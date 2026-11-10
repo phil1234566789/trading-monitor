@@ -53,3 +53,25 @@ it('rejects cyclic, invalid and ambiguous value references',()=>{
  const original=largeHistory();original.literal={snapshotStructureRef:0};
  expect(()=>encodeSnapshotStructures(original)).toThrow(/reserved/i);
 });
+
+it('compacts dense observation history and supplementary OB lists while leaving gate evidence inline',()=>{
+ const original=snapshot(),candidates=Array.from({length:700},(_,i)=>({id:`h1-ob-${i}`,dir:1,
+  top:4300+i/100,bottom:4290+i/100,recognizedAt:600,timeframe:'1h',
+  details:'Nativer geschlossener Orderblock als zusätzliches Argument'}));
+ const confluences={status:'observed',ruleVersion:'native-ob-observation-v1',rules:[],divergences:[],obCandidates:candidates};
+ original.checklist.checks.confluences=confluences;
+ original.checklist.setup.primary.checks.confluences=structuredClone(confluences);
+ original.checklist.checks.antiConfluences={status:'notFound',ruleVersion:'native-anti-v1',
+  rules:[{status:'notFound',price:4323.57,knownAt:600,ageSeconds:14400,threshold:14400}],obCandidates:structuredClone(candidates)};
+ original.checklistHistory={version:'checklist-changes-v1',entries:Array.from({length:4000},(_,i)=>({at:900+i,
+  states:[{status:'observed',label:'H1-OB als Zusatzargument',version:'native-confirmed-v1',knownAt:900}]}))};
+ const before=structuredClone(original),stored=encodeSnapshotStructures(original);
+ expect(JSON.stringify(stored).length).toBeLessThan(JSON.stringify(original).length*.7);
+ expect(decodeSnapshotStructures(JSON.parse(JSON.stringify(stored)))).toEqual(original);
+ expect(original).toEqual(before);
+ expect(stored.checklist.checks.antiConfluences).toEqual(original.checklist.checks.antiConfluences);
+ for(const field of ['status','ruleVersion','rules','divergences'])
+  expect(stored.checklist.checks.confluences[field]).toEqual(confluences[field]);
+ expect(stored.checklist.setup.primary.targetSelection).toEqual(original.checklist.setup.primary.targetSelection);
+ expect(stored.rangeCourse).toEqual(original.rangeCourse);
+});

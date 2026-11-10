@@ -55,24 +55,27 @@ const VALUE_VERSION='deduplicated-values-v2';
 function encodeValues(snapshot) {
   const counts=new Map();
   const json=value=>JSON.stringify(value);
-  const eligible=(key,inside)=>inside||key==='checklistHistory'||structureKey(key);
-  function collect(value,key='',inside=false) {
+  // Zusatzargument-Listen teilen; SQL-Gates und Anti-Confluences bleiben direkt lesbar.
+  const eligible=(key,inside,parentKey)=>inside||key==='checklistHistory'||structureKey(key)
+    ||key==='obCandidates'&&parentKey==='confluences';
+  function collect(value,key='',inside=false,parentKey='') {
     if(reference(value))throw new Error('Reserved snapshot structure reference');
-    inside=eligible(key,inside);
+    inside=eligible(key,inside,parentKey);
     const text=json(value);
-    if(inside&&text?.length>=128)counts.set(text,(counts.get(text)??0)+1);
-    if(value&&typeof value==='object')for(const [name,item]of Object.entries(value))collect(item,name,inside);
+    // Auch kurze wiederholte Statusbelege können einen langen Verlauf über das JSONB-Limit treiben.
+    if(inside&&text?.length>=64)counts.set(text,(counts.get(text)??0)+1);
+    if(value&&typeof value==='object')for(const [name,item]of Object.entries(value))collect(item,name,inside,key);
   }
   collect(snapshot);
   const pool=[...counts].filter(([,count])=>count>1).map(([text])=>text);
   const indices=new Map(pool.map((text,index)=>[text,index]));
-  function pack(value,key='',inside=false,skip=false) {
-    inside=eligible(key,inside);
+  function pack(value,key='',inside=false,skip=false,parentKey='') {
+    inside=eligible(key,inside,parentKey);
     const index=inside?indices.get(json(value)):undefined;
     if(index!==undefined&&!skip)return {snapshotStructureRef:index};
-    if(Array.isArray(value))return value.map(item=>pack(item,'',inside));
+    if(Array.isArray(value))return value.map(item=>pack(item,'',inside,false,key));
     return value&&typeof value==='object'
-      ? Object.fromEntries(Object.entries(value).map(([name,item])=>[name,pack(item,name,inside)])) : value;
+      ? Object.fromEntries(Object.entries(value).map(([name,item])=>[name,pack(item,name,inside,false,key)])) : value;
   }
   return {...pack(snapshot),structureStorage:{version:VALUE_VERSION,structures:pool.map(text=>pack(JSON.parse(text),'',true,true))}};
 }

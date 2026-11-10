@@ -1,7 +1,7 @@
 # Graph Report - statistics-entry-patterns  (2026-11-10)
 
 ## Corpus Check
-- 1403 files · ~1,291,741 words
+- 1403 files · ~1,291,810 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7a5ba2e5`
+- Built from commit: `0eb7d712`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1235,12 +1235,12 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
-- **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
-  _High betweenness centrality (0.039) - this node is a cross-community bridge._
 - **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `collectNestedChain`, `cssColor`, `Vegapunk Slimming Results (-86%)`, `format.js`, `m1Checklist.js`, `useTradeSetup2History.js`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
-- **Why does `File Separation: Algorithm vs Rendering` connect `Vegapunk Slimming Results (-86%)` to `marketStructureRendering.ts`?**
-  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `cssColor()` connect `cssColor` to `MilkyMetaTrader.vue`, `usePriceChartRsi.js`, `PriceChart.vue`, `priceChartObZones.js`, `Statistik.vue`, `GoldPreview.vue`, `dailyPivotMarkers.js`, `MmtTargetEditor.vue`, `PinAddPopup.vue`, `TradeSetupCockpit.vue`, `sessions.js`, `format.js`, `marketStructureRendering.ts`, `useTradeSetup2History.js`, `SimulationEntryTable.vue`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **What connects `{ readFileSync }`, `{ join }`, `SKILL` to the rest of the system?**
   _2016 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**

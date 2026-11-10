@@ -14919,7 +14919,7 @@
       "file_type": "code",
       "norm_label": "decodevalues()",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L87"
+      "source_location": "L90"
     },
     {
       "id": "src_tradesetupsnapshotstorage_decodevalues_unpack",
@@ -14931,7 +14931,7 @@
       "file_type": "code",
       "norm_label": "unpack()",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L92"
+      "source_location": "L95"
     },
     {
       "id": "src_tradesetupsnapshotstorage_encodelegacystructures",
@@ -14955,7 +14955,7 @@
       "file_type": "code",
       "norm_label": "encodesnapshotstructures()",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L80"
+      "source_location": "L83"
     },
     {
       "id": "src_tradesetupsnapshotstorage_encodevalues",
@@ -14979,7 +14979,7 @@
       "file_type": "code",
       "norm_label": "collect()",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L59"
+      "source_location": "L61"
     },
     {
       "id": "src_tradesetupsnapshotstorage_encodevalues_pack",
@@ -14991,7 +14991,7 @@
       "file_type": "code",
       "norm_label": "pack()",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L69"
+      "source_location": "L72"
     },
     {
       "id": "src_tradesetupsnapshotstorage_reference",
@@ -109164,7 +109164,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L93",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -109200,7 +109200,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L81",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -109212,7 +109212,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L83",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -109224,7 +109224,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -109236,7 +109236,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L60",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -123912,7 +123912,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L92",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -123924,7 +123924,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L59",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -123936,7 +123936,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L69",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -232268,7 +232268,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L80",
+      "source_location": "L83",
       "weight": 1.0
     },
     {
@@ -232279,7 +232279,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tradeSetupSnapshotStorage.js",
-      "source_location": "L87",
+      "source_location": "L90",
       "weight": 1.0
     },
     {
@@ -266879,5 +266879,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7a5ba2e5d23d186df2a94c82de3ff6eba04268cf"
+  "built_at_commit": "0eb7d7121d027b7be33f75c9d4a25d3197c602bd"
 }
