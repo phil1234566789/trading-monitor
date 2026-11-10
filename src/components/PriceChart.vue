@@ -53,6 +53,7 @@ import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { tintFvgCandles, tintM1FvgCandle } from "../fvgCandleTint.js";
+import {createM1FvgChartSelection} from '../m1FvgChartSelection.js';
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import {
@@ -324,6 +325,7 @@ const props = defineProps({
   // wenn aktiv, wertet der Klick-Handler unten Klicks auf Trade-Setup-OB-Boxen aus. Sonst bleibt
   // ein Klick beim Pan/Zoom-Verhalten von lightweight-charts, wie bisher.
   tradeModeActive: { type: Boolean, default: false },
+  entryFvgSelection: { type: Object, default: null },
   // Ziel-Modus (Chat 2026-07-27: "einem Trade ein Target hinzufügen ... die Linien klickbar
   // machen") — nur innerhalb von tradeModeActive relevant, schaltet den Klick-Handler von
   // "Trade-Setup-OB anklicken" auf "Pivot/OB als Target anklicken" um (siehe Dashboard.vue: targetAddTrade).
@@ -365,6 +367,7 @@ const emit = defineEmits([
   "close-debug-metadata",
   "close-rsi-divergence-stats",
   "select-target",
+  'select-entry-fvg',
   "select-setup-confirmations",
   "pin-context-menu",
   // Generisch seit Chat 2026-08-30 (TradeEditModal.vue bekam dieselben Lupe-Buttons wie die TSC) —
@@ -1882,8 +1885,14 @@ function applyCandleData() {
   const candles = tintFvgCandles(clipReplay(allCandles), snapshot ? [] : tradeSetupsMetadata.value, props.currentBar, color);
   lastCandleTime.value=candles[candles.length-1]?.time??null;
   refreshBrokerTrades();
-  candleSeries.setData(tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color));
+  const tinted=tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color);
+  candleSeries.setData(entryFvgPicker.paint(tinted,color));
 }
+
+const entryFvgPicker=createM1FvgChartSelection(()=>({candles:markIgnored(clipReplay(allCandles),props.symbol),
+  bar:props.currentBar,replayUntil:props.replayUntil,nowSec:Math.floor(Date.now()/1000),
+  selection:props.tradeModeActive?props.entryFvgSelection:null}));
+watch(()=>props.entryFvgSelection,()=>{if(chart&&candleSeries)applyCandleData();});
 
 function closeTradeSetup2Selection() {
   void setup2.select(null);
@@ -2130,6 +2139,11 @@ onMounted(() => {
       return;
     }
     if (!props.tradeModeActive) return;
+    if(props.entryFvgSelection){
+      const result=entryFvgPicker.select(param.time,candleSeries.coordinateToPrice(param.point.y));
+      if(result)emit('select-entry-fvg',result);
+      return;
+    }
     // Ziel-Modus (Chat 2026-07-27/28): Klick auf ein Pivot (Linie) oder eine OB-Zone (Box) -> ans
     // Dashboard durchreichen, das den Preis als Target zum gerade "scharfen" Trade hinzufügt.
     // Eigener Modus statt einfach zusätzlich zum Setup-Klick zu testen, damit ein Klick nie

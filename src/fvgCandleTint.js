@@ -25,6 +25,11 @@ export function tintM1FvgCandle(candles, fvg, bar, farbe) {
   return tintCandleTimes(candles, new Set([fvg.candleTime]), farbe);
 }
 
+export function tintM1FvgCandidates(candles, candidates, bar, farbe) {
+  if(bar!=='1m' || !farbe)return candles;
+  return tintCandleTimes(candles,new Set(candidates.map(fvg=>fvg.candleTime)),farbe);
+}
+
 function tintCandleTimes(candles, zeiten, farbe) {
   if (zeiten.size === 0) return candles;
   return candles.map((c) => (zeiten.has(c.time) ? { ...c, color: farbe, wickColor: farbe } : c));

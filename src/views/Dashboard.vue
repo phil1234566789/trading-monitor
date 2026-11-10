@@ -14,6 +14,8 @@ import StyleModal from "../components/StyleModal.vue";
 import SessionsModal from "../components/SessionsModal.vue";
 import NewsModal from "../components/NewsModal.vue";
 import TradeEditModal from "../components/TradeEditModal.vue";
+import {m1FvgDraftPrefill} from '../m1FvgEntrySelection.js';
+import {formatDatedTime} from '../berlinTime.js';
 import {useJournalRoute} from '../composables/useJournalRoute.js';
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
 import MetadataPanel from "../components/MetadataPanel.vue";
@@ -355,13 +357,17 @@ const tradeModeActive = computed(() => chartMode.value === "trade");
 // aktualisiert, nachdem im Panel ein Setup/Ziel über den Chart hinzugefügt wurde).
 const editingTradeId = ref(null);
 const tradeEditModalRef = ref(null);
+const entryFvgMessage=ref('');
+let entryFvgToken=0;
 function onPositionDraftStarted() {
   disarmChartClick();
+  entryFvgMessage.value='';
   hoveredModalEvidenceItem.value = null;
   hoveredModalTargetItem.value = null;
 }
 let positionAccountChange = false;
 async function onPositionCreated(positionId, accountId) {
+  disarmChartClick();
   // Ein bewusst anderes Zielkonto darf den gerade angelegten Entry nicht aus dem Editor filtern.
   positionAccountChange = true;
   if (selectedTradingAccountId.value !== ALL_ACCOUNTS_ID) selectedTradingAccountId.value = accountId ?? ALL_ACCOUNTS_ID;
@@ -380,6 +386,7 @@ function onEditRequest(t) {
 // entfernt) — hoveredModalEvidenceItem/-TargetItem blieben sonst für immer auf dem letzten Stand
 // hängen, ein Phantom-Highlight im Chart, das sich nie mehr von selbst löst.
 function closeTradeEditModal() {
+  if(entryFvgSelection.value)disarmChartClick();
   editingTradeId.value = null;
   hoveredModalEvidenceItem.value = null;
   hoveredModalTargetItem.value = null;
@@ -440,6 +447,8 @@ const tscBootstrapArmed = ref(false);
 // Stellen geworden) — ein Objekt aus Name -> Ref, statt jede Ref einzeln in jeder Funktion zu
 // nennen, hält das wartbar, wenn ein achter Arm-Zustand dazukommt.
 const ARM_STATES = {
+  entryFvgImmediate:ref(null),
+  entryFvgRetestReaction:ref(null),
   target: targetAddTrade,
   confirmation: confirmationAddTrade,
   rangeConfirmation: rangeConfirmationAddTrade,
@@ -459,6 +468,8 @@ function clearArmStatesExcept(keep) {
 // wird er in der Kopfleiste (App.vue), weil der Modus-Umschalter dort sitzt; clearArmStatesExcept
 // lässt immer höchstens einen scharf, deshalb reicht der erste Treffer.
 const ARM_HINTS = {
+  entryFvgImmediate:t=>`M1-FVG-Impulskerze wählen · neue Position zu DR #${t.dealingRangeId} · a: FVG-Schluss`,
+  entryFvgRetestReaction:t=>`M1-FVG-Impulskerze wählen · neue Position zu DR #${t.dealingRangeId} · b: Retest + Richtungskerze`,
   target: (t) => `🎯 nächster Klick auf Pivot/OB fügt Trade #${t.id} ein Target hinzu`,
   confirmation: (t) => `✔ nächster Klick auf Sweep/OB/Divergenz fügt Trade #${t.id} eine Bestätigung hinzu`,
   rangeConfirmation: (t) => `✔ nächster Klick auf Sweep/OB/Divergenz fügt Dealing Range #${t.dealingRangeId} eine Bestätigung hinzu`,
@@ -505,6 +516,25 @@ const armedTscSection = computed(() => (armedAction.value?.payload?.isTsc ? (TSC
 // Das Trade-Edit-Modal hat je eine Range- und eine Positions-Sektion pro Art, deckt sich also 1:1
 // mit den Arm-Keys — hier reicht der rohe Key.
 const armedTradeAction = computed(() => (armedAction.value && !armedAction.value.payload?.isTsc ? armedAction.value.key : null));
+const entryFvgSelection=computed(()=>armedAction.value?.key.startsWith('entryFvg')?armedAction.value.payload:null);
+function onRequestEntryFvg(variant){
+  const trade=editingTrade.value;
+  if(!trade||trade.instrument!==currentSymbol.value)return;
+  entryFvgMessage.value='';
+  currentBar.value='1m';
+  armChartClick(variant==='immediate'?'entryFvgImmediate':'entryFvgRetestReaction',
+    {...trade,variant,draftToken:++entryFvgToken});
+}
+function onSelectEntryFvg(result){
+  const target=entryFvgSelection.value;
+  if(!target||target.draftToken!==result.target?.draftToken)return;
+  if(result.status!=='ready'){entryFvgMessage.value=result.reason;return;}
+  const prefill=m1FvgDraftPrefill(result,target,editingTrade.value,currentSymbol.value);
+  if(!prefill){disarmChartClick();return;}
+  tradeEditModalRef.value?.beginPositionDraft(prefill);
+  entryFvgMessage.value=`FVG-Impuls ${formatDatedTime(result.fvg.candleTime)} · Entry nach Schluss ${formatDatedTime(prefill.entryTime)} · ${prefill.entryPrice}`;
+}
+watch([editingTradeId,currentSymbol],()=>{if(entryFvgSelection.value)disarmChartClick();});
 // Sonst bliebe der Hinweis in der globalen Kopfleiste stehen, wenn man das Dashboard verlässt.
 onUnmounted(() => (chartHint.value = null));
 // Ein Weg, einen Chart-Klick scharf zu machen — vorher stand derselbe Dreizeiler achtmal da.
@@ -2196,11 +2226,14 @@ watch(selectedTradingAccountId, () => {
     v-if="editingTrade"
     :trade="editingTrade"
     :armed-action="armedTradeAction"
+    :entry-fvg-message="entryFvgMessage"
     :current-symbol="currentSymbol"
     @close="closeTradeEditModal"
     @saved="refreshTrades"
     @created="onPositionCreated"
     @position-draft-started="onPositionDraftStarted"
+    @position-draft-cancelled="disarmChartClick"
+    @request-entry-fvg="onRequestEntryFvg"
     @open-in-tsc="onOpenJournalInTsc(editingTrade)"
     @deleted="onTradeDeleted"
     @request-add-target="onAddTargetRequest(editingTrade)"
@@ -2303,6 +2336,7 @@ watch(selectedTradingAccountId, () => {
     :trade-mode-active="tradeModeActive"
     :measure-mode-active="chartMode === 'measure'"
     :target-mode-active="anyArmStateActive"
+    :entry-fvg-selection="entryFvgSelection"
     :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null || tscBootstrapArmed"
     :confluence-mode-active="confluenceAddTrade != null || rangeConfluenceAddTrade != null"
     :anti-confluence-mode-active="antiConfluenceAddTrade != null || rangeAntiConfluenceAddTrade != null"
@@ -2316,6 +2350,7 @@ watch(selectedTradingAccountId, () => {
     @close-debug-metadata="showDebugMetadata = false"
     @close-rsi-divergence-stats="showRsiDivergenceStats = false"
     @select-target="onSelectTarget"
+    @select-entry-fvg="onSelectEntryFvg"
     @select-setup-confirmations="onSelectSetupConfirmations"
     @measure-done="onMeasureDone"
     @pin-context-menu="onPinContextMenu"

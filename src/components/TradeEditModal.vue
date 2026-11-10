@@ -1,5 +1,6 @@
 <script setup>
 import DealingRangeSetupSelect from './DealingRangeSetupSelect.vue';
+import M1FvgEntryControls from './M1FvgEntryControls.vue';
 import { ref, computed } from "vue";
 import { useTradePositionForm } from "../composables/useTradePositionForm.js";
 import { updateDealingRange, deleteTrade, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
@@ -32,6 +33,7 @@ const props = defineProps({
   // Welcher Add-Button gerade den nächsten Chart-Klick scharf hat (Arm-Key aus Dashboard.vue:
   // armedTradeAction, z.B. "rangeConfirmation"/"target"), sonst null — nur fürs Highlight.
   armedAction: { type: String, default: null },
+  entryFvgMessage: {type:String,default:''},
 });
 // Zwei getrennte "Bestätigung hinzufügen"-Anfragen (Chat 2026-07-31: "wir haben die gesamte Basis
 // um alles per Klick übernehmen zu können" — kurz zuvor per Formular ausprobiert, dann wieder
@@ -47,6 +49,8 @@ const emit = defineEmits([
   "saved",
   "created",
   "position-draft-started",
+  'position-draft-cancelled',
+  'request-entry-fvg',
   "deleted",
   "request-add-target",
   "request-add-confirmation",
@@ -78,6 +82,7 @@ function startPositionDraft(prefill) {
   emit('position-draft-started');
 }
 defineExpose({ beginPositionDraft:startPositionDraft });
+function cancelDraft(){cancelPositionDraft();emit('position-draft-cancelled');}
 
 // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
 // Long#24 wäre die Lesson daraus" — kann auch eine falsch bestimmte dealing range sein, nicht nur
@@ -354,6 +359,10 @@ function confirmationLabel(confirmation) {
     <div class="tem-group tem-group-position">
       <h3 class="tem-group-title">{{ addingPosition ? '▶ Neue Ausführung' : `▶ Ausführung #${trade.id}` }}</h3>
       <p v-if="addingPosition" class="tem-muted">Neue Position derselben DR · gespeichert wird erst mit „Position speichern“.</p>
+      <M1FvgEntryControls v-if="addingPosition" :range-id="trade.dealingRangeId" :instrument="trade.instrument"
+        :direction="trade.direction" :armed-action="armedAction" :message="entryFvgMessage"
+        :disabled="saving || currentSymbol !== trade.instrument || createdPositionId != null"
+        @request="variant => emit('request-entry-fvg',variant)" />
       <template v-if="!addingPosition">
 
       <CrudListSection
@@ -457,7 +466,7 @@ function confirmationLabel(confirmation) {
           <p v-if="saveError" role="alert" class="tem-lesson-error">{{ saveError }}</p>
           <p v-if="createdPositionId != null" role="status">Position #{{ createdPositionId }} gespeichert.</p>
           <ActionButton type="submit" class="tem-save-btn" :disabled="saving || createdPositionId != null">{{ addingPosition ? 'Position speichern' : 'Speichern' }}</ActionButton>
-          <ActionButton v-if="addingPosition" :disabled="saving" @click="cancelPositionDraft">Abbrechen</ActionButton>
+          <ActionButton v-if="addingPosition" :disabled="saving" @click="cancelDraft">Abbrechen</ActionButton>
         </form>
       </section>
 

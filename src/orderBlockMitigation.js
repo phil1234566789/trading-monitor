@@ -1,17 +1,12 @@
 import { candleTouchesOrderBlock, candleInvalidatesOrderBlock } from './orderBlockDetection.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
-
-export function m1FvgBounds(direction,gap,confirmation) {
-  const bottom=direction==='short'?confirmation.high:confirmation.low-gap;
-  return {bottom,top:bottom+gap};
-}
+import {confirmedM1Fvg} from './m1FairValueGap.js';
+export {m1FvgBounds} from './m1FairValueGap.js';
 
 export function orderBlockMitigationFvg(rows,direction,end=rows.length,start=0) {
   const window=rows.slice(Math.max(start,end-4),end);
   if(window.length!==4 || window.some((c,i)=>c.ignored || (i && c.time!==window[i-1].time+60)))return null;
-  const [,first,impulse,last]=window;
-  const gap=direction==='short'?first.low-last.high:last.low-first.high;
-  return gap>1e-9 ? {direction,candleTime:impulse.time,recognizedAt:last.time+60,gap} : null;
+  return confirmedM1Fvg(window,direction);
 }
 
 // Der OB kann aus jedem TF stammen; die Mitigation wird immer im M1 bestätigt.
