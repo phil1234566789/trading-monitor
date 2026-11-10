@@ -52,7 +52,7 @@ async function load() {
       const key = `${zone.dir === 1 ? 'obBull' : 'obBear'}${bar.value === '5m' ? 'M5' : bar.value}`;
       series.attachPrimitive(new OrderBlockPrimitive(goldDisplayZone(zone, candles), {
         fillColor: cssColor(key), borderColor: cssColor(`${key}Border`),
-        borderWidth: 1, textColor: '#d1d4dc', label: zone.invalidated ? `${selected.timeframe} · beendet` : selected.timeframe,
+        borderWidth: 1, textColor: '#d1d4dc', label: selected.timeframe,
       }, candles));
     }
     obCount.value = zones.length;

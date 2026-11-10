@@ -258,7 +258,7 @@ function zoneOptions(z, inPinContext, isSelectedPin) {
   const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
   const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
   const borderKey = inactive ? keys.inactiveBorder : z.dir === 1 ? keys.bullBorder : keys.bearBorder;
-  const label = z.invalidated ? `${z.timeframe ?? ""} · beendet` : z.timeframe ?? "";
+  const label = z.timeframe ?? "";
   return {
     fillColor: cssColor(key),
     borderColor: cssColor(borderKey),

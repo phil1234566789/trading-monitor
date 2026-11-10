@@ -28,7 +28,7 @@ describe.each(['5M','1H','4H'])('%s historical OB display is independent of vali
     expect(filterHistorical(all,true)).toEqual(all);
     expect(filterHistorical(all,false)).toEqual([]);
   });
-  it('draws it with existing inactive colors, a finished label and a finite endpoint', () => {
+  it('draws it with existing inactive colors, the timeframe label and a finite endpoint', () => {
     const primitives = [], series = { attachPrimitive:vi.fn(),detachPrimitive:vi.fn() };
     renderPersistedZones(series,[ended],primitives,[{time:ended.startTime},{time:at}]);
     expect(series.attachPrimitive).toHaveBeenCalledTimes(1);
@@ -36,7 +36,7 @@ describe.each(['5M','1H','4H'])('%s historical OB display is independent of vali
     expect(orderBlockEndTime(primitives[0].zone)).toBe(ended.endTime);
     const key = timeframe==='5M'?'obInactiveM5':timeframe==='1H'?'obInactive1h':'obInactive4h';
     expect(primitives[0]._options.fillColor).toBe(cssColor(key));
-    expect(primitives[0]._options.label).toContain('beendet');
+    expect(primitives[0]._options.label).toBe(timeframe);
   });
   it('never accepts a historical invalidated box as new evidence or target', () => {
     const zones = [{...ended,touched:false}];
