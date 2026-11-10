@@ -3,15 +3,16 @@ import fixture from './fixtures/xauusd-dr121-exploratory-short.json';
 import {assertNativeReferenceCandles} from './helpers/nativeReferenceFixture.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {closedChecklistCandles} from '../src/tradeSetupChecklistTimeBasis.js';
-import {obMinimum} from '../src/instrumentConfig.js';
+// Diese explorative Referenz dokumentiert bewusst den eingefrorenen Mindestgap vor v29.
+const historicalMinimum = .75;
 
 const at=clock=>Date.parse(`2026-10-29T${clock}:00+01:00`)/1000;
 const sweep=fixture.measured.sweep;
-const goldObs=until=>detectOrderBlocks(closedChecklistCandles(fixture.candles.m5,'5m',until),'5m',true,obMinimum('XAUUSD','5m'));
+const goldObs=until=>detectOrderBlocks(closedChecklistCandles(fixture.candles.m5,'5m',until),'5m',true,historicalMinimum);
 const postSweep=zone=>zone.dir===-1&&zone.startTime>sweep.firstM1TouchTime;
 
 // Schwaches exploratives Beispiel: keine neue Strategie und kein positiver Pflicht-Entry-Test.
-describe('DR121 exploratory native reference with late M5 order block',()=>{
+describe('DR121 frozen pre-v29 exploratory reference with late M5 order block',()=>{
  it.each(['m1','m5','h1'])('preserves original %s data and hashes',bar=>assertNativeReferenceCandles(fixture,bar));
  it('keeps every native M1 minute and distinguishes M5 bucket from precise sweep minute',()=>{
   fixture.candles.m1.forEach((c,i)=>expect(c.time).toBe(at('10:10')+i*60));
@@ -25,7 +26,7 @@ describe('DR121 exploratory native reference with late M5 order block',()=>{
  it('does not promote the late small positive gap into a qualifying Gold OB',()=>{
   const small=fixture.measured.orderBlocks.firstPositiveGapAfterSweep;
   expect(small).toMatchObject({impulseTime:at('12:35'),knownAt:at('12:45')});
-  expect(small.gap).toBeCloseTo(.68,9);expect(obMinimum('XAUUSD','5m')).toBe(.75);
+  expect(small.gap).toBeCloseTo(.68,9);expect(historicalMinimum).toBe(.75);
   const generic=detectOrderBlocks(closedChecklistCandles(fixture.candles.m5,'5m',small.knownAt),'5m');
   expect(generic.some(z=>z.dir===-1&&z.startTime===small.impulseTime)).toBe(true);
   expect(goldObs(small.knownAt).filter(postSweep)).toEqual([]);

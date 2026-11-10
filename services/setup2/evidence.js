@@ -1,4 +1,5 @@
 import { JOINT_LOSS_RISK_VERSION } from '../../src/dealingRangeRisk.js';
+import {obMinimum} from '../../src/instrumentConfig.js';
 import {observeCapturedRanges} from './priceObservations.js';
 import {packEvidence} from './evidencePayload.js';
 import {evidenceHash as hash} from './evidenceIdentity.js';
@@ -16,6 +17,7 @@ const iso=sec=>new Date(sec*1000).toISOString();
 export function createLiveEvidence(config,{fromTime,toTime,startedAt,mode}) {
  const m5BosRuleVersion=m5BosRuleVersionFor(config.instrument,config.entryPattern);
  const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,
+  m5OrderBlockMinGap:obMinimum(config.instrument,'5m'),
   entryPatterns:[...CURRENT_ENTRY_PATTERNS],m1Periods:{...CURRENT_M1_PERIODS},includeSweepRetestSources:true,
   entryPattern2OrderBlockRule:{...ENTRY_PATTERN_2_OB_RULE},
   entryPattern1SweepAgeRule:ENTRY_PATTERN_1_SWEEP_AGE_POLICY,

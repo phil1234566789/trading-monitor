@@ -104,8 +104,11 @@ export function advanceOrderBlocks(candles,state,from) {
     const bearGap = c1.low - cur.high;
     const bullGapPct = (bullGap / refPrice) * 100;
     const bearGapPct = (bearGap / refPrice) * 100;
-    const bullRelevant = minGapAbs != null ? bullGap >= minGapAbs - GAP_EPSILON : bullGapPct >= IRRELEVANT_PCT;
-    const bearRelevant = minGapAbs != null ? bearGap >= minGapAbs - GAP_EPSILON : bearGapPct >= IRRELEVANT_PCT;
+    // Ohne Mindestgröße bleibt eine echte positive Lücke Pflicht; Epsilon darf keine Null-FVG erzeugen.
+    const bullRelevant = minGapAbs === 0 ? bullGap > 0
+      : minGapAbs != null ? bullGap >= minGapAbs - GAP_EPSILON : bullGapPct >= IRRELEVANT_PCT;
+    const bearRelevant = minGapAbs === 0 ? bearGap > 0
+      : minGapAbs != null ? bearGap >= minGapAbs - GAP_EPSILON : bearGapPct >= IRRELEVANT_PCT;
 
     if (bullRelevant) {
       for (const z of zones) if (z.dir === 1 && z.active) z.active = false;

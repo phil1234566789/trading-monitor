@@ -14,7 +14,9 @@ export function calculateSnapshotIndicators({ frames: rawFrames, source, config,
   const dbObZones = ['1h', '4h'].flatMap(bar => (frames[bar] ? detectOrderBlocks(frames[bar], bar === '1h' ? '1H' : '4H', false,
     obMinimum(source.instrument, bar === '1h' ? '1H' : '4H')).map(z => ({ ...z, instrument: source.instrument, timeframe: bar === '1h' ? '1H' : '4H' })) : []));
   const zones = filterHistorical(collectObsZones({ ...props, m5Candles: frames['5m'] ?? [], dbObZones,
-    symbol: source.instrument, replayUntil: at, price: null }), props.showHistoricalObs);
+    symbol: source.instrument, replayUntil: at, price: null,
+    // Alte Gold-Läufe entstanden vor dem Wegfall des Mindestgaps; ihre Ergänzungen bleiben historisch.
+    m5MinGap: config.m5OrderBlockMinGap ?? (source.instrument === 'XAUUSD' ? 0.75 : obMinimum(source.instrument, '5m')) }), props.showHistoricalObs);
   const pivots = {};
   for (const bar of ['1h', '5m']) {
     if (!frames[bar]) continue;

@@ -32,7 +32,7 @@ it('preserves legacy backfill time and supports current Gold scaling without cha
   const legacy = replaySetup1({ ...args, recognitionDelaySec: 0 });
   const current = replaySetup1(args);
   expect(Date.parse(current.rows[0].created_at) - Date.parse(legacy.rows[0].created_at)).toBe(300000);
-  expect(obMinimum('XAUUSD', '5m')).toBe(0.75);
+  expect(obMinimum('XAUUSD', '5m')).toBe(0);
   expect(strategyDistance(DEFAULT_TRADE_SETUP_PARAMS.maxSweepDistance, 'XAUUSD')).toBe(30);
   expect(replaySetup1({ ...args, minimum: 0.75 }).rows).toEqual([]);
 });

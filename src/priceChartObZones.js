@@ -107,13 +107,13 @@ export function filterDbObZones(dbObZones, symbol, replayUntil, timeframe, price
 // ohnehin schon für andere Features geladen werden (m5Candles, bereits clipReplay-gefiltert vom
 // Aufrufer) — nur die tatsächlich referenzierte Teilmenge der M5-OBs wird persistiert (siehe
 // PLAN-chart-objekte-forex.md Abschnitt 5), das volle M5-Universum bleibt bewusst Live-Recompute.
-export function collectObsZones({ showObs4h, showObs1h, showObsM5, dbObZones, symbol, replayUntil, price, m5Candles }) {
+export function collectObsZones({ showObs4h, showObs1h, showObsM5, dbObZones, symbol, replayUntil, price, m5Candles, m5MinGap = obMinimum(symbol, '5m') }) {
   const zones = [];
   if (showObs4h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "4H", price));
   if (showObs1h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "1H", price));
   if (showObsM5) {
     zones.push(
-      ...detectOrderBlocks(m5Candles, "5m", true, obMinimum(symbol, '5m'))
+      ...detectOrderBlocks(m5Candles, "5m", true, m5MinGap)
         .map((z) => ({ ...z, timeframe: "5M" })),
     );
   }
