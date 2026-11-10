@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1794336894.280938,
-    "seen": 1794337415.3169882,
-    "ast_hash": "0fe232e1a947128ea60023a5625e9075",
+    "mtime": 1794339402.3361363,
+    "seen": 1794339627.0369277,
+    "ast_hash": "49617695f888cb4ac502191554dd97b2",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "src/orderBlocks.js": {
-    "mtime": 1794336958.0693183,
-    "seen": 1794337415.3169882,
-    "ast_hash": "6351156d9e4c19e5e0df71827dd8d0c2",
+    "mtime": 1794339308.8500588,
+    "seen": 1794339627.0734434,
+    "ast_hash": "047a7105077d11b45d1599a743ca700a",
     "semantic_hash": ""
   },
   "src/pinContext.js": {
@@ -534,9 +534,9 @@
     "semantic_hash": ""
   },
   "src/priceChartObZones.js": {
-    "mtime": 1794334403.8022177,
-    "seen": 1794337415.3169882,
-    "ast_hash": "c0b475789a27b3c3907e002c1fb9e643",
+    "mtime": 1794339500.8870473,
+    "seen": 1794339627.0764432,
+    "ast_hash": "e8413472635e615cbaf06021cb75c124",
     "semantic_hash": ""
   },
   "src/range.type.ts": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1794337031.9586136,
-    "seen": 1794337415.3169882,
-    "ast_hash": "c80f88ff06ad9436dcb918ce41ac5e1d",
+    "mtime": 1794339434.1061885,
+    "seen": 1794339627.1024485,
+    "ast_hash": "7642f422a87506512da84a245cabe63c",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -3324,9 +3324,9 @@
     "semantic_hash": ""
   },
   "src/fvgCandleTint.js": {
-    "mtime": 1794336687.3473814,
-    "seen": 1794337415.3169882,
-    "ast_hash": "30c3450697bcbad600c6660903f3e9f9",
+    "mtime": 1794339272.6090333,
+    "seen": 1794339627.0609326,
+    "ast_hash": "2b840c51f398f59aba252b3592d8e2d3",
     "semantic_hash": ""
   },
   "test/fvgCandleTint.test.js": {
@@ -8406,9 +8406,9 @@
     "semantic_hash": ""
   },
   "src/components/M1FvgEntryControls.vue": {
-    "mtime": 1794338728.7898774,
-    "seen": 1794338847.6053216,
-    "ast_hash": "3db950f379c545814eb8c80f6cd609dc",
+    "mtime": 1794339272.6090333,
+    "seen": 1794339627.0329275,
+    "ast_hash": "961505096733fe490db8c24a6c868967",
     "semantic_hash": ""
   },
   "src/m1FairValueGap.js": {
@@ -8424,9 +8424,9 @@
     "semantic_hash": ""
   },
   "src/m1FvgEntrySelection.js": {
-    "mtime": 1794338728.6055775,
-    "seen": 1794338847.6748352,
-    "ast_hash": "bc399d8dfc89433e64f0cea7b48c1235",
+    "mtime": 1794339564.3191922,
+    "seen": 1794339627.0659323,
+    "ast_hash": "c3b86d682c337a378f9f79d8c7f8bb11",
     "semantic_hash": ""
   },
   "test/fixtures/dr128M1FvgSelection.json": {
@@ -8448,9 +8448,39 @@
     "semantic_hash": ""
   },
   "test/m1FvgRetestDepth.test.js": {
-    "mtime": 1794338710.8650625,
-    "seen": 1794338847.8865018,
-    "ast_hash": "3c2f43d7f8570d48d9ae97ec49fe6678",
+    "mtime": 1794339321.891751,
+    "seen": 1794339627.170481,
+    "ast_hash": "8f4c10584be84b89a236fbbe98d3c706",
+    "semantic_hash": ""
+  },
+  "src/composables/useM1FvgPreviewContext.js": {
+    "mtime": 1794339434.0586753,
+    "seen": 1794339627.0459275,
+    "ast_hash": "047190340c494b6b6b36fc2fb4af8826",
+    "semantic_hash": ""
+  },
+  "test/fixtures/xau27OctM1FvgSelection.json": {
+    "mtime": 1794339321.8957496,
+    "seen": 1794339627.1554813,
+    "ast_hash": "8c8561f047592b4400e4eaac2efca211",
+    "semantic_hash": ""
+  },
+  "test/m1FvgAssociatedOrderBlock.test.js": {
+    "mtime": 1794339370.3360186,
+    "seen": 1794339627.169481,
+    "ast_hash": "469aeb6126e283cf924a44f7a048ec76",
+    "semantic_hash": ""
+  },
+  "test/m1FvgPreviewContext.test.js": {
+    "mtime": 1794339434.113186,
+    "seen": 1794339627.170481,
+    "ast_hash": "af2d28997600bc892245978aed76bbd3",
+    "semantic_hash": ""
+  },
+  "test/m1ObChartZones.test.js": {
+    "mtime": 1794339500.8880484,
+    "seen": 1794339627.1709862,
+    "ast_hash": "7eb09bf65c134f7f4017af2dccf51a4f",
     "semantic_hash": ""
   }
 }
