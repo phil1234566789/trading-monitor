@@ -8,6 +8,7 @@ const checkpoints = [
  ['targets','E · Targets'], ['antiConfluences','F · Anti-Confluences']
 ];
 const labels = {
+ sweepAge:'H · Sweep-Level-Mindestalter · nur Pattern 1',
  m5Countertrend:'M5-Countertrend', m5Bos:'M5-BOS', m5Choch:'M5-CHoCH',
  m1PivotBreak:'M1-Pivotbruch', m1Choch:'M1-CHoCH', m1Bos:'M1-BOS',
  retest:'M5-OB-Retest', retestOrderBlock:'Retest-Orderblock in Setup-Richtung',
@@ -38,8 +39,8 @@ export function watcherRangeEvidence(snapshot, entry, latestM1) {
     :entryPattern1ConditionResults(conditions,snapshot.direction,m1.evaluatedAt,m1.entryPattern);
    const rule = rules
     .find(rule => rule.required && !rule.passed && Object.hasOwn(conditions, rule.key)
-      && (conditions[rule.key] === null || (['orderBlockPlacement','orderBlockDepth'].includes(rule.key)
-        && ['unmet','unknown'].includes(conditions[rule.key]?.status)) || (['m1PivotBreak','m1Choch','m1Bos'].includes(rule.key)
+      && (conditions[rule.key] === null || (['sweepAge','orderBlockPlacement','orderBlockDepth'].includes(rule.key)
+        && ['blocked','unmet','unknown'].includes(conditions[rule.key]?.status)) || (['m1PivotBreak','m1Choch','m1Bos'].includes(rule.key)
        && Number.isFinite(conditions[rule.key]?.recognizedAt) && conditions[rule.key]?.type && conditions[rule.key]?.direction)));
 
    if (rule) missing = labels[rule.key] ?? null;

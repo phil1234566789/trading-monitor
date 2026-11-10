@@ -14,6 +14,7 @@ import { antiConfluenceStatus, checklistObservationRules, observationRuleDetails
 import { usesM5BosEntryPattern1, usesPivotBreakEntryPattern1, isEntryPattern1, usesOptionalM5BosEntryPattern1 } from './entryPattern1Conditions.js';
 import {entryPattern1M5ConfirmationLabel} from './entryPattern1M5Confirmation.js';
 import {isEntryPattern2,entryPattern2ConditionResults} from './entryPattern2Conditions.js';
+import {entryPattern1SweepAgeLabel} from './entryPattern1SweepAge.js';
 
 export const REVIEW_STATUS_LABELS = { passed: 'Erfüllt', unmet: 'Fehlt am gespeicherten Stand', unknown: 'Unbekannt / unbewertet' };
 export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' };
@@ -128,6 +129,10 @@ export function setupEntryConditions(snapshot,selectedPattern=null) {
   add('structure', pattern2?'M1-P2-Struktur auswertbar':'M1-P5-Struktur auswertbar', m1?.currentTrend ? 'passed' : 'unknown',
     m1?.currentTrend ? (m1.details ?? []).slice(0, m1.trends?.length ?? 0)
       : Array.isArray(m1?.details) ? m1.details : ['Keine M1-Auswertung gespeichert.']);
+  const sweepAge=(entry?.conditions ?? m1?.conditions)?.sweepAge;
+  if(pattern1&&sweepAge)add('sweepAge','H · Sweep-Level-Mindestalter · nur Pattern 1',
+    sweepAge.minimumAgeSeconds===null?'passed':known(sweepAge.recognizedAt)?sweepAge.status==='passed'?'passed':sweepAge.status==='blocked'?'unmet':'unknown':'unknown',
+    [entryPattern1SweepAgeLabel(sweepAge),Number.isFinite(sweepAge.ageSeconds)?`Alter beim Sweep ${(sweepAge.ageSeconds/3600).toFixed(2)} h`:'Alter nicht kausal belegt.'],sweepAge.recognizedAt);
   if (pattern1) for (const [key,label] of (usesM5BosEntryPattern1(version) ? [['m5Bos','M5-BOS in Setup-Richtung'],pivotPattern?['m1PivotBreak','M1-Pivotbruch ab Sweep']:['m1Choch','M1-CHoCH ab Sweep']] : [['m5Choch','M5-CHoCH in Setup-Richtung'],['m1Bos','M1-BOS in Setup-Richtung']])) {
     const signal=entry?.conditions?.[key] ?? m1?.conditions?.[key];
     const optional=key==='m5Bos' && usesOptionalM5BosEntryPattern1(version);

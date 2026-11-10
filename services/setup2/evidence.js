@@ -9,6 +9,7 @@ import {ENTRY_PATTERN_1_VERSION} from '../../src/entryPattern1Conditions.js';
 import {M1_STRUCTURE_PERIOD} from '../../src/m1StructureSettings.js';
 import {m5BosRuleVersionFor} from '../../src/entryPattern1M5Confirmation.js';
 import {ENTRY_PATTERN_2_OB_RULE} from '../../src/entryPattern2OrderBlock.js';
+import {ENTRY_PATTERN_1_SWEEP_AGE_POLICY} from '../../src/entryPattern1SweepAge.js';
 const iso=sec=>new Date(sec*1000).toISOString();
 
 // Originalwissen bleibt unverändert; später finalisierte Verläufe tragen einen eigenen as-of-Stand.
@@ -17,6 +18,7 @@ export function createLiveEvidence(config,{fromTime,toTime,startedAt,mode}) {
  const configuration={schemaVersion:1,setupVersion:SETUP2_VERSION,drRiskVersion:JOINT_LOSS_RISK_VERSION,entryPattern:ENTRY_PATTERN_1_VERSION,
   entryPatterns:[...CURRENT_ENTRY_PATTERNS],m1Periods:{...CURRENT_M1_PERIODS},includeSweepRetestSources:true,
   entryPattern2OrderBlockRule:{...ENTRY_PATTERN_2_OB_RULE},
+  entryPattern1SweepAgeRule:ENTRY_PATTERN_1_SWEEP_AGE_POLICY,
   relativeM5SweepRangeVersion:RELATIVE_M5_SWEEP_RANGE_VERSION,sourceFamilyVersion:SOURCE_FAMILY_VERSION,
   sourceIdeaBindingVersion:SOURCE_IDEA_BINDING_VERSION,exitPolicy:SOURCE_IDEA_EXIT_POLICY,m1Period:M1_STRUCTURE_PERIOD,...config,
   ...(m5BosRuleVersion?{m5BosRuleVersion}:{})},configurationId=hash(configuration),originals=new Map(),payloads=new Map(),origins=new Map();

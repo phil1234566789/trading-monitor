@@ -12,6 +12,7 @@ import { normalizeM1ChecklistPresentation } from './m1ChecklistPresentation.js';
 import { formatDatedTime } from './berlinTime.js';
 import { entryPattern1ConditionsReady, usesCountertrendM5BosEntryPattern1, ENTRY_PATTERN_1_VERSION, usesOptionalM5BosEntryPattern1, usesEntryPattern1Categories, entryPattern1StructureCategory, entryPattern1CategoryMetadata } from './entryPattern1Conditions.js';
 import { advanceEntryPattern1Follow } from './entryPattern1Progress.js';
+import {entryPattern1SweepAgeRule} from './entryPattern1SweepAge.js';
 
 // Explizite Startregel: der aus Setup 1.0 übernommene OB zählt auch bei späterem E.
 export function setup1OrderBlockIncluded(primary, direction, evaluatedAt) {
@@ -69,7 +70,9 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
   }
   const {m5Bos,m5Countertrend,orderBlocks}=m5Facts;
   const follow=entryPattern1RetestFvg(rows,orderBlocks,context.confirmedAt,context.direction,evaluatedAt,entryProgress);
-  const conditions={m5Bos,...(usesCountertrendM5BosEntryPattern1(version) ? {m5Countertrend} : {}),m1PivotBreak:pivotBreak ?? null,retest:follow.retest,fvg:follow.fvg};
+  const ageRule=version===ENTRY_PATTERN_1_VERSION?entryPattern1SweepAgeRule(context.instrument,context.primary,evaluatedAt):null;
+  const sweepAge=ageRule?.minimumAgeSeconds===null?null:ageRule;
+  const conditions={...(sweepAge?{sweepAge}:{}),m5Bos,...(usesCountertrendM5BosEntryPattern1(version) ? {m5Countertrend} : {}),m1PivotBreak:pivotBreak ?? null,retest:follow.retest,fvg:follow.fvg};
   const candidate=follow.status==='ready' && follow.fvg && follow.fvg.recognizedAt >= (context.validatedAt ?? context.confirmedAt)
     && entryPattern1ConditionsReady(conditions,context.direction,follow.fvg.recognizedAt,version)
     ? m1EntryFromFvg(context,follow.fvg,rows,evaluatedAt,follow.retest) : null;
@@ -84,9 +87,10 @@ export function evaluateCountertrendEntryPattern1({context,rows,evaluatedAt,tren
     ? `${label}: Konnte nicht ermittelt werden · M1-Historie ab OB-Bestätigung fehlt oder ist lückenhaft.` : `${label} fehlt`;
   return normalizeM1ChecklistPresentation({status:entry?'passed':'pending',entryPattern:version,instrument:context.instrument,evaluatedAt,
     trends,m5Bos,pivotBreak:conditions.m1PivotBreak,structureStart,internalSweeps,orderBlocks,conditions,retest:follow.retest,fvg:follow.fvg,entry,
-    details:[...trends.map(()=>''),...facts.map(([label,fact])=>fact ? `${label}: ${formatDatedTime(fact.recognizedAt)} Uhr${fact.orderBlock
+    details:[...trends.map(()=>''),...facts.map(([label,fact])=>Number.isFinite(fact?.recognizedAt) ? `${label}: ${formatDatedTime(fact.recognizedAt)} Uhr${fact.orderBlock
       ? ` · OB ${formatDatedTime(fact.orderBlock.startTime)} Uhr · ${fact.orderBlock.bottom}–${fact.orderBlock.top} · ${fact.orderBlock.inclusionRule==='setup1OrderBlockIncluded' ? 'Startregel: Setup-1.0-OB' : 'ab DR-Bestätigung entstanden'}` : ''}` : missingFact(label))],
     detailStatuses:[...trends.map(()=> 'context'),...facts.map(([label,fact])=>fact?'passed':label.startsWith('M5-BOS') && usesOptionalM5BosEntryPattern1(version)?'context':follow.status==='unknown'?'unknown':'unmet')],
-    entryBlockedReason:entry ? null : usesEntryPattern1Categories(version) && !m5Countertrend
+    entryBlockedReason:entry ? null : sweepAge?.status==='blocked'?'Nur Pattern 1 gesperrt: Sweep-Level jünger als 4 Stunden.'
+      :sweepAge?.status==='unknown'?'Nur Pattern 1 ungeklärt: Sweep-Level-Alter nicht kausal belegt.':usesEntryPattern1Categories(version) && !m5Countertrend
       ? 'Konnte nicht ermittelt werden · aktueller kausaler M5-Strukturbeleg fehlt.' : facts.filter(([label,fact])=>!fact && !(label.startsWith('M5-BOS') && usesOptionalM5BosEntryPattern1(version))).map(([label])=>missingFact(label)).join('; ') || 'Signale erst nach der FVG bekannt.'},context.direction);
 }

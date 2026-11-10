@@ -1,0 +1,796 @@
+{
+  "version": "pattern-local-sweep-age-proof-v1",
+  "productVersion": "ls-entry-patterns-local-sweep-age-v28",
+  "semantics": "GBPUSD/XAUUSD P1-v11 H-only: saved business age at sweep >=14400 seconds. Exactly four hours passes. Missing age is unknown. P2 and EURUSD have no new age gate. Other genuine F blockers still disqualify the whole DR.",
+  "versionDistinction": "Prior main-v27 had no four-hour F rule; archived v30 BOTH had it globally. Main-v28 adds it explicitly in H/P1; new immutable compatibility runtime moves only that exact archived F rule into H/P1. Historical files are unchanged.",
+  "nativeReferences": {
+    "method": "18 isolated native XAU P1 evaluator comparisons plus original36 outcomes; single DR121 native full common-gates path; no multi-month scan.",
+    "XAUUSD": {
+      "baselineRunId": "setup2-ececb114d190fcccead91cf4",
+      "entries": 18,
+      "outcomes": 36,
+      "results": [
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:short:1785831300:countertrend-entry-model-1-v11:1785840720",
+          "ageSeconds": 28200,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:long:1786435200:countertrend-entry-model-1-v11:1786452180",
+          "ageSeconds": 48300,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:long:1786435200:countertrend-entry-model-1-v11:1786453320",
+          "ageSeconds": 48300,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:long:1786603200:countertrend-entry-model-1-v11:1786605900",
+          "ageSeconds": 62700,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:long:1786603200:countertrend-entry-model-1-v11:1786606620",
+          "ageSeconds": 62700,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:short:1788225600:countertrend-entry-model-1-v11:1788241920",
+          "ageSeconds": 44100,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:short:1788225600:countertrend-entry-model-1-v11:1788245280",
+          "ageSeconds": 44100,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:short:1788225600:countertrend-entry-model-1-v11:1788246600",
+          "ageSeconds": 44100,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:XAUUSD:short:1789993200:countertrend-entry-model-1-v11:1789997520",
+          "ageSeconds": 29400,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:11138:countertrend-entry-model-1-v11:1790925480",
+          "ageSeconds": 90000,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:11138:countertrend-entry-model-1-v11:1790931720",
+          "ageSeconds": 90000,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:13008:countertrend-entry-model-1-v11:1791270840",
+          "ageSeconds": 475200,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:13008:countertrend-entry-model-1-v11:1791272040",
+          "ageSeconds": 475200,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:13008:countertrend-entry-model-1-v11:1791273300",
+          "ageSeconds": 475200,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:16113:countertrend-entry-model-1-v11:1791554160",
+          "ageSeconds": 205200,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:16113:countertrend-entry-model-1-v11:1791556800",
+          "ageSeconds": 205200,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:23307:countertrend-entry-model-1-v11:1792561620",
+          "ageSeconds": 54000,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        },
+        {
+          "id": "XAUUSD:XAUUSD:setup1:23307:countertrend-entry-model-1-v11:1792563300",
+          "ageSeconds": 54000,
+          "entryExactExceptNewProof": true,
+          "outcomesExact": true
+        }
+      ]
+    },
+    "DR121": {
+      "oldF": "disqualified",
+      "newF": "validated",
+      "C": "passed",
+      "D": "passed",
+      "sweepAgeSeconds": 7200,
+      "entryAt": 1793273100,
+      "entryPrice": 4034.12,
+      "orderBlockMaxFraction": 0.18909090909098517,
+      "trueFBlockerStillBlocks": true
+    }
+  },
+  "GBPUSD": {
+    "instrument": "GBPUSD",
+    "runId": "setup2-b5adbc05b5b27c26dcddeffa",
+    "runVersion": "countertrend-entry-model-1-v27",
+    "entryPattern": "countertrend-entry-model-1-v11",
+    "method": "Persisted original P1 conditions verified by byte-preserved original core plus new pattern-local H age gate; original 26 outcomes re-evaluated exactly on original native M1. No new M5 recognition or full pipeline replay.",
+    "originalCoreFile": "C:\\Users\\Philip\\.codex\\worktrees\\t71-lifecycle-13706\\trading-monitor\\.debug\\gbpusd-2026-v27-saved-a-age\\core.mjs",
+    "originalCoreByteSha256": "cdbe42385cffb62df4699f4a9727dd2c6be60ac2e6805f641837a38f92e48f5a",
+    "entryByteSha256": "3f6aebb825ccdda276df5226cffc6d2737cfed5258a1aba203e13f82aa3d1116",
+    "m1File": "C:\\Users\\Philip\\.codex\\worktrees\\t71-lifecycle-13706\\trading-monitor\\.debug\\gbpusd-2026-v27-saved-a-age\\cache\\GBPUSD-1m-1717354800-1793780100.json",
+    "m1ByteSha256": "0b7b0b5b56dbaf8b6247fad70c29ad54f66ea4d01574f2cffea61a50143104cb",
+    "baselineCount": 13,
+    "originalSignalConditionsPassed": 13,
+    "newHGatePassed": 13,
+    "minimumAgeSeconds": 14400,
+    "exactBoundaryEntries": [
+      "GBPUSD:GBPUSD:setup1:10203:countertrend-entry-model-1-v11:1790868720"
+    ],
+    "outcomesExact": 26,
+    "totals": {
+      "wide": {
+        "entries": 13,
+        "W": 9,
+        "L": 4,
+        "BE": 0,
+        "unknown": 0,
+        "netRClosed": 13.328273809523811
+      },
+      "narrow": {
+        "entries": 13,
+        "W": 8,
+        "L": 5,
+        "BE": 0,
+        "unknown": 0,
+        "netRClosed": 15.81524651201831
+      }
+    },
+    "rows": [
+      {
+        "id": "GBPUSD:GBPUSD:setup1:1861:countertrend-entry-model-1-v11:1768810080",
+        "sourceKey": "GBPUSD:setup1:1861",
+        "direction": "short",
+        "entryAt": 1768810080,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1768808400,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 23100,
+          "pivotTime": 1768783500,
+          "touchedTime": 1768806600,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.0833333333333333
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.1111111111111112
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:1879:countertrend-entry-model-1-v11:1769067900",
+        "sourceKey": "GBPUSD:setup1:1879",
+        "direction": "short",
+        "entryAt": 1769067900,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1769061600,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 38700,
+          "pivotTime": 1769016300,
+          "touchedTime": 1769055000,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 3.580357142857143
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 5.276315789473684
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:1936:countertrend-entry-model-1-v11:1769779680",
+        "sourceKey": "GBPUSD:setup1:1936",
+        "direction": "long",
+        "entryAt": 1769779680,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1769768400,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 27000,
+          "pivotTime": 1769739600,
+          "touchedTime": 1769766600,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.0833333333333333
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.0925925925925926
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:1997:countertrend-entry-model-1-v11:1770883080",
+        "sourceKey": "GBPUSD:setup1:1997",
+        "direction": "long",
+        "entryAt": 1770883080,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1770881100,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 61200,
+          "pivotTime": 1770816600,
+          "touchedTime": 1770877800,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t1Be",
+            "netRMultiple": 0.9416666666666667
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "t1Be",
+            "netRMultiple": 1.153061224489796
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:2335:countertrend-entry-model-1-v11:1776668100",
+        "sourceKey": "GBPUSD:setup1:2335",
+        "direction": "long",
+        "entryAt": 1776668100,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1776667200,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 15900,
+          "pivotTime": 1776647700,
+          "touchedTime": 1776663600,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t1Be",
+            "netRMultiple": 0.8666666666666667
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "t1Be",
+            "netRMultiple": 0.7761194029850746
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:2714:countertrend-entry-model-1-v11:1782803340",
+        "sourceKey": "GBPUSD:setup1:2714",
+        "direction": "long",
+        "entryAt": 1782803340,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1782801000,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 65700,
+          "pivotTime": 1782733500,
+          "touchedTime": 1782799200,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.0833333333333333
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.0675675675675675
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:2714:countertrend-entry-model-1-v11:1782806820",
+        "sourceKey": "GBPUSD:setup1:2714",
+        "direction": "long",
+        "entryAt": 1782806820,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1782801000,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 65700,
+          "pivotTime": 1782733500,
+          "touchedTime": 1782799200,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.0833333333333333
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.108695652173913
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:3125:countertrend-entry-model-1-v11:1789544040",
+        "sourceKey": "GBPUSD:setup1:3125",
+        "direction": "short",
+        "entryAt": 1789544040,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1789539000,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 61200,
+          "pivotTime": 1789477200,
+          "touchedTime": 1789538400,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 3.53125
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 6.78
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:3125:countertrend-entry-model-1-v11:1789547100",
+        "sourceKey": "GBPUSD:setup1:3125",
+        "direction": "short",
+        "entryAt": 1789547100,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1789539000,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 61200,
+          "pivotTime": 1789477200,
+          "touchedTime": 1789538400,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 1.0416666666666667
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 1.6891891891891893
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:5491:countertrend-entry-model-1-v11:1790238960",
+        "sourceKey": "GBPUSD:setup1:5491",
+        "direction": "short",
+        "entryAt": 1790238960,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1790238062.613,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 49800,
+          "pivotTime": 1790186400,
+          "touchedTime": 1790236200,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 3.35
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 4.674418604651163
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:5491:countertrend-entry-model-1-v11:1790240700",
+        "sourceKey": "GBPUSD:setup1:5491",
+        "direction": "short",
+        "entryAt": 1790240700,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1790238062.613,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 49800,
+          "pivotTime": 1790186400,
+          "touchedTime": 1790236200,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 2.55
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "slBeforeT1",
+            "netRMultiple": -1.131578947368421
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:8299:countertrend-entry-model-1-v11:1790688600",
+        "sourceKey": "GBPUSD:setup1:8299",
+        "direction": "short",
+        "entryAt": 1790688600,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1790685063.658,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 20100,
+          "pivotTime": 1790662200,
+          "touchedTime": 1790682300,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t1Be",
+            "netRMultiple": 0.4583333333333333
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "t1Be",
+            "netRMultiple": 0.4583333333333333
+          }
+        ]
+      },
+      {
+        "id": "GBPUSD:GBPUSD:setup1:10203:countertrend-entry-model-1-v11:1790868720",
+        "sourceKey": "GBPUSD:setup1:10203",
+        "direction": "short",
+        "entryAt": 1790868720,
+        "originalConditionsValid": true,
+        "newHGate": {
+          "version": "p1-sweep-level-business-age-4h-v1",
+          "status": "passed",
+          "label": "Sweep-Level mindestens 4 Stunden alt · nur Pattern 1",
+          "recognizedAt": 1790856662.571,
+          "minimumAgeSeconds": 14400,
+          "ageSeconds": 14400,
+          "pivotTime": 1790841300,
+          "touchedTime": 1790855700,
+          "source": "checkpointA.sweep.ageSeconds"
+        },
+        "executionUnchanged": true,
+        "outcomesExact": [
+          {
+            "variant": "wide",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 1.3416666666666666
+          },
+          {
+            "variant": "narrow",
+            "status": "closed",
+            "outcome": "t2",
+            "netRMultiple": 0.5193548387096775
+          }
+        ]
+      }
+    ],
+    "limitations": [
+      "Does not claim current main M5/P1 signal recognition parity; original GBP v27 signal engine is intentionally preserved.",
+      "The original GBP baseline has no declared Pattern2 source path; new P2 findings require a separately identified bounded experiment."
+    ]
+  },
+  "exploratorySixWindows": {
+    "method": "Exactly six preselected short windows; frozen causal C/D/E/F retained except exact sweep-age rule removed from F; P2-only chronological M1 prefixes; original per-instrument lifecycle/risk and execution contracts; no source discovery or multi-month run.",
+    "runtime": {
+      "file": "C:\\Users\\Philip\\Documents\\git\\trading-monitor\\.debug\\statistics-entry-patterns\\.debug\\pattern-local-sweep-age-runtime-v3\\core.mjs",
+      "sha256": "4c2d1deb7d307577d74df2ddb9232e931f73b8add27ed664ca669f4ebcfb1930",
+      "modernSha256": "a61f7e8f234677bc2047e5571df4363f62a05833d74a56204becce5f9c094260"
+    },
+    "selectedSixWindowsSha256": "79a2ad4606139ced0ef025575125dcea2481e64e7385fbb0d30afccc3c65c988",
+    "totals": {
+      "XAUUSD": {
+        "windows": 3,
+        "entries": 0,
+        "checkedSourceMinutes": 60,
+        "wide": {
+          "entries": 0,
+          "W": 0,
+          "L": 0,
+          "BE": 0,
+          "open": 0,
+          "unknown": 0,
+          "notExecutable": 0,
+          "netRClosed": 0
+        },
+        "narrow": {
+          "entries": 0,
+          "W": 0,
+          "L": 0,
+          "BE": 0,
+          "open": 0,
+          "unknown": 0,
+          "notExecutable": 0,
+          "netRClosed": 0
+        },
+        "originalRunId": "setup2-6dd4a875d67d73c94d77ba3d",
+        "declaredOriginalPatterns": "BOTH"
+      },
+      "GBPUSD": {
+        "windows": 3,
+        "entries": 0,
+        "checkedSourceMinutes": 55,
+        "wide": {
+          "entries": 0,
+          "W": 0,
+          "L": 0,
+          "BE": 0,
+          "open": 0,
+          "unknown": 0,
+          "notExecutable": 0,
+          "netRClosed": 0
+        },
+        "narrow": {
+          "entries": 0,
+          "W": 0,
+          "L": 0,
+          "BE": 0,
+          "open": 0,
+          "unknown": 0,
+          "notExecutable": 0,
+          "netRClosed": 0
+        },
+        "originalRunId": "setup2-b5adbc05b5b27c26dcddeffa",
+        "declaredOriginalPatterns": "P1 only; bounded prospective P2 probe on existing LS/OB facts"
+      }
+    },
+    "inputs": {
+      "XAUUSD": {
+        "m1File": "C:\\Users\\Philip\\Documents\\git\\trading-monitor\\.debug\\xau-p2-production\\.debug\\xau-both-aug-nov-v2\\1m.json",
+        "m1Sha256": "f8e4da196ca0a3cda8878868997a4f0e4b86e04f9068f73a4935e3bec437e302",
+        "m5File": "C:\\Users\\Philip\\Documents\\git\\trading-monitor\\.debug\\xau-p2-production\\.debug\\xau-both-aug-nov-v2\\5m.json",
+        "m5Sha256": "8186b683223119265435e5532ea5ddac671be1bce099d1c7006057d7663e1571"
+      },
+      "GBPUSD": {
+        "m1File": "C:\\Users\\Philip\\.codex\\worktrees\\t71-lifecycle-13706\\trading-monitor\\.debug\\gbpusd-2026-v27-saved-a-age\\cache\\GBPUSD-1m-1717354800-1793780100.json",
+        "m1Sha256": "0b7b0b5b56dbaf8b6247fad70c29ad54f66ea4d01574f2cffea61a50143104cb",
+        "m5File": "C:\\Users\\Philip\\.codex\\worktrees\\t71-lifecycle-13706\\trading-monitor\\.debug\\gbpusd-2026-v27-saved-a-age\\cache\\GBPUSD-5m-1717354800-1793780100.json",
+        "m5Sha256": "cd60af50b91b3212851f621c4d98065389209334221b31d9f5e2d64448ba31ca"
+      }
+    },
+    "limits": [
+      "Selection was biased toward short complete windows, OB placement and shallow first touch; not representative and not an overall win rate.",
+      "Only the six authorized source windows were checked; no newly generated GBP R2 sources, aliases merged or other sources scanned.",
+      "Outcomes are evaluated only through each bounded window, without extending it; open or ambiguous outcomes remain separate.",
+      "Source-local idea/lifecycle handling does not simulate a joint multi-source portfolio."
+    ],
+    "resultsFile": "C:\\Users\\Philip\\Documents\\git\\trading-monitor\\.debug\\pattern-local-gates\\cohorts\\six-window-results.json"
+  },
+  "finalClosure": {
+    "coreHash": "aec07d12028b6b7603e37422f3b86a6f98015a3dcd33affd59f3db62945de707",
+    "modernHash": "72897e685c5eaada66a58cd707405c3c7435981c2c71eb9295849a8e597fbe6b",
+    "originalNativeRuntime": {
+      "version": "pattern-local-sweep-age-runtime-v1",
+      "basedOnRunId": "setup2-6dd4a875d67d73c94d77ba3d",
+      "archivedRuntimeHashes": {
+        "core.mjs": "31464c5250895bb378b24fb6dea3b173f7ba57394823b2db0dc30e02c3ad884a",
+        "baseline.mjs": "c2e3f55a61a259d8338674b0329be4e3dd789a521397f5dc5cf6d5ad17e68bd1"
+      },
+      "coreHash": "aec07d12028b6b7603e37422f3b86a6f98015a3dcd33affd59f3db62945de707",
+      "modernHash": "3983dabc07388d0426bf3f626b661211ad987820586a16641ae688686ef14173",
+      "changes": [
+        {
+          "name": "evaluateCountertrendEntryPattern1",
+          "beforeHash": "d06583d0c6b530653ff612f4ca2786d4e9a6c10911aac434e111a9842d1385c9",
+          "afterHash": "9d855a64c4fbb818a8d2af571f104bbc24e5e08d836e113aff61adfee56c3c28"
+        },
+        {
+          "name": "evaluateEntryPattern2",
+          "beforeHash": "361ec65aeadbee143a5f04b7d0a44463d704ef131f4e196ff1b436879240eb3d",
+          "afterHash": "79d2976e0069c427d283e8fae65b61d6c2b7c0d8ad268b6567232651195da5e0"
+        },
+        {
+          "name": "detectSweepRetestSources",
+          "beforeHash": "31a71a8d5ce0e3e88758ed1eb76fa76e55ab19c64f4085a76db2b5f2a4dc0c28",
+          "afterHash": "87c838e5f2135ee8b3be3087ffd37540e250aceb95cbccf8bcab27bd94a96189"
+        },
+        {
+          "name": "entryPattern1ConditionResults",
+          "beforeHash": "2af3d0beeb5513e5ef62fa960f2271056126d5a4d08383fd9fa98c478195a42a",
+          "afterHash": "8ff5dfb34820fae8caf77f2b9895b4635051372717db6c836cabe9e4e2b2e964"
+        },
+        {
+          "name": "entryPattern1ConditionsReady",
+          "beforeHash": "e83450f273f53df611dc67c281fe6ec6f6c476a56c5c15d2ea176d114b7e7862",
+          "afterHash": "e2eecabf684305f5b0468d44bb15704a24bd9072685fb4c11ae5c1689e840387"
+        },
+        {
+          "name": "entryPattern1StructureCategory",
+          "beforeHash": "34c92f1cfc35baab54cb2af9d2bf755674264a207d4cb86c95e03defaeb8c6d7",
+          "afterHash": "0908bc696229dea1f37e5ccf3d23fefb1ee8d2cc199657b82c927db773fb7880"
+        },
+        {
+          "name": "evaluateChecklistConfluences",
+          "beforeHash": "879398824d4875be71b2eade93e90a7c7683fbc3a76a3fe3d47be3e7ac850f1d",
+          "afterHash": "c08ad399298b4ea85902b65e831bdf5ff665b3eb51f187175a28d05effbafdde"
+        },
+        {
+          "name": "evaluateCountertrendChecklist",
+          "beforeHash": "d961c06d8751ac20807d7ad4e068f2fb27a99e2fec12557f6ba23eddbf43f1b1",
+          "afterHash": "8ebb4ddb67bff37f7ae551a4c939428df5e2a6e046414eb5efbaa6a3a752de63"
+        },
+        {
+          "name": "buildTradeSetup2Configuration",
+          "beforeHash": "c36acd7f17e7e719f12e0286bcfc2c1d2b475514c4d86f54aefe68398e82a246",
+          "afterHash": "a138178fc6a20430214cdfd42183d031d89febd08b834ebe93351c7b546adaf7"
+        }
+      ],
+      "scope": "Only the exact age rule leaves global F; original v30 P1 detection, C/D/E, other F rules, execution contract, outcomes and lifecycle remain archived. P2 uses released 50% OB rules.",
+      "usage": "New run identity and manifest required; never resume or overwrite the historical run."
+    },
+    "criticalFunctionBodiesUnchanged": [
+      "entryPattern1SweepAgePassed",
+      "evaluateEntryPattern2",
+      "entryPattern2OrderBlockPlacement",
+      "evaluateEntryPattern2OrderBlockDepth"
+    ],
+    "finalXauAgeProofsRechecked": 18,
+    "note": "Between native replay and final closure only H proof metadata/labels and legacy-version non-application changed; archived P1 engine and P2/50% predicates remain exact."
+  },
+  "tests": {
+    "passed": 2704,
+    "preexistingFailures": 13,
+    "preexistingFailureFiles": 5,
+    "failureNamesMatchCleanMain21695f30": true,
+    "build": "SPA and Node watcher passed",
+    "reviewFindings": 0,
+    "serializerRoundtrips": 96,
+    "packing": {
+      "snapshots": 301,
+      "payloads": 735,
+      "captureMs": 11765.04580000001,
+      "maxCaptureMs": 71.02470000000176,
+      "completeMs": 37.086599999998725,
+      "retainedBytes": 4976300,
+      "bytes": 4978003,
+      "serializationMs": 39.93629999999757
+    }
+  },
+  "limits": [
+    "GBP checks persisted original P1 signals plus new H predicate and reruns26 original outcomes; it is not a new M5 signal scan.",
+    "Six exploratory windows were selected for short duration, coverage and preliminary geometry; zero new entries is not evidence of whole-year effect or a representative win rate.",
+    "No historical run mutated, no annual scan, no source merging or automatic deduplication."
+  ],
+  "callsites": {
+    "source": "countertrendChecklist: original sweepAgeSec business-time fact, no global age prefilter",
+    "eligibility": "countertrendEntryPattern1 + entryPattern1Conditions + structure category; pattern2 unaffected",
+    "globalDR": "countertrendDealingRange still evaluates genuine F blockers; immutable adapter removes only exact countertrendSweepLevelAge ID",
+    "persistence": "conditions.sweepAge, generic recursive live-evidence references, snapshot/checkpoint/run versions",
+    "presentation": "H row in review/features, watcher H blocker labels, original shared DR/lifecycle/risk kept"
+  }
+}

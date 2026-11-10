@@ -58,7 +58,7 @@ describe('Countertrend entry pattern 1 conditions', () => {
 describe('entry pattern 1 detection', () => {
   const primary={id:'dr',reactionRecognizedAt:at('09:30'),reactionOB:{dir:-1,startTime:at('09:20'),top:1.36,bottom:1.359},
     checks:{m5Trend:{evaluatedAt:at('09:30'),structureState:{trend:'uptrend',currRange:{high:{pivotTime:at('09:20'),price:1.36},low:{pivotTime:at('08:00'),price:1.34}},nestedTrend:null}}},
-    sweep:{level:{touchedTime:at('09:20')}},invalidation:1.36,targetSelection:{status:'passed',selectedAt:at('09:30'),target1:{price:1.35335},target2:{price:1.353}}};
+    sweep:{ageSeconds:86400,level:{touchedTime:at('09:20')}},invalidation:1.36,targetSelection:{status:'passed',selectedAt:at('09:30'),target1:{price:1.35335},target2:{price:1.353}}};
   const context={entryPattern:ENTRY_PATTERN_1_VERSION,instrument:'GBPUSD',direction:'short',setupKey:'dr',primary,
     confirmedAt:at('09:30'),structureStart:at('08:00'),settings:{},
     anchor:{pivotTime:at('08:45'),price:1.35554,recognizedAt:at('09:30')},

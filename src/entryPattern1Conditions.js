@@ -1,5 +1,6 @@
 import {entryPositionSizeFactor} from './entryCategory.js';
 import { entryPattern1M5BosMatches, entryPattern1CountertrendKnown } from './entryPattern1M5Bos.js';
+import {entryPattern1SweepAgePassed} from './entryPattern1SweepAge.js';
 
 export const ENTRY_PATTERN_1_VERSION = 'countertrend-entry-model-1-v11';
 export const OPTIONAL_M5_BOS_ENTRY_PATTERN_1_VERSION = 'countertrend-entry-model-1-v10';
@@ -23,6 +24,7 @@ export function entryPattern1ConditionResults(conditions, direction, entryAt, ve
   const same=fact=>known(fact)&&fact.direction===direction;
   const optional=usesOptionalM5BosEntryPattern1(version);
   return [
+    ...(Object.hasOwn(conditions ?? {},'sweepAge')?[{key:'sweepAge',required:true,passed:entryPattern1SweepAgePassed(conditions,entryAt)}]:[]),
     {key:'direction',required:true,passed:['short','long'].includes(direction)&&Number.isFinite(entryAt)},
     {key:'m5Countertrend',required:optional||usesCountertrendM5BosEntryPattern1(version),passed:entryPattern1CountertrendKnown(conditions?.m5Countertrend,direction,entryAt)},
     {key:m5Key,required:!optional,passed:same(m5)&&m5.type===(legacy?'CHoCH':'BOS')&&(!usesCountertrendM5BosEntryPattern1(version)||entryPattern1M5BosMatches(m5,conditions?.m5Countertrend,direction,entryAt))},
@@ -38,6 +40,7 @@ export const usesOptionalM5BosEntryPattern1 = version => version === OPTIONAL_M5
 export const usesEntryPattern1Categories = version => version === ENTRY_PATTERN_1_VERSION || usesOptionalM5BosEntryPattern1(version);
 
 export function entryPattern1StructureCategory(conditions, direction, at, version = ENTRY_PATTERN_1_VERSION) {
+  if(!entryPattern1SweepAgePassed(conditions,at))return null;
   const pivot=conditions?.m1PivotBreak;
   if (pivot?.type !== 'pivot-break' || pivot.direction !== direction
     || !Number.isFinite(pivot.recognizedAt) || pivot.recognizedAt > at) return null;

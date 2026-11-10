@@ -1,15 +1,17 @@
 // Inhaltsadressierte Teile sparen identische Strukturpools, ohne Originalbelege zu kürzen.
+const MIN_REFERENCE_BYTES=96;
 export function packEvidence(value,payloads,hash,key='',parentKey='') {
  if(value==null || typeof value!=='object')return value;
  if(key==='stops' && parentKey==='entry')return JSON.parse(JSON.stringify(value));
  const packed=Array.isArray(value)?value.map(v=>packEvidence(v,payloads,hash)):
   Object.fromEntries(Object.entries(value).map(([k,v])=>[k,packEvidence(v,payloads,hash,k,key)]));
- const large=JSON.stringify(packed).length>128;
+ const large=JSON.stringify(packed).length>MIN_REFERENCE_BYTES;
  if(Array.isArray(value) && value.length>128 && large){
   const ids=[];for(let i=0;i<packed.length;i+=128){const payload=packed.slice(i,i+128),id=hash(payload);payloads.set(id,{id,payload});ids.push(id);}
   return {$liveEvidenceChunks:ids};
  }
- if((Array.isArray(value) || !['','checklist','checks','setup','primary','entry','m1Check','dealingRange','coverage','priceObservation','rangeCourse','lifecycle'].includes(key) && typeof value.status!=='string' || key==='checks' && parentKey==='primary') && large) {
+ // Das beim Sweep eingefrorene Alter bleibt über alle M1-Stände identisch; den H-Beleg verlustfrei einmal speichern.
+ if((Array.isArray(value) || key==='sweepAge' || !['','checklist','checks','setup','primary','entry','m1Check','dealingRange','coverage','priceObservation','rangeCourse','lifecycle'].includes(key) && typeof value.status!=='string' || key==='checks' && parentKey==='primary') && large) {
   const id=hash(packed);payloads.set(id,{id,payload:packed});return {$liveEvidenceRef:id};
  }
  return packed;
