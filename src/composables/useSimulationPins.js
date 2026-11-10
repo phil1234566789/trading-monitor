@@ -3,13 +3,15 @@ import { fetchSimulationPins,addSimulationPin,removePinEntry,removeSimulationPin
 import { simulationPinKey,simulationPinSnapshot } from '../simulationPinSnapshot.js';
 import {livePinSource,pinBelongsToSource} from '../simulationPinSource.js';
 import { matchSimulationPins } from '../simulationPinMatching.js';
+import {simulationFeatureDigest,storedSimulationFeatureIdentity} from '../simulationFeatureIdentity.js';
 
 export function useSimulationPins(filters,run,results,{repository,datasets,runs}={}) {
   const pins=ref([]),error=ref(''),loading=ref(false),saving=ref(false),target=ref(null);
 
   const origins=ref(new Map());
+  const signatures=ref(new Map());
   const associations=computed(()=>new Map([filters.value.run,filters.value.compare].filter(Boolean).map(id=>
-    [id,matchSimulationPins(pins.value,datasets?.value.get(id)?.groups??[],id,origins.value,runs?.value??[])])));
+    [id,matchSimulationPins(pins.value,datasets?.value.get(id)?.groups??[],id,origins.value,runs?.value??[],signatures.value)])));
   const listedPins=computed(()=>associations.value.get(filters.value.run)?.matched??[]);
   const unmatchedPins=computed(()=>associations.value.get(filters.value.run)?.unmatched??[]);
   const associatedPins=computed(()=>[...associations.value.values()].flatMap(a=>a.matched));
@@ -22,6 +24,8 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
     try {
       const rows=await fetchSimulationPins();
       if(ticket!==revision)return;
+      const digests=new Map(await Promise.all(rows.filter(pin=>pin.kind==='simulation_checkpoint').map(async pin=>[pin.id,
+        await simulationFeatureDigest(storedSimulationFeatureIdentity(pin.simulationContext?.checkpoint?.details)??'null')])));
       const resolved=new Map();
       if(repository) {
         // Ein Herkunftssnapshot je Pin genügt; alte Läufe müssen nicht vollständig geladen werden.
@@ -32,13 +36,14 @@ export function useSimulationPins(filters,run,results,{repository,datasets,runs}
           if(!id)return;
           const live=livePinSource(pin);
           const key=JSON.stringify([pin.simulationRunId,live?.eventId,live?.recordId,entry,id]);
-          if(!snapshotCache.has(key))snapshotCache.set(key,live?(live.recordId?repository.getLiveSnapshotPin(live.recordId):repository.getLivePinSnapshot(live.eventId)):(entry?repository.getSnapshot:repository.getSetupSnapshot)(pin.simulationRunId,id));
+          if(!snapshotCache.has(key))snapshotCache.set(key,live?(live.recordId?repository.getLiveSnapshotPin(live.recordId):repository.getLivePinSnapshot(live.eventId)):
+            repository.getPinSnapshot?repository.getPinSnapshot(pin.simulationRunId,id,entry):(entry?repository.getSnapshot:repository.getSetupSnapshot)(pin.simulationRunId,id));
           try{resolved.set(pin.id,await snapshotCache.get(key));}
           catch{snapshotCache.delete(key);resolved.set(pin.id,{pinReadError:true});}
         }));
         }
       }
-      if(ticket===revision){pins.value=rows;origins.value=resolved;}
+      if(ticket===revision){pins.value=rows;origins.value=resolved;signatures.value=digests;}
     } catch(cause){if(ticket===revision)error.value=cause.message || 'Pins konnten nicht geladen werden.';}
     finally{if(ticket===revision)loading.value=false;}
   }

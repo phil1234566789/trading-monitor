@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+import {encodeStatisticsIndex,decodeStatisticsIndex} from '../src/simulationStatisticsIndex.js';
+const {PGlite}=await import(pathToFileURL(process.env.SIMULATION_PGLITE_MODULE).href);
+const db=new PGlite();
+try{
+ await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
+ for(const name of ['20260930110000_trade_setup_simulations.sql','20261110093000_simulation_statistics_projection.sql','20261110095500_simulation_statistics_index.sql','20261110100500_simulation_statistics_page.sql'])
+  await db.exec(await readFile(new URL('../supabase/migrations/'+name,import.meta.url),'utf8'));
+ const run={id:'r',version:'test',evaluatedAt:100,from:1,to:100,status:'complete',configuration:{}};
+ await db.query('insert into trade_setup_simulation_runs values($1,$2)',['r',run]);
+ const revision=()=>db.query("select revision,generation from simulation_statistics_sources where run_id='r'").then(r=>r.rows[0]);
+ const original=(await db.query('select xmin::text,run from trade_setup_simulation_runs')).rows;
+ const source=await revision(),generation='10000000-0000-0000-0000-000000000001';
+ const rows=Array.from({length:31},(_,i)=>({key:`k${String(i).padStart(2,'0')}`,recognizedAt:i,summary:{key:`k${String(i).padStart(2,'0')}`,snapshot:{runId:'r'}},results:[],orders:[],detail:{key:`k${String(i).padStart(2,'0')}`,largeTree:['original']}}));
+ await db.exec('set role anon');
+ await assert.rejects(()=>db.query('insert into simulation_statistics_sources(run_id) values($1)',['illegal']),/permission denied/);
+ await assert.rejects(()=>db.query('select stage_simulation_statistics($1,$2,$3,$4)',['r',generation,source.revision+1,rows.slice(0,25)]),/source changed/);
+ for(let i=0;i<rows.length;i+=25)await db.query('select stage_simulation_statistics($1,$2,$3,$4)',['r',generation,source.revision,rows.slice(i,i+25)]);
+ assert.equal((await db.query('select * from simulation_statistics_overview')).rows.length,0,'Staging must not be visible');
+ await assert.rejects(()=>db.query('select publish_simulation_statistics($1,$2,$3,$4,$5)',['r',generation,source.revision,30,1]),/Incomplete/);
+ await db.query('select publish_simulation_statistics($1,$2,$3,$4,$5)',['r',generation,source.revision,31,1]);
+ const index=await encodeStatisticsIndex(rows);
+ await db.query('select save_simulation_statistics_index($1,$2,$3,$4)',['r',generation,source.revision,index]);
+ const stored=(await db.query("select index_data from simulation_statistics_sources where run_id='r'")).rows[0].index_data;
+ assert.deepEqual(await decodeStatisticsIndex(stored),rows.map(({key,summary,results,orders})=>({key,summary,results,orders})));
+ await assert.rejects(()=>db.query('select stage_simulation_statistics($1,$2,$3,$4)',['r',generation,source.revision,[rows[0]]]),/immutable/);
+ const page=(await db.query('select key,summary from simulation_statistics_overview where run_id=$1 and generation=$2 order by key limit 25',['r',generation])).rows;
+ assert.equal(page.length,25);assert(!JSON.stringify(page).includes('largeTree'));
+ assert.deepEqual((await db.query('select * from read_simulation_statistics_page($1,$2,$3)',['r',generation,page.map(row=>row.key)])).rows,page);
+ await assert.rejects(()=>db.query('select * from read_simulation_statistics_page($1,$2,$3)',['r',generation,rows.map(row=>row.key)]),/at most 25/);
+ const second=(await db.query('select key from simulation_statistics_overview where run_id=$1 and generation=$2 and key>$3 order by key limit 25',['r',generation,page.at(-1).key])).rows;
+ assert.equal(second.length,6);assert.equal(new Set([...page,...second].map(r=>r.key)).size,31);
+ assert.deepEqual((await db.query('select detail from simulation_statistics_ranges where run_id=$1 and generation=$2 and key=$3',['r',generation,'k00'])).rows[0].detail,rows[0].detail);
+ await assert.rejects(()=>db.query('delete from simulation_statistics_ranges'),/permission denied/);
+ await db.exec('reset role');
+ assert.deepEqual((await db.query('select xmin::text,run from trade_setup_simulation_runs')).rows,original);
+ await db.query("update trade_setup_simulation_runs set run=run||'{\"evaluatedAt\":101}'");
+ assert.equal((await revision()).generation,null);
+ assert.equal((await db.query("select index_data from simulation_statistics_sources where run_id='r'")).rows[0].index_data,null);
+ await db.exec('set role anon');assert.equal((await db.query('select * from simulation_statistics_overview')).rows.length,0);
+ await assert.rejects(()=>db.query('select publish_simulation_statistics($1,$2,$3,$4,$5)',['r',generation,source.revision,31,1]),/source changed/);
+ await db.exec('reset role');
+ console.log(JSON.stringify({projectionRows:31,firstPage:25,secondPage:6,sourceUnchanged:true,incompleteHidden:true,staleGenerationRejected:true,readOnlyRls:true}));
+}finally{await db.close();}

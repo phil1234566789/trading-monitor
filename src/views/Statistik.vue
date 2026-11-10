@@ -15,6 +15,8 @@ import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinList from '../components/SimulationPinList.vue';
 import { useSimulationPins } from '../composables/useSimulationPins.js';
 import {isLiveWatcherMonth,liveMonthViewId} from '../liveWatcherMonth.js';
+import {useSimulationRangePage} from '../composables/useSimulationRangePage.js';
+import {useSimulationRangeDetails} from '../composables/useSimulationRangeDetails.js';
 import { cssColor } from '../chartColors.js';
 const route=useRoute(),router=useRouter();
 const readFilters=query=>{const value=comparisonFilters(query),run=liveMonthViewId(value.run),compare=liveMonthViewId(value.compare);return {...value,run,compare:isLiveWatcherMonth(run)&&compare===run?'':compare};};
@@ -24,6 +26,22 @@ const repository=createSetup2Repository(supabase);
 const loadCheckpointSnapshot=createCheckpointSnapshotLoader(repository);
 const liveSelected=computed(()=>isLiveWatcherMonth(filters.value.run));
 const {runs,selectedRun,comparisonRun,current,previous,datasets,loading,error,runListError,dateError,refresh}=useSimulationComparison(repository,filters,pins);
+const currentDataset=computed(()=>datasets.value.get(filters.value.run));
+const selectedRunId=computed(()=>filters.value.run);
+const rangePage=useSimulationRangePage(repository,selectedRunId,currentDataset,computed(()=>current.value.groups));
+const rangeDetails=useSimulationRangeDetails(repository,selectedRunId,currentDataset);
+function detailState(group){
+ const state=rangeDetails.states.get(group.key);
+ if(!state?.group)return state;
+ const ids=new Set(group.entries.map(entry=>entry.id));
+ return {...state,group:{...state.group,entries:state.group.entries.filter(entry=>ids.has(entry.id))}};
+}
+async function openPin(target,event){
+ await rangeDetails.open(target.group);
+ const state=rangeDetails.states.get(target.group.key);
+ if(state?.group)pinState.open({...target,group:state.group},event);
+ else pinState.error.value=state?.error||'DR-Beleg konnte nicht geladen werden.';
+}
 const pinState=useSimulationPins(filters,selectedRun,computed(()=>datasets.value.get(filters.value.run)?.results ?? []),{repository,datasets,runs});
 const pinListOpen=ref(false);
 const listedPins=pinState.listedPins;
@@ -33,7 +51,7 @@ watch([pinState.pins,pinState.associatedPins],([raw,associated])=>{pins.value=[.
 function refreshAll(){refresh();pinState.refresh();}
 watch(()=>route.query,query=>{if(isLiveWatcherMonth(query.run)&&query.run.endsWith(':catchup'))legacySourceHint.value=liveMonthViewId(query.run);const next=readFilters(query);if(JSON.stringify(next)!==JSON.stringify(filters.value))filters.value=next;});
 watch(filters,value=>{const query=Object.fromEntries(Object.entries(value).filter(([,v])=>v));if(JSON.stringify(comparisonFilters(route.query))!==JSON.stringify(value))router.replace({path:'/statistik',query});},{deep:true,immediate:true});
-let liveTimer;onMounted(()=>{liveTimer=setInterval(()=>{if(liveSelected.value && !document.hidden && !loading.value)refresh();},30000);});onUnmounted(()=>clearInterval(liveTimer));
+let liveTimer;onMounted(()=>{liveTimer=setInterval(()=>{if(liveSelected.value && !document.hidden && !loading.value)refresh(false);},30000);});onUnmounted(()=>clearInterval(liveTimer));
 const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>d.groups.flatMap(g=>g.features)).map(f=>[f.key,f])).values()]);
 </script>
 <template>
@@ -54,7 +72,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
       <p v-if="pinState.error.value" role="alert" class="error">{{ pinState.error.value }} <button @click="pinState.refresh">Pins erneut laden</button></p>
       <p v-else-if="pinState.loading.value" role="status" class="note">Pins werden geladen…</p>
       <p v-if="error || dateError" role="alert" class="error">{{ error || dateError }} <button v-if="error" @click="refresh">Erneut versuchen</button></p>
-      <p v-else-if="loading" role="status" class="empty">Gespeicherte Läufe und Review-Belege werden geladen…</p>
+      <p v-else-if="loading" role="status" class="empty">Statistik wird geladen…</p>
       <p v-else-if="!runs.length" role="status" class="empty">Noch keine gespeicherten Simulationsläufe.</p>
       <p v-else-if="!filters.run" role="status" class="empty">Bitte einen gespeicherten Lauf wählen.</p>
       <p v-else-if="!selectedRun" role="alert" class="empty">Kein abgeschlossener Lauf verfügbar oder der verlinkte Lauf fehlt. Bitte einen Lauf wählen.</p>
@@ -64,7 +82,7 @@ const features=computed(()=>[...new Map([...datasets.value.values()].flatMap(d=>
         <p v-if="!current.groups.length" role="status" class="empty">Keine DRs für diese Filterauswahl.</p>
         <SimulationComparisonMetrics :current="current.results" :previous="previous.results" :compare="!!filters.compare" />
         <SimulationRunQuality :current="current" :previous="previous" :compare="!!filters.compare" />
-        <SimulationDrList :run="selectedRun" :groups="current.groups" :results="current.results" :load-snapshot="loadCheckpointSnapshot" :is-pinned="pinState.isPinned" :pin-note="pinState.pinNote" :pin-count="listedPins.length+pinState.unmatchedPins.value.length" @show-pins="showPins" @pin-menu="pinState.open" />
+        <SimulationDrList :run="selectedRun" :groups="rangePage.page.value" :total="current.groups.length" :page-loading="rangePage.loading.value" :page-error="rangePage.error.value" :detail-state="detailState" :open-details="rangeDetails.open" @more="rangePage.more" :results="current.results" :load-snapshot="loadCheckpointSnapshot" :is-pinned="pinState.isPinned" :pin-note="pinState.pinNote" :pin-count="listedPins.length+pinState.unmatchedPins.value.length" @show-pins="showPins" @pin-menu="openPin" />
       </template>
     </div>
     <SimulationPinMenu :target="pinState.target.value" :saving="pinState.saving.value" :error="pinState.error.value" @close="pinState.target.value=null" @save="pinState.save" @remove="pinState.remove" @show-pins="showPins" />

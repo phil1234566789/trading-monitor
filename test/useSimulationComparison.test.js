@@ -2,6 +2,20 @@ import {expect,it,vi} from 'vitest';
 import {effectScope,ref,nextTick} from 'vue';
 import {useSimulationComparison} from '../src/composables/useSimulationComparison.js';
 
+it('reuses prepared completed runs across comparisons and reloads only on explicit refresh',async()=>{
+ const scope=effectScope(),filters=ref({run:'a',compare:''});
+ const repository={listRunOptions:vi.fn(async()=>[{id:'a',status:'complete'},{id:'b',status:'complete'}]),
+  getRun:vi.fn(async id=>({id,status:'complete'})),listStatistics:vi.fn(async()=>({prepared:true,generation:'g',groups:[],results:[]})),
+  listReviewMetadata:vi.fn(),listResults:vi.fn(),listRunDrCounts:async()=>new Map()};
+ const view=scope.run(()=>useSimulationComparison(repository,filters,ref([])));
+ const settle=async()=>{for(let i=0;i<20;i++)await nextTick();};
+ try{await settle();filters.value={run:'a',compare:'b'};await settle();filters.value={run:'b',compare:''};await settle();
+  expect(repository.listStatistics.mock.calls).toEqual([['a'],['b']]);expect(repository.listRunOptions).toHaveBeenCalledTimes(1);
+  expect(repository.listReviewMetadata).not.toHaveBeenCalled();expect(repository.listResults).not.toHaveBeenCalled();
+  await view.refresh();expect(repository.listStatistics.mock.calls).toEqual([['a'],['b'],['b']]);
+ }finally{scope.stop();}
+});
+
 it('lists runs by execution time without opening an unrequested dataset and preserves deep links',async()=>{
   const available=[{id:'legacy',status:'complete',evaluatedAt:9999},{id:'old',status:'complete',startedAt:100},
     {id:'new',status:'complete',completedAt:200},{id:'running',status:'running',startedAt:300}];

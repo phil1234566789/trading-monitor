@@ -4,6 +4,7 @@ import {berlinDateStrFor} from './berlinTime.js';
 import {liveWatcherRun} from './liveWatcherSnapshots.js';
 import {createLiveEvidenceRepository} from './liveEvidenceRepository.js';
 import {liveEvidenceView,liveEvidenceResults} from './liveEvidenceView.js';
+import {createStatisticsRepository} from './simulationStatisticsRepository.js';
 
 // Ein Monatsmodell bündelt beide Quellen; ihre Originalkontexte bleiben unverändert.
 export function createSetup2Repository(db){
@@ -36,7 +37,7 @@ export function createSetup2Repository(db){
  const materialize=async(run,snapshot)=>snapshot?(await materializeMany(run,[snapshot]))[0]:null;
  const record=async(run,snapshot)=>{const complete=await materialize(run,snapshot);return complete?{snapshot:complete,results:liveEvidenceResults([complete])}:null;};
  const assertStored=run=>{if(isLiveWatcherMonth(run))throw new Error('Live-Ereignisse dürfen nicht als Simulation neu gespeichert werden.');};
- const facade={...stored,
+ const facade={...stored,...createStatisticsRepository(db),
   saveRun:run=>{assertStored(run.id);return stored.saveRun(run);},
   saveEntries:(run,records)=>{assertStored(run);return stored.saveEntries(run,records);},
   saveSetups:(run,records)=>{assertStored(run);return stored.saveSetups(run,records);},
@@ -61,7 +62,8 @@ export function createSetup2Repository(db){
     &&(!Number.isFinite(options.to)||row.entryTime<options.to)&&(!Number.isFinite(options.asOf)||row.entryTime<=options.asOf));
   },
   async listRunDrCounts(ids){
-   const counts=await stored.listRunDrCounts(ids.filter(id=>!isLiveWatcherMonth(id)));
+   const storedIds=ids.filter(id=>!isLiveWatcherMonth(id));
+   const counts=storedIds.length?await facade.listStatisticsCounts(storedIds):new Map();
    for(const id of ids.filter(isLiveWatcherMonth)){
     const cached=pending.get(JSON.stringify([liveMonthViewId(id),null]));
     const keys=cached?(await cached.promise).snapshots.map(snapshot=>snapshot.setupKey)

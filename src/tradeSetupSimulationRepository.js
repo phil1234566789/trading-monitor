@@ -17,10 +17,10 @@ async function pages(query,pageSize=PAGE_SIZE) {
 }
 
 // Cursor statt OFFSET: auch kurze Serverseiten bis zur wirklich leeren Seite lesen.
-async function snapshotMetadataPages(query) {
+async function snapshotMetadataPages(query,pageSize=10) {
   const rows=[];
   for(;;){
-    const {data,error}=await query(rows.at(-1)).limit(10);
+    const {data,error}=await query(rows.at(-1)).limit(pageSize);
     if(error)throw error;
     if(!data?.length)return rows;
     rows.push(...data);
@@ -55,12 +55,18 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
     return decodeSnapshotStructures(data?.snapshot ?? null);
   };
   return {
+    getPinSnapshot:async(runId,id,entry=false)=>{
+      const table=entry?'trade_setup_simulation_entries_review_metadata':'trade_setup_simulation_setups_review_metadata';
+      const {data,error}=await db.from(table).select('id,run_id,instrument,direction,metadata').eq('run_id',runId).eq('id',id).maybeSingle();
+      if(error)throw error;
+      return data?simulationReviewMetadata({...data,...data.metadata}):null;
+    },
     getRun: async (runId) => {
       const { data, error } = await db.from('trade_setup_simulation_runs').select('run').eq('id', runId).maybeSingle();
       if (error) throw error;
       return data?.run ?? null;
     },
-    listReviewMetadata: async runId => {
+    listReviewMetadata: async (runId,{pageSize=10}={}) => {
       if(!runId)throw new Error('Ein Lauf ist für die Statistik-Metadaten erforderlich.');
       const groups=[];
       for(const table of ['trade_setup_simulation_setups','trade_setup_simulation_entries'])
@@ -68,7 +74,7 @@ export function createSimulationRepository(db,{compactStructures=false}={}) {
           // Die View entpackt jeden Originalstand einmal; der Cursor vermeidet Arbeit für übersprungene Zeilen.
           let query=db.from(table+'_review_metadata').select('id,run_id,instrument,direction,metadata').eq('run_id',runId).order('id');
           return last ? query.gt('id',last.id) : query;
-        }));
+        },pageSize));
       return groups.flat().map(row=>simulationReviewMetadata({...row,...row.metadata}));
     },
     listReviewSnapshots: async (runId) => {

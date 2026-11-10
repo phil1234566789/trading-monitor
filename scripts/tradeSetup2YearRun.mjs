@@ -10,6 +10,7 @@ import { setup2ProfilingPlugin,createSetup2Profile } from './setup2Profiling.mjs
 import { archiveClient, candleCoverage, writeJson } from './tradeSetup2Archive.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { createSimulationRepository } from '../src/tradeSetupSimulationRepository.js';
+import {buildSimulationStatistics} from './simulationStatisticsBuild.mjs';
 import {startSimulationRunExecution,completeSimulationRunExecution} from '../src/simulationRunClock.js';
 
 import { tradeSetupFromRow } from '../src/tradeSetupRow.js';
@@ -120,8 +121,9 @@ run.provenance.inputs=simulationRunInputs({configuration,from:run.from,to:run.to
   sourceHash,sourceCommit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),
   inputSetId:configuration.inputSetId ?? null,hash});
 if (previousRun && previousRun.id !== run.id) throw new Error('Run configuration changed; choose a new --output directory. Existing run preserved.');
-const repository = options.publish === 'true' ? createSimulationRepository(createClient(process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })) : null;
+const publicationDb=options.publish==='true'?createClient(process.env.VITE_SUPABASE_URL,
+  process.env.VITE_SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false}}):null;
+const repository=publicationDb?createSimulationRepository(publicationDb):null;
 let publishedAt = 0;
 async function saveProgress(force = false) {
   await writeJson(runFile, run);
@@ -224,4 +226,5 @@ try {
   run.status = 'failed'; run.progress = { ...run.progress, error: error.message, aborted: controller.signal.aborted };
   throw error;
 } finally { await saveProgress(true); }
+if(repository&&run.status==='complete')await buildSimulationStatistics(publicationDb,repository,run.id);
 console.log(JSON.stringify({ runId: run.id, status: run.status, output: directory }));

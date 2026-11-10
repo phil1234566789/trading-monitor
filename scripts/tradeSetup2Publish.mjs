@@ -6,6 +6,7 @@ import { createSimulationRepository } from '../src/tradeSetupSimulationRepositor
 import {prepareSimulationPublication,openPublicationPostgres} from './simulationPublication.mjs';
 import {isDeepStrictEqual} from 'node:util';
 import {readPublicationCatalog,savePublicationRecords,verifyPublicationRecords} from './simulationPublicationResume.mjs';
+import {buildSimulationStatistics} from './simulationStatisticsBuild.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const directory = path.resolve(root, process.argv[2] ?? '.debug/trade-setup-2');
@@ -48,4 +49,5 @@ await verifyPublicationRecords({db,runId:run.id,directory:prepared.directory,ins
   onProgress:p=>console.log(JSON.stringify({phase:'roundtrip',...p}))});
 await prepared.verify();await repository.saveRun(run);
 if(!isDeepStrictEqual(await repository.getRun(run.id),run))throw new Error('Run metadata roundtrip failed');
+await buildSimulationStatistics(db,repository,run.id);
 console.log(JSON.stringify({ runId: run.id, entries, setups, verified: true }));

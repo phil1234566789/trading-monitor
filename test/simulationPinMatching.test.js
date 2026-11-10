@@ -1,6 +1,7 @@
 import { describe,it,expect } from 'vitest';
 import { matchSimulationPins,simulationDrIdentity } from '../src/simulationPinMatching.js';
 import { simulationGroupHasPin } from '../src/simulationRunComparison.js';
+import {simulationFeatureIdentity,simulationFeatureDigest,storedSimulationFeatureIdentity} from '../src/simulationFeatureIdentity.js';
 const snapshot=(runId='new',setupKey='new-id')=>({id:`${runId}-snapshot`,runId,setupKey,instrument:'GBPUSD',direction:'long',knownAt:300,
   checklist:{setup:{primary:{sweep:{timeframe:'5M',level:{price:1.2,pivotTime:100,touchedTime:200,fineTouchedTime:220}},
     reactionOB:{startTime:240,top:1.3,bottom:1.25}}}}});
@@ -12,6 +13,16 @@ const pin=(kind='simulation_dr')=>({id:1,kind,simulationRunId:'old',simulationSn
 const match=(p,groups=[group()])=>matchSimulationPins([p],groups,'new',new Map([[p.id,snapshot('old','old-id')]]),
   [{id:'old',from:100,to:500,status:'complete',configuration:{label:'Alter Lauf'}}]);
 describe('cross-run simulation pins',()=>{
+  it('matches compact checkpoint signatures without downloading details and rejects changed or missing signatures',async()=>{
+    const p=pin('simulation_checkpoint'),g=group();
+    g.featureSignatures={reaction:await simulationFeatureDigest(simulationFeatureIdentity(g.features,feature))};
+    g.features=g.features.map(({details,...f})=>f);
+    const signatures=new Map([[p.id,await simulationFeatureDigest(storedSimulationFeatureIdentity(p.simulationContext.checkpoint.details))]]);
+    const origins=new Map([[p.id,snapshot('old','old-id')]]);
+    expect(matchSimulationPins([p],[g],'new',origins,[],signatures).matched).toHaveLength(1);
+    expect(matchSimulationPins([p],[g],'new',origins).unmatched).toHaveLength(1);
+    signatures.set(p.id,'changed');expect(matchSimulationPins([p],[g],'new',origins,[],signatures).unmatched).toHaveLength(1);
+  });
   it('matches market evidence despite changed IDs, preserving the original pin and note',()=>{
     const p={...pin(),pinType:'observation'},before=JSON.stringify(p),result=match(p);
     expect(result.matched).toHaveLength(1);expect(result.unmatched).toHaveLength(0);

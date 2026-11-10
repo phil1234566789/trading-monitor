@@ -1,9 +1,9 @@
 import {livePinSource} from './simulationPinSource.js';
 import {isLiveWatcherMonth} from './liveWatcherMonth.js';
 import { simulationPinKey } from './simulationPinSnapshot.js';
-import { featureDetails } from './simulationReviewFeatures.js';
 import { simulationChartLink } from './tradeSetupSimulationStatistics.js';
 import { simulationRunLabel } from './simulationRunPresentation.js';
+import {simulationFeatureIdentity,storedSimulationFeatureIdentity} from './simulationFeatureIdentity.js';
 
 // IDs und Regelversionen wechseln zwischen Läufen. Nur vollständig belegte Marktobjekte zuordnen.
 export function simulationDrIdentity(snapshot) {
@@ -33,14 +33,14 @@ function matchEntry(pin,groups,origin,native) {
       ?'Instrument, Richtung oder exakter Zeitpunkt des ursprünglichen Entries fehlen.'
       :'Kein Entry mit demselben Instrument, derselben Richtung und demselben Zeitpunkt in diesem Lauf.'};
 }
-function sameFeature(group,saved) {
+function sameFeature(group,saved,digest) {
   const current=group.features.find(f=>f.key===saved?.key);
+  if(group.featureSignatures)return !!current && !!digest && group.featureSignatures[saved.key]===digest;
   // JSONB ordnet Objektschlüssel neu; ihre Speicherreihenfolge ist kein geänderter Befund.
-  const signature=features=>JSON.stringify(features?.map(f=>[f.key,f.group,f.label,f.value,f.details]));
-  return current && signature(featureDetails(group.features,current))===signature(saved.details);
+  return current && simulationFeatureIdentity(group.features,current)===storedSimulationFeatureIdentity(saved.details);
 }
 
-export function matchSimulationPins(pins,groups,runId,origins=new Map(),runs=[]) {
+export function matchSimulationPins(pins,groups,runId,origins=new Map(),runs=[],signatures=new Map()) {
   const index=new Map();
   for(const group of groups) {
     const key=simulationDrIdentity(group.snapshot);
@@ -66,7 +66,7 @@ export function matchSimulationPins(pins,groups,runId,origins=new Map(),runs=[])
     if(pin.kind==='simulation_entry') ({group,entry,reason}=matchEntry(pin,groups,origin,native));
     if(!reason && pin.kind==='simulation_checkpoint') {
       feature=group.features.find(f=>f.key===pin.simulationCheckpointKey);
-      if(!feature || !native&&!sameFeature(group,pin.simulationContext?.checkpoint))reason='Checkpoint fehlt oder sein gespeicherter Befund hat sich geändert.';
+      if(!feature || !native&&!sameFeature(group,pin.simulationContext?.checkpoint,signatures.get(pin.id)))reason='Checkpoint fehlt oder sein gespeicherter Befund hat sich geändert.';
     }
     if(reason){unmatched.push({...base,unmatchedReason:reason});continue;}
     const target={kind:pin.kind,group,feature,entry};

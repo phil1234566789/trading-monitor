@@ -1,0 +1,62 @@
+{
+  "baseline": {
+    "runId": "setup2-6dd4a875d67d73c94d77ba3d",
+    "ms": 62285.906599999995,
+    "requests": 541,
+    "bytes": 36295289,
+    "snapshots": 5362,
+    "results": 238
+  },
+  "measurements": [
+    {
+      "ms": 918.2736,
+      "requests": 3,
+      "bytes": 1729423,
+      "groups": 3254,
+      "results": 238,
+      "page": 25
+    },
+    {
+      "ms": 1062.5551999999998,
+      "requests": 3,
+      "bytes": 1729423,
+      "groups": 3254,
+      "results": 238,
+      "page": 25
+    },
+    {
+      "ms": 859.2784000000001,
+      "requests": 3,
+      "bytes": 1729423,
+      "groups": 3254,
+      "results": 238,
+      "page": 25
+    }
+  ],
+  "medianMs": 918.2736,
+  "parity": {
+    "snapshots": 5362,
+    "groups": 3254,
+    "results": 238,
+    "filterCases": 101,
+    "exactStatistics": true,
+    "exactLabelsAndPinIdentity": true,
+    "indexBytes": 21394925
+  },
+  "coverage": {
+    "completed_runs": 14,
+    "prepared_ranges": 6173,
+    "prepared_runs": 14
+  },
+  "scope": "Stored simulation data fetch plus first 25 DR summaries; excludes app startup, rendering, optional live discovery and pin requests.",
+  "baselineSamples": 1,
+  "afterSamples": 3,
+  "checks": {
+    "focusedTests": 48,
+    "fullSuitePassed": 2691,
+    "fullSuiteFailed": 13,
+    "sameFailuresReproducedOnCleanMain": true,
+    "databaseIntegration": "31 rows: 25 + 6 pagination, read-only RLS, source unchanged, stale and partial projection rejection, compressed index roundtrip",
+    "browser": "Native GBPUSD and XAU runs: 25 cards, 0 entry tables before opening; one detail and entry table on opening, next page 50 cards, pattern filter and comparison, no browser errors or visible alerts"
+  }
+}
