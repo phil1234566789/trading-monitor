@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import native from './fixtures/dr128M1FvgSelection.json';
 import {m1FvgEntryCandidates,m1FvgEntryPrefill} from '../src/m1FvgEntrySelection.js';
 const candle=(time,open,high,low,close)=>({time,open,high,low,close});
-const base=depth=>[candle(0,111,112,110,111),candle(60,111,111.2,100,101),candle(120,101,102,99,100),
+const base=depth=>[candle(-60,111,113,110,111),candle(0,111,112,110,111),candle(60,111,111.2,100,101),candle(120,101,102,99,100),
   candle(180,101,102+8*depth,100,101),candle(240,101,101,98,99)];
 const mirror=rows=>rows.map(c=>({...c,open:240-c.open,close:240-c.close,high:240-c.low,low:240-c.high}));
 it.each([0,.4999,.5,1,1.1])('requires at least 50 percent wick penetration, depth=%s, in both directions',depth=>{
@@ -15,7 +15,7 @@ it.each([0,.4999,.5,1,1.1])('requires at least 50 percent wick penetration, dept
   }
 });
 it('does not freeze a shallow first touch; waits for a later qualifying retest and another candle',()=>{
-  const rows=base(.1);rows[4]=candle(240,101,106,100,101);rows.push(candle(300,101,101,98,99));
+  const rows=base(.1);rows[5]=candle(240,101,106,100,101);rows.push(candle(300,101,101,98,99));
   const fvg=m1FvgEntryCandidates(rows,180,'short')[0];
   expect(m1FvgEntryPrefill({candles:rows,fvg,evaluatedAt:300,variant:'retestReaction'}).status).toBe('pending');
   expect(m1FvgEntryPrefill({candles:rows,fvg,evaluatedAt:360,variant:'retestReaction'}))

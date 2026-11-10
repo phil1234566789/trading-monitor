@@ -34,3 +34,10 @@ function tintCandleTimes(candles, zeiten, farbe) {
   if (zeiten.size === 0) return candles;
   return candles.map((c) => (zeiten.has(c.time) ? { ...c, color: farbe, wickColor: farbe } : c));
 }
+
+// Ein goldener Impuls kann gleichzeitig eine andere FVG bestätigen: dann bleibt Gold im Körper.
+export function tintManualFvgConfirmation(candles,preview,bar,color) {
+  if(bar!=='1m'||preview?.status!=='ready'||!color)return candles;
+  return candles.map(c=>c.time===preview.confirmationCandleTime
+    ?{...c,...(c.color?{}:{color,wickColor:color}),borderColor:color}:c);
+}

@@ -1,4 +1,5 @@
 <script setup>
+import {closedReplayEvaluationTime} from '../tradeSetupChecklistTimeBasis.js';
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { nextCandlePollDelay } from "../candlePolling.js";
 import { usePriceChartM1Structure } from '../composables/usePriceChartM1Structure.js';
@@ -52,7 +53,7 @@ import { DivergenceLinePrimitive } from "../rsiRendering.js";
 import { usePriceChartRsi } from "../composables/usePriceChartRsi.js";
 import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
-import { tintFvgCandles, tintM1FvgCandle } from "../fvgCandleTint.js";
+import { tintFvgCandles, tintM1FvgCandle, tintManualFvgConfirmation } from "../fvgCandleTint.js";
 import {createM1FvgChartSelection} from '../m1FvgChartSelection.js';
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
@@ -213,6 +214,7 @@ const props = defineProps({
   // ich Indikatoren > OBs im M5 anhabe, werden mir ganz viele M5 OBs angezeigt" — showOrderBlocks
   // folgte bei Forex bisher IMMER dem gerade angezeigten Chart-Timeframe, nie mehrere gleichzeitig).
   // Jeder der drei Timeframes ist jetzt unabhängig an-/ausschaltbar, siehe refreshPoiZonesInternal.
+  showObsM1: { type: Boolean, default: false },
   showObsM5: { type: Boolean, default: false },
   showObs1h: { type: Boolean, default: true },
   showObs4h: { type: Boolean, default: true },
@@ -325,6 +327,7 @@ const props = defineProps({
   // wenn aktiv, wertet der Klick-Handler unten Klicks auf Trade-Setup-OB-Boxen aus. Sonst bleibt
   // ein Klick beim Pan/Zoom-Verhalten von lightweight-charts, wie bisher.
   tradeModeActive: { type: Boolean, default: false },
+  entryFvgPreview: { type: Object, default: null },
   entryFvgSelection: { type: Object, default: null },
   // Ziel-Modus (Chat 2026-07-27: "einem Trade ein Target hinzufügen ... die Linien klickbar
   // machen") — nur innerhalb von tradeModeActive relevant, schaltet den Klick-Handler von
@@ -1214,6 +1217,8 @@ function refreshPoiZonesInternal() {
   const zones = collectObsZones({
     showObs4h: props.showObs4h,
     showObs1h: props.showObs1h,
+    showObsM1: props.showObsM1,
+    m1Candles: props.currentBar==='1m' ? markIgnored(clipReplay(allCandles),props.symbol).filter(c=>c.time+60<=closedReplayEvaluationTime(props.replayUntil,Math.floor(Date.now()/1000),allCandles,'1m')) : [],
     showObsM5: props.showObsM5,
     ...obZoneCtx(),
   });
@@ -1228,7 +1233,8 @@ function refreshPoiZonesInternal() {
     props.pinObZoneKeys,
     props.hoveredPinObZoneKey ?? targetPickerHoveredObKey.value ?? antiConfluencePickerHoveredObKey.value,
   );
-  poiZonesMetadata.value = visibleZones;
+  // M1 ist hier ein reiner Indikator; keine neuen Journal-/Pin-Schreibpfade ableiten.
+  poiZonesMetadata.value = visibleZones.filter(z=>z.timeframe!=='1M');
 }
 
 // Target-Vorschläge (PLAN-find-targets.md, Chat 2026-08-27) — Auswahl-Logik in findTargets.js,
@@ -1886,13 +1892,13 @@ function applyCandleData() {
   lastCandleTime.value=candles[candles.length-1]?.time??null;
   refreshBrokerTrades();
   const tinted=tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color);
-  candleSeries.setData(entryFvgPicker.paint(tinted,color));
+  candleSeries.setData(tintManualFvgConfirmation(entryFvgPicker.paint(tinted,color),props.entryFvgPreview,props.currentBar,cssColor('tradeConnector')));
 }
 
 const entryFvgPicker=createM1FvgChartSelection(()=>({candles:markIgnored(clipReplay(allCandles),props.symbol),
   bar:props.currentBar,replayUntil:props.replayUntil,nowSec:Math.floor(Date.now()/1000),
-  selection:props.tradeModeActive?props.entryFvgSelection:null}));
-watch(()=>props.entryFvgSelection,()=>{if(chart&&candleSeries)applyCandleData();});
+  selection:(props.tradeModeActive?props.entryFvgSelection:null) ?? props.entryFvgPreview?.target}));
+watch(()=>[props.entryFvgSelection,props.entryFvgPreview],()=>{if(chart&&candleSeries)applyCandleData();});
 
 function closeTradeSetup2Selection() {
   void setup2.select(null);
@@ -2378,6 +2384,7 @@ watch(() => props.annotations, refreshDrawingsInternal);
 // nur ein Neuzeichnen.
 watch(() => props.showObs1h, refreshPoiZonesInternal);
 watch(() => props.showObs4h, refreshPoiZonesInternal);
+watch(() => props.showObsM1, refreshPoiZonesInternal);
 watch(() => props.showObsM5, refreshPoiZonesInternal);
 watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);

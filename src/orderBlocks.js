@@ -255,7 +255,7 @@ const OB_ZONE_KEYS = {
 
 function zoneOptions(z, inPinContext, isSelectedPin) {
   const inactive = z.touched || z.invalidated;
-  const keys = OB_ZONE_KEYS[z.timeframe] ?? OB_ZONE_KEYS["1H"];
+  const keys = OB_ZONE_KEYS[z.timeframe==='1M'?'5M':z.timeframe] ?? OB_ZONE_KEYS["1H"];
   const key = inactive ? keys.inactive : z.dir === 1 ? keys.bull : keys.bear;
   const borderKey = inactive ? keys.inactiveBorder : z.dir === 1 ? keys.bullBorder : keys.bearBorder;
   const label = z.timeframe ?? "";

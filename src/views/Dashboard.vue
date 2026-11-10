@@ -1,4 +1,5 @@
 <script setup>
+import {watchM1FvgPreviewContext} from '../composables/useM1FvgPreviewContext.js';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { liveMonthViewId } from "../liveWatcherMonth.js";
@@ -141,6 +142,7 @@ const showHistoricalObs = useLocalStorageRef("showHistoricalObs", false);
 // bei Forex bisher IMMER nur den gerade angezeigten Chart-Timeframe zeigte, nie M5+1H+4H gleichzeitig.
 // Jetzt unabhängig an-/ausschaltbar (siehe PriceChart.vue: collectObsZones), "Historische OBs"
 // (Untermenü) bleibt weiterhin ein gemeinsamer Filter für alle drei.
+const showObsM1 = useLocalStorageRef("showObsM1", false);
 const showObsM5 = useLocalStorageRef("showObsM5", false);
 const showObs1h = useLocalStorageRef("showObs1h", true);
 const showObs4h = useLocalStorageRef("showObs4h", true);
@@ -358,10 +360,12 @@ const tradeModeActive = computed(() => chartMode.value === "trade");
 const editingTradeId = ref(null);
 const tradeEditModalRef = ref(null);
 const entryFvgMessage=ref('');
+const entryFvgPreview=ref(null);
 let entryFvgToken=0;
 function onPositionDraftStarted() {
   disarmChartClick();
   entryFvgMessage.value='';
+  entryFvgPreview.value=null;
   hoveredModalEvidenceItem.value = null;
   hoveredModalTargetItem.value = null;
 }
@@ -386,6 +390,7 @@ function onEditRequest(t) {
 // entfernt) — hoveredModalEvidenceItem/-TargetItem blieben sonst für immer auf dem letzten Stand
 // hängen, ein Phantom-Highlight im Chart, das sich nie mehr von selbst löst.
 function closeTradeEditModal() {
+  entryFvgPreview.value=null;
   if(entryFvgSelection.value)disarmChartClick();
   editingTradeId.value = null;
   hoveredModalEvidenceItem.value = null;
@@ -521,6 +526,7 @@ function onRequestEntryFvg(variant){
   const trade=editingTrade.value;
   if(!trade||trade.instrument!==currentSymbol.value)return;
   entryFvgMessage.value='';
+  entryFvgPreview.value=null;
   currentBar.value='1m';
   armChartClick(variant==='immediate'?'entryFvgImmediate':'entryFvgRetestReaction',
     {...trade,variant,draftToken:++entryFvgToken});
@@ -532,9 +538,9 @@ function onSelectEntryFvg(result){
   const prefill=m1FvgDraftPrefill(result,target,editingTrade.value,currentSymbol.value);
   if(!prefill){disarmChartClick();return;}
   tradeEditModalRef.value?.beginPositionDraft(prefill);
-  entryFvgMessage.value=`FVG-Impuls ${formatDatedTime(result.fvg.candleTime)} · Entry nach Schluss ${formatDatedTime(prefill.entryTime)} · ${prefill.entryPrice}`;
+  entryFvgPreview.value=result;
+  entryFvgMessage.value=`FVG-Impuls ${formatDatedTime(result.fvg.candleTime)}${result.retestCandleTime!=null?` · Retest ${formatDatedTime(result.retestCandleTime)}`:''} · Bestätigungskerze ${formatDatedTime(result.confirmationCandleTime)} · Entry nach Schluss ${formatDatedTime(prefill.entryTime)} · ${prefill.entryPrice}`;
 }
-watch([editingTradeId,currentSymbol],()=>{if(entryFvgSelection.value)disarmChartClick();});
 // Sonst bliebe der Hinweis in der globalen Kopfleiste stehen, wenn man das Dashboard verlässt.
 onUnmounted(() => (chartHint.value = null));
 // Ein Weg, einen Chart-Klick scharf zu machen — vorher stand derselbe Dreizeiler achtmal da.
@@ -1394,6 +1400,7 @@ const showDebugMetadata = useLocalStorageRef("showDebugMetadata", false);
 const replayTime = useLocalStorageRef("replayTime", 1783011600); // 02.07.2026 19:00 (Berlin)
 const replayActive = useLocalStorageRef("replayActive", false);
 const replayUntil = computed(() => (replayActive.value ? replayTime.value : null));
+watchM1FvgPreviewContext({preview:entryFvgPreview,message:entryFvgMessage,editingTradeId,symbol:currentSymbol,bar:currentBar,replayUntil,armed:armedAction,selection:entryFvgSelection,disarm:disarmChartClick});
 // Alte Ergebnisse dürfen beim Kontextwechsel nicht bis zum nächsten Chart-Event stehen bleiben.
 watch([currentSymbol, replayUntil, showTradeSetupChecklist], () => {
   checklistState.value = null;
@@ -1481,7 +1488,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs, showObsM1];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 // War bis 2026-08-30 eine reine JS-Variable (nicht in localStorage) — ein Reload zwischen
 // Ausblenden und Wieder-Einblenden (z.B. Tab zu/wieder auf am nächsten Handelstag) verlor den
@@ -1494,7 +1501,7 @@ function toggleIndikatoren() {
     indikatorenSavedState.value = INDIKATOREN_REFS.map((r) => r.value);
     INDIKATOREN_REFS.forEach((r) => { r.value = false; });
   } else if (indikatorenSavedState.value) {
-    INDIKATOREN_REFS.forEach((r, i) => { r.value = indikatorenSavedState.value[i]; });
+    INDIKATOREN_REFS.forEach((r, i) => { r.value = indikatorenSavedState.value[i] ?? false; });
     indikatorenSavedState.value = null;
   } else {
     // Noch nie über diesen Button ausgeblendet (z.B. alle Sub-Toggles waren schon einzeln aus) —
@@ -1505,6 +1512,7 @@ function toggleIndikatoren() {
     showRsiDivergenceHistory.value = false;
     showLiquidity.value = true;
     showSweptLiquidity.value = false;
+    showObsM1.value = false;
     showObsM5.value = false;
     showObs1h.value = true;
     showObs4h.value = true;
@@ -1515,7 +1523,7 @@ function toggleIndikatoren() {
 // Muster wie toggleIndikatoren oben, nur eine Ebene tiefer (nur die drei Timeframe-Schalter, nicht
 // showHistoricalObs — der bleibt unabhängig vom Ein-/Ausschalten aller OBs bestehen, wie bisher).
 // obsSavedState ebenfalls in localStorage (2026-08-30, gleicher Reload-Bug wie indikatorenSavedState).
-const OBS_REFS = [showObsM5, showObs1h, showObs4h];
+const OBS_REFS = [showObsM5, showObs1h, showObs4h, showObsM1];
 const obsActive = computed(() => OBS_REFS.some((r) => r.value));
 const obsSavedState = useLocalStorageRef("obsSavedState", null);
 function toggleObs() {
@@ -1523,9 +1531,10 @@ function toggleObs() {
     obsSavedState.value = OBS_REFS.map((r) => r.value);
     OBS_REFS.forEach((r) => { r.value = false; });
   } else if (obsSavedState.value) {
-    OBS_REFS.forEach((r, i) => { r.value = obsSavedState.value[i]; });
+    OBS_REFS.forEach((r, i) => { r.value = obsSavedState.value[i] ?? false; });
     obsSavedState.value = null;
   } else {
+    showObsM1.value = false;
     showObsM5.value = false;
     showObs1h.value = true;
     showObs4h.value = true;
@@ -1890,6 +1899,7 @@ watch(selectedTradingAccountId, () => {
                  folgten Forex-OBs immer nur dem gerade angezeigten Chart-Timeframe, nie mehrere
                  gleichzeitig, siehe PriceChart.vue: collectObsZones). -->
             <div v-if="obsMenuOpen" class="toggle-dropdown">
+              <ToggleButton variant="menu" :class="{ active: showObsM1 }" @click="showObsM1 = !showObsM1">M1 · im M1-Chart</ToggleButton>
               <ToggleButton variant="menu" :class="{ active: showObsM5 }" @click="showObsM5 = !showObsM5">
                 M5
               </ToggleButton>
@@ -2232,7 +2242,7 @@ watch(selectedTradingAccountId, () => {
     @saved="refreshTrades"
     @created="onPositionCreated"
     @position-draft-started="onPositionDraftStarted"
-    @position-draft-cancelled="disarmChartClick"
+    @position-draft-cancelled="onPositionDraftStarted"
     @request-entry-fvg="onRequestEntryFvg"
     @open-in-tsc="onOpenJournalInTsc(editingTrade)"
     @deleted="onTradeDeleted"
@@ -2285,6 +2295,7 @@ watch(selectedTradingAccountId, () => {
     :pinned-rsi-divergences="pinnedRsiDivergences"
     :show-trades="showTrades"
     :show-obs-m5="showObsM5"
+    :show-obs-m1="showObsM1"
     :show-obs-1h="showObs1h"
     :show-obs-4h="showObs4h"
     :show-historical-obs="showHistoricalObs"
@@ -2337,6 +2348,7 @@ watch(selectedTradingAccountId, () => {
     :measure-mode-active="chartMode === 'measure'"
     :target-mode-active="anyArmStateActive"
     :entry-fvg-selection="entryFvgSelection"
+    :entry-fvg-preview="entryFvgPreview"
     :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null || tscBootstrapArmed"
     :confluence-mode-active="confluenceAddTrade != null || rangeConfluenceAddTrade != null"
     :anti-confluence-mode-active="antiConfluenceAddTrade != null || rangeAntiConfluenceAddTrade != null"
