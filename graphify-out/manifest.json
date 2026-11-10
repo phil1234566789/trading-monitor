@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1794339402.3361363,
-    "seen": 1794339627.0369277,
-    "ast_hash": "49617695f888cb4ac502191554dd97b2",
+    "mtime": 1794340596.1618545,
+    "seen": 1794340803.9335172,
+    "ast_hash": "e7aef20aa0e848f8f3704ba446865de8",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -3324,9 +3324,9 @@
     "semantic_hash": ""
   },
   "src/fvgCandleTint.js": {
-    "mtime": 1794339272.6090333,
-    "seen": 1794339627.0609326,
-    "ast_hash": "2b840c51f398f59aba252b3592d8e2d3",
+    "mtime": 1794340546.2697144,
+    "seen": 1794340803.9585211,
+    "ast_hash": "d74a7668b276af4eb5bfbee0436284b1",
     "semantic_hash": ""
   },
   "test/fvgCandleTint.test.js": {
@@ -8406,9 +8406,9 @@
     "semantic_hash": ""
   },
   "src/components/M1FvgEntryControls.vue": {
-    "mtime": 1794339272.6090333,
-    "seen": 1794339627.0329275,
-    "ast_hash": "961505096733fe490db8c24a6c868967",
+    "mtime": 1794340596.1628542,
+    "seen": 1794340803.9295175,
+    "ast_hash": "8e0bf4e253cfc14fa9611b424989ddad",
     "semantic_hash": ""
   },
   "src/m1FairValueGap.js": {
@@ -8418,15 +8418,15 @@
     "semantic_hash": ""
   },
   "src/m1FvgChartSelection.js": {
-    "mtime": 1794336851.8067856,
-    "seen": 1794337415.3169882,
-    "ast_hash": "792becb815d194b751ef97e6a07feac7",
+    "mtime": 1794340546.2687106,
+    "seen": 1794340803.9635198,
+    "ast_hash": "63ba50394ce28055376f55dbe668c48b",
     "semantic_hash": ""
   },
   "src/m1FvgEntrySelection.js": {
-    "mtime": 1794339564.3191922,
-    "seen": 1794339627.0659323,
-    "ast_hash": "c3b86d682c337a378f9f79d8c7f8bb11",
+    "mtime": 1794340509.1510072,
+    "seen": 1794340803.9635198,
+    "ast_hash": "1b0cf6161d92b5dec45c68737a8621dd",
     "semantic_hash": ""
   },
   "test/fixtures/dr128M1FvgSelection.json": {
@@ -8481,6 +8481,24 @@
     "mtime": 1794339500.8880484,
     "seen": 1794339627.1709862,
     "ast_hash": "7eb09bf65c134f7f4017af2dccf51a4f",
+    "semantic_hash": ""
+  },
+  "src/m1FvgEntryProjection.js": {
+    "mtime": 1794340546.2221885,
+    "seen": 1794340803.9635198,
+    "ast_hash": "4efc657d4136bbc38327ea11434b8d62",
+    "semantic_hash": ""
+  },
+  "src/m1FvgEntrySequence.js": {
+    "mtime": 1794340509.1510072,
+    "seen": 1794340803.9635198,
+    "ast_hash": "dbc30e01b8dc3a73d58694c710ee7651",
+    "semantic_hash": ""
+  },
+  "test/m1FvgEntryProjection.test.js": {
+    "mtime": 1794340609.486995,
+    "seen": 1794340804.0650654,
+    "ast_hash": "c96b2903d410b4b10c9357e0d1fb3362",
     "semantic_hash": ""
   }
 }
