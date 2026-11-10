@@ -10,6 +10,20 @@ import { savedDealingRangePriceOutcome } from '../src/savedDealingRangePriceOutc
 const candle = (time, high, low, extra = {}) => ({ time, high, low, close: 15, ...extra });
 const input = { validatedAt: 600, validationPrice: 15, target1: 20, target2: 30, invalidation: 10, direction: 'long', windowEnd: 1800 };
 describe('independent M5 DR observation', () => {
+  it('attaches the outcome to snapshots grouped by their shared source idea', () => {
+    const snapshot = { id: 'setup', instrument: 'XAUUSD', setupKey: 'source-a', knownAt: 600, direction: 'long',
+      dealingRange: { version: DEALING_RANGE_VERSION, status: 'validated' },
+      checklist: { setup: { primary: { direction: 'long', invalidation: 10,
+        targetSelection: { status: 'passed', selectedAt: 600, target1: { price: 20 }, target2: { price: 30 } },
+        lifecycle: { sourceIdeaKey: 'shared-idea', sourceIdeaKnownAt: 600 } } } } };
+    const entry = { ...snapshot, id: 'entry', setupKey: 'source-b', knownAt: 660,
+      entry: { id: 'execution', ideaKey: 'shared-idea', ideaKnownAt: 600 } };
+    const completed = completeDealingRangePriceObservations([snapshot, entry],
+      [candle(300, 19, 14), candle(600, 31, 14)], 900);
+    expect(completed[0].priceObservation).toMatchObject({ stage1: 'target1', stage2: 'target2' });
+    expect(completed[1].priceObservation).toEqual(completed[0].priceObservation);
+    expect(savedDealingRangePriceOutcome(groupSetupSnapshots(completed)[0]).status).toBe('t2');
+  });
   it.each(['long','short'])('measures T2, return, open and missing history for %s', direction => {
     const mirror = c => direction === 'short' ? { ...c, high: 40-c.low, low: 40-c.high } : c;
     const base = { ...input, direction, validationPrice: direction === 'short' ? 25 : 15,

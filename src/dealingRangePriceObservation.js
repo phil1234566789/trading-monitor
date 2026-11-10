@@ -1,6 +1,7 @@
 import { candleTimeIndex } from './candleTimeIndex.js';
 import { candleTouchesPrice } from './structurePivotTime';
 import { groupSetupSnapshots } from './tradeSetup2Review.js';
+import { setupSnapshotGroupKey } from './setupSnapshotGroupKey.js';
 
 export const DR_PRICE_OBSERVATION_VERSION = 'validated-frozen-levels-m5-v1';
 
@@ -84,7 +85,7 @@ export function completeDealingRangePriceObservations(snapshots, candles, window
     observations.set(group.key, { ...observation, setupKey: first.setupKey });
   }
   return snapshots.map(s => {
-    const observation = observations.get(`${s.runId ?? ''}:${s.instrument}:${s.setupKey ?? s.entry?.setupKey ?? s.id}`);
+    const observation = observations.get(setupSnapshotGroupKey(s));
     return observation ? { ...s, priceObservation: observation } : s;
   });
 }

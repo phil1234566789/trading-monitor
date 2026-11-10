@@ -1,4 +1,5 @@
 import {setup1ChecklistDetails} from './setup1ChecklistDetails.js';
+import { setupSnapshotGroupKey } from './setupSnapshotGroupKey.js';
 import {savedRiskInvalidationLabel} from './dealingRangeRisk.js';
 import {entryPatternVersion} from './entryPattern.js';
 import { entryChecklist } from './m1Entry.js';
@@ -22,10 +23,7 @@ export const REVIEW_STATUS_ICONS = { passed: '✓', unmet: '✕', unknown: '?' }
 export function groupSetupSnapshots(snapshots) {
   const groups = new Map();
   for (const snapshot of snapshots) {
-    const lifecycle=snapshot.checklist?.setup?.primary?.lifecycle??snapshot.rangeCourse?.lifecycle;
-    const ideaKey=snapshot.entry?.ideaKey??lifecycle?.sourceIdeaKey,ideaKnownAt=snapshot.entry?.ideaKnownAt??lifecycle?.sourceIdeaKnownAt;
-    const identity=ideaKey&&Number.isFinite(ideaKnownAt)&&ideaKnownAt<=snapshot.knownAt?ideaKey:snapshot.setupKey??snapshot.entry?.setupKey??snapshot.id;
-    const key = `${snapshot.runId ?? ''}:${snapshot.instrument}:${identity}`;
+    const key = setupSnapshotGroupKey(snapshot);
     if (!groups.has(key)) groups.set(key, { key, candidate: null, latestCandidate: null, firstValidated: null, entries: [] });
     const group = groups.get(key);
     if (savedDealingRangeStatus(snapshot) === 'validated' && (!group.firstValidated || snapshot.knownAt < group.firstValidated.knownAt)) group.firstValidated = snapshot;
