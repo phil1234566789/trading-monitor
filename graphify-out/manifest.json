@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeEditModal.vue": {
-    "mtime": 1794342674.7367108,
-    "seen": 1794342946.4374034,
-    "ast_hash": "c35879af677dc10eaf7018cac1f9b98e",
+    "mtime": 1794343868.5333793,
+    "seen": 1794344139.953739,
+    "ast_hash": "4cbe6d1a9d90317fc377bebcfdf22907",
     "semantic_hash": ""
   },
   "src/components/TradeSetupCockpit.vue": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1794342412.981062,
-    "seen": 1794342946.5082774,
-    "ast_hash": "06b2af5fe68be340a3f1d6ad010ad0b4",
+    "mtime": 1794343789.3993986,
+    "seen": 1794344140.022144,
+    "ast_hash": "318657faa52a052eb40d42c8cea10859",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -8382,9 +8382,9 @@
     "semantic_hash": ""
   },
   "src/composables/useTradePositionForm.js": {
-    "mtime": 1794341885.507394,
-    "seen": 1794342946.4484048,
-    "ast_hash": "3a7af4836e0709264b4d77cd28696f86",
+    "mtime": 1794343728.9732473,
+    "seen": 1794344139.9652486,
+    "ast_hash": "3ce7ba3f3dcdf294fc882963f1a1aa32",
     "semantic_hash": ""
   },
   "src/tradePositionFields.js": {
@@ -8406,9 +8406,9 @@
     "semantic_hash": ""
   },
   "src/components/M1FvgEntryControls.vue": {
-    "mtime": 1794340596.1628542,
-    "seen": 1794340803.9295175,
-    "ast_hash": "8e0bf4e253cfc14fa9611b424989ddad",
+    "mtime": 1794343728.9752507,
+    "seen": 1794344139.9447405,
+    "ast_hash": "cbca97765d70f3c4855b92c999ac9f8c",
     "semantic_hash": ""
   },
   "src/m1FairValueGap.js": {
@@ -8424,9 +8424,9 @@
     "semantic_hash": ""
   },
   "src/m1FvgEntrySelection.js": {
-    "mtime": 1794340509.1510072,
-    "seen": 1794340803.9635198,
-    "ast_hash": "1b0cf6161d92b5dec45c68737a8621dd",
+    "mtime": 1794343789.3993986,
+    "seen": 1794344139.9797559,
+    "ast_hash": "c6d4be5f8b4bedd63a9c0b4bbe095c68",
     "semantic_hash": ""
   },
   "test/fixtures/dr128M1FvgSelection.json": {
@@ -8442,9 +8442,9 @@
     "semantic_hash": ""
   },
   "test/m1FvgEntrySelection.test.js": {
-    "mtime": 1794338747.6769247,
-    "seen": 1794338847.8865018,
-    "ast_hash": "9da79348a83bdfb1a32f494c6ea9a106",
+    "mtime": 1794343789.3993986,
+    "seen": 1794344140.0938995,
+    "ast_hash": "e0c295be96d1d7bb24c65e84ed562ebc",
     "semantic_hash": ""
   },
   "test/m1FvgRetestDepth.test.js": {
@@ -8502,9 +8502,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeExecutionCard.vue": {
-    "mtime": 1794342558.4721894,
-    "seen": 1794342946.4374034,
-    "ast_hash": "316350e4949c9005552719611f6295de",
+    "mtime": 1794343728.9742472,
+    "seen": 1794344139.953739,
+    "ast_hash": "3f40159acacd4018634bbf752a2158ce",
     "semantic_hash": ""
   },
   "src/composables/useDealingRangeExecutions.js": {
@@ -8514,9 +8514,9 @@
     "semantic_hash": ""
   },
   "src/composables/useJournalExecutionDraft.js": {
-    "mtime": 1794342558.4701898,
-    "seen": 1794342946.4414039,
-    "ast_hash": "8796b02f1bd92d522f0f55e979f866af",
+    "mtime": 1794343789.3964005,
+    "seen": 1794344139.9577386,
+    "ast_hash": "0dc8b51aaff4d46bdec45414125653b3",
     "semantic_hash": ""
   },
   "src/composables/usePositionExitDate.js": {
@@ -8532,15 +8532,15 @@
     "semantic_hash": ""
   },
   "test/journalExecutionCards.component.test.js": {
-    "mtime": 1794342602.8684244,
-    "seen": 1794342946.5798512,
-    "ast_hash": "6829388cf4c8effaba5eb72c24fc3a0e",
+    "mtime": 1794343789.4013338,
+    "seen": 1794344140.088902,
+    "ast_hash": "a5376f10a19ad97aefbf9d0e6996129a",
     "semantic_hash": ""
   },
   "test/journalExecutionDraft.test.js": {
-    "mtime": 1794342243.1124132,
-    "seen": 1794342946.5798512,
-    "ast_hash": "40ae451d401972a643b5e4ca295f326b",
+    "mtime": 1794343789.3993986,
+    "seen": 1794344140.088902,
+    "ast_hash": "634c073a9f29d0439ba2396468a18feb",
     "semantic_hash": ""
   },
   "test/journalExecutionForms.test.js": {
@@ -8559,6 +8559,24 @@
     "mtime": 1794341906.5903845,
     "seen": 1794342946.6023598,
     "ast_hash": "1575d2f87100dfd9c072c8b117a1048f",
+    "semantic_hash": ""
+  },
+  "src/composables/useJournalEntryFinder.js": {
+    "mtime": 1794343868.5323794,
+    "seen": 1794344139.9577386,
+    "ast_hash": "5abc5014f6cf6ae92fe3909882075c4e",
+    "semantic_hash": ""
+  },
+  "test/journalEntryFinder.test.js": {
+    "mtime": 1794343868.5353918,
+    "seen": 1794344140.088902,
+    "ast_hash": "d1c0250ac35bb2cb8a874af773c3d850",
+    "semantic_hash": ""
+  },
+  "test/journalExistingEntryPrefill.test.js": {
+    "mtime": 1794343831.6326,
+    "seen": 1794344140.088902,
+    "ast_hash": "7e75b132fd44e2a48fff13ff222fe9af",
     "semantic_hash": ""
   }
 }
