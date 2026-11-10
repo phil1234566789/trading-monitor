@@ -132,7 +132,7 @@ function toConfirmation(c, level) {
   };
 }
 
-export async function fetchTrades(instrument, accountId = null) {
+export async function fetchTrades(instrument, accountId = null, dealingRangeId = null) {
   // Seit 2026-07-31: eine Zeile hier ist eine trade_positions-AUSFÜHRUNG, mit ihrer dealing_ranges-
   // IDEE eingebettet (!inner, weil wir unten auf dealing_ranges.instrument filtern — ohne !inner
   // kann PostgREST nicht auf einem eingebetteten Feld filtern) plus deren trade_setups(ob_start_time)
@@ -146,6 +146,7 @@ export async function fetchTrades(instrument, accountId = null) {
         JOURNAL_POSITION_SELECT,
       )
       .eq("dealing_ranges.instrument", instrument);
+    if (dealingRangeId != null) query = query.eq("dealing_range_id", dealingRangeId);
     if (accountId != null && accountId !== ALL_ACCOUNTS_ID) query = query.eq("trading_account_id", accountId);
     const { data: page, error } = await query
       .order("triggered_at", { ascending: false })
@@ -155,7 +156,10 @@ export async function fetchTrades(instrument, accountId = null) {
     data.push(...page);
     offset += page.length;
   }
-  if(privateJournalAvailable())data.push(...await loadPrivateJournalPages('journal_positions',{instrument,...(accountId!=null&&accountId!==ALL_ACCOUNTS_ID?{account_id:accountId}:{})}));
+  if(privateJournalAvailable()){
+    const privateRows=await loadPrivateJournalPages('journal_positions',{instrument,...(accountId!=null&&accountId!==ALL_ACCOUNTS_ID?{account_id:accountId}:{})});
+    data.push(...privateRows.filter(row=>dealingRangeId==null||row.dealing_ranges?.id===dealingRangeId));
+  }
   data.sort((a,b)=>Date.parse(b.triggered_at)-Date.parse(a.triggered_at)||b.id-a.id);
   if (data.length === 0) return [];
 

@@ -145,9 +145,11 @@ click-in-chart mechanism: an add button arms the next chart click (`armChartClic
 `src/trades.js`'s `fetchTrades` still returns one flat row per **position** (not per dealing
 range) with the parent range's fields embedded (`instrument`/`direction`/`invalidation`/
 `tradeSetupId`/`dealingRangeId`) — this keeps `TradesTable.vue`/`TradeEditModal.vue`/
-`PriceChart.vue`'s existing one-row-per-trade rendering working unchanged. There is deliberately no
-UI yet for viewing a dealing range as a group of its positions, or for adding a second
-position/re-entry via the UI (only via the MCP server's `add_trade_position` tool for now).
+`PriceChart.vue`'s existing one-row-per-trade rendering working unchanged. `TradeEditModal.vue`
+loads all executions of its DR across accounts through a scoped `fetchTrades` read and renders
+independent `TradeExecutionCard.vue` forms. Shared DR evidence appears once; entry evidence stays
+with its execution. Adding a position appends a separate draft; only its explicit save inserts a row.
+The exit date defaults to the entry's Berlin calendar day, while the exit clock remains unset.
 
 ### "Laniakea" persona (`/l`)
 

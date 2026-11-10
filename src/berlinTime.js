@@ -42,3 +42,19 @@ export function formatDatedTime(unixSec) {
 export function formatBerlinTime(unixSec) {
   return TIME_FORMATTER.format(new Date(unixSec * 1000));
 }
+
+export function berlinDatetimeInput(unixSec) {
+  return unixSec == null ? '' : formatDatedTime(unixSec).replace(' ','T');
+}
+
+export function parseBerlinDatetimeInput(value,originalTime=null) {
+  const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if(!match)return NaN;
+  // Unveränderte historische Zeiten behalten auch die zweite Stunde bei der Herbstumstellung.
+  if(Number.isFinite(originalTime)&&berlinDatetimeInput(originalTime)===value)return originalTime;
+  const [,year,month,day,hour,minute]=match.map(Number),guess=Date.UTC(year,month-1,day,hour,minute);
+  const offsets=new Set([-86400000,0,86400000].map(delta=>berlinOffsetMinutes(guess+delta)));
+  const candidates=[...offsets].map(offset=>(guess-offset*60000)/1000)
+    .filter(seconds=>berlinDatetimeInput(seconds)===value).sort((a,b)=>a-b);
+  return candidates[0] ?? NaN;
+}

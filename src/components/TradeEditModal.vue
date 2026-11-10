@@ -1,18 +1,17 @@
 <script setup>
 import DealingRangeSetupSelect from './DealingRangeSetupSelect.vue';
-import M1FvgEntryControls from './M1FvgEntryControls.vue';
+import TradeExecutionCard from './TradeExecutionCard.vue';
+import {useDealingRangeExecutions} from '../composables/useDealingRangeExecutions.js';
+import {useJournalExecutionDraft} from '../composables/useJournalExecutionDraft.js';
 import { ref, computed } from "vue";
-import { useTradePositionForm } from "../composables/useTradePositionForm.js";
-import { updateDealingRange, deleteTrade, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
+import { updateDealingRange, removeTargetFromTrade, removeConfirmationFromTrade } from "../tradeIntake.js";
 import { fmtDateTime, fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { formatTargetLabel } from "../tradeTargets";
 import { formatEvidenceLabel } from "../tradeEvidence";
-import { accounts } from "../tradingAccounts.js";
 import MetadataPanel from "./MetadataPanel.vue";
 import CrudListSection from "./CrudListSection.vue";
 import ActionButton from "./ui/ActionButton.vue";
 import IconButton from "./ui/IconButton.vue";
-import TradeJournalComments from './TradeJournalComments.vue';
 
 // Ersetzt die vorherigen Inline-Buttons in TradesTable.vue (🔗 verknüpfen, + Ziel, × Ziel
 // entfernen) — Chat 2026-07-27/28: "das war jetzt bissl too much, was ist wenn man versehentlich
@@ -24,6 +23,8 @@ import TradeJournalComments from './TradeJournalComments.vue';
 // Dashboard.vue live aus der `trades`-Liste nachgereicht wird, nicht als einmalige Kopie.
 const props = defineProps({
   trade: { type: Object, required: true },
+  positions: {type:Array,default:()=>[]},
+  armedPositionId: [Number,String],
   // Für den Instrument-Mismatch-Guard der Lupe-Buttons unten (Chat 2026-08-30, analog zu
   // TradeSetupCockpit.vue) — die Picker-Kandidaten kommen aus dem gerade im Chart geladenen
   // Instrument (PriceChart.vue: poiZonesMetadata/getCurrentLiquidityLevels), nicht aus dem Trade
@@ -74,15 +75,20 @@ const emit = defineEmits([
   "open-anti-confluence-picker",
 ]);
 
-const { entryPrice, entryTimeInput, stopLoss, exitPrice, exitTimeInput, outcome, reasoning, tradingAccountId,
-  size, netPl, commission, saving, addingPosition, saveError, createdPositionId, beginPositionDraft, cancelPositionDraft, save } =
-  useTradePositionForm(() => props.trade, { saved:() => emit('saved'), created:(id, accountId) => emit('created', id, accountId) });
-function startPositionDraft(prefill) {
-  beginPositionDraft(prefill);
-  emit('position-draft-started');
+const {positions:executions,loading:loadingExecutions,error:executionsError,refresh:loadExecutions}=
+  useDealingRangeExecutions(()=>props.trade,()=>props.positions);
+const {draftKey,draftBase,card:draftCardRef,container:executionSectionRef,visiblePositions:visibleExecutions,start:startPositionDraft,cancel:cancelDraft,
+  apply:applyPositionDraftPrefill,reload:refreshExecutions,onCreated:onExecutionCreated}=useJournalExecutionDraft({
+    trade:()=>props.trade,loading:computed(()=>loadingExecutions.value||!!executionsError.value),positions:executions,refresh:loadExecutions,
+    started:()=>emit('position-draft-started'),cancelled:()=>emit('position-draft-cancelled'),
+    created:(id,accountId)=>emit('created',id,accountId),
+  });
+defineExpose({applyPositionDraftPrefill,refreshExecutions});
+async function onExecutionSaved(){await refreshExecutions();emit('saved');}
+function addEntryEvidence(category,position){
+  const event={confirmation:'request-add-confirmation',confluence:'request-add-confluence',anti_confluence:'request-add-anti-confluence'}[category];
+  emit(event,position);
 }
-defineExpose({ beginPositionDraft:startPositionDraft });
-function cancelDraft(){cancelPositionDraft();emit('position-draft-cancelled');}
 
 // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
 // Long#24 wäre die Lesson daraus" — kann auch eine falsch bestimmte dealing range sein, nicht nur
@@ -161,21 +167,12 @@ async function toggleFavorite() {
 // category für Bestätigungen/Zusatzargumente/Anti-Confluences (siehe trade-from-poi.md#confirmation-
 // confluence-und-anti-confluence--wie-eine-dealing-range-go-bekommt).
 const rangeConfirmations = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "confirmation"));
-const positionConfirmations = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "confirmation"));
 const rangeConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "confluence"));
-const positionConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "confluence"));
 const rangeAntiConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "range" && c.category === "anti_confluence"));
 
 const instrumentMismatch = computed(() => props.trade.instrument !== props.currentSymbol);
 function pickerButtonTitle(baseTitle) {
   return instrumentMismatch.value ? `Erst zu ${props.trade.instrument} wechseln.` : baseTitle;
-}
-const positionAntiConfluences = computed(() => (props.trade.confirmations ?? []).filter((c) => c.level === "position" && c.category === "anti_confluence"));
-
-async function onDelete() {
-  if (!confirm(`Trade #${props.trade.id} wirklich löschen?`)) return;
-  const ok = await deleteTrade(props.trade.id);
-  if (ok) emit("deleted");
 }
 
 // Invalidierung als Liste mit höchstens einem Eintrag, identisch zu TradeSetupCockpit.vue — die
@@ -196,7 +193,7 @@ async function onRemoveTarget(target) {
 
 async function onRemoveConfirmation(confirmation) {
   const ok = await removeConfirmationFromTrade(confirmation.id);
-  if (ok) emit("saved");
+  if (ok) await onExecutionSaved();
 }
 
 // Nicht replay-aware (anders als PriceChart.vue) — das Panel zeigt den ECHTEN aktuellen Stand,
@@ -211,7 +208,7 @@ function confirmationLabel(confirmation) {
 </script>
 
 <template>
-  <MetadataPanel :title="addingPosition ? `Position zu DR #${trade.dealingRangeId} hinzufügen` : `✏️ Trade #${trade.id} bearbeiten`" :width="560" :height="700" position="bottom-right" @close="emit('close')">
+  <MetadataPanel :title="`DR #${trade.dealingRangeId} · Ausführungen`" :width="760" :height="900" position="bottom-right" @close="emit('close')">
     <div class="tem-header">
       <span class="tem-direction" :class="trade.direction">{{ trade.direction === "short" ? "Short" : "Long" }}</span>
       <span>{{ trade.instrument }}</span>
@@ -235,7 +232,6 @@ function confirmationLabel(confirmation) {
     <div class="tem-group tem-group-range">
       <h3 class="tem-group-title">
         📐 Dealing Range #{{ trade.dealingRangeId }}
-        <button type="button" class="tem-favorite-btn" :disabled="saving || addingPosition" @click="startPositionDraft()">Position hinzufügen</button>
         <button type="button" class="tem-favorite-btn" @click="emit('open-in-tsc')">Im TSC öffnen</button>
         <button
           class="tem-favorite-btn"
@@ -354,126 +350,22 @@ function confirmationLabel(confirmation) {
       </CrudListSection>
     </div>
 
-    <!-- Trade Position: diese EINE Ausführung — Entry-Kriterien/Ergebnis können sich von anderen
-         Re-Entries derselben Dealing Range unterscheiden. -->
-    <div class="tem-group tem-group-position">
-      <h3 class="tem-group-title">{{ addingPosition ? '▶ Neue Ausführung' : `▶ Ausführung #${trade.id}` }}</h3>
-      <p v-if="addingPosition" class="tem-muted">Neue Position derselben DR · gespeichert wird erst mit „Position speichern“.</p>
-      <M1FvgEntryControls v-if="addingPosition" :range-id="trade.dealingRangeId" :instrument="trade.instrument"
-        :direction="trade.direction" :armed-action="armedAction" :message="entryFvgMessage"
-        :disabled="saving || currentSymbol !== trade.instrument || createdPositionId != null"
-        @request="variant => emit('request-entry-fvg',variant)" />
-      <template v-if="!addingPosition">
-
-      <CrudListSection
-        title="Bestätigungen (GO für diesen Entry)"
-        icon="✔"
-        add-title="Bestätigung hinzufügen (Trade-Modus, dann Sweep/OB/Divergenz anklicken) — oder ein ganzes Trade-Setup für LS+OB auf einmal"
-        :items="positionConfirmations"
-        :item-key="(c) => c.id"
-        :item-label="confirmationLabel"
-        empty-text="Noch keine Bestätigungen."
-        :armed="armedAction === 'confirmation'"
-        @add="emit('request-add-confirmation')"
-        @remove="onRemoveConfirmation"
-        @hover="(c) => emit('hover-evidence', c)"
-      />
-
-      <CrudListSection
-        title="Zusatzargumente (Entry)"
-        icon="💡"
-        add-title="Zusatzargument hinzufügen (Trade-Modus, dann Fib anklicken)"
-        :items="positionConfluences"
-        :item-key="(c) => c.id"
-        :item-label="confirmationLabel"
-        empty-text="Noch keine Zusatzargumente."
-        :armed="armedAction === 'confluence'"
-        @add="emit('request-add-confluence')"
-        @remove="onRemoveConfirmation"
-        @hover="(c) => emit('hover-evidence', c)"
-      />
-
-      <CrudListSection
-        title="Anti-Confluences (Entry)"
-        icon="💀"
-        add-title="Anti-Confluence hinzufügen (Trade-Modus, dann Sweep/OB/Fib/Divergenz anklicken)"
-        :items="positionAntiConfluences"
-        :item-key="(c) => c.id"
-        :item-label="confirmationLabel"
-        empty-text="Noch keine Anti-Confluences."
-        :armed="armedAction === 'antiConfluence'"
-        @add="emit('request-add-anti-confluence')"
-        @remove="onRemoveConfirmation"
-        @hover="(c) => emit('hover-evidence', c)"
-      />
-
-      </template>
-      <section class="tem-section">
-        <h4 class="tem-section-title">Ausführung<span v-if="!addingPosition && trade.brokerPrivate"> · Beträge in {{trade.accountCurrency}}</span></h4>
-        <form class="tem-form" autocomplete="off" @submit.prevent="save">
-          <label>
-            Entry-Preis
-            <input v-model="entryPrice" type="number" step="any" :required="addingPosition" :min="addingPosition ? 0 : undefined" placeholder="leer = nicht gefüllt" />
-          </label>
-          <label>
-            Entry-Zeit
-            <input v-model="entryTimeInput" type="datetime-local" :required="addingPosition" />
-          </label>
-          <label>
-            Stop-Loss
-            <input v-model="stopLoss" type="number" step="any" placeholder="optional" />
-          </label>
-          <label>
-            Exit-Preis
-            <input v-model="exitPrice" type="number" step="any" placeholder="optional" />
-          </label>
-          <label>
-            Exit-Zeit
-            <input v-model="exitTimeInput" type="datetime-local" />
-          </label>
-          <label>
-            Size (Lots)
-            <input v-model="size" type="number" step="any" placeholder="optional" />
-          </label>
-          <label>
-            Net P/L
-            <input v-model="netPl" type="number" step="any" placeholder="optional" />
-          </label>
-          <label>
-            Commission
-            <input v-model="commission" type="number" step="any" placeholder="optional" />
-          </label>
-          <label>
-            Trading-Konto
-            <select v-model="tradingAccountId">
-              <option :value="null">— kein Konto —</option>
-              <option v-for="account in accounts" :key="account.id" :value="account.id">{{ account.name }}</option>
-            </select>
-          </label>
-          <label>
-            Ergebnis
-            <select v-model="outcome">
-              <option value="">— (offen/kein Fill)</option>
-              <option value="open">Offen</option>
-              <option value="win">Win</option>
-              <option value="loss">Loss</option>
-            </select>
-          </label>
-          <label>
-            Begründung
-            <textarea v-model="reasoning" rows="3" autocomplete="off"></textarea>
-          </label>
-          <p v-if="saveError" role="alert" class="tem-lesson-error">{{ saveError }}</p>
-          <p v-if="createdPositionId != null" role="status">Position #{{ createdPositionId }} gespeichert.</p>
-          <ActionButton type="submit" class="tem-save-btn" :disabled="saving || createdPositionId != null">{{ addingPosition ? 'Position speichern' : 'Speichern' }}</ActionButton>
-          <ActionButton v-if="addingPosition" :disabled="saving" @click="cancelDraft">Abbrechen</ActionButton>
-        </form>
-      </section>
-
-      <TradeJournalComments v-if="!addingPosition" :position-id="trade.id" />
-      <p v-if="!addingPosition && trade.brokerPrivate">Private Brokerzuordnung · Original-Deals bleiben erhalten.</p>
-      <ActionButton v-if="!addingPosition && !trade.brokerPrivate" tone="danger" class="tem-delete-btn" @click="onDelete">🗑 Diese Ausführung löschen</ActionButton>
-    </div>
+    <section ref="executionSectionRef" class="tem-executions" aria-label="Ausführungen dieser Dealing Range">
+      <div class="tem-executions-heading">
+        <h3>Ausführungen · {{executions.length}}</h3>
+        <ActionButton :disabled="loadingExecutions||!!executionsError||draftKey!=null" @click="startPositionDraft">Position hinzufügen</ActionButton>
+      </div>
+      <p v-if="loadingExecutions" role="status" class="tem-muted">Ausführungen werden geladen …</p>
+      <p v-if="executionsError" role="alert" class="tem-lesson-error">{{executionsError}} <button type="button" @click="refreshExecutions">Erneut laden</button></p>
+      <TradeExecutionCard v-for="(position,index) in visibleExecutions" :key="position.id" :trade="position" :number="index+1"
+        :selected="position.id===trade.id" :current-symbol="currentSymbol" :armed-action="armedPositionId===position.id?armedAction:null"
+        :draft-active="draftKey!=null" :can-delete="draftKey==null" @saved="onExecutionSaved" @created="onExecutionCreated" @deleted="id=>emit('deleted',id)"
+        @add-evidence="addEntryEvidence" @remove-evidence="onRemoveConfirmation" @hover-evidence="item=>emit('hover-evidence',item)" />
+      <TradeExecutionCard v-if="draftKey!=null" ref="draftCardRef" :key="'draft:'+draftKey" :trade="draftBase" :number="visibleExecutions.length+1"
+        draft :draft-key="draftKey" :current-symbol="currentSymbol" :armed-action="armedAction" :entry-fvg-message="entryFvgMessage"
+        @saved="onExecutionSaved" @created="onExecutionCreated" @cancel="cancelDraft" @prefill="emit('position-draft-started')"
+        @request-entry-fvg="payload=>emit('request-entry-fvg',payload)" />
+    </section>
   </MetadataPanel>
 </template>
 
@@ -613,11 +505,6 @@ function confirmationLabel(confirmation) {
   border-color: rgba(41, 98, 255, 0.35);
 }
 
-.tem-group-position {
-  background: rgba(154, 160, 172, 0.06);
-  border-color: rgba(154, 160, 172, 0.3);
-}
-
 .tem-group-title {
   margin: 2px 0 10px;
   font-size: 13px;
@@ -660,61 +547,7 @@ function confirmationLabel(confirmation) {
   cursor: default;
 }
 
-.tem-section {
-  background: #1a1e28;
-  border: 1px solid #2a2e39;
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-}
-
-.tem-section:last-child {
-  margin-bottom: 0;
-}
-
-/* Bestätigungen/Targets/Invalidierung liegen alle in CrudListSection.vue (eigene Klassen-Präfixe dort). */
-.tem-section-title {
-  margin: 0 0 8px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #565a64;
-}
-
-.tem-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tem-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 12px;
-  color: #9aa0ac;
-}
-
-.tem-form input,
-.tem-form select,
-.tem-form textarea {
-  background: #131722;
-  border: 1px solid #2a2e39;
-  border-radius: 4px;
-  color: #d1d4dc;
-  font-size: 13px;
-  padding: 5px 8px;
-  color-scheme: dark;
-  resize: vertical;
-}
-
-.tem-save-btn {
-  margin-top: 4px;
-}
-
-.tem-delete-btn {
-  display: block;
-  width: 100%;
-}
+.tem-executions-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tem-executions-heading h3{font-size:14px;margin:0}
+.tem-header{flex-wrap:wrap}
 </style>

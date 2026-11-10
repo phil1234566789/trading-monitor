@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 // Generisches schwebendes Panel: verschiebbar (per Header-Drag), größenveränderbar (natives
 // CSS `resize: both` — kein JS nötig) und scrollbar (Body hat eigenes overflow:auto, damit der
@@ -23,6 +23,12 @@ const left = ref(Math.max(PANEL_MARGIN, window.innerWidth - props.width - PANEL_
 // gezogene Größe wieder auf den Prop-Default zurückschreibt.
 const width = ref(props.width);
 const height = ref(props.height);
+const viewport=ref({width:window.innerWidth,height:window.innerHeight});
+function visibleOffset(offset,size,available,ratio){return Math.max(0,Math.min(offset,available-Math.min(size,available*ratio)-PANEL_MARGIN));}
+// Ein schmales Fenster darf ein bereits geöffnetes Panel nicht außerhalb des sichtbaren Bereichs stehen lassen.
+const visibleLeft=computed(()=>visibleOffset(left.value,width.value,viewport.value.width,.95));
+const visibleTop=computed(()=>visibleOffset(top.value,height.value,viewport.value.height,.9));
+const updateViewport=()=>{viewport.value={width:window.innerWidth,height:window.innerHeight};};
 const panelEl = ref(null);
 let resizeObserver = null;
 
@@ -30,8 +36,8 @@ let dragOffsetX = 0;
 let dragOffsetY = 0;
 
 function startDrag(e) {
-  dragOffsetX = e.clientX - left.value;
-  dragOffsetY = e.clientY - top.value;
+  dragOffsetX = e.clientX - visibleLeft.value;
+  dragOffsetY = e.clientY - visibleTop.value;
   window.addEventListener("mousemove", onDrag);
   window.addEventListener("mouseup", stopDrag);
 }
@@ -45,6 +51,7 @@ function stopDrag() {
 }
 
 onMounted(() => {
+  window.addEventListener("resize",updateViewport);
   if (!panelEl.value) return;
   resizeObserver = new ResizeObserver((entries) => {
     const entry = entries[0];
@@ -62,12 +69,14 @@ onMounted(() => {
   resizeObserver.observe(panelEl.value);
 });
 onUnmounted(() => {
+  window.removeEventListener("resize",updateViewport);
   resizeObserver?.disconnect();
+  stopDrag();
 });
 </script>
 
 <template>
-  <div ref="panelEl" class="metadata-panel" :style="{ top: top + 'px', left: left + 'px', width: width + 'px', height: height + 'px' }">
+  <div ref="panelEl" class="metadata-panel" :style="{ top: visibleTop + 'px', left: visibleLeft + 'px', width: width + 'px', height: height + 'px' }">
     <div class="metadata-panel-header" @mousedown="startDrag">
       <span>{{ props.title }}</span>
       <button type="button" class="metadata-panel-close" @click="emit('close')">×</button>

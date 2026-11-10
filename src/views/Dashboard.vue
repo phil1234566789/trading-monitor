@@ -396,6 +396,10 @@ function closeTradeEditModal() {
   hoveredModalEvidenceItem.value = null;
   hoveredModalTargetItem.value = null;
 }
+async function refreshJournalContext(){
+  const results=await Promise.all([refreshTrades(),tradeEditModalRef.value?.refreshExecutions()]);
+  return results.every(result=>result!==false);
+}
 function onTradeDeleted() {
   closeTradeEditModal();
   refreshTrades();
@@ -522,14 +526,14 @@ const armedTscSection = computed(() => (armedAction.value?.payload?.isTsc ? (TSC
 // mit den Arm-Keys — hier reicht der rohe Key.
 const armedTradeAction = computed(() => (armedAction.value && !armedAction.value.payload?.isTsc ? armedAction.value.key : null));
 const entryFvgSelection=computed(()=>armedAction.value?.key.startsWith('entryFvg')?armedAction.value.payload:null);
-function onRequestEntryFvg(variant){
+function onRequestEntryFvg({variant,draftKey}){
   const trade=editingTrade.value;
   if(!trade||trade.instrument!==currentSymbol.value)return;
   entryFvgMessage.value='';
   entryFvgPreview.value=null;
   currentBar.value='1m';
   armChartClick(variant==='immediate'?'entryFvgImmediate':'entryFvgRetestReaction',
-    {...trade,variant,draftToken:++entryFvgToken});
+    {...trade,variant,draftKey,draftToken:++entryFvgToken});
 }
 function onSelectEntryFvg(result){
   const target=entryFvgSelection.value;
@@ -537,7 +541,7 @@ function onSelectEntryFvg(result){
   if(result.status!=='ready'){entryFvgMessage.value=result.reason;return;}
   const prefill=m1FvgDraftPrefill(result,target,editingTrade.value,currentSymbol.value);
   if(!prefill){disarmChartClick();return;}
-  tradeEditModalRef.value?.beginPositionDraft(prefill);
+  if(!tradeEditModalRef.value?.applyPositionDraftPrefill(prefill,target.draftKey)){disarmChartClick();return;}
   entryFvgPreview.value=result;
   entryFvgMessage.value=`FVG-Impuls ${formatDatedTime(result.fvg.candleTime)}${result.retestCandleTime!=null?` · Retest ${formatDatedTime(result.retestCandleTime)}`:''} · Bestätigungskerze ${formatDatedTime(result.confirmationCandleTime)} · Entry nach Schluss ${formatDatedTime(prefill.entryTime)} · ${prefill.entryPrice}`;
 }
@@ -704,7 +708,7 @@ async function onTscRemoveTarget(t) {
 // noch, welche Liste danach neu geladen wird (analog trade.isTsc in onSelectTarget).
 async function onAddTargetFromPicker({ dealingRangeId, isTsc, ...target }) {
   const ok = await addTargetToTrade(dealingRangeId, target);
-  if (ok) (isTsc ? refreshTscRange() : refreshTrades());
+  if (ok) (isTsc ? refreshTscRange() : refreshJournalContext());
 }
 // Anti-Confluence-Vorschläge (Chat 2026-08-30) — PriceChart.vue: openAntiConfluencePicker baut das
 // Confirmation-Rohformat bereits fertig (dieselbe Form wie ein Chart-Klick), hier nur noch der ganz
@@ -712,12 +716,12 @@ async function onAddTargetFromPicker({ dealingRangeId, isTsc, ...target }) {
 // Anti-Confluence. Generisch seit Chat 2026-08-30, siehe onAddTargetFromPicker oben.
 async function onAddAntiConfluenceFromPicker({ dealingRangeId, isTsc, ...confirmation }) {
   const ok = await addRangeConfirmation(dealingRangeId, confirmation, "anti_confluence");
-  if (ok) (isTsc ? refreshTscRange() : refreshTrades());
+  if (ok) (isTsc ? refreshTscRange() : refreshJournalContext());
 }
 // Lupe-Buttons im TradeEditModal (Chat 2026-08-30, analog zur TSC) — öffnet denselben Picker wie
 // @open-target-picker/@open-anti-confluence-picker auf der TradeSetupCockpit unten, nur mit der
 // Dealing Range des gerade bearbeiteten Trades statt tscRange, isTsc=false schickt die Picker-
-// Auswahl oben in onAddTargetFromPicker/onAddAntiConfluenceFromPicker über refreshTrades() statt
+// Auswahl oben in onAddTargetFromPicker/onAddAntiConfluenceFromPicker über refreshJournalContext() statt
 // refreshTscRange() zurück. editingTrade trägt direction/targets/invalidation bereits eingebettet
 // (siehe trades.js: fetchTrades).
 function editingTradeAsRange() {
@@ -804,21 +808,21 @@ async function onSelectTarget(target) {
     targetAddTrade.value = null;
     // Ziele gehören zur dealing_range, nicht zur einzelnen Ausführung (Chat 2026-07-31).
     const ok = await addTargetToTrade(trade.dealingRangeId, target);
-    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshJournalContext());
     return;
   }
   if (confirmationAddTrade.value) {
     const trade = confirmationAddTrade.value;
     confirmationAddTrade.value = null;
     const ok = await addConfirmationToTrade(trade.id, target, "confirmation");
-    if (ok) refreshTrades();
+    if (ok) refreshJournalContext();
     return;
   }
   if (rangeConfirmationAddTrade.value) {
     const trade = rangeConfirmationAddTrade.value;
     rangeConfirmationAddTrade.value = null;
     const ok = await addRangeConfirmation(trade.dealingRangeId, target, "confirmation");
-    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshJournalContext());
     return;
   }
   // Zusatzargument (Confluence: Fib) — derselbe Insert-Pfad wie eine Confirmation,
@@ -828,14 +832,14 @@ async function onSelectTarget(target) {
     const trade = confluenceAddTrade.value;
     confluenceAddTrade.value = null;
     const ok = await addConfirmationToTrade(trade.id, target, "confluence");
-    if (ok) refreshTrades();
+    if (ok) refreshJournalContext();
     return;
   }
   if (rangeConfluenceAddTrade.value) {
     const trade = rangeConfluenceAddTrade.value;
     rangeConfluenceAddTrade.value = null;
     const ok = await addRangeConfirmation(trade.dealingRangeId, target, "confluence");
-    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshJournalContext());
     return;
   }
   // Anti-Confluence — gleicher kind-Satz wie Confirmation/Confluence (pivot/ob/fib/rsi_divergence),
@@ -845,14 +849,14 @@ async function onSelectTarget(target) {
     const trade = antiConfluenceAddTrade.value;
     antiConfluenceAddTrade.value = null;
     const ok = await addConfirmationToTrade(trade.id, target, "anti_confluence");
-    if (ok) refreshTrades();
+    if (ok) refreshJournalContext();
     return;
   }
   if (rangeAntiConfluenceAddTrade.value) {
     const trade = rangeAntiConfluenceAddTrade.value;
     rangeAntiConfluenceAddTrade.value = null;
     const ok = await addRangeConfirmation(trade.dealingRangeId, target, "anti_confluence");
-    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshJournalContext());
     return;
   }
   // Invalidierung — schreibt seit 22.09.2026 nicht mehr nur target.price, sondern das angeklickte
@@ -862,7 +866,7 @@ async function onSelectTarget(target) {
     const trade = invalidationAddTrade.value;
     invalidationAddTrade.value = null;
     const ok = await setDealingRangeInvalidation(trade.dealingRangeId, target);
-    if (ok) (trade.isTsc ? refreshTscRange() : refreshTrades());
+    if (ok) (trade.isTsc ? refreshTscRange() : refreshJournalContext());
     return;
   }
   if (tscBootstrapArmed.value) {
@@ -885,7 +889,7 @@ async function onSelectTarget(target) {
 }
 const { saving: setupSaving, error: setupSaveError, save: onSelectSetupConfirmations } = useSetupConfirmations({
   currentSymbol, confirmationAddTrade, rangeConfirmationAddTrade, tscBootstrapArmed,
-  tscRangeId, refreshTscRange, refreshTrades: () => refreshTrades(),
+  tscRangeId, refreshTscRange, refreshTrades: () => refreshJournalContext(),
 });
 // Klick auf eine Zeile in TradesTable.vue: springt im Chart hin (siehe jumpToTrade, Chat
 // 2026-07-27, erste Runde) UND fokussiert den TSC auf das verknüpfte Trade-Setup, falls
@@ -2235,6 +2239,8 @@ watch(selectedTradingAccountId, () => {
     ref="tradeEditModalRef"
     v-if="editingTrade"
     :trade="editingTrade"
+    :positions="trades"
+    :armed-position-id="armedAction?.payload?.id"
     :armed-action="armedTradeAction"
     :entry-fvg-message="entryFvgMessage"
     :current-symbol="currentSymbol"
@@ -2247,11 +2253,11 @@ watch(selectedTradingAccountId, () => {
     @open-in-tsc="onOpenJournalInTsc(editingTrade)"
     @deleted="onTradeDeleted"
     @request-add-target="onAddTargetRequest(editingTrade)"
-    @request-add-confirmation="onAddConfirmationRequest(editingTrade)"
+    @request-add-confirmation="onAddConfirmationRequest"
     @request-add-range-confirmation="onAddRangeConfirmationRequest(editingTrade)"
-    @request-add-confluence="onAddConfluenceRequest(editingTrade)"
+    @request-add-confluence="onAddConfluenceRequest"
     @request-add-range-confluence="onAddRangeConfluenceRequest(editingTrade)"
-    @request-add-anti-confluence="onAddAntiConfluenceRequest(editingTrade)"
+    @request-add-anti-confluence="onAddAntiConfluenceRequest"
     @request-add-range-anti-confluence="onAddRangeAntiConfluenceRequest(editingTrade)"
     @request-set-invalidation="onSetInvalidationRequest(editingTrade)"
     @remove-invalidation="removeInvalidation(editingTrade.dealingRangeId, false)"

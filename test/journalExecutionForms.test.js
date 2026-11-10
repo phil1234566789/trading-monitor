@@ -1,0 +1,23 @@
+import {afterEach,expect,it,vi} from 'vitest';
+import {effectScope,ref} from 'vue';
+const api=vi.hoisted(()=>({addPositionToDealingRange:vi.fn(),updateTrade:vi.fn()}));
+vi.mock('../src/tradeIntake.js',()=>api);
+import {useTradePositionForm} from '../src/composables/useTradePositionForm.js';
+let scope;
+afterEach(()=>{scope?.stop();vi.resetAllMocks();});
+it('keeps saved-card edits and a new-card draft independent through saves, cancellation and insert retries',async()=>{
+ scope=effectScope();const base={id:151,dealingRangeId:128,tradingAccountId:5,entryPrice:4113.31,entryTime:1793908560,stopLoss:4117.98,exitPrice:4095.36,exitTime:1793912400};
+ const original=ref(base),sibling=ref({...base,id:152,entryPrice:4112.1}),anchor=ref({...base});
+ const callbacks={saved:vi.fn(),created:vi.fn()};
+ const [one,two,draft]=scope.run(()=>[original,sibling,anchor].map(row=>useTradePositionForm(()=>row.value,callbacks)));
+ one.reasoning.value='unsaved151';two.reasoning.value='unsaved152';draft.beginPositionDraft({entryPrice:4004.83,entryTime:1793086500});
+ api.updateTrade.mockResolvedValue(true);await one.save();expect(draft.entryPrice.value).toBe(4004.83);expect(two.reasoning.value).toBe('unsaved152');
+ expect(api.updateTrade).toHaveBeenCalledWith(151,expect.any(Object),undefined);
+ two.cancelPositionDraft();expect(one.reasoning.value).toBe('unsaved151');expect(draft.addingPosition.value).toBe(true);
+ expect(draft.exitDateInput.value).toBe('2026-10-27');expect(draft.exitClockInput.value).toBe('');
+ let finish;api.addPositionToDealingRange.mockImplementation(()=>new Promise(resolve=>finish=resolve));
+ const saving=draft.save();await draft.save();expect(api.addPositionToDealingRange).toHaveBeenCalledTimes(1);
+ expect(api.addPositionToDealingRange.mock.calls[0][1].fields).toMatchObject({stopLoss:null,exitPrice:null,exitTime:null,tradingAccountId:5});
+ finish({id:153});await saving;await draft.save();expect(api.addPositionToDealingRange).toHaveBeenCalledTimes(1);
+ expect(one.entryPrice.value).toBe(4113.31);expect(two.entryPrice.value).toBe(4112.1);
+});
