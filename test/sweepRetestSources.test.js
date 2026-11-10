@@ -7,11 +7,12 @@ const input={instrument:'XAUUSD',m5Candles:fixture.candles.m5,h1Candles:fixture.
 const reference=sources=>sources.find(s=>s.obStartTime===at('06:40')&&s.sweeps.some(sweep=>sweep.level.price===4037.84));
 describe('additional causal sweep / existing M5 OB source',()=>{
   it('discovers the original DR121 geometry without a new post-sweep M5 OB or fake database ID',()=>{
-    const source=reference(detectSweepRetestSources(input));
+    const sources=detectSweepRetestSources(input),source=reference(sources);
     expect(source).toMatchObject({obTop:4043.74,obBottom:4038.24,createdAt:at('12:10'),orderBlockKnownAt:at('06:50')});
     expect(source.tradeSetupId).toBeUndefined();
     expect(setupSourceKey(source)).toContain(':sweep-retest:');
     expect(setupSourceRecognitionTime(source)).toBe(at('12:10'));
+    expect(sources.every(s=>s.dir===-1?s.obTop<s.ls.price:s.obBottom>s.ls.price)).toBe(true);
   });
   it('does not know the contact before the native M5 candle closes',()=>{
     expect(reference(detectSweepRetestSources({...input,evaluatedAt:at('12:09')}))).toBeUndefined();

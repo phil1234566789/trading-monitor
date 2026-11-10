@@ -137,12 +137,15 @@ export function setupEntryConditions(snapshot,selectedPattern=null) {
   }
   if(pattern2){
     const conditions=entry?.conditions ?? m1?.conditions;
-    const labels={retest:'Retest eines passenden M5-OB',m1PivotBreak:'M1-P2-Pivotbruch in Traderichtung',
+    const labels={orderBlockPlacement:'M5-OB vollständig jenseits des LS',orderBlockDepth:'M5-OB-Retesttiefe bis Entry',
+      retest:'Retest eines passenden M5-OB',m1PivotBreak:'M1-P2-Pivotbruch in Traderichtung',
       retestedFvg:'Gleichgerichtete M1-FVG ab Strukturfreigabe',fvgRetest:'Retest der bekannten M1-FVG · Wick-Überlauf zulässig',fvg:'Neue gleichgerichtete M1-FVG nach FVG-Retest'};
     for(const rule of entryPattern2ConditionResults(conditions,snapshot.direction,entry?.recognizedAt ?? at)){
       const fact=conditions?.[rule.key];
-      add(rule.key,labels[rule.key],rule.passed?'passed':fact?'unmet':'unknown',
-        fact?[`Erkannt ${date(fact.recognizedAt)}`,...(rule.passed?[]:['Pflichtbedingung am gespeicherten Stand nicht erfüllt.'])]:['Kein kausaler Beleg gespeichert.'],fact?.recognizedAt);
+      add(rule.key,labels[rule.key],rule.passed?'passed':fact?.status==='unknown'?'unknown':fact?'unmet':'unknown',
+        fact?[`Erkannt ${date(fact.recognizedAt)}`,
+          ...(Number.isFinite(fact.maxRetestFraction)?[`Grenze ${fact.maxRetestFraction*100} % · gemessene Tiefe ${Number.isFinite(fact.maxPenetrationFraction)?(fact.maxPenetrationFraction*100).toFixed(2)+' %':'unbekannt'}`]:[]),
+          ...(rule.passed?[]:['Pflichtbedingung am gespeicherten Stand nicht erfüllt.'])]:['Kein kausaler Beleg gespeichert.'],fact?.recognizedAt);
     }
   }
   for (const [key, label, offset] of (pattern2?[]:[['retest', pattern1 ? 'Retest eines passenden M5-OB' : 'M5-OB-Retest nach bestätigter Reaktion', 2], ['fvg', pattern1 ? 'Gleichgerichtete M1-FVG nach Retest' : 'Erste gleichgerichtete M1-FVG nach Retest', 3]])) {

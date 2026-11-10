@@ -7,6 +7,7 @@ import { M1_FVG_RETEST_PATTERN_VERSION } from './m1FvgRetestSequence.js';
 import { m5EntryHistoryKnown } from './m5EntryHistory.js';
 import {refineChecklistH1Sweeps} from './tradeSetupChecklistH1Sweeps.js';
 import {strongestSetupSweeps} from './tradeSetup.js';
+import {entryPattern2OrderBlockPlacement} from './entryPattern2OrderBlock.js';
 
 export const SWEEP_RETEST_SOURCE_KIND='liquidity-sweep-existing-m5-ob-retest-v1';
 
@@ -43,6 +44,8 @@ export function detectSweepRetestSources({instrument,m5Candles=[],h1Candles=[],e
   for(const {level,timeframe,sweepAt,sweepKnownAt} of sweeps)for(const {zone,knownAt,contacts,invalidationKnownAt,coverage} of histories){
     const obDir=-level.dir;
     if(zone.dir!==obDir || !(knownAt<=(level.fineTouchedTime ?? level.touchedTime)))continue;
+    if(entryPattern2OrderBlockPlacement({orderBlock:{...zone,recognizedAt:knownAt},level,
+      direction:obDir===1?'long':'short',evaluatedAt:sweepKnownAt}).status!=='passed')continue;
     // Spätere Invalidierungen dürfen die damals gültige Quelle nicht rückwirkend entfernen.
     const retest=contacts.find(candle=>candle.time>=sweepAt);
     if(!retest)continue;

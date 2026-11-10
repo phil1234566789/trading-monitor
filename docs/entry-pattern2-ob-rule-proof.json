@@ -1,0 +1,42 @@
+{
+  "runId": "setup2-6dd4a875d67d73c94d77ba3d",
+  "rule": {
+    "version": "ob-beyond-ls-max-depth-until-entry-v1",
+    "maxRetestFraction": 0.5
+  },
+  "method": "Existing frozen Pattern-2 entries re-evaluated at their original confirmation close; static eligibility, not a portfolio simulation.",
+  "inputSha256": "f8e4da196ca0a3cda8878868997a4f0e4b86e04f9068f73a4935e3bec437e302",
+  "entrySha256": "125507a3bd45ab40ad2d65ed62b180b5369060f60fddc8a4b4db2a31775eb615",
+  "tested": 101,
+  "retained": 28,
+  "removed": 73,
+  "clusterBefore": 7,
+  "clusterAfter": 1,
+  "runtimeEntryParity": 28,
+  "unknownRules": 0,
+  "pattern1EntriesUntouched": 18,
+  "baselineCommit": "21695f30",
+  "tests": {
+    "filesPassed": 364,
+    "testsPassed": 2698,
+    "preexistingFailures": 13,
+    "preexistingFailureFiles": 5,
+    "baselineFailureNamesIdentical": true,
+    "focusedTests": 39
+  },
+  "dr121": {
+    "entryBerlin": "2026-10-29 12:25",
+    "entryPrice": 4034.12,
+    "maxPenetrationFraction": 0.1890909090909,
+    "retained": true
+  },
+  "build": {
+    "spa": "passed",
+    "watcher": "passed"
+  },
+  "review": {
+    "blockingFindings": 0,
+    "reviewer": "independent child agent"
+  },
+  "scope": "No P1 detection change; no automatic deduplication; no new portfolio simulation; original run and frozen inputs unchanged."
+}
