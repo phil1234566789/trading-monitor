@@ -62,13 +62,15 @@ const latest=computed(()=>[...sync.value.filter(s=>selectedIds.value.has(s.accou
 <template><div class="mmt-stat-layout"><MmtTradeExtremes :trades="trades" :account-name="name" :known="Boolean(coverage.length)"/><section class="mmt-panel mmt-statistics" aria-labelledby="mmt-statistics-title">
  <div class="mmt-section-heading"><h2 id="mmt-statistics-title">Trading-Statistik <small v-if="account" class="mmt-muted">· {{name(account)}}</small></h2><ActionButton :disabled="loading" @click="refresh(false)">{{loading?'Lädt …':'Statistik aktualisieren'}}</ActionButton></div>
  <p v-if="error" class="mmt-error" role="alert">Historie nicht aktuell: {{error}}</p>
- <p class="mmt-muted">{{coverage.length}} / {{selectedAccounts.length}} Konten mit eingelesener Historie · {{latest?'Letzter Historienabgleich '+fmtDateTime(latest,{timeZone:'Europe/Berlin',second:'2-digit'}):'Historienabgleich noch nicht bestätigt'}} · Brokerdaten und gekennzeichnete CSV-Importe, inklusive manueller Trades.</p>
  <p v-if="problems.length" class="mmt-error" role="status">Historienimport läuft oder ist gestört. Ergebnisse können noch unvollständig sein.</p>
+ <details class="mmt-stat-filter-menu"><summary>Filter<span v-if="asset||from||to||outcomes.length<outcomeOptions.length"> · aktiv</span></summary>
+ <p class="mmt-muted">{{coverage.length}} / {{selectedAccounts.length}} Konten mit eingelesener Historie · {{latest?'Letzter Historienabgleich '+fmtDateTime(latest,{timeZone:'Europe/Berlin',second:'2-digit'}):'Historienabgleich noch nicht bestätigt'}} · Brokerdaten und gekennzeichnete CSV-Importe, inklusive manueller Trades.</p>
  <div class="mmt-stat-filters">
   <label>Asset<select v-model="asset"><option value="">Alle Assets</option><option v-for="a in assets" :key="a">{{a}}</option></select></label>
   <label>Abschluss ab<input v-model="from" type="date"></label><label>bis<input v-model="to" type="date"></label>
  </div>
  <fieldset class="mmt-outcome-filter"><legend>Ergebnis</legend><label v-for="item in outcomeOptions" :key="item.key"><input v-model="outcomes" type="checkbox" :value="item.key">{{item.label}}</label><span class="mmt-muted">Mehrfachauswahl · vor Kommission</span></fieldset>
+ </details>
  <p v-if="!outcomes.length" class="mmt-muted" role="status">Keine Ergebnisart ausgewählt.</p>
  <p v-if="outcomes.length<outcomeOptions.length" class="mmt-muted">Ergebnisfilter aktiv: Alle Kennzahlen und Ansichten beziehen sich nur auf die ausgewählten Ergebnisse.</p>
  <p v-if="from&&to&&from>to" role="alert" class="mmt-error">Das Enddatum liegt vor dem Startdatum.</p>

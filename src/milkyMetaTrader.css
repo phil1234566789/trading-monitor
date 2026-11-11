@@ -15,14 +15,6 @@
 .mmt-page p {line-height:1.45; margin:6px 0}
 .mmt-muted,.mmt-page dt {color:var(--mmt-muted)}
 .mmt-page summary {cursor:pointer; padding:3px 0}
-.mmt-account-bar {display:flex; align-items:center; justify-content:space-between; gap:12px}
-.mmt-account-bar>div {display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
-.mmt-account-bar>.mmt-account-status {display:flex;align-items:center;justify-content:flex-end;flex-wrap:nowrap;gap:8px;min-width:0;margin-left:auto}
-.mmt-status.mmt-broker-status {white-space:normal}
-.mmt-account-bar h2 {font-size:13px; margin:0}
-.mmt-account-bar .mmt-muted {font-size:11px}
-.mmt-status {border:1px solid #665332; color:#efcd8d; padding:4px 8px; border-radius:3px; font-size:11px; white-space:nowrap}
-.mmt-status[data-ready=true] {border-color:#365c52; color:#91d5c1}
 .mmt-side-column {min-width:0}
 .mmt-workspace {display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:12px; align-items:start}
 .mmt-panel {min-width:0; padding:12px; background:var(--mmt-surface); border:1px solid var(--mmt-border); border-radius:4px; margin-bottom:8px}
@@ -114,7 +106,6 @@
   .mmt-heading {align-items:start}
   .mmt-heading h1 {font-size:17px}
   .mmt-heading .ui-action-btn {max-width:140px}
-  .mmt-account-bar {align-items:start; flex-direction:column; gap:6px}
   .mmt-panel {padding:10px}
   .mmt-levels>div {display:block}
   .mmt-levels dd {margin-top:3px; font-size:12px}

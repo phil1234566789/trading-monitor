@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useStatusBar } from '../composables/useStatusBar.js';
-import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus, mmtSelectedAccountId, mmtExecutionReady, mmtAccountSnapshot } from '../milkyMetaTraderPolling.js';
+import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus, mmtSelectedAccountId, mmtAccountSnapshot } from '../milkyMetaTraderPolling.js';
 import { positionCommissions } from '../milkyMetaTraderStatistics.js';
 import { cssColor } from '../chartColors.js';
 import MilkyMetaTraderStatistics from '../components/MilkyMetaTraderStatistics.vue';
@@ -41,7 +41,6 @@ const active=computed(()=>accounts.value.find(a=>a.id===activeId.value));
 const api=(action,fields,options)=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,token.value)(action,fields,options);
 const time=value=>value ? new Date(value).toLocaleString('de-DE',{timeZone:'Europe/Berlin'}) : '—';
 const snapshot=computed(()=>mmtAccountSnapshot(active.value,status.value?.bridge));
-const ready=computed(()=>mmtExecutionReady(active.value,status.value,snapshot.value));
 const currentOrders=computed(()=>(status.value?.orders??[]).filter(order=>['searching','sending','unknown'].includes(order.status)||(order.status==='executed'&&order.result?.position_lifecycle?.state!=='closed')));
 const previousOrders=computed(()=>(status.value?.orders??[]).filter(order=>!currentOrders.value.includes(order)));
 
@@ -124,7 +123,6 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
   <main class="mmt-page" :style="{'--mmt-positive':cssColor('candleUp'),'--mmt-negative':cssColor('candleDown')}">
     <header class="mmt-heading"><div><h1>Milky Meta Trader <small>MMT</small></h1></div>
       <ActionButton v-if="unlocked" @click="lock">Sperren &amp; Schlüssel vergessen</ActionButton></header>
-    <details class="mmt-notice"><summary>Risikogrenzen und Worker-Schutz</summary><p>Alle Entry-Modi benötigen bestätigte Kontogrenzen und eine frische Worker-Schutzprüfung. Tagesstopp und Teilziele benötigen den laufenden Worker; Slippage und Gebühren können den tatsächlichen Verlust erhöhen.</p></details>
     <p v-if="error" role="alert" class="mmt-error">{{error}}</p>
     <p v-if="pollError" role="alert" class="mmt-error">Statusabgleich fehlgeschlagen: {{pollError}}. Letzten Brokerstand und Verbindung prüfen.</p>
     <p v-if="message" role="status">{{message}}</p>
@@ -136,13 +134,6 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       <ActionButton type="submit" :disabled="busy||!token">{{busy?'Verbinde …':'Entsperren'}}</ActionButton>
     </form>
     <template v-else>
-      <section class="mmt-account-bar" aria-label="Aktives Handelskonto">
-        <div><h2>{{active?.name??'Kein Konto ausgewählt'}}</h2><span class="mmt-muted" v-if="active">{{active.login}} · {{active.server}} · {{active.mode==='demo'?'Demo':'Real / Challenge'}}</span></div>
-        <div class="mmt-account-status">
-          <span v-if="dataAge==null||dataAge>staleSeconds" role="status" class="mmt-status mmt-broker-status">Brokerdaten {{dataAge==null?'noch nicht verfügbar':'seit '+dataAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</span>
-          <span class="mmt-status" :data-ready="Boolean(ready)">{{ready?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
-        </div>
-      </section>
       <MmtDailyStopStatus :status="status" :now="now" :stale-seconds="staleSeconds" />
       <MilkyMetaTraderBalances v-model:statistics-account="statisticsAccount" :accounts="accounts" :active-id="activeId" :status="status" :history="brokerHistory" :now="now" :stale-seconds="staleSeconds" />
         <p v-if="workerProblem" role="alert" class="mmt-error">Ausführung gestört: {{workerProblem.code}}<span v-if="workerProblem.stage"> in {{workerProblem.stage}}</span>. Entry-Aufträge und Brokerstatus prüfen; nichts blind erneut senden.</p>

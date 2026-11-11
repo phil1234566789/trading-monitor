@@ -6,6 +6,7 @@ import {fmtMoney,fmtPrice,fmtDateTime} from '../format.js';
 import {closedBrokerTrades} from '../milkyMetaTraderStatistics.js';
 import {accountBalance,accountPerformance,challengeGauge,balanceHealth} from '../milkyMetaTraderBalances.js';
 import {snapshotAgeSeconds} from '../milkyMetaTraderMonitoring.js';
+import {mmtAccountSnapshot,mmtExecutionReady} from '../milkyMetaTraderPolling.js';
 const statisticsAccount=defineModel('statisticsAccount',{type:String,default:''});
 const props=defineProps({accounts:Array,activeId:String,status:Object,history:Object,now:Number,staleSeconds:Number});
 const result=computed(()=>closedBrokerTrades(props.history?.rows??[]));
@@ -21,11 +22,16 @@ const rows=computed(()=>(props.accounts??[]).filter(a=>!a.archived).map(account=
 const time=value=>fmtDateTime(value,{year:'numeric',timeZone:'Europe/Berlin'});
 const money=(value,currency)=>value==null?'unbekannt':fmtMoney(value,currency);
 const limitsTitle=row=>'Quelle: '+(row.limits_source??'unbekannt')+' · '+(row.limits_at?time(row.limits_at)+' (Berlin)':'Stand unbekannt');
+const activeAccount=computed(()=>props.accounts?.find(a=>a.id===props.activeId));
+const activeSnapshot=computed(()=>mmtAccountSnapshot(activeAccount.value,props.status?.bridge));
+const executionReady=computed(()=>mmtExecutionReady(activeAccount.value,props.status,activeSnapshot.value));
+const brokerAge=computed(()=>activeSnapshot.value&&!activeSnapshot.value.worker_error?snapshotAgeSeconds(props.status?.bridge?.heartbeat_at,props.now):null);
 </script>
 
 <template>
  <section class="mmt-balances" aria-label="Balance aller gespeicherten Konten">
   <div class="mmt-balance-selection"><span class="mmt-muted">Statistik nach Konto</span><ToggleButton variant="bordered" :class="{active:!statisticsAccount}" :aria-pressed="!statisticsAccount" @click="statisticsAccount=''">Alle aktive Konten</ToggleButton><ArchivedAccounts v-model:account="statisticsAccount" :accounts="accounts" /></div>
+  <p v-if="!activeAccount" class="mmt-muted" role="status">Kein Handelskonto ausgewählt.</p>
   <div class="mmt-balance-list" tabindex="0" role="region" aria-label="Konten horizontal scrollen">
   <article v-for="row in rows" :key="row.account.id" class="mmt-balance-card" :data-statistics-selected="row.account.id===statisticsAccount" :aria-label="row.account.name+' · '+row.account.login">
    <button type="button" class="mmt-balance-select" :aria-label="'Statistik: '+row.account.name" :aria-pressed="row.account.id===statisticsAccount" :title="'Verlustgrenze: '+money(row.loss_floor,row.currency)+' · '+limitsTitle(row)" @click="statisticsAccount=row.account.id"></button>
@@ -34,6 +40,11 @@ const limitsTitle=row=>'Quelle: '+(row.limits_source??'unbekannt')+' · '+(row.l
     <span v-if="row.account.id===activeId" class="mmt-balance-health" :data-ok="row.health.ok" :role="row.health.ok?'status':'alert'">{{row.health.ok?'●':'⚠'}} {{row.health.label}}</span>
     <small v-else class="mmt-muted mmt-balance-saved" :title="row.balance_at?time(row.balance_at)+' (Berlin)':'Zeitpunkt unbekannt'">{{row.readerFresh?'Daten aktuell':'Gespeicherter Stand'}}</small>
     <div><small class="mmt-muted">{{row.account.login}}</small> <small v-if="row.account.id===activeId" class="mmt-selected">Aktives Handelskonto</small><small v-else class="mmt-muted">Handel: nicht gewählt</small></div>
+    <small class="mmt-muted mmt-balance-broker">{{row.account.server}} · {{row.account.mode==='demo'?'Demo':'Real / Challenge'}}</small>
+   </div>
+   <div v-if="row.account.id===activeId" class="mmt-balance-execution" role="status">
+    <span :data-ready="executionReady">{{executionReady?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
+    <p v-if="brokerAge==null||brokerAge>staleSeconds" class="mmt-error">Brokerdaten {{brokerAge==null?'noch nicht verfügbar':'seit '+brokerAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
    </div>
    <div class="mmt-balance-gauge" role="group" :aria-label="'Balance '+money(row.balance,row.currency)+', Verlustgrenze '+money(row.loss_floor,row.currency)+', Ziel '+money(row.target,row.currency)+', Challenge-Fortschritt '+(row.gauge.progress==null?'unbekannt':fmtPrice(row.gauge.progress,1)+' Prozent')">
     <svg viewBox="-64 -32 348 154" aria-hidden="true">
@@ -71,6 +82,9 @@ const limitsTitle=row=>'Quelle: '+(row.limits_source??'unbekannt')+' · '+(row.l
 .mmt-balance-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem .5rem;min-height:2.75rem;margin-bottom:.25rem;align-items:start}.mmt-balance-heading>div{grid-column:1/-1}.mmt-balance-heading>.mmt-balance-health,.mmt-balance-saved{text-align:right;max-width:110px;font-size:.65rem}
 .mmt-balance-heading strong{overflow-wrap:anywhere}
 .mmt-balance-heading small{font-weight:normal}
+.mmt-balance-broker{grid-column:1/-1;overflow-wrap:anywhere}
+.mmt-balance-execution{font-size:11px;line-height:1.4;margin:4px 0 8px;overflow-wrap:anywhere}
+.mmt-balance-execution span{color:#efcd8d}.mmt-balance-execution span[data-ready="true"]{color:#91d5c1}
 .mmt-balance-gauge{position:relative;width:320px;max-width:100%;min-height:120px;margin:0 auto}
 .mmt-balance-gauge svg{display:block;width:100%;overflow:visible}
 .mmt-balance-arc,.mmt-balance-risk,.mmt-balance-fill{fill:none;stroke-width:14}.mmt-balance-arc{stroke-linecap:round}

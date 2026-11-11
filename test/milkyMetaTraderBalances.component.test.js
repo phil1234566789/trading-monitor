@@ -43,6 +43,17 @@ it('keeps additional accounts in the same scrollable account strip',async()=>{
  expect(html.match(/<article/g)).toHaveLength(6);
  expect(html).toContain('Konten horizontal scrollen');
 });
+it('integrates broker identity and worker readiness only into the active account card',async()=>{
+ const now=Date.now(),accounts=[{id:'a',login:1,server:'BeyondIQCapital-Server',name:'Trading',mode:'live'},{id:'b',login:2,server:'Other',name:'Inactive worker',mode:'demo'}];
+ const status={online:true,server_live_allowed:true,bridge:{heartbeat_at:new Date(now).toISOString(),snapshot:{account_login:1,account_server:'BeyondIQCapital-Server',execution_ready:true,trade_allowed:true}}};
+ const html=await renderToString(Vue.createSSRApp(Balances,{accounts,activeId:'a',status,now,staleSeconds:15}));
+ expect(html).toContain('BeyondIQCapital-Server · Real / Challenge');
+ expect(html).toContain('Other · Demo');
+ expect(html.match(/Worker verbunden · Freigabe je Entry geprüft/g)).toHaveLength(1);
+ expect(html).not.toContain('Brokerdaten noch nicht verfügbar');
+ const stale=await renderToString(Vue.createSSRApp(Balances,{accounts,activeId:'a',status,now:now+16000,staleSeconds:15}));
+ expect(stale).toContain('seit 16 Sekunden nicht aktualisiert');
+});
 
 it('marks only recent reader observations current and falls back to a saved stand after an outage',async()=>{
  const now=Date.parse('2026-11-05T08:00:00Z');
