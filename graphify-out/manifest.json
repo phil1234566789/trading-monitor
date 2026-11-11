@@ -6720,9 +6720,9 @@
     "semantic_hash": ""
   },
   "src/views/MilkyMetaTrader.vue": {
-    "mtime": 1794390797.7690835,
-    "seen": 1794390937.6273885,
-    "ast_hash": "ee334b42146f1b38c7582cc3b25ce7b8",
+    "mtime": 1794400632.4022245,
+    "seen": 1794400756.1124434,
+    "ast_hash": "a8f08cae027d0924ca2c253d2976a3fa",
     "semantic_hash": ""
   },
   "supabase/functions/mt5-control/index.ts": {
@@ -7128,9 +7128,9 @@
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderBalances.vue": {
-    "mtime": 1794390713.8194144,
-    "seen": 1794390937.6263885,
-    "ast_hash": "3f526bb0b50c43f18839241dcbfa81e9",
+    "mtime": 1794400632.6768477,
+    "seen": 1794400756.0280268,
+    "ast_hash": "26c91e334bdbc689844743af02ee8104",
     "semantic_hash": ""
   },
   "src/milkyMetaTraderBalances.js": {
@@ -7146,9 +7146,9 @@
     "semantic_hash": ""
   },
   "test/milkyMetaTraderBalances.component.test.js": {
-    "mtime": 1794390714.3945057,
-    "seen": 1794390937.6273885,
-    "ast_hash": "aea5623072384f2c6effc1808cb2876c",
+    "mtime": 1794400690.8441923,
+    "seen": 1794400756.200945,
+    "ast_hash": "58145c1564bc87af9d5c479d55ecadce",
     "semantic_hash": ""
   },
   "test/milkyMetaTraderBalances.test.js": {
@@ -7266,9 +7266,9 @@
     "semantic_hash": ""
   },
   "src/components/MmtDailyStopStatus.vue": {
-    "mtime": 1794390797.5590532,
-    "seen": 1794390937.6263885,
-    "ast_hash": "3b27f86bdde8067ef86acdbc9dc8124c",
+    "mtime": 1794400674.14787,
+    "seen": 1794400756.0310261,
+    "ast_hash": "c6cff0a6e232a18015c8dc51326fa0e2",
     "semantic_hash": ""
   },
   "src/components/MmtRiskPolicyEditor.vue": {
@@ -8589,6 +8589,18 @@
     "mtime": 1794390714.3735056,
     "seen": 1794390937.6273885,
     "ast_hash": "a9714c47565674bbe56ee4353c60b3e1",
+    "semantic_hash": ""
+  },
+  "src/mmtDailyHealth.js": {
+    "mtime": 1794400673.9346895,
+    "seen": 1794400756.0774481,
+    "ast_hash": "75456f2ad43684233b3cfa91141a7ce7",
+    "semantic_hash": ""
+  },
+  "test/mmtDailyHealth.test.js": {
+    "mtime": 1794400690.6353436,
+    "seen": 1794400756.2039442,
+    "ast_hash": "b064a79ec88b29e30bd8b1d333bfd17b",
     "semantic_hash": ""
   }
 }
