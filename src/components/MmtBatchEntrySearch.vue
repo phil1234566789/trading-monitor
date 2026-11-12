@@ -4,7 +4,7 @@ import ActionButton from './ui/ActionButton.vue';
 import {chartInstrument} from '../tradeIdeas.js';
 import {riskPreviewMetrics} from '../../supabase/functions/trading-monitor-mcp/mt5RiskContract.js';
 import {confirmMmtBatch} from '../mmtBatchSearch.js';
-import {MMT_ACCOUNT_ROLES,accountsForRole} from '../mmtAccountRoles.js';
+import {MMT_ACCOUNT_SELECTIONS,accountsForRole} from '../mmtAccountRoles.js';
 const props=defineProps({api:Function,accounts:Array,statuses:Object,activeId:String,symbol:String,idea:Object,disabled:Boolean,now:Number});
 const emit=defineEmits(['submitted']);
 const role=ref('normal'),riskMode=ref('risky'),duration=ref(30),rows=ref([]),busy=ref(false),error=ref('');
@@ -72,11 +72,11 @@ async function reconcile(){
 <template>
  <section class="mmt-panel mmt-ticket" aria-label="Entry auf ausgewählten Konten suchen">
   <label class="role-picker">Handelskonto<select v-model="role" :disabled="busy||unresolved" aria-label="Trade-Art und Konto">
-   <option v-for="r in MMT_ACCOUNT_ROLES" :key="r.value" :value="r.value">{{r.label}} · {{accountsForRole(accounts??[],r.value)[0]?.name??'kein Konto zugewiesen'}}</option>
-   <option value="all" disabled>Überall ausführen · wartet auf Support</option>
+   <option v-for="r in MMT_ACCOUNT_SELECTIONS" :key="r.value" :value="r.value">{{r.label}} · {{accountsForRole(accounts??[],r.value).map(a=>a.name).join(' + ')||'Kontozuordnung fehlt'}}</option>
   </select></label>
   <p v-if="idea"><strong>{{idea.direction==='long'?'Long':'Short'}} · SL {{idea.sl}} · {{symbol}}</strong></p>
-  <p v-for="a in selectedAccounts" :key="a.id"><template v-if="details(a).metrics">{{details(a).metrics.volume}} Lot · RR {{details(a).metrics.rr?.toFixed(2)??'—'}} · {{details(a).metrics.risk.toFixed(2)}} {{details(a).metrics.currency}}</template><span v-else role="status">{{details(a).reason}}</span></p>
+  <p v-for="a in selectedAccounts" :key="a.id"><strong>{{a.name}}</strong> · <template v-if="details(a).metrics">{{details(a).metrics.volume}} Lot · RR {{details(a).metrics.rr?.toFixed(2)??'—'}} · {{details(a).metrics.risk.toFixed(2)}} {{details(a).metrics.currency}}</template><span v-else role="status">{{details(a).reason}}</span></p>
+  <p v-if="selectedAccounts.length>1" class="mmt-muted">{{selectedAccounts.length}} getrennte Suchen · Risiko je Konto · Ausführung kann je Konto abweichen.</p>
   <form class="compact-controls" @submit.prevent="prepare">
    <label>Risiko<select v-model="riskMode" :disabled="busy||unresolved"><option value="risky">Risky · 0,5 %</option><option value="full">Full · 0,9 %</option></select></label>
    <label>Gültig · Minuten<input v-model="duration" type="number" min="1" max="60" required :disabled="busy||unresolved"></label>
