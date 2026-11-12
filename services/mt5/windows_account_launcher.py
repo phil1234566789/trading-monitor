@@ -6,17 +6,15 @@ import subprocess
 import sys
 import time
 import uuid
+from worker_environment import worker_settings
 
 
 def launch(account_id, execute=False, root=Path(r'C:\MMT')):
     account_id = str(uuid.UUID(account_id))
     private = root / 'private' / 'accounts' / account_id
-    settings = dict(line.split('=', 1) for line in (private / 'worker.env').read_text(encoding='utf-8-sig').splitlines()
-                    if line.strip() and not line.startswith('#'))
-    allowed = {'MT5_ACCOUNT_ID', 'MT5_TERMINAL_PATH', 'MT5_WORKER_URL', 'MT5_WORKER_TOKEN',
-               'MT5_ALLOW_LIVE', 'MT5_JOURNAL_PATH', 'MT5_SERVER_TIME_OFFSET_SEC'}
+    settings = worker_settings(private / 'worker.env')
     terminal = root / 'accounts' / account_id / 'terminal64.exe'
-    if (set(settings) - allowed or settings.get('MT5_ACCOUNT_ID') != account_id
+    if (settings.get('MT5_ACCOUNT_ID') != account_id
             or Path(settings.get('MT5_TERMINAL_PATH', '')).resolve() != terminal.resolve()
             or Path(settings.get('MT5_JOURNAL_PATH', '')).resolve() != (private / 'execution.sqlite3').resolve()):
         raise ValueError('account_configuration_mismatch')

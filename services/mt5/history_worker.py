@@ -44,7 +44,7 @@ def main():
     while True:
         identity=None
         try:
-            if not initialize_terminal(api,path,timeout=5000):raise ValueError('terminal_unavailable')
+            if not initialize_terminal(api,path,timeout=5000,portable=bool(os.environ.get('MT5_ACCOUNT_ID'))):raise ValueError('terminal_unavailable')
             c=cloud.call('history_context',{})
             identity=dict(account_login=c['account_login'],account_server=c['account_server'])
             _,count=sync_history(api,cloud,offset)
