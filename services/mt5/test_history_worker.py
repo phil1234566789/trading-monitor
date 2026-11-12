@@ -29,3 +29,10 @@ class HistoryTests(unittest.TestCase):
    else:api.history_deals_get.return_value=None
    with self.assertRaises(ValueError):sync_history(api,cloud,10800)
    self.assertNotIn('history_complete',[c.args[0] for c in cloud.call.call_args_list])
+ def test_acknowledges_only_the_requested_refresh_after_successful_import(self):
+  api,cloud=self.setup_sync()
+  sync_history(api,cloud,10800,requested_at='2026-11-12T21:00:00Z')
+  complete=cloud.call.call_args_list[-1]
+  self.assertEqual(complete.args[0],'history_complete')
+  self.assertEqual(complete.args[1]['requested_at'],'2026-11-12T21:00:00Z')
+  api.order_send.assert_not_called();api.login.assert_not_called()

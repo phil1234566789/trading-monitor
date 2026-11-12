@@ -13,7 +13,7 @@ export async function executionConfig(accountId?:unknown) {
     throw new Error('mt5_not_configured');
   }
   const account=await activeMt5Account(accountId),{login,server,mode}=account;
-  return { accountId:account.id,riskPolicy:await readRiskPolicy(account.id),login:Number(login), server, mode, allowLive: Deno.env.get('MT5_ALLOW_LIVE') === 'true' };
+  return { accountId:account.id,historyRequest:account.history_requested_at??null,riskPolicy:await readRiskPolicy(account.id),login:Number(login), server, mode, allowLive: Deno.env.get('MT5_ALLOW_LIVE') === 'true' };
 }
 
 function validId(id: string) {
@@ -100,7 +100,7 @@ export async function workerAction(body: Record<string, any>) {
       .is('result->position_lifecycle->closed_at_sec',null).order('id').limit(20);
     if(body.watch_cursor)query=query.gt('id',body.watch_cursor);
     const watched=checked(await query)??[];
-    return {orders,watch_orders:watched,watch_cursor:watched.length?watched[watched.length-1].id:null};
+    return {orders,watch_orders:watched,watch_cursor:watched.length?watched[watched.length-1].id:null,history_request:config.historyRequest};
   }
   validId(body.id);
   if(body.action==='position_update') {

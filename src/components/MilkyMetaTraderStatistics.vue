@@ -5,7 +5,7 @@ import MmtTradeExtremes from './MmtTradeExtremes.vue';
 import EquityChart from './MilkyMetaTraderEquityChart.vue';
 import Breakdown from './MilkyMetaTraderStatisticsBreakdown.vue';
 import MilkyMetaTraderJournal from './MilkyMetaTraderJournal.vue';
-import {loadMmtHistory} from '../milkyMetaTraderHistory.js';
+import {refreshMmtHistory} from '../milkyMetaTraderHistory.js';
 import {closedBrokerTrades,filterBrokerTrades,statisticsGroups} from '../milkyMetaTraderStatistics.js';
 import {fmtDate,fmtDateTime,fmtPrice,pnlClass} from '../format.js';
 import '../milkyMetaTraderStatistics.css';
@@ -24,15 +24,15 @@ const outcomeOptions=[{key:'win',label:'Gewinner'},{key:'loss',label:'Verlierer'
 const currency='USD';
 const views=[{key:'list',label:'PnL-Liste'},{key:'chart',label:'X–Y-Diagramm'},{key:'asset',label:'Assets'},{key:'hour',label:'Entry-Stunden · Berlin'},{key:'weekday',label:'Entry-Wochentage · Berlin'}];
 const journalTrade=ref(null);
-let timer,inFlight=false,alive=true;
+let inFlight=false,alive=true;
 async function refresh(background=false){
  if(inFlight)return;inFlight=true;if(!background)loading.value=true;
- try{const data=await loadMmtHistory(props.api,background);if(alive){raw.value=data.rows;sync.value=data.sync;imports.value=data.imports;error.value='';loaded.value=true;emit('history',data);}}
+ try{const data=await refreshMmtHistory(props.api);if(alive){raw.value=data.rows;sync.value=data.sync;imports.value=data.imports;error.value=data.refreshError;loaded.value=true;emit('history',data);}}
  catch(e){if(alive)error.value=e.message;}
  finally{inFlight=false;if(alive)loading.value=false;}
 }
-onMounted(()=>{void refresh();timer=setInterval(()=>{if(document.visibilityState==='visible')void refresh(true);},60000);});
-onUnmounted(()=>{alive=false;clearInterval(timer);});
+onMounted(()=>{void refresh();});
+onUnmounted(()=>{alive=false;});
 const result=computed(()=>closedBrokerTrades(raw.value));
 const imported=computed(()=>importedClosedTrades(imports.value));
 const assets=computed(()=>[...new Set([...result.value.trades,...imported.value].map(t=>t.symbol))].sort());

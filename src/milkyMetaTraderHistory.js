@@ -12,3 +12,21 @@ export async function loadMmtHistory(api,background=false,afterId=0){
  }
  return {rows,sync,imports};
 }
+
+export async function refreshMmtHistory(api){
+ let refreshError='';
+ try{
+  const {requests}=await api('history_refresh',{});
+  let done=false;
+  for(let attempt=0;attempt<20;attempt++){
+   const status=await api('history_refresh_status',{requests},{background:true});
+   if(status.failed?.length)throw new Error('history_refresh_failed');
+   if(status.done){done=true;break;}
+   await new Promise(resolve=>setTimeout(resolve,1000));
+  }
+  if(!done)throw new Error('history_refresh_timeout');
+ }catch{
+  refreshError='Brokerhistorie konnte nicht aktualisiert werden. Angezeigt wird der gespeicherte Stand; bitte erneut versuchen.';
+ }
+ return {...await loadMmtHistory(api),refreshError};
+}

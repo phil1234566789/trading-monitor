@@ -13,6 +13,7 @@ from health import fault_details
 from daily_stop import DailyStopEngine
 from target_worker import TargetEngine
 from terminal_connection import initialize_terminal
+from history_mailbox import HistoryMailbox
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -57,6 +58,7 @@ class Engine:
         self.last_fault_report=0
         self.pending_notified=set()
         self.next_reconcile={}
+        self.history_mailbox=HistoryMailbox()
 
     def report_fault(self,error):
         fault=fault_details(error,self.last_fault)
@@ -181,6 +183,8 @@ class Engine:
                     response = self.cloud.call('poll', dict(snapshot=snapshot,watch_cursor=watch_cursor))
                     daily_allowed=self.daily_stop.cycle(snapshot)
                     self.targets.cycle(risk_allowed=daily_allowed)
+                    try:self.history_mailbox.request(response.get('history_request'))
+                    except (OSError,ValueError):print('history_request_delivery_failed',flush=True)
                     checked_cycle=True
                     watched=response.get('watch_orders',[])
                     if not isinstance(watched,list) or len(watched)>20:raise ValueError('invalid_position_watch')

@@ -3,6 +3,7 @@ import os
 import time
 from pathlib import Path
 from worker import Cloud
+from history_mailbox import HistoryMailbox
 
 def normalise_deal(deal,offset):
     d=deal._asdict()
@@ -11,7 +12,7 @@ def normalise_deal(deal,offset):
                 symbol=d['symbol'],volume=float(d['volume']),price=float(d['price']),
                 profit=float(d['profit']),commission=float(d['commission']),swap=float(d['swap']),fee=float(d['fee']))
 
-def sync_history(api,cloud,offset,reader_id=None):
+def sync_history(api,cloud,offset,reader_id=None,requested_at=None):
     context=cloud.call('history_context',dict(account_id=reader_id) if reader_id else {})
     if context.get('archived'):raise ValueError('archived_account')
     identity=dict(account_login=context['account_login'],account_server=context['account_server'])
@@ -30,7 +31,7 @@ def sync_history(api,cloud,offset,reader_id=None):
         batch=rows[start:start+100]
         result=cloud.call('history_batch',dict(**identity,currency=account.currency,deals=batch))
         if result.get('recorded')!=len(batch):raise ValueError('history_batch_unconfirmed')
-    cloud.call('history_complete',dict(**identity,currency=account.currency,until_sec=until,full=full))
+    cloud.call('history_complete',dict(**identity,currency=account.currency,until_sec=until,full=full,**(dict(requested_at=requested_at) if requested_at else {})))
     return identity,len(rows)
 
 def main():
@@ -41,19 +42,25 @@ def main():
     offset=int(os.environ.get('MT5_SERVER_TIME_OFFSET_SEC','0'))
     if abs(offset)>14*3600 or offset%900:raise ValueError('invalid_server_time_offset')
     cloud=Cloud(os.environ['MT5_WORKER_URL'],os.environ['MT5_WORKER_TOKEN'])
+    mailbox=HistoryMailbox()
     while True:
+        requested=mailbox.pending()
+        if not requested:
+            time.sleep(1)
+            continue
         identity=None
         try:
-            if not initialize_terminal(api,path,timeout=5000,portable=bool(os.environ.get('MT5_ACCOUNT_ID'))):raise ValueError('terminal_unavailable')
             c=cloud.call('history_context',{})
             identity=dict(account_login=c['account_login'],account_server=c['account_server'])
-            _,count=sync_history(api,cloud,offset)
+            if not initialize_terminal(api,path,timeout=5000,portable=bool(os.environ.get('MT5_ACCOUNT_ID'))):raise ValueError('terminal_unavailable')
+            _,count=sync_history(api,cloud,offset,requested_at=requested)
             print('history_synced deals='+str(count),flush=True)
         except Exception:
             print('history_sync_failed',flush=True)
             if identity:
-                try:cloud.call('history_fault',identity)
+                try:cloud.call('history_fault',dict(**identity,requested_at=requested))
                 except Exception:pass
-        finally:api.shutdown()
-        time.sleep(30)
+        finally:
+            api.shutdown()
+            mailbox.finish(requested)
 if __name__=='__main__':main()
