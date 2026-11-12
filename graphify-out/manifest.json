@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1794390714.0489602,
-    "seen": 1794390937.6273885,
-    "ast_hash": "318657faa52a052eb40d42c8cea10859",
+    "mtime": 1794470605.046671,
+    "seen": 1794471934.4255135,
+    "ast_hash": "f470ef836fde2eee0f75d51be3eced26",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -6708,9 +6708,9 @@
     "semantic_hash": ""
   },
   "services/mt5/worker.py": {
-    "mtime": 1794390713.776411,
-    "seen": 1794390937.6263885,
-    "ast_hash": "b54d77274ca0186e744e70857834dbea",
+    "mtime": 1794471813.7980268,
+    "seen": 1794471934.2730024,
+    "ast_hash": "1f2a613be982cfe88f63d14bc19189d4",
     "semantic_hash": ""
   },
   "src/milkyMetaTraderClient.js": {
@@ -6942,9 +6942,9 @@
     "semantic_hash": ""
   },
   "services/mt5/history_worker.py": {
-    "mtime": 1794390713.7654088,
-    "seen": 1794390937.6263885,
-    "ast_hash": "246e47ea24f96bc1f82c7692bab2a165",
+    "mtime": 1794471814.212823,
+    "seen": 1794471934.2660024,
+    "ast_hash": "c7c0e8ad02965501886c7dcfab776b15",
     "semantic_hash": ""
   },
   "services/mt5/test_history_worker.py": {
@@ -7548,9 +7548,9 @@
     "semantic_hash": ""
   },
   "services/mt5/reader.py": {
-    "mtime": 1794390713.7664094,
-    "seen": 1794390937.6263885,
-    "ast_hash": "43f8c5c25d86195f3627f9808b3817db",
+    "mtime": 1794471813.9987955,
+    "seen": 1794471934.2660024,
+    "ast_hash": "075616483e7373fd595e2138de12a158",
     "semantic_hash": ""
   },
   "services/mt5/start-readers.ps1": {
@@ -7560,9 +7560,9 @@
     "semantic_hash": ""
   },
   "services/mt5/test_reader.py": {
-    "mtime": 1794390713.7734096,
-    "seen": 1794390937.6263885,
-    "ast_hash": "c40c5190e0f59ede77d9606fea4d13f8",
+    "mtime": 1794471814.4238782,
+    "seen": 1794471934.2710025,
+    "ast_hash": "c286fda8f7dd716dcc62895d7ea2d457",
     "semantic_hash": ""
   },
   "src/algoWatcherArchive.js": {
@@ -8601,6 +8601,30 @@
     "mtime": 1794400690.6353436,
     "seen": 1794400756.2039442,
     "ast_hash": "b064a79ec88b29e30bd8b1d333bfd17b",
+    "semantic_hash": ""
+  },
+  "services/mt5/terminal_connection.py": {
+    "mtime": 1794471813.594741,
+    "seen": 1794471934.2690024,
+    "ast_hash": "5844c0b30ff0d295425c0dbc174dd681",
+    "semantic_hash": ""
+  },
+  "services/mt5/test_terminal_connection.py": {
+    "mtime": 1794471814.6299253,
+    "seen": 1794471934.2720022,
+    "ast_hash": "26cb851e0673f9553462f77019239a75",
+    "semantic_hash": ""
+  },
+  "services/mt5/test_windows_account_launcher.py": {
+    "mtime": 1794470557.3231966,
+    "seen": 1794471934.2720022,
+    "ast_hash": "1e4e187d6bfe6a7cbacb8ffc67510997",
+    "semantic_hash": ""
+  },
+  "services/mt5/windows_account_launcher.py": {
+    "mtime": 1794470557.089176,
+    "seen": 1794471934.2730024,
+    "ast_hash": "deb420346f397403a7d0c631396d4387",
     "semantic_hash": ""
   }
 }
