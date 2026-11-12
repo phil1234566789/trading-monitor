@@ -6960,9 +6960,9 @@
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderStatistics.vue": {
-    "mtime": 1794390713.8234146,
-    "seen": 1794390937.6263885,
-    "ast_hash": "2293fc28c6f9233f513aeaba2bf23915",
+    "mtime": 1794400759.6371822,
+    "seen": 1794470578.6465456,
+    "ast_hash": "062f4d14e17cda441745dfefb6931f7a",
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderStatisticsBreakdown.vue": {
@@ -7644,9 +7644,9 @@
     "semantic_hash": ""
   },
   "src/components/MmtBatchEntrySearch.vue": {
-    "mtime": 1794390713.824414,
-    "seen": 1794390937.6263885,
-    "ast_hash": "b34f17add997557f8e61db9cc7eb03ba",
+    "mtime": 1794470475.2314992,
+    "seen": 1794470578.6475458,
+    "ast_hash": "f58c995462f22f96daf1aaaa2570cdbd",
     "semantic_hash": ""
   },
   "src/mmtBatchSearch.js": {
@@ -7662,9 +7662,9 @@
     "semantic_hash": ""
   },
   "src/mmtAccountRoles.js": {
-    "mtime": 1794390713.961442,
-    "seen": 1794390937.6273885,
-    "ast_hash": "370eb64f442051a9c709582fd3fe2eba",
+    "mtime": 1794470475.0134487,
+    "seen": 1794470578.7220657,
+    "ast_hash": "e73d57d4e08287f13b5ca5ef9a43cc55",
     "semantic_hash": ""
   },
   "src/mmtChartStatus.js": {
@@ -7674,9 +7674,9 @@
     "semantic_hash": ""
   },
   "test/mmtAccountRoles.test.js": {
-    "mtime": 1794390714.4005053,
-    "seen": 1794390937.6273885,
-    "ast_hash": "b401f8d416d7e16ed492da7b1f531e76",
+    "mtime": 1794470475.4454,
+    "seen": 1794470578.9261043,
+    "ast_hash": "aa80725ace724528bac874811e69bee5",
     "semantic_hash": ""
   },
   "test/mt5AccountRoles.integration.mjs": {
