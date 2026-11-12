@@ -6942,9 +6942,9 @@
     "semantic_hash": ""
   },
   "services/mt5/history_worker.py": {
-    "mtime": 1794471814.212823,
-    "seen": 1794471934.2660024,
-    "ast_hash": "c7c0e8ad02965501886c7dcfab776b15",
+    "mtime": 1794518979.9204636,
+    "seen": 1794519080.0271714,
+    "ast_hash": "054407bba8f76b7557e11362acf278ed",
     "semantic_hash": ""
   },
   "services/mt5/test_history_worker.py": {
@@ -8622,9 +8622,33 @@
     "semantic_hash": ""
   },
   "services/mt5/windows_account_launcher.py": {
-    "mtime": 1794480268.5539494,
-    "seen": 1794480355.8068376,
-    "ast_hash": "44eac2774293b21600fd245d17478ec1",
+    "mtime": 1794518979.5485134,
+    "seen": 1794519080.0391753,
+    "ast_hash": "cf28d2c28b0ae3ef8ffae37a8ca47fb2",
+    "semantic_hash": ""
+  },
+  "services/mt5/register-history-task.ps1": {
+    "mtime": 1794519006.9062397,
+    "seen": 1794519080.0281715,
+    "ast_hash": "51b75da2f6a5ef89ec1189b52a2c4a0f",
+    "semantic_hash": ""
+  },
+  "services/mt5/test_windows_history_launcher.py": {
+    "mtime": 1794518980.1124275,
+    "seen": 1794519080.0381749,
+    "ast_hash": "c4129fdda6b3071a9afddf9eb4d2ec72",
+    "semantic_hash": ""
+  },
+  "services/mt5/windows_history_launcher.py": {
+    "mtime": 1794518979.734717,
+    "seen": 1794519080.0391753,
+    "ast_hash": "9869778ac7eccf2a37190678a8648662",
+    "semantic_hash": ""
+  },
+  "services/mt5/worker_environment.py": {
+    "mtime": 1794518979.3598242,
+    "seen": 1794519080.0391753,
+    "ast_hash": "c8d97c7c3feda3841ed98897dbcb72ee",
     "semantic_hash": ""
   }
 }
