@@ -2,7 +2,6 @@
 import argparse
 import os
 from pathlib import Path
-import runpy
 import subprocess
 import sys
 import time
@@ -33,9 +32,12 @@ def launch(account_id, execute=False, root=Path(r'C:\MMT')):
     sys.path.insert(0, str(runtime))
     ini = terminal.parent / ('trading.ini' if execute else 'read-only.ini')
     subprocess.Popen([str(terminal), '/portable', '/config:' + str(ini)], creationflags=0x08000000)
-    time.sleep(5)
+    time.sleep(10)
     sys.argv = [str(runtime / 'worker.py')] + ([] if execute else ['--monitor'])
-    runpy.run_path(str(runtime / 'worker.py'), run_name='__main__')
+    from worker import main
+    from worker_lock import terminal_worker_lock, terminal_lock_path
+    with terminal_worker_lock(terminal_lock_path(terminal)):
+        return main()
 
 
 if __name__ == '__main__':
@@ -46,4 +48,4 @@ if __name__ == '__main__':
     private = Path(r'C:\MMT\private\accounts') / args.account_id
     sys.stdout = (private / 'worker.stdout.log').open('a', encoding='utf-8', buffering=1)
     sys.stderr = (private / 'worker.stderr.log').open('a', encoding='utf-8', buffering=1)
-    launch(args.account_id, args.execute)
+    raise SystemExit(launch(args.account_id, args.execute))

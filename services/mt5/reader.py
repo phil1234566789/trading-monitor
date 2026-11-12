@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from worker import Cloud
 from history_worker import sync_history
+from terminal_connection import initialize_terminal
 
 ACTIONS=frozenset(('configuration','snapshot','history_context','history_start','history_batch','history_complete','history_fault'))
 class ReaderCloud(Cloud):
@@ -31,7 +32,7 @@ def connect(api,cloud,config):
         raise ValueError('reader_terminal_not_isolated')
     connection=cloud.call('configuration',dict(account_id=config['account_id']))
     try:
-        if not api.initialize(path=str(path),login=connection['account_login'],server=connection['account_server'],
+        if not initialize_terminal(api,path,login=connection['account_login'],server=connection['account_server'],
                               password=connection['password'],portable=True,timeout=15000):
             raise ValueError('reader_terminal_unavailable')
         terminal=api.terminal_info()

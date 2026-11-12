@@ -3,6 +3,7 @@ from pathlib import Path
 import tempfile
 import types
 import unittest
+from contextlib import nullcontext
 from unittest.mock import patch
 from windows_account_launcher import launch
 
@@ -19,12 +20,14 @@ class WindowsAccountLauncherTests(unittest.TestCase):
                           MT5_ALLOW_LIVE=str(permitted).lower())
             with patch.object(Path, 'read_text', return_value='\n'.join(k+'='+v for k,v in config.items())), \
                  patch.dict(os.environ, {}, clear=True), patch('os.chdir'), patch('time.sleep'), \
-                 patch('subprocess.Popen') as spawn, patch('runpy.run_path') as run, \
-                 patch.dict('sys.modules', {'certifi': types.SimpleNamespace(where=lambda: 'trusted.pem')}), \
+                 patch('subprocess.Popen') as spawn, \
+                 patch.dict('sys.modules', {'certifi': types.SimpleNamespace(where=lambda: 'trusted.pem'),
+                    'worker': types.SimpleNamespace(main=lambda: None),
+                    'worker_lock': types.SimpleNamespace(terminal_worker_lock=lambda path: nullcontext(),terminal_lock_path=lambda path:path)}), \
                  patch('sys.argv', []), patch('sys.path', []):
                 launch(ACCOUNT, execute, root)
                 import sys
-                return dict(live=os.environ['MT5_ALLOW_LIVE'], argv=list(sys.argv), terminal=spawn.call_args.args[0], run=run.called)
+                return dict(live=os.environ['MT5_ALLOW_LIVE'], argv=list(sys.argv), terminal=spawn.call_args.args[0])
 
     def test_monitor_cannot_trade_even_when_config_permits_live(self):
         result = self.invoke()

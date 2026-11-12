@@ -12,6 +12,7 @@ from core import Journal, trigger_matches, validate_intent, positive
 from health import fault_details
 from daily_stop import DailyStopEngine
 from target_worker import TargetEngine
+from terminal_connection import initialize_terminal
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -222,7 +223,7 @@ def main():
         if not isinstance(config.get('account_login'), int) or not isinstance(config.get('account_server'), str):
             raise ValueError('invalid_account_configuration')
     connection = dict(login=config['account_login'], server=config['account_server'], password=config['password']) if config else {}
-    if not mt5.initialize(path=path, timeout=5000, portable=bool(os.environ.get('MT5_ACCOUNT_ID')), **connection):
+    if not initialize_terminal(mt5, path, timeout=30000, portable=bool(os.environ.get('MT5_ACCOUNT_ID')), **connection):
         print(json.dumps(dict(connected=False, error_code=mt5.last_error()[0])))
         return 1
     try:
