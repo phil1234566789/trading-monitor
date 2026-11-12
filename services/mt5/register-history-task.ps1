@@ -15,7 +15,7 @@ if((Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue).State -eq '
  return
 }
 $launcher=Join-Path $Root 'app\services\mt5\windows_history_launcher.py'
-$action=New-ScheduledTaskAction -Execute (Join-Path $Root 'venv\Scripts\python.exe') -Argument ('-u "'+$launcher+'" --account-id '+$AccountId+' --config "'+$configPath+'"') -WorkingDirectory (Split-Path $launcher)
+$action=New-ScheduledTaskAction -Execute (Join-Path $Root 'venv\Scripts\pythonw.exe') -Argument ('-u "'+$launcher+'" --account-id '+$AccountId+' --config "'+$configPath+'"') -WorkingDirectory (Split-Path $launcher)
 $settings=New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName $name -Action $action -Trigger (New-ScheduledTaskTrigger -AtStartup) -Settings $settings -User SYSTEM -RunLevel Highest -Force | Out-Null
 Start-ScheduledTask -TaskName $name
