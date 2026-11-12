@@ -2274,7 +2274,6 @@ watch(selectedTradingAccountId, () => {
   />
 
   <!-- Alle Analysebereiche sind unabhängig schaltbar; die Checklist folgt direkt auf das Cockpit. -->
-  <p v-if="currentSymbol === 'XAUUSD'" role="status">Gold · FXCM Bid · geschlossene Kerzen · Historie ab Januar 2026. Struktur benötigt Vorlauf; vor dem Archivbeginn ist sie unvollständig.</p>
   <div class="chart-tsc-row">
     <PriceChart
       ref="priceChartRef"
