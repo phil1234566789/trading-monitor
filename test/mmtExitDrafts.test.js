@@ -72,5 +72,3 @@ describe('joint TP and SL drafts',()=>{
   moveTargetDraft('exit',0,1999,'stop');expect(targetDraftLines('XAUUSD').find(l=>l.kind==='stop').forecast.rr).toBe(-1);
  });
 });
-
-
