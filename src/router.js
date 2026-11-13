@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from "vue-router";
+import {installRouteRecovery} from './routeRecovery.js';
 
 // Hash-History (statt History-API), da das geplante GitHub-Pages-Deployment keine
 // serverseitigen Rewrites fuer beliebige SPA-Routen unterstuetzt.
@@ -25,3 +26,4 @@ export const router = createRouter({
     { path: "/algo-watcher", name: "algo-watcher", component: () => import("./views/AlgoWatcher.vue") },
   ],
 });
+installRouteRecovery(router);
