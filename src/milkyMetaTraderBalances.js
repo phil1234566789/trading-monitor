@@ -1,5 +1,6 @@
 import {RISK_BASE} from '../supabase/functions/trading-monitor-mcp/mt5RiskContract.js';
 import {mmtExecutionReady,mmtAccountSnapshot} from './milkyMetaTraderPolling.js';
+import {entryDailyStopReason} from './mmtDailyStopReason.js';
 import {tradePerformance} from './milkyMetaTraderPerformance.js';
 export function balancePosition(balance,floor,target){
  if(![balance,floor,target].every(Number.isFinite)||target<=floor)return null;
@@ -32,7 +33,8 @@ export function challengeGauge(balance,floor,target){
 }
 export function balanceHealth(status,fresh,account,now){
  if(status?.bridge?.snapshot?.worker_error||status?.health?.incident)return {ok:false,label:'Betrieb gestört'};
- if(status?.ui_cached)return {ok:false,label:'Gespeicherter Stand'};
+ if(entryDailyStopReason(status,now))return {ok:false,label:'Tagesstopp aktiv'};
+ if(status?.ui_cached)return {ok:false,neutral:true,label:'Gespeicherter Stand'};
  if(!fresh||!status?.online||!mmtAccountSnapshot(account,status?.bridge))return {ok:false,label:'Verbindung prüfen'};
  const checked=Date.parse(status?.health?.checked_at);
  if(!Number.isFinite(checked)||checked>now||now-checked>(status?.ui_health_read_at?960000:150000))return {ok:false,label:'Überwachung prüfen'};

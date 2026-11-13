@@ -3,6 +3,7 @@ import {computed} from 'vue';
 import ToggleButton from './ui/ToggleButton.vue';
 import ArchivedAccounts from './MmtArchivedAccounts.vue';
 import MmtDailyStopStatus from './MmtDailyStopStatus.vue';
+import {entryDailyStopReason} from '../mmtDailyStopReason.js';
 import {accountDailyStatus} from '../mmtAccountDailyStatus.js';
 import {fmtMoney,fmtPrice,fmtDateTime} from '../format.js';
 import {closedBrokerTrades} from '../milkyMetaTraderStatistics.js';
@@ -28,7 +29,8 @@ const money=(value,currency)=>value==null?'unbekannt':fmtMoney(value,currency);
 const limitsTitle=row=>'Quelle: '+(row.limits_source??'unbekannt')+' · '+(row.limits_at?time(row.limits_at)+' (Berlin)':'Stand unbekannt');
 const activeAccount=computed(()=>props.accounts?.find(a=>a.id===props.activeId));
 const activeSnapshot=computed(()=>mmtAccountSnapshot(activeAccount.value,props.status?.bridge));
-const executionReady=computed(()=>mmtExecutionReady(activeAccount.value,props.status,activeSnapshot.value));
+const executionReady=computed(()=>!props.status?.ui_cached&&mmtExecutionReady(activeAccount.value,props.status,activeSnapshot.value));
+const executionLabel=computed(()=>activeSnapshot.value?.worker_error?'Worker gestört':entryDailyStopReason(props.status,props.now)||(props.status?.ui_cached?'Gespeicherter Stand · Prüfung bei Aktion':executionReady.value?'Worker verbunden · Freigabe je Entry geprüft':props.status?.online?'Ausführung nicht bereit':'Worker offline'));
 const brokerAge=computed(()=>activeSnapshot.value&&!activeSnapshot.value.worker_error?snapshotAgeSeconds(props.status?.bridge?.heartbeat_at,props.now):null);
 </script>
 
@@ -41,14 +43,14 @@ const brokerAge=computed(()=>activeSnapshot.value&&!activeSnapshot.value.worker_
    <button type="button" class="mmt-balance-select" :aria-label="'Statistik: '+row.account.name" :aria-pressed="row.account.id===statisticsAccount" :title="'Verlustgrenze: '+money(row.loss_floor,row.currency)+' · '+limitsTitle(row)" @click="statisticsAccount=row.account.id"></button>
    <div class="mmt-balance-heading">
     <strong>{{row.account.name}}</strong>
-    <span v-if="row.account.id===activeId" class="mmt-balance-health" :data-ok="row.health.ok" :role="row.health.ok?'status':'alert'">{{row.health.ok?'●':'⚠'}} {{row.health.label}}</span>
+    <span v-if="row.account.id===activeId" class="mmt-balance-health" :data-ok="row.health.ok" :data-neutral="row.health.neutral" :role="row.health.ok||row.health.neutral?'status':'alert'">{{row.health.neutral?'·':row.health.ok?'●':'⚠'}} {{row.health.label}}</span>
     <small v-else class="mmt-muted mmt-balance-saved" :title="row.balance_at?time(row.balance_at)+' (Berlin)':'Zeitpunkt unbekannt'">{{row.readerFresh?'Daten aktuell':'Gespeicherter Stand'}}</small>
     <div><small class="mmt-muted">{{row.account.login}}</small> <small v-if="row.account.id===activeId" class="mmt-selected">Aktives Handelskonto</small><small v-else class="mmt-muted">Handel: nicht gewählt</small></div>
     <small class="mmt-muted mmt-balance-broker">{{row.account.server}} · {{row.account.mode==='demo'?'Demo':'Real / Challenge'}}</small>
    </div>
    <div v-if="row.account.id===activeId" class="mmt-balance-execution" role="status">
-    <span :data-ready="executionReady">{{executionReady?'Worker verbunden · Freigabe je Entry geprüft':status?.online?'Ausführung nicht bereit':'Worker offline'}}</span>
-    <p v-if="brokerAge==null||brokerAge>staleSeconds" class="mmt-error">Brokerdaten {{brokerAge==null?'noch nicht verfügbar':'seit '+brokerAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
+    <span :data-ready="executionReady">{{executionLabel}}</span>
+    <p v-if="!status?.ui_cached&&(brokerAge==null||brokerAge>staleSeconds)" class="mmt-error">Brokerdaten {{brokerAge==null?'noch nicht verfügbar':'seit '+brokerAge+' Sekunden nicht aktualisiert'}}. Angezeigte Werte sind kein aktueller Stand.</p>
    </div>
    <div class="mmt-balance-gauge" role="group" :aria-label="'Balance '+money(row.balance,row.currency)+', Verlustgrenze '+money(row.loss_floor,row.currency)+', Ziel '+money(row.target,row.currency)+', Challenge-Fortschritt '+(row.gauge.progress==null?'unbekannt':fmtPrice(row.gauge.progress,1)+' Prozent')">
     <svg viewBox="-64 -32 348 154" aria-hidden="true">
@@ -100,5 +102,5 @@ const brokerAge=computed(()=>activeSnapshot.value&&!activeSnapshot.value.worker_
 .mmt-balance-ends span:nth-child(2){text-align:center}.mmt-balance-floor{color:var(--mmt-negative)}
 .mmt-balance-ends span:last-child{text-align:right}.mmt-balance-ends strong{display:block;font-weight:normal;color:inherit}
 .mmt-balance-floor-label{fill:var(--mmt-negative);font:11px system-ui}
-.mmt-balance-health{color:var(--mmt-negative)}.mmt-balance-health[data-ok="true"]{color:var(--mmt-positive)}
+.mmt-balance-health{color:var(--mmt-negative)}.mmt-balance-health[data-neutral="true"]{color:var(--mmt-muted)}.mmt-balance-health[data-ok="true"]{color:var(--mmt-positive)}
 </style>
