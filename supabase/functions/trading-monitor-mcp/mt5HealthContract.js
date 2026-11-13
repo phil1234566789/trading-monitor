@@ -20,5 +20,5 @@ export function healthMessage(incident) {
     execution_paused:'Eine Entry-Suche wartet, aber der Worker ist nicht zur Ausfuehrung bereit.',
     send_outcome_unknown:'Der Orderausgang ist unklar. Brokerpositionen pruefen; nichts erneut senden.'};
   const reason=descriptions[incident.code]??`Ausfuehrungsfehler: ${incident.code}${incident.detail?.stage?' in '+incident.detail.stage:''}.`;
-  return `MMT: ${incident.resolved_at?'Stoerung inzwischen beendet':'Eingreifen erforderlich'}\n${reason}\nErkannt: ${time} (Berlin)\nIncident: ${incident.id}\nKeinen verpassten Entry automatisch nachholen.\nhttps://phil1234566789.github.io/trading-monitor/#/milky-meta-trader`;
+  return `MMT: ${incident.resolved_at?'Stoerung inzwischen beendet':'Anhaltende Stoerung seit mindestens 2 Stunden'}\n${reason}\nErkannt: ${time} (Berlin)\nIncident: ${incident.id}\nKeinen verpassten Entry automatisch nachholen.\nhttps://phil1234566789.github.io/trading-monitor/#/milky-meta-trader`;
 }

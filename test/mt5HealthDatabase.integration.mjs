@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-const {PGlite}=await import(new URL('../.debug/mmt-health-sql/node_modules/@electric-sql/pglite/dist/index.js',import.meta.url));
+import {pathToFileURL} from 'node:url';
+const {PGlite}=await import(process.env.MMT_PGLITE_MODULE?pathToFileURL(process.env.MMT_PGLITE_MODULE).href:new URL('../.debug/mmt-health-sql/node_modules/@electric-sql/pglite/dist/index.js',import.meta.url));
 test('MMT incidents are private, deduplicated and claimed without duplicate delivery',async()=>{
  const db=new PGlite();
  try {
@@ -9,6 +10,7 @@ test('MMT incidents are private, deduplicated and claimed without duplicate deli
   await db.exec(await readFile(new URL('../supabase/migrations/20261029090000_mt5_execution.sql',import.meta.url),'utf8'));
   const health=await readFile(new URL('../supabase/migrations/20261029110000_mt5_health.sql',import.meta.url),'utf8');
   await db.exec(health.split('-- Cron-Transport')[0]);
+  await db.exec(await readFile(new URL('../supabase/migrations/20261113090000_mt5_health_sustained_outage.sql',import.meta.url),'utf8'));
   await db.exec('set role anon');
   await assert.rejects(db.query('select * from mt5_health_incidents'),/permission denied/);
   await assert.rejects(db.query('select mt5_record_health(null,null,null)'),/permission denied/);
@@ -17,14 +19,26 @@ test('MMT incidents are private, deduplicated and claimed without duplicate deli
   const b=(await db.query("select (mt5_record_health('fault:one','AttributeError','{}')).id as id")).rows[0].id;
   assert.equal(a,b);
   assert.equal((await db.query('select * from mt5_health_deliveries')).rows.length,2);
+  assert.equal((await db.query('select * from mt5_claim_health_notifications(4)')).rows.length,0);
+  await db.exec("update mt5_health_incidents set opened_at=now()-interval '119 minutes'");
+  assert.equal((await db.query('select * from mt5_claim_health_notifications(4)')).rows.length,0);
+  const changed=(await db.query("select (mt5_record_health('offline:one','worker_offline','{}')).id as id")).rows[0].id;
+  assert.equal(changed,a);
+  await db.exec("update mt5_health_incidents set opened_at=now()-interval '2 hours'");
   assert.equal((await db.query('select * from mt5_claim_health_notifications(4)')).rows.length,2);
   assert.equal((await db.query('select * from mt5_claim_health_notifications(4)')).rows.length,0);
   await db.exec("update mt5_health_deliveries set last_attempt_at=now()-interval '3 minutes'");
   assert.equal((await db.query('select * from mt5_claim_health_notifications(4)')).rows.length,0);
   assert.equal((await db.query("select * from mt5_health_deliveries where status='uncertain'")).rows.length,2);
+  await db.exec("update mt5_health_deliveries set status='accepted',accepted_at=now()");
+  assert.equal((await db.query("select (mt5_record_health('fault:new','TimeoutError','{}')).id as id")).rows[0].id,a);
+  assert.equal((await db.query('select * from mt5_claim_health_notifications(4)')).rows.length,0);
   await db.exec('select mt5_record_health(null,null,null)');
+  await db.exec("update mt5_health_deliveries set status='pending'");
+  assert.equal((await db.query('select * from mt5_claim_health_notifications(4)')).rows.length,0);
   const c=(await db.query("select (mt5_record_health('fault:one','AttributeError','{}')).id as id")).rows[0].id;
   assert.notEqual(c,a);
+  assert.equal((await db.query('select * from mt5_claim_health_notifications(4)')).rows.length,0);
   const account=(await db.query("insert into mt5_accounts(name,login,server,mode,credentials) values('test',42,'Demo','demo','{}') returning id")).rows[0];
   await db.query('select mt5_select_test_account($1)',[account.id]);
   const snapshot={account_login:42,account_server:'Demo',trade_allowed:true,execution_ready:false};
