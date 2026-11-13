@@ -21,12 +21,9 @@ describe('anti-confluence rule list', () => {
     [[rule('a','found',false), rule('b','unknown')], 'unknown'],
     [[rule('a','unknown',false)], 'clear'],
   ])('aggregates enabled rules only (%j)', (rules, status) => expect(summarizeAntiConfluenceRules(rules)).toBe(status));
-  it('keeps missing H1 data observable without blocking when invalidation is disabled', () => {
-    const result = evaluateChecklistConfluences({ evaluatedAt: 600, direction: 'short' });
-    expect(result.antiConfluences).toMatchObject({ status: 'clear', rules: [
-      { id: 'h1CounterDivergence', disqualifies: false, status: 'unknown', evidence: [] },
-    ] });
-    expect(result.antiConfluences.rules).toHaveLength(1);
+  it('has no RSI observation in the current F check even without H1 data', () => {
+    const result=evaluateChecklistConfluences({evaluatedAt:600,direction:'short'});
+    expect(result.antiConfluences).toMatchObject({status:'clear',rules:[]});
   });
   it.each([['pending','found'], ['passed','clear'], ['unknown','unknown']])('reads legacy F=%s as %s', (status, expected) => {
     expect(checklistObservationRules({ status }, 'antiConfluences')[0].status).toBe(expected);

@@ -32,18 +32,16 @@ describe('Checklist RSI evidence', () => {
 });
 
 describe('Checklist E/G', () => {
-  it('keeps H1 counter-divergences separate from same-direction M5 evidence', () => {
-    const result = evaluateChecklistConfluences({ evaluatedAt: 111600, direction: 'short', h1Candles: divergenceCandles(3600, true), m5Candles: divergenceCandles() });
-    expect(result.antiConfluences.divergences.candidates).toMatchObject([{ type: 'bullish', timeframe: '1H' }]);
-    expect(detectChecklistDivergences({ candles: divergenceCandles(), timeframe: '5m', evaluatedAt: 111600 }).candidates)
-      .toMatchObject([{ type: 'bearish', timeframe: '5m' }]);
+  it('does not add a detected H1 counter-divergence to F while preserving the shared RSI detector', () => {
+    const candles=divergenceCandles(3600,true);
+    expect(detectChecklistDivergences({candles,timeframe:'1H',evaluatedAt:111600}).candidates)
+      .toMatchObject([{type:'bullish',timeframe:'1H'}]);
+    const result=evaluateChecklistConfluences({evaluatedAt:111600,direction:'short',h1Candles:candles,m5Candles:divergenceCandles()});
+    expect(result.antiConfluences).toMatchObject({status:'clear',rules:[]});
+    expect(result.antiConfluences).not.toHaveProperty('divergences');
+    expect(detectChecklistDivergences({candles:divergenceCandles(),timeframe:'5m',evaluatedAt:111600}).candidates)
+      .toMatchObject([{type:'bearish',timeframe:'5m'}]);
     expect(result.confluences.divergences.status).toBe('unknown');
-    expect(result.antiConfluences.status).toBe('clear');
-    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'found',disqualifies:false,
-      evidence:[{type:'bullish',timeframe:'1H',recognizedAt:111600}]}]);
-    expect(result.antiConfluences.details).toEqual(['bullische 1H Divergenz vorhanden']);
-    expect(result.antiConfluences.explanation).toContain('RSI');
-    expect(result.confluences.status).not.toBe('blocked');
   });
   it('matches the actual P5 pivot and exposes age without inventing strength', () => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 12000, direction: 'short', primary, target2,
@@ -63,26 +61,25 @@ describe('Checklist E/G', () => {
     expect(result.go).toBeUndefined();
     expect(result.antiConfluences.deferredChecks).toEqual(['sweep', 'orderBlock', 'strength']);
   });
-  it.each([['short', false, 'bullische'], ['long', true, 'bärische']])('marks only the absent H1 counter-divergence green for %s', (direction, bullish, label) => {
+  it.each([['short', false, 'bullische'], ['long', true, 'bärische']])('has no active F rule regardless of opposite RSI direction for %s', (direction, bullish, label) => {
     const result = evaluateChecklistConfluences({ evaluatedAt: 111600, direction, h1Candles: divergenceCandles(3600, bullish) });
     expect(result.antiConfluences.status).toBe('clear');
-    expect(result.antiConfluences.rules).toMatchObject([{id:'h1CounterDivergence',status:'clear',disqualifies:false,evidence:[]}]);
-    expect(result.antiConfluences.details).toEqual([`keine ${label} 1H Divergenz vorhanden`]);
-    expect(result.antiConfluences.explanation).toContain('nur die H1-Gegendivergenz');
+    expect(result.antiConfluences.rules).toEqual([]);
+    expect(result.antiConfluences.details).toEqual(['Keine aktiven Anti-Confluence-Regeln.']);
     expect(result.antiConfluences.deferredChecks).toEqual(['sweep', 'orderBlock', 'strength']);
     expect(result.go).toBeUndefined();
   });
-  it.each([undefined, [], divergenceCandles(3600).slice(0, 20)])('keeps missing or insufficient H1 history unknown', h1Candles => {
+  it.each([undefined, [], divergenceCandles(3600).slice(0, 20)])('does not create an RSI F rule for missing H1 history', h1Candles => {
     const check = evaluateChecklistConfluences({ evaluatedAt: 111600, direction: 'short', h1Candles }).antiConfluences;
     expect(check.status).toBe('clear');
-    expect(check.rules[0].status).toBe('unknown');
-    expect(check.details).toEqual(['1H-Gegendivergenz noch nicht prüfbar.']);
+    expect(check.rules).toEqual([]);
+    expect(check.details).toEqual(['Keine aktiven Anti-Confluence-Regeln.']);
   });
-  it('uses only closed H1 candles for the counter-divergence', () => {
-    const args = { direction: 'short', h1Candles: divergenceCandles(3600, true) };
-    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 20 * 3600 }).antiConfluences.rules[0].status).toBe('unknown');
-    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111599 }).antiConfluences.status).toBe('clear');
-    expect(evaluateChecklistConfluences({ ...args, evaluatedAt: 111600 }).antiConfluences.rules[0].status).toBe('found');
+  it('keeps the standalone H1 RSI detector causal outside F', () => {
+    const candles=divergenceCandles(3600,true),args={candles,timeframe:'1H'};
+    expect(detectChecklistDivergences({...args,evaluatedAt:20*3600}).status).toBe('unknown');
+    expect(detectChecklistDivergences({...args,evaluatedAt:111599}).candidates).toEqual([]);
+    expect(detectChecklistDivergences({...args,evaluatedAt:111600}).candidates).toMatchObject([{type:'bullish'}]);
   });
 });
 

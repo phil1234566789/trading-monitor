@@ -94,7 +94,7 @@ export function setupEntryConditions(snapshot,selectedPattern=null) {
     const future = Number.isFinite(time) && !known(time);
     const antiStatus = key === 'antiConfluences' ? antiConfluenceStatus(check, at) : null;
     const status = antiStatus ? {clear:'passed',found:'unmet',unknown:'unknown'}[antiStatus] : normal(check?.status);
-    const details = antiStatus && check ? observationRuleDetails(checklistObservationRules(check, key)) : originalDetails[key] ?? check?.details;
+    const details = antiStatus && check ? observationRuleDetails(checklistObservationRules(check, key),check.details) : originalDetails[key] ?? check?.details;
     add(key, label, future ? 'unknown' : status, future ? ['Beleg liegt nach dem gespeicherten Stand.']
       : details ?? ['Keine Prüfung gespeichert.'], time ?? at);
   }

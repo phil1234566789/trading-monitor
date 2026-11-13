@@ -14,7 +14,7 @@ export function checklistPresentation(state,m1Check) {
       detailStatuses: key === 'antiConfluences' || check.status === 'passed' ? [check.status] : [] };
     if (check?.rules) {
       const rules = checklistObservationRules(check, key);
-      view[key] = { explanation: check.explanation, details: observationRuleDetails(rules),
+      view[key] = { explanation: check.explanation, details: observationRuleDetails(rules,check.details),
         detailStatuses: rules.map(r => r.invalidates && r.status === 'found' ? 'blocked'
           : r.status === 'unknown' ? 'unknown' : r.invalidates ? 'passed' : 'context') };
     }

@@ -342,6 +342,12 @@ it("uses only the flag belonging to an explicitly saved rule version", () => {
 	})).toBe("found");
 });
 import {evaluateCountertrendChecklist} from '../src/countertrendChecklist.js';
-it('new pending F/G checks already persist only v3 rule fields',()=>{const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:600,dataStatus:'missing'});for(const key of ['antiConfluences','confluences']){expect(result.checks[key].ruleVersion).toBe('checklist-observation-rules-v3');expect(result.checks[key].rules[0]).toHaveProperty('disqualifies',false);expect(result.checks[key].rules[0]).not.toHaveProperty('invalidates');}});
+it('current pending checks persist empty F and unchanged observational G under v4',()=>{
+ const result=evaluateCountertrendChecklist({instrument:'GBPUSD',evaluatedAt:600,dataStatus:'missing'});
+ expect(result.checks.antiConfluences).toMatchObject({status:'clear',ruleVersion:'checklist-observation-rules-v4',rules:[]});
+ expect(result.checks.confluences.ruleVersion).toBe('checklist-observation-rules-v4');
+ expect(result.checks.confluences.rules[0]).toHaveProperty('disqualifies',false);
+ expect(result.checks.confluences.rules[0]).not.toHaveProperty('invalidates');
+});
 import {isVersionedDealingRangeRun} from '../src/tradeSetup2DealingRange.js';
 it('keeps complete serialized historical run and pin fixtures byte-identical after all readers',()=>{const fixture={run:{version:'countertrend-entry-model-1-v12',configuration:{dealingRangeVersion:'countertrend-abcdef-v1'},snapshots:[{id:'s',runId:'r',setupKey:'dr',instrument:'GBPUSD',knownAt:600,entry:null,dealingRange:{version:'countertrend-abcdef-v1',status:'invalidated',reason:'priceInvalidation'}}]},pins:[{stage:'invalidated',outcome:{status:'invalidation',label:'Alter Text'}}]};const serialized=JSON.stringify(fixture,null,2);const saved=JSON.parse(serialized);expect(isVersionedDealingRangeRun(saved.run)).toBe(true);for(const snapshot of saved.run.snapshots){restoreTradeSetup2Snapshot(snapshot);dealingRangeLabel(snapshot);}for(const pin of saved.pins){simulationPinStageLabel(pin);}expect(JSON.stringify(saved,null,2)).toBe(serialized);});

@@ -1,9 +1,11 @@
 import { formatBerlinTime } from './berlinTime.js';
 
-export const OBSERVATION_RULE_VERSION = 'checklist-observation-rules-v3';
+export const OBSERVATION_RULE_VERSION = 'checklist-observation-rules-v4';
 export const OBSERVATION_STATUS_LABELS = { found: 'Gefunden', clear: 'Nicht gefunden', unknown: 'Nicht prüfbar' };
-// Bis die DR-Zuordnung fachlich feststeht, bleibt historische Gegendivergenz ein Beleg ohne Sperrwirkung.
+// Nur zum Lesen historischer F-Belege; neue Prüfstände enthalten keine RSI-Anti-Confluence.
 export const H1_COUNTER_DIVERGENCE_RULE = { id: 'h1CounterDivergence', label: 'H1-RSI-Gegendivergenz', disqualifies: false };
+export const currentAntiConfluenceCheck = () => ({status:'clear',ruleVersion:OBSERVATION_RULE_VERSION,rules:[],
+  details:['Keine aktiven Anti-Confluence-Regeln.'],explanation:'RSI-Divergenzen werden in Schritt F nicht geprüft.'});
 export const M5_SWEEP_DIVERGENCE_RULE = { id: 'm5SweepDivergence', label: 'M5-RSI-Divergenz am Sweep', disqualifies: false };
 
 export function divergenceObservationRule({ id, label, invalidates, disqualifies, divergences, latestOnly = false }) {
@@ -13,7 +15,7 @@ export function divergenceObservationRule({ id, label, invalidates, disqualifies
 }
 
 export function summarizeAntiConfluenceRules(rules, evaluatedAt = Infinity, version) {
-  if (version && ![OBSERVATION_RULE_VERSION, 'checklist-observation-rules-v1', 'checklist-observation-rules-v2'].includes(version)) return 'unknown';
+  if (version && ![OBSERVATION_RULE_VERSION, 'checklist-observation-rules-v1', 'checklist-observation-rules-v2', 'checklist-observation-rules-v3'].includes(version)) return 'unknown';
   const enabled = rules.filter(rule => observationRuleDisqualifies(rule, version));
   const statusAt = rule => rule.status === 'found' && rule.evidence?.length
     && !rule.evidence.some(e => Number.isFinite(e.recognizedAt) && e.recognizedAt <= evaluatedAt) ? 'unknown' : rule.status;
@@ -38,7 +40,8 @@ export function antiConfluenceStatus(check, evaluatedAt = Infinity) {
   return check ? summarizeAntiConfluenceRules(checklistObservationRules(check, 'antiConfluences'), evaluatedAt, check.ruleVersion) : 'unknown';
 }
 
-export function observationRuleDetails(rules) {
+export function observationRuleDetails(rules, fallback = []) {
+  if(!rules.length)return fallback;
   return rules.map(rule => {
     const times = rule.evidence.filter(e => Number.isFinite(e.fromTime) && Number.isFinite(e.toTime))
       .map(e => `${formatBerlinTime(e.fromTime)} → ${formatBerlinTime(e.toTime)}`);
@@ -60,7 +63,7 @@ export function restoreChecklistObservationChecks(checks) {
 }
 
 export function observationRuleDisqualifies(rule, version) {
-  if (version === OBSERVATION_RULE_VERSION) return rule.disqualifies === true;
+  if ([OBSERVATION_RULE_VERSION,'checklist-observation-rules-v3'].includes(version)) return rule.disqualifies === true;
   if (version && !['checklist-observation-rules-v1','checklist-observation-rules-v2'].includes(version)) return false;
   if (version) return rule.invalidates === true;
   return Object.hasOwn(rule, 'disqualifies') ? rule.disqualifies === true : rule.invalidates === true;

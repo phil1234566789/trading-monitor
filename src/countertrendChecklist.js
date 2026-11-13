@@ -8,7 +8,7 @@ import { evaluateDealingRange, COUNTERTREND_STAGE_VERSION } from './tradeSetup2D
 import { fixChecklistTargets,CHECKLIST_RULE_VERSION } from './tradeSetupChecklistLifecycle.js';
 import { evaluateChecklistConfluences } from './tradeSetupChecklistConfluences.js';
 import { deriveSetupEntryInvalidation, sweepAgeSec } from './tradeSetup.js';
-import { divergenceObservationRule, H1_COUNTER_DIVERGENCE_RULE, M5_SWEEP_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
+import { divergenceObservationRule, currentAntiConfluenceCheck, M5_SWEEP_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION } from './checklistObservationRules.js';
 import { ENTRY_PATTERN_1_VERSION } from './entryPattern1Conditions.js';
 import { finalObservation,setupMemoKey } from './setup2Memo.js';
 import {M1_FVG_RETEST_PATTERN_VERSION} from './m1FvgRetestSequence.js';
@@ -36,8 +36,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
   const pending = () => ({ status: 'pending', details: [pendingDetail] });
   const checks = { liquiditySweep: pending(), reaction: pending(), m5Trend: unknownChecklistM5(),
     outerM5Trend: { status: 'unknown', required: true, trend: 'unknown', details: ['Äußerster M5-Trend unbekannt.'] },
-    targets: pending(), antiConfluences: {status:'unknown',details:[pendingDetail],
-      ruleVersion:OBSERVATION_RULE_VERSION,rules:[divergenceObservationRule({...H1_COUNTER_DIVERGENCE_RULE,divergences:{status:'unknown'}})]}, confluences: { ...pending(), ruleVersion:OBSERVATION_RULE_VERSION,
+    targets: pending(), antiConfluences: currentAntiConfluenceCheck(), confluences: { ...pending(), ruleVersion:OBSERVATION_RULE_VERSION,
       rules:[divergenceObservationRule({...M5_SWEEP_DIVERGENCE_RULE,divergences:{status:'unknown'}})] } };
   const result = { model: 'countertrend', entryPattern:ENTRY_PATTERN_1_VERSION,ruleVersion: COUNTERTREND_STAGE_VERSION, instrument, evaluatedAt,
     status: dataStatus, checks, direction: null, setupType: 'unclear', confirmed: false, abortReason: null,

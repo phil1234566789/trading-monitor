@@ -7,8 +7,8 @@ import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
 import { firstTouchAfter } from './structurePivotTime';
 import { pricePrecisionForInstrument } from './format.js';
 import { finalObservation } from './setup2Memo.js';
-import { observationRuleDisqualifies, divergenceObservationRule, summarizeAntiConfluenceRules, OBSERVATION_RULE_VERSION,
-  H1_COUNTER_DIVERGENCE_RULE, M5_SWEEP_DIVERGENCE_RULE } from './checklistObservationRules.js';
+import { divergenceObservationRule, OBSERVATION_RULE_VERSION, currentAntiConfluenceCheck,
+  M5_SWEEP_DIVERGENCE_RULE } from './checklistObservationRules.js';
 
 const unknown = () => ({ status: 'unknown', candidates: [] });
 const evidence = candidates => ({ status: candidates.length ? 'present' : 'absent', candidates });
@@ -93,17 +93,14 @@ function assignSweepDivergence(divergences, main, candles) {
  */
 export function evaluateChecklistConfluences({ evaluatedAt, direction, instrument, primary, opposingCandidates,
   target2, h1Candles, m5Candles, minGapByTimeframe = {}, frozen = {}, detectScanOrderBlocks } = {}) {
-  const frozenAnti = finalObservation(frozen.antiConfluences, 'antiConfluences');
+  const frozenAnti = frozen.antiConfluences?.ruleVersion===OBSERVATION_RULE_VERSION && finalObservation(frozen.antiConfluences, 'antiConfluences');
   const frozenConfluence = finalObservation(frozen.confluences, 'confluences');
-  const antiConfluences = { status: 'unknown', details: [], sweepCandidates: [], obCandidates: [], divergences: unknown(),
+  const antiConfluences = { ...currentAntiConfluenceCheck(), sweepCandidates: [], obCandidates: [],
     deferredChecks: ['sweep', 'orderBlock', 'strength'] };
   const confluences = { status: 'unknown', details: [], obCandidates: [], divergences: unknown() };
   const result = { antiConfluences, confluences };
   const updateRules = () => {
     antiConfluences.ruleVersion = confluences.ruleVersion = OBSERVATION_RULE_VERSION;
-    antiConfluences.rules = [divergenceObservationRule({ ...H1_COUNTER_DIVERGENCE_RULE,
-      divergences: antiConfluences.divergences, latestOnly: true })];
-    antiConfluences.status = summarizeAntiConfluenceRules(antiConfluences.rules, evaluatedAt);
     confluences.rules = [divergenceObservationRule({ ...M5_SWEEP_DIVERGENCE_RULE, divergences: confluences.divergences })];
   };
   updateRules();
@@ -113,8 +110,6 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
     return result;
   }
   const short = direction === 'short';
-  antiConfluences.divergences = frozenAnti ? frozen.antiConfluences.divergences
-    : selectDivergences(detectChecklistDivergences({ candles: h1Candles, timeframe: '1H', evaluatedAt }), short ? 'bullish' : 'bearish');
   const main = knownSnapshot(primary, evaluatedAt) && primary.direction === direction ? primary : null;
   const m5 = closedChecklistCandles(m5Candles, '5m', evaluatedAt);
   confluences.divergences = frozenConfluence ? frozen.confluences.divergences : assignSweepDivergence(
@@ -150,19 +145,7 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
       .map(ob => ({ ...ob, touchOnSweepCandle: sweepCandle ? candleTouchesOrderBlock(sweepCandle, ob) : null,
         sameMovement: 'unknown' }));
   }
-  // Freigabe und Beobachtungsdaten trennen: ausgeschaltete Regeln sind auch bei Datenlücken klar.
-  const counterDivergence = antiConfluences.divergences.candidates.at(-1);
   updateRules();
-  const counterLabel = `${short ? 'bullische' : 'bärische'} 1H Divergenz vorhanden`;
-  antiConfluences.details = [antiConfluences.divergences.status === 'unknown' ? '1H-Gegendivergenz noch nicht prüfbar.'
-    : counterDivergence ? counterLabel : `keine ${counterLabel}`];
-  antiConfluences.explanation = 'Bewertet wird nur die H1-Gegendivergenz im geschlossenen Datenstand. Sweep-/OB-Zuordnung und Stärkevergleich sind zurückgestellt; keine Gesamtfreigabe.';
-  if (counterDivergence) {
-    const d = counterDivergence;
-    antiConfluences.explanation += ` ${observationRuleDisqualifies(H1_COUNTER_DIVERGENCE_RULE) ? 'Disqualifizierendes Gegenargument' : 'Nur Beobachtung'}: ${formatDatedTime(d.fromTime)} → ${formatDatedTime(d.toTime)}; RSI ${d.fromRsi.toFixed(1)} → ${d.toRsi.toFixed(1)}; bestätigt ${formatDatedTime(d.recognizedAt)} (Europe/Berlin).`;
-  } else if (antiConfluences.divergences.status === 'unknown') {
-    antiConfluences.explanation += ' H1-Daten fehlen oder die Historie reicht nicht.';
-  }
   const divergence = confluences.divergences.candidates[0];
   confluences.status = divergence ? 'passed' : confluences.divergences.status === 'unknown' ? 'unknown' : 'pending';
   if (divergence) {
