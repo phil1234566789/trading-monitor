@@ -76,6 +76,23 @@ class TargetBrokerTests(unittest.TestCase):
         self.api.positions_get.return_value=(position(),)
         self.broker=TargetBroker(Broker(self.api,42,'Demo'))
 
+    def test_native_magic_zero_needs_no_execution_order_or_original_sl(self):
+        row=plan(native_tp=1.32)
+        row['plan']['magic']=0
+        row['plan']['initial_sl']=None
+        p=position();p.magic=0
+        self.api.positions_get.return_value=(p,)
+        request=self.broker.prepare(row,'install',-1)
+        self.assertEqual(request['position'],123)
+        self.assertEqual(request['sl'],1.29)
+        self.assertEqual(request['tp'],1.32)
+        self.api.symbol_info_tick.return_value.bid=1.315
+        self.api.symbol_info_tick.return_value.ask=1.3151
+        close=self.broker.prepare(row,'close',0)
+        self.assertEqual(close['position'],123)
+        self.assertEqual(close['volume'],.01)
+        self.api.order_send.assert_not_called()
+
     def test_tp_install_keeps_real_broker_sl(self):
         row=plan(native_tp=1.32);row['plan']['targets']=[dict(price=1.32,volume=.02)]
         request=self.broker.prepare(row,'install',-1)

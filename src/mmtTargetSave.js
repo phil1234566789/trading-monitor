@@ -15,3 +15,5 @@ export async function saveTargetDraft(orderId){
  if(!editor||editor.state.value.disabled)return false;
  return editor.save();
 }
+
+export const nativeTargetKey=(accountId,ticket)=>`native:${accountId}:${ticket}`;

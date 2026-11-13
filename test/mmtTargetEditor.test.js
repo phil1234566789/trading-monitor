@@ -1,8 +1,10 @@
 import {afterEach,describe,it,expect,vi} from 'vitest';
 import {createRenderer,h,nextTick,reactive,ssrContextKey} from 'vue';
+import {renderToString} from '@vue/server-renderer';
+import {createSSRApp} from 'vue';
 import Editor from '../src/components/MmtTargetEditor.vue';
 import {moveTargetDraft,splitTargetDraft,changeTargetShare,targetDraftLines} from '../src/mmtTargetDrafts.js';
-import {saveTargetDraft,targetSaveState} from '../src/mmtTargetSave.js';
+import {saveTargetDraft,targetSaveState,nativeTargetKey} from '../src/mmtTargetSave.js';
 const renderer=createRenderer({createElement:tag=>({tag,children:[],props:{}}),createText:text=>({text}),createComment:()=>({}),setText:(n,t)=>n.text=t,setElementText:(n,t)=>n.text=t,patchProp:(n,k,o,v)=>n.props[k]=v,insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
 let app;afterEach(()=>{app?.unmount();vi.unstubAllGlobals();vi.restoreAllMocks();});
 const order={id:'e297afbf-172c-4304-99e7-eb1198191050',status:'executed',intent:{symbol:'XAUUSD.gbe',direction:'long',stop_loss:1990,account_login:42,account_server:'Demo'},result:{price:2000,volume:.01,position:123}};
@@ -11,7 +13,7 @@ async function mount(extra={}){
  vi.stubGlobal('document',{visibilityState:'visible'});
  const api=extra.api??vi.fn().mockImplementation(async(action,body)=>action==='target_state'?{plan:null}:{plan:{revision:body.revision,state:'pending',next_index:0,plan:{targets:body.targets}}});
  const current=reactive(structuredClone(extra.snapshot??snapshot));
- app=renderer.createApp({...Editor,render:()=>h('div')},{order:extra.order??order,api,snapshot:current,online:true,entryTime:100});
+ app=renderer.createApp({...Editor,render:()=>h('div')},{order:extra.nativePosition?undefined:extra.order??order,nativePosition:extra.nativePosition,api,snapshot:current,online:true,entryTime:100});
  app.provide(ssrContextKey,{});
  const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api,snapshot:current};
 }
@@ -86,5 +88,32 @@ describe('TP edits require Save',()=>{
  it('discard restores broker targets without sending',async()=>{
   const {state,api}=await mount();moveTargetDraft(order.id,0,2050);state.reset();await nextTick();
   expect(state.draft.targets[0].price).toBe(2010);expect(state.draft.dirty).toBe(false);expect(api).toHaveBeenCalledTimes(1);
+ });
+});
+
+
+describe('native broker position target management',()=>{
+ it('renders its real template without an execution order',async()=>{
+  const html=await renderToString(createSSRApp(Editor,{nativePosition:{accountId:'mock',login:42,server:'Demo',ticket:123,type:0,magic:0,direction:'long',symbol:'XAUUSD.gbe',entryPrice:2000},snapshot,online:false,api:vi.fn()}));
+  expect(html).toContain('XAUUSD.gbe');expect(html).toContain('RR');expect(html).not.toContain('undefined');
+ });
+ const native={accountId:'account-two',accountName:'Konto 2',login:42,server:'Demo',ticket:123,magic:0,type:0,direction:'long',symbol:'XAUUSD.gbe',entryPrice:2000};
+ it('reuses drag/split/chart-save and restores a native 25/75 plan without inventing an initial SL',async()=>{
+  let stored=null;
+  const api=vi.fn(async(action,body)=>{expect(body.order_id).toBeUndefined();expect(body.position_ticket).toBe(123);if(action==='target_state')return {plan:stored};stored={revision:body.revision,state:'pending',next_index:0,plan:{targets:structuredClone(body.targets)}};return {plan:stored};});
+  const current=structuredClone(snapshot);Object.assign(current.positions[0],{volume:.04,magic:0});
+  const key=nativeTargetKey(native.accountId,native.ticket);
+  const {state}=await mount({nativePosition:native,api,snapshot:current});
+  expect(state.context.initialSl).toBeNull();expect(state.validation.value.targets[0].rr).toBeNull();
+  splitTargetDraft(key,0);changeTargetShare(key,0,25);moveTargetDraft(key,1,2015);await nextTick();
+  expect(await saveTargetDraft(key)).toBe(true);expect(stored.plan.targets.map(t=>t.volume)).toEqual([.01,.03]);
+  expect(api.mock.calls.filter(c=>c[0]==='target_save')).toHaveLength(1);
+  app.unmount();await mount({nativePosition:native,api,snapshot:current});
+  expect(targetDraftLines('XAUUSD').map(t=>t.percent)).toEqual([25,75]);
+ });
+ it('does not attach controls to the same ticket with a different magic or account',async()=>{
+  const current=structuredClone(snapshot);Object.assign(current.positions[0],{magic:7});
+  const {state}=await mount({nativePosition:native,snapshot:current});expect(state.position).toBeUndefined();
+  expect(await saveTargetDraft(nativeTargetKey(native.accountId,native.ticket))).toBe(false);
  });
 });

@@ -14,7 +14,7 @@ export function useMmtTargetDrawing(){
   clear();const candles=c.candles;if(!candles.length)return;
   const last=candles[candles.length-1].time,bar=barSecondsFor(c.currentBar);
   for(const line of targetDraftLines(c.symbol).sort((a,b)=>Number(a.selected)-Number(b.selected))){
-   const risk=Math.abs(line.entryPrice-line.initialSl),rr=risk>0?(line.direction==='long'?line.price-line.entryPrice:line.entryPrice-line.price)/risk:null;
+   const risk=line.initialSl==null?null:Math.abs(line.entryPrice-line.initialSl),rr=risk>0?(line.direction==='long'?line.price-line.entryPrice:line.entryPrice-line.price)/risk:null;
    const primitive=new LiquidityLinePrimitive({price:line.price,pivotTime:line.entryTime??last,endTime:last+bar*12},
     {color:cssColor('candleUp'),lineWidth:line.selected?3:2,label:`${line.label} · ${line.price} · RR ${rr?.toFixed(2)??'—'}`,labelSide:'end-above',lenientLabels:true,forceLabel:line.selected,futureBarSeconds:bar,extendToRight:true},candles);
    series.attachPrimitive(primitive);primitives.push({primitive,line});

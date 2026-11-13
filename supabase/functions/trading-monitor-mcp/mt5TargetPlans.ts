@@ -4,34 +4,44 @@ import {executionConfig} from './mt5Execution.ts';
 import {validateWorkerSnapshot,validateDispatchAccount} from './executionContract.js';
 import {validateTargetAllocation} from './targetPlanContract.js';
 const uuid=z.string().uuid(),number=z.number().finite(),positive=number.positive();
-const request=z.object({order_id:uuid,revision:uuid,expected_revision:uuid.nullable(),targets:z.array(z.object({price:positive,volume:positive}).strict()).min(1).max(5),observed:z.object({volume:positive,sl:positive,tp:number.nonnegative()}).strict()}).strict();
+const identity={order_id:uuid.optional(),position_ticket:z.number().int().positive().safe().optional()};
+const oneIdentity=(v:{order_id?:string;position_ticket?:number})=>(v.order_id!=null)!==(v.position_ticket!=null);
+const request=z.object({...identity,revision:uuid,expected_revision:uuid.nullable(),targets:z.array(z.object({price:positive,volume:positive}).strict()).min(1).max(5),observed:z.object({volume:positive,sl:positive,tp:number.nonnegative()}).strict()}).strict().refine(oneIdentity);
 const resultSchema=z.object({status:z.enum(['executed','rejected','unknown']),reason:z.string().max(100).optional(),remaining_volume:number.nonnegative().optional(),sl:positive.optional(),tp:number.nonnegative().optional(),deal:z.number().int().positive().optional()}).strict();
 export async function targetPlanAction(body:Record<string,unknown>,worker=false){
  const db=mt5Database(),action=body.action;
  if(!worker&&action==='target_state'){
-  const order=uuid.parse(body.order_id);
-  return {plan:checked(await db.from('mt5_target_plans').select('*').eq('order_id',order).maybeSingle())};
+  const input=z.object(identity).strict().refine(oneIdentity).parse({...(body.order_id!=null?{order_id:body.order_id}:{}),...(body.position_ticket!=null?{position_ticket:body.position_ticket}:{})});
+  const account=await activeMt5Account(body.account_id);
+  let query=db.from('mt5_target_positions').select('id').eq('account_id',account.id).eq('account_login',account.login).eq('account_server',account.server);
+  query=input.order_id?query.eq('execution_order_id',input.order_id):query.eq('position_ticket',input.position_ticket!);
+  const subject:any=checked(await query.maybeSingle());
+  return {plan:subject?checked(await db.from('mt5_target_plans').select('*').eq('order_id',subject.id).maybeSingle()):null};
  }
  const config=await executionConfig(body.account_id);
  if(!worker&&action==='target_save'){
   const {action:_,account_id:__,...fields}=body,input=request.parse(fields);
-  const order:any=checked(await db.from('mt5_execution_orders').select('*').eq('id',input.order_id).single());
-  if(order.status!=='executed'||!order.result?.price||!order.result?.volume||order.result?.position_lifecycle?.state==='closed')throw new Error('target_fill_required');
-  validateDispatchAccount(order.intent,config);
+  const order:any=input.order_id?checked(await db.from('mt5_execution_orders').select('*').eq('id',input.order_id).single()):null;
+  if(order){
+   if(order.status!=='executed'||!order.result?.price||!order.result?.volume||order.result?.position_lifecycle?.state==='closed')throw new Error('target_fill_required');
+   validateDispatchAccount(order.intent,config);
+  }
   const bridge:any=await accountBridge(await activeMt5Account(body.account_id));
-  if(Date.now()-Date.parse(bridge.heartbeat_at)>5000)throw new Error('bridge_offline');
+  const heartbeat=Date.parse(bridge?.heartbeat_at),now=Date.now();
+  if(!Number.isFinite(heartbeat)||now-heartbeat>5000||heartbeat>now+1000)throw new Error('bridge_offline');
   const s=validateWorkerSnapshot(bridge.snapshot,config);
   if(!s.target_plans_ready||!s.execution_ready||!s.trade_allowed||s.worker_error)throw new Error('target_worker_not_ready');
-  const ticket=order.result.position??order.result.order;
-  const p=s.positions.find((p:any)=>p.ticket===ticket&&p.symbol===order.intent.symbol&&p.type===(order.intent.direction==='long'?0:1)&&p.magic===order.result.magic);
-  const q=s.quotes?.find((q:any)=>q.symbol===order.intent.symbol);
-  if(!p||!q||Date.now()/1000-q.time>5)throw new Error('target_position_unavailable');
+  const ticket=order?(order.result.position??order.result.order):input.position_ticket;
+  const p=s.positions.find((p:any)=>p.ticket===ticket&&(!order||(p.symbol===order.intent.symbol&&p.type===(order.intent.direction==='long'?0:1)&&p.magic===order.result.magic)));
+  const q=s.quotes?.find((q:any)=>q.symbol===p?.symbol);
+  if(!p||!q||now/1000-q.time>5||q.time>now/1000+1||!(p.price_open>0)||!Number.isSafeInteger(p.magic)||p.magic<0)throw new Error('target_position_unavailable');
   if(['volume','sl','tp'].some(key=>Math.abs(p[key]-input.observed[key as keyof typeof input.observed])>1e-9))throw new Error('target_position_changed');
-  const allocation=validateTargetAllocation(input.targets,p,q,order.result.price,order.result.initial_sl??order.intent.stop_loss);
-  const plan={...allocation,order_id:order.id,account_login:config.login,account_server:config.server,mode:config.mode,
-   position:ticket,symbol:order.intent.symbol,direction:order.intent.direction,magic:order.result.magic,
-   entry_price:order.result.price,initial_sl:order.result.initial_sl??order.intent.stop_loss,filled_volume:order.result.volume};
-  return {plan:checked(await db.rpc('mt5_save_target_plan',{p_order:order.id,p_revision:input.revision,p_expected:input.expected_revision,p_plan:plan,p_checkpoint:input.observed}))};
+  const entry=order?order.result.price:p.price_open,initialSl=order?(order.result.initial_sl??order.intent.stop_loss):null;
+  const allocation=validateTargetAllocation(input.targets,p,q,entry,initialSl);
+  const plan={...allocation,order_id:order?.id??crypto.randomUUID(),account_id:config.accountId,account_login:config.login,account_server:config.server,mode:config.mode,
+   position:ticket,symbol:p.symbol,direction:p.type===0?'long':'short',magic:p.magic,
+   entry_price:entry,initial_sl:initialSl,filled_volume:order?order.result.volume:p.volume};
+  return {plan:checked(await db.rpc('mt5_save_target_plan',{p_order:plan.order_id,p_revision:input.revision,p_expected:input.expected_revision,p_plan:plan,p_checkpoint:input.observed}))};
  }
  if(!worker)throw new Error('invalid_target_action');
  if(action==='target_poll'){
