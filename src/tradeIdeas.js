@@ -22,6 +22,15 @@ export function nearestTradeIdea(annotations,time) {
  if(ideas[1]&&Math.abs(ideas[0].time-time)===Math.abs(ideas[1].time-time))return {idea:null,reason:'tie'};
  return {idea:ideas[0],reason:null};
 }
+export function editTradeIdea(annotation,level,point) {
+ if(!point||!['entry','sl','tp'].includes(level))return null;
+ const idea={...annotation.tradeIdea,[level]:point.price};
+ if(level==='entry')idea.time=Math.round(point.time);
+ else idea.endTime=Math.round(point.time);
+ if(!validTradeIdea(idea))return null;
+ return {...annotation,from:{...annotation.from,time:formatDatedTime(idea.time),price:idea.entry},
+  to:{...annotation.to,time:formatDatedTime(idea.endTime),price:idea.sl},tradeIdea:idea};
+}
 export function confirmedOrderTrade(order,entryTime) {
  if(order.status!=='executed'||!positive(order.result?.price)||!positive(entryTime))return null;
  const life=order.result.position_lifecycle,closed=life?.state==='closed';

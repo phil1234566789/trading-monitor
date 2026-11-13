@@ -12,29 +12,38 @@
 import {renderTradeIdeas} from '../tradeIdeaRendering.js';
 import {barSecondsFor} from '../timeframes.js';
 import { renderAnnotations } from "../annotations.js";
+import {useTradeIdeaEditing} from './useTradeIdeaEditing.js';
 
-export function usePriceChartDrawings() {
+export function usePriceChartDrawings({store,pointAt}) {
   let chart = null;
   let candleSeries = null;
   const annotationPrimitives = [];
   const annotationPriceLines = [];
+  let lastContext;
+  const editor=useTradeIdeaEditing({store,pointAt,refresh:()=>{if(chart&&lastContext)refresh(lastContext);}});
 
   // Aufgerufen aus PriceChart.vue: onMounted, direkt nach candleSeries-Anlage.
-  function create(chartInstance, candleSeriesInstance) {
+  function create(chartInstance, candleSeriesInstance,element) {
     chart = chartInstance;
     candleSeries = candleSeriesInstance;
+    editor.create(chart,element);
   }
 
   // Aufgerufen aus PriceChart.vue: onUnmounted.
   function dispose() {
+    editor.dispose();
     chart = null;
     candleSeries = null;
   }
 
   function refresh({ annotations, annotationsDate, candles, currentBar }) {
+    lastContext={annotations,annotationsDate,candles,currentBar};
+    annotations=editor.annotations(annotations);
     renderAnnotations(candleSeries, annotations.filter(a=>!a.tradeIdea), annotationPrimitives, annotationPriceLines, candles, annotationsDate);
-    renderTradeIdeas(candleSeries,annotations,annotationPrimitives,candles,barSecondsFor(currentBar));
+    const lines=[];
+    renderTradeIdeas(candleSeries,annotations,annotationPrimitives,candles,barSecondsFor(currentBar),(primitive,annotation,level)=>lines.push({primitive,annotation,level}));
+    editor.setLines(lines);
   }
 
-  return { create, dispose, refresh };
+  return { create, dispose, refresh, editingStatus:editor.status };
 }
