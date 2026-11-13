@@ -11,6 +11,14 @@ it('reads each active account without switching the selected trading account and
  expect(accountDailyStatus(accounts[0],other)).toBeNull();
  expect(accountDailyStatus(accounts[1],other)).toBe(other);
 });
+it('keeps a known position when its account is archived without polling archives or reviving empty archive history',async()=>{
+ const account={id:'a',login:1,server:'s',archived:true};
+ const previous={online:true,bridge:{snapshot:{account_login:1,account_server:'s',positions:[{ticket:12}]}}};
+ const api=vi.fn();
+ const result=await readAccountDailyStatuses(api,[account,{id:'csv',archived:true}],null,null,{}, {a:previous});
+ expect(api).not.toHaveBeenCalled();expect(result.a).toMatchObject({online:false,inactive:true});
+ expect(result.a.status_error).toContain('Inaktives Konto');expect(result.a.bridge.snapshot.positions).toEqual([{ticket:12}]);expect(result.csv).toBeUndefined();
+});
 it('retains only the last correctly bound account snapshot on a partial poll failure and clears real closures',async()=>{
  const accounts=[{id:'a',login:1,server:'s'},{id:'b',login:2,server:'s'}];
  const state=(login,positions)=>({online:true,bridge:{heartbeat_at:'2026-11-13T13:00:00Z',snapshot:{account_login:login,account_server:'s',positions}}});

@@ -55,7 +55,7 @@ export function draftRiskBasis(draft){
  return positionRiskBasis(draft.direction,draft.entryPrice,outer);
 }
 export function targetDraftLines(symbol){
- return [...drafts.entries()].filter(([,d])=>d.symbol===symbol).flatMap(([orderId,d])=>{
+ return [...drafts.entries()].filter(([,d])=>d.symbol===symbol&&d.online!==false).flatMap(([orderId,d])=>{
  return ['target','stop'].flatMap(kind=>{
  const levels=d[listKey(kind)]??[],shares=targetShares(levels,d.positionVolume),totalPercent=shares.reduce((sum,n)=>sum+n,0);
  const allocation=kind==='stop'?stopDraftAllocation(levels,d.positionVolume,d.quote,d.direction):targetDraftAllocation(levels,d.positionVolume,d.quote?.volume_step),side=d.direction==='long'?'long':'short',basisSl=draftRiskBasis(d);
@@ -71,7 +71,7 @@ export function targetDraftLines(symbol){
  }]:[]);});});
 }
 export function stopEntryDraftLines(symbol){
- return [...drafts.entries()].filter(([,d])=>d.symbol===symbol&&d.needsStop&&!d.stops?.length).map(([orderId,d])=>({
+ return [...drafts.entries()].filter(([,d])=>d.symbol===symbol&&d.online!==false&&d.needsStop&&!d.stops?.length).map(([orderId,d])=>({
   orderId,index:-1,kind:'entry',price:d.entryPrice,entryTime:d.entryTime,entryPrice:d.entryPrice,accountLabel:d.accountLabel,positionId:d.positionId,
   canAddStop:d.canAddStop,stopPreviews:d.stopPreviews,stopReason:d.stopReason,dirty:d.dirty,direction:d.direction,
  }));

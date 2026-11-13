@@ -8,12 +8,13 @@ import MmtTargetChartControls from '../components/MmtTargetChartControls.vue';
 import {targetSaveState,saveTargetDraft,cancelTargetDraft} from '../mmtTargetSave.js';
 import {suspendChartScrolling} from '../chartScrollSuspension.js';
 import {chartMode} from '../chartModes.js';
-export function useMmtTargetDrawing(){
+export function useMmtTargetDrawing(visible=()=>true){
  let chart,series,element,drag=null,activeTarget=null,restoreScrolling,overlay,app,frame,windowTarget;
  const context=shallowRef(null),controls=shallowRef([]),dragging=shallowRef(false),guide=shallowRef(null),cancellation=shallowRef(null),primitives=[];
  function clear(){if(series)for(const {primitive} of primitives)series.detachPrimitive(primitive);primitives.length=0;}
  const stop=watchEffect(()=>{
   const c=context.value;if(!series||!c)return;
+  if(!visible()){up();clear();controls.value=[];return;}
   const lines=targetDraftLines(c.symbol);
   if(drag&&!lines.some(line=>line.orderId===drag.orderId&&line.index===drag.index&&line.kind===drag.kind))up();
   clear();const candles=c.candles;if(!candles.length)return;
@@ -28,7 +29,7 @@ export function useMmtTargetDrawing(){
   const hits=primitives.filter(p=>p.primitive.distanceTo(x,y)<=7),selected=hits.filter(p=>p.line.selected);
   return selected.length===1?selected[0]:hits.length===1?hits[0]:null;
  }
- function cursorAt(x,y){return drag||(chartMode.value==='navigate'&&hitAt(x,y))?'ns-resize':null;}
+ function cursorAt(x,y){return visible()&&(drag||(chartMode.value==='navigate'&&hitAt(x,y)))?'ns-resize':null;}
  function updateGuide(){
   if(!drag||!series||!chart){guide.value=null;return;}
   const line=targetDraftLines(context.value?.symbol).find(line=>line.orderId===drag.orderId&&line.index===drag.index&&line.kind===drag.kind);
@@ -61,7 +62,7 @@ export function useMmtTargetDrawing(){
  function addStop(line,mode){if(addStopDraft(line.orderId,mode))activeTarget={...line,index:0,kind:'stop'};}
  function nudge(line,direction){activeTarget=line;moveTargetDraft(line.orderId,line.index,line.price+direction*10**-(line.digits??2),line.kind);}
  function tick(){
-  if(!chart||!element)return;
+  if(!chart||!element||!visible())return;
   updateGuide();
   const height=chart.panes?.()[0]?.getHeight?.()??element.clientHeight-30,right=Math.max(0,element.clientWidth-chart.timeScale().width());
   const rows=[...primitives.map(({line})=>line),...stopEntryDraftLines(context.value?.symbol)].map(line=>{
@@ -80,7 +81,7 @@ export function useMmtTargetDrawing(){
  }
  function point(event){const rect=element.getBoundingClientRect();return {x:event.clientX-rect.left,y:event.clientY-rect.top};}
  function down(event){
-  if(chartMode.value!=='navigate'||event.button!==0||event.target.tagName!=='CANVAS')return;
+  if(!visible()||chartMode.value!=='navigate'||event.button!==0||event.target.tagName!=='CANVAS')return;
   const p=point(event),hit=hitAt(p.x,p.y);
   if(!hit)return;
   start(hit.line,event);
@@ -93,13 +94,18 @@ export function useMmtTargetDrawing(){
  function up(){restoreScrolling?.();restoreScrolling=null;drag=null;dragging.value=false;guide.value=null;if(element)element.style.cursor='';}
  function blur(){up();activeTarget=null;}
  watch(chartMode,blur,{flush:'sync'});
+ watch(visible,shown=>{
+  // Ausblenden beendet auch einen aktiven Drag; unsichtbare Linien dürfen Pan/Zoom nicht festhalten.
+  blur();clear();controls.value=[];cancelAnimationFrame(frame);
+  if(shown&&chart)frame=requestAnimationFrame(tick);
+ },{flush:'sync'});
  function create(nextChart,nextSeries,nextElement){
   chart=nextChart;series=nextSeries;element=nextElement;
   windowTarget=element.ownerDocument?.defaultView;windowTarget?.addEventListener('blur',blur);
   element.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('lostpointercapture',up,true);document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',leave,true);document.addEventListener('focusin',leave,true);
   overlay=document.createElement('div');element.appendChild(overlay);
   app=createApp({render:()=>h(MmtTargetChartControls,{rows:controls.value,dragging:dragging.value,guide:guide.value,cancellation:cancellation.value,onCancel:cancel,onMove:start,onSplit:split,onNudge:nudge,onShare:(line,value)=>{activeTarget=line;changeTargetShare(line.orderId,line.index,value,line.kind);},onAddStop:addStop,onSave:line=>saveTargetDraft(line.orderId)})});app.mount(overlay);
-  frame=requestAnimationFrame(tick);
+  if(visible())frame=requestAnimationFrame(tick);
  }
  function refresh(value){context.value=value;}
  function dispose(){up();clear();cancelAnimationFrame(frame);app?.unmount();overlay?.remove();app=null;overlay=null;controls.value=[];windowTarget?.removeEventListener('blur',blur);windowTarget=null;element?.removeEventListener('pointerdown',down,true);document.removeEventListener('pointermove',move,true);document.removeEventListener('pointerup',up,true);document.removeEventListener('pointercancel',up,true);document.removeEventListener('lostpointercapture',up,true);document.removeEventListener('keydown',escape,true);document.removeEventListener('pointerdown',leave,true);document.removeEventListener('focusin',leave,true);activeTarget=null;chart=null;series=null;element=null;context.value=null;}

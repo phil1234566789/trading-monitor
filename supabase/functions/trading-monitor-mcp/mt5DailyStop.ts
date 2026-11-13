@@ -66,13 +66,16 @@ export async function dailyStopAction(body:Record<string,any>){
 }
 
 export async function readDailyStopStatus(accountId?:string){
- const db=mt5Database();let account;
+ let account;
  try{account=await activeMt5Account(accountId);}catch(error){if(error instanceof Error&&error.message==='no_active_account')return null;throw error;}
  if(accountId&&accountId!==account.id)throw new Error('account_mismatch');
+ return readAccountDailyStopStatus(account,await accountBridge(account));
+}
+export async function readAccountDailyStopStatus(account:any,bridge:any){
+ const db=mt5Database();
  const context=await stopContext(account,db,Math.floor(Date.now()/1000));
  const recent=checked(await db.from('mt5_guard_commands').select('*').eq('account_id',account.id).order('created_at',{ascending:false}).limit(20))??[];
  const commands=await readGuardCommands(db,account.id);
- const bridge:any=await accountBridge(account);
  const s=bridge?.snapshot,now=Math.floor(Date.now()/1000);
  const ready=!!bridge&&Date.now()-Date.parse(bridge.heartbeat_at)<=5000&&s.account_login===Number(account.login)&&s.account_server===account.server
   &&s.risk_guards_ready===true&&s.hedging===true&&!s.worker_error&&!s.risk_error&&s.risk?.day===context.day

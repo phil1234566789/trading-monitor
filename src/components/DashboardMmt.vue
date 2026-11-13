@@ -1,5 +1,5 @@
 <script setup>
-import {computed,ref,toRef,watch} from 'vue';
+import {computed,onUnmounted,ref,toRef,watch} from 'vue';
 import MmtTargetEditor from './MmtTargetEditor.vue';
 import {executionPositionId,findOrderPosition} from '../milkyMetaTraderMonitoring.js';
 import {nearestTradeIdea,chartInstrument} from '../tradeIdeas.js';
@@ -11,25 +11,21 @@ import IconButton from './ui/IconButton.vue';
 import {fmtPrice,pnlClass} from '../format.js';
 import {collectMmtBrokerPositions,projectBrokerPositions} from '../mmtBrokerPositions.js';
 import '../milkyMetaTrader.css';
-const props=defineProps({symbol:String,annotations:Array,lastCandleTime:Number,replay:Boolean});
-const emit=defineEmits(['trades','broker-positions']);
-const mmt=useDashboardMmt(toRef(props,'symbol'));
-const {api,status,orders,accounts,accountStatuses,activeId,account,snapshot,brokerQuote,activeOrders,trades,history,entryTimeFor,links,error,key,now,refresh,cancel}=mmt;
+const props=defineProps({symbol:String,annotations:Array,lastCandleTime:Number,replay:Boolean,enabled:{type:Boolean,default:true}});
+const emit=defineEmits(['broker-positions']);
+const mmt=useDashboardMmt(toRef(props,'symbol'),()=>props.enabled);
+const {api,status,orders,accounts,accountStatuses,activeId,account,snapshot,brokerQuote,activeOrders,entryTimeFor,error,key,now,refresh,cancel}=mmt;
 const nearest=computed(()=>nearestTradeIdea(props.annotations??[],props.lastCandleTime));
 const ambiguity=computed(()=>nearest.value.reason==='tie');
 const entryDisabledReason=computed(()=>props.replay?'Replay aktiv: Entry-Suche nur im Live-Chart möglich.':error.value||(!nearest.value.idea?(ambiguity.value?'Zwei Ideen sind gleich nah: eine ausblenden.':'Eine Long-/Short-Idee mit SL im Chart fehlt.') :''));
 const accountFor=o=>accounts.value.find(a=>Number(a.login)===o.intent.account_login&&a.server===o.intent.account_server);
 const snapshotFor=o=>accountStatuses.value[accountFor(o)?.id]?.bridge?.snapshot;
-const onlineFor=o=>openPositions.value.find(p=>p.account.id===accountFor(o)?.id&&p.position.ticket===executionPositionId(o))?.online===true;
+const onlineFor=o=>props.enabled&&openPositions.value.find(p=>p.account.id===accountFor(o)?.id&&p.position.ticket===executionPositionId(o))?.online===true;
 const apiFor=o=>(action,fields,options)=>api(action,{...fields,account_id:accountFor(o)?.id},options);
 const apiForNativePosition=position=>(action,fields,options)=>api(action,{...fields,account_id:position.accountId},options);
 const openPositions=computed(()=>collectMmtBrokerPositions(accounts.value,accountStatuses.value,now.value));
 const managedPositions=computed(()=>orders.value.filter(o=>findOrderPosition(o,snapshotFor(o))));
 const brokerPositions=computed(()=>projectBrokerPositions(openPositions.value,managedPositions.value));
-const chartTrades=computed(()=>{
- const nativeEntries=new Set(brokerPositions.value.filter(position=>position.entryPrice&&position.managedOrderId).map(position=>`mmt:${position.managedOrderId}`));
- return trades.value.filter(trade=>!nativeEntries.has(trade.id));
-});
 const searchStatus={searching:'Entry wird gesucht',sending:'Wird gesendet',unknown:'Ausführung ungeklärt'};
 const lastResult=ref(null),submittedIds=new Set();
 function afterSubmit(ids=[]){for(const id of ids)submittedIds.add(id);void refresh();}
@@ -37,8 +33,8 @@ watch(orders,(orders,previous)=>{
  const result=mmtSearchFeedback(orders,previous,submittedIds);
  if(result)lastResult.value=result;
 });
-watch(chartTrades,value=>emit('trades',value),{immediate:true});
 watch(brokerPositions,value=>emit('broker-positions',value),{immediate:true});
+onUnmounted(()=>emit('broker-positions',[]));
 </script>
 <template>
  <section class="mmt-page mmt-chart-card" aria-label="MMT im Chart">
@@ -59,11 +55,11 @@ watch(brokerPositions,value=>emit('broker-positions',value),{immediate:true});
   <ul v-if="openPositions.length" class="mmt-order-list" aria-label="Offene Positionen" aria-live="polite">
    <li v-for="p in openPositions" :key="p.key" class="mmt-live-position" :data-stale="!p.online">
     <div class="mmt-order-heading"><strong>{{p.position.symbol}} · {{p.position.type===0?'Long':'Short'}} · {{fmtPrice(p.position.volume,2)}} Lot</strong><strong :class="pnlClass(p.position.profit)">{{fmtPrice(p.position.profit,2)}} {{p.currency}}</strong></div>
-    <small class="mmt-muted">{{p.account.name}} · Broker-PnL ohne Kosten/Swap<span v-if="!p.online"> · Stand veraltet</span></small>
+    <small class="mmt-muted">{{p.account.name}} · Broker-PnL ohne Kosten/Swap<span v-if="p.account.archived"> · Konto inaktiv · letzter bekannter Stand</span><span v-else-if="!p.online"> · Stand veraltet</span></small>
    </li>
   </ul>
   <MmtTargetEditor v-for="o in managedPositions" :key="o.id" headless :order="o" :api="apiFor(o)" :snapshot="snapshotFor(o)" :online="onlineFor(o)&&!error" :entry-time="entryTimeFor(o)" :account-name="accountFor(o)?.name" @saved="refresh" />
-  <MmtTargetEditor v-for="position in brokerPositions.filter(position=>!position.managedOrderId)" :key="position.id" headless :native-position="position" :api="apiForNativePosition(position)" :snapshot="accountStatuses[position.accountId]?.bridge?.snapshot" :online="position.online&&!error" :entry-time="position.openedAt" :account-name="position.accountName" @saved="refresh" />
+  <MmtTargetEditor v-for="position in brokerPositions.filter(position=>!position.inactive&&!position.managedOrderId)" :key="position.id" headless :native-position="position" :api="apiForNativePosition(position)" :snapshot="accountStatuses[position.accountId]?.bridge?.snapshot" :online="enabled&&position.online&&!error" :entry-time="position.openedAt" :account-name="position.accountName" @saved="refresh" />
  </section>
 </template>
 <style scoped>

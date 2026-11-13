@@ -13,7 +13,7 @@ const draftKey=d=>JSON.stringify({targets:d?.targets,stops:d?.stops,riskMode:d?.
 
 export function useMmtExitEditor(props,emit){
  const plan=ref(null),busy=ref(false),error=ref(''),receipt=ref(''),loaded=ref(false),refreshError=ref(''),uncertain=ref(null),costs=ref(null),stopPreviews=ref({});
- let disposed=false,generation=0;
+ let disposed=false,generation=0,refreshRequest=null;
  const context=computed(()=>props.nativePosition?{
   key:nativeTargetKey(props.nativePosition.accountId,props.nativePosition.ticket),request:{position_ticket:props.nativePosition.ticket},
   symbol:props.nativePosition.symbol,direction:props.nativePosition.direction,entry:props.nativePosition.entryPrice,initialSl:null,
@@ -58,7 +58,7 @@ export function useMmtExitEditor(props,emit){
  const runtimeMetadata=()=>({symbol:chartInstrument(context.value.symbol),entryTime:props.entryTime??position.value?.opened_at_sec??null,digits:quote.value?.digits,
   entryPrice:context.value.entry,initialSl:context.value.initialSl,basisSl:plan.value?.plan.risk_basis_sl??context.value.initialSl,basisSource:plan.value?.plan.risk_basis_source??null,direction:context.value.direction,
   accountLabel:props.accountName||`Konto ${context.value.login}`,positionId:context.value.ticket,positionVolume:position.value?.volume,
-  quote:quote.value,currency:props.snapshot?.currency,swap:position.value?.swap,costs:costs.value,stopPreviews:stopPreviews.value,canAddStop:canAddStop.value,stopReason:stopReason.value,needsStop:position.value?.sl===0,brokerStop:position.value?.sl});
+  quote:quote.value,online:props.online,currency:props.snapshot?.currency,swap:position.value?.swap,costs:costs.value,stopPreviews:stopPreviews.value,canAddStop:canAddStop.value,stopReason:stopReason.value,needsStop:position.value?.sl===0,brokerStop:position.value?.sl});
  function savedLevels(kind){
   const levels=plan.value?.plan[kind==='stop'?'stops':'targets'];
   if(levels)return levels.slice(plan.value[kind==='stop'?'next_stop_index':'next_index']??0);
@@ -81,9 +81,12 @@ export function useMmtExitEditor(props,emit){
   setTargetDraft(context.value.key,{...draft.value,[list]:draft.value[list].filter((_,i)=>i!==index),dirty:true,...(kind==='stop'?{stopsDirty:true}:{}),...(selected===null?{}:{selectedIndex:selected===index?null:selected>index?selected-1:selected})});
  }
  function changeRiskMode(mode){setTargetDraft(context.value.key,{...draft.value,riskMode:mode,dirty:true,stopsDirty:true});}
- async function refresh(){
+ function refresh(){
   if(disposed||busy.value||!props.online)return;
+  if(refreshRequest?.generation===generation)return refreshRequest.promise;
   const requested=generation;
+  const request={generation,promise:null};refreshRequest=request;
+  request.promise=(async()=>{
   try{
    const value=await props.api('target_state',context.value.request,{background:true});
    if(disposed||requested!==generation)return;plan.value=value.plan;costs.value=value.costs??null;stopPreviews.value=value.stop_previews??{};loaded.value=true;refreshError.value='';
@@ -95,6 +98,8 @@ export function useMmtExitEditor(props,emit){
    if(!position.value){removeTargetDraft(context.value.key);return;}
    if(!draft.value||!draft.value.dirty)initTargets(savedLevels('target'));
   }catch(e){if(!disposed&&requested===generation)refreshError.value=e.message;}
+  })().finally(()=>{if(refreshRequest===request)refreshRequest=null;});
+  return request.promise;
  }
  async function save(){
   if(saveReason.value)return false;

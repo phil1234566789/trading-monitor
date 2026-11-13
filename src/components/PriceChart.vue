@@ -83,7 +83,6 @@ import {useMmtTargetDrawing} from '../composables/useMmtTargetDrawing.js';
 import {useBrokerPositionDrawing} from '../composables/useBrokerPositionDrawing.js';
 import {useTradeIdeaDrawing} from '../composables/useTradeIdeaDrawing.js';
 import {useDrawings} from '../composables/useDrawings.js';
-import {renderBrokerTrades} from '../tradeIdeaRendering.js';
 import { measureDrawing } from "../chartMeasure.js";
 import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
 import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
@@ -322,7 +321,7 @@ const props = defineProps({
   annotationsDate: { type: String, default: null },
   // Mess-Modus (Philip 2026-09-23) — eigener Klick-Modus neben dem Trade-Modus, nicht innerhalb:
   // gemessen wird frei zwischen zwei Punkten, ohne Treffer auf irgendein Chart-Objekt.
-  brokerTrades: {type:Array,default:()=>[]},
+  showBrokerPositions: {type:Boolean,default:true},
   brokerPositions: {type:Array,default:()=>[]},
   measureModeActive: { type: Boolean, default: false },
   // Trade-Modus (Chat 2026-07-27: "damit ich nicht versehentlich in den Chart reinklicke") — nur
@@ -386,8 +385,8 @@ const emit = defineEmits([
   "measure-done",
 ]);
 
-const targetDrawing=useMmtTargetDrawing();
-const brokerPositionDrawing=useBrokerPositionDrawing(()=>props.brokerPositions,()=>props.symbol);
+const targetDrawing=useMmtTargetDrawing(()=>props.showBrokerPositions);
+const brokerPositionDrawing=useBrokerPositionDrawing(()=>props.showBrokerPositions?props.brokerPositions:[],()=>props.symbol);
 const lastCandleTime=ref(null);
 const ideaStore=useDrawings();
 function ideaPointAt(x,y){
@@ -401,14 +400,6 @@ const ideaDrawing=useTradeIdeaDrawing({
  context:()=>[props.symbol,props.currentBar,props.replayUntil],
  pointAt:ideaPointAt,save:d=>ideaStore.add(d.annotations,d.title),refresh:()=>{if(chart&&candleSeries)refreshDrawingsInternal();}
 });
-const brokerPrimitives=[];
-function refreshBrokerTrades(){
- if(!candleSeries)return;
- for(const p of brokerPrimitives)candleSeries.detachPrimitive(p);
- brokerPrimitives.length=0;
- renderBrokerTrades(candleSeries,props.brokerTrades,brokerPrimitives,clipReplay(allCandles));
-}
-watch(()=>props.brokerTrades,refreshBrokerTrades);
 const { markSuccess } = useStatusBar();
 const snapshotView = computed(() => isTradeSetup2SnapshotView(props));
 const snapshotCandleState = ref('loading'), snapshotCandleError = ref('');
@@ -1894,7 +1885,6 @@ function applyCandleData() {
   const snapshot=setup2.selected.value;
   const candles = tintFvgCandles(clipReplay(allCandles), snapshot ? [] : tradeSetupsMetadata.value, props.currentBar, color);
   lastCandleTime.value=candles[candles.length-1]?.time??null;
-  refreshBrokerTrades();
   const tinted=tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color);
   candleSeries.setData(entryFvgPicker.paint(tinted,color,cssColor('tradeConnector')));
 }

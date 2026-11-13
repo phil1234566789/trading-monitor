@@ -1,7 +1,7 @@
 import {readExecutionOrders} from './mt5OrderRead.js';
 import {riskPreviewMetrics,entrySearchMetrics} from './mt5RiskContract.js';
 import {readRiskPolicy} from './mt5Risk.ts';
-import {readDailyStopStatus} from './mt5DailyStop.ts';
+import {readAccountDailyStopStatus} from './mt5DailyStop.ts';
 import {assertDailyStopSnapshot} from './dailyStopContract.js';
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
@@ -31,12 +31,23 @@ export async function getExecutionStatus(id?: string,accountId?:unknown) {
   const bridge = account?await accountBridge(account):null;
   // Erledigte Historie bleibt begrenzt; laufende Suchen dürfen durch neue Aufträge nie verschwinden.
   const orders=await readExecutionOrders(db);
-  const dailyStatus=await readDailyStopStatus(accountId as string);
+  const dailyStatus=account?await readAccountDailyStopStatus(account,bridge):null;
   const {policy:risk_policy,...dailyStop}=dailyStatus??{policy:null};
   const online = bridge && Date.now() - Date.parse(bridge.heartbeat_at) <= 15_000;
   return { daily_stop:dailyStatus?dailyStop:null,risk_policy,bridge, online: !!online, health:await getMt5Health(), orders, execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',
     server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true',
     limits: { maxLots:.01, maxDurationSec:3600 } };
+}
+
+export async function getAccountExecutionStatus(accountId:unknown){
+  // Zusatzkonten brauchen ihren Broker-/Schutzstand, nicht erneut globale Orders, Health und Balances.
+  if(accountId==null)throw new Error('invalid_account');
+  const account=await activeMt5Account(accountId),bridge=await accountBridge(account);
+  if(bridge)validateDispatchAccount(bridge.snapshot,{login:Number(account.login),server:account.server,mode:account.mode,allowLive:true});
+  const dailyStatus=await readAccountDailyStopStatus(account,bridge);
+  const {policy:risk_policy,...daily_stop}=dailyStatus;
+  return {daily_stop,risk_policy,bridge,online:!!bridge&&Date.now()-Date.parse(bridge.heartbeat_at)<=15000,
+    execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true'};
 }
 
 export async function createExecutionOrder(input: Record<string, unknown>, confirmedMarket=false,accountId?:unknown) {

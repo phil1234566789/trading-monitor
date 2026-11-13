@@ -4,6 +4,7 @@ import {renderToString} from '@vue/server-renderer';
 import {createSSRApp} from 'vue';
 import Controls from '../src/components/MmtTargetChartControls.vue';
 import Editor from '../src/components/MmtTargetEditor.vue';
+import {useMmtExitEditor} from '../src/composables/useMmtExitEditor.js';
 import {moveTargetDraft,splitTargetDraft,changeTargetShare,targetDraftLines,addStopDraft} from '../src/mmtTargetDrafts.js';
 import {saveTargetDraft,targetSaveState,nativeTargetKey,cancelTargetDraft} from '../src/mmtTargetSave.js';
 const renderer=createRenderer({createElement:tag=>({tag,children:[],props:{}}),createText:text=>({text}),createComment:()=>({}),setText:(n,t)=>n.text=t,setElementText:(n,t)=>n.text=t,patchProp:(n,k,o,v)=>n.props[k]=v,insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
@@ -19,6 +20,34 @@ async function mount(extra={}){
  const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api,snapshot:current};
 }
 describe('TP edits require Save',()=>{
+ it('preserves a dirty and uncertain plan while offline or hidden, then reconciles it without another save',async()=>{
+  vi.stubGlobal('document',{visibilityState:'visible'});
+  const props=reactive({order:structuredClone(order),snapshot:structuredClone(snapshot),online:true,entryTime:100,api:vi.fn(async(action)=>{if(action==='target_state')return {plan:null};throw new Error('network');})});
+  let state;app=renderer.createApp({setup(){state=useMmtExitEditor(props,()=>{});return()=>h('div');}});app.mount({children:[]});await nextTick();await nextTick();
+  moveTargetDraft(order.id,0,2012);await state.save();expect(state.uncertain.value).not.toBeNull();const uncertain=state.uncertain.value;
+  props.online=false;await nextTick();expect(state.draft.value.targets[0].price).toBe(2012);expect(state.draft.value.dirty).toBe(true);expect(targetDraftLines('XAUUSD').some(row=>row.orderId===order.id)).toBe(false);
+  await state.refresh();expect(props.api.mock.calls.filter(call=>call[0]==='target_save')).toHaveLength(1);expect(state.uncertain.value).toBe(uncertain);expect(cancelTargetDraft(order.id)).toBe(false);
+  props.online=true;await nextTick();expect(targetDraftLines('XAUUSD').some(row=>row.orderId===order.id)).toBe(true);expect(state.saveReason.value).toContain('ungeklärt');await state.save();
+  expect(props.api.mock.calls.filter(call=>call[0]==='target_save')).toHaveLength(1);
+ });
+ it('coalesces slow target reads per editor and ignores a late response after unmount',async()=>{
+  let resolve;const api=vi.fn(()=>new Promise(r=>{resolve=r;}));
+  const {state}=await mount({api});const one=state.refresh(),two=state.refresh();
+  expect(one).toBe(two);expect(api).toHaveBeenCalledTimes(1);
+  resolve({plan:null});await one;expect(state.loaded).toBe(true);
+  const after=state.refresh();expect(api).toHaveBeenCalledTimes(2);
+  app.unmount();app=null;resolve({plan:{revision:'late',state:'active',plan:{targets:[]}}});await after;
+  expect(targetDraftLines('XAUUSD').some(row=>row.orderId===order.id)).toBe(false);
+ });
+ it('starts a new bound context immediately and never installs the older out-of-order plan response',async()=>{
+  const resolves=[],api=vi.fn(()=>new Promise(resolve=>resolves.push(resolve))),current=reactive(structuredClone(order));
+  const {state}=await mount({api,order:current});current.id='another-order';await nextTick();
+  expect(api).toHaveBeenCalledTimes(2);
+  resolves[1]({plan:{revision:'new',state:'active',next_index:0,plan:{targets:[{price:2011,volume:.01}]}}});await nextTick();await nextTick();
+  expect(state.plan.revision).toBe('new');
+  resolves[0]({plan:{revision:'old',state:'active',next_index:0,plan:{targets:[{price:2019,volume:.01}]}}});await nextTick();await nextTick();
+  expect(state.plan.revision).toBe('new');expect(state.draft.targets[0].price).toBe(2011);
+ });
  it('keeps the controller and chart draft registered without rendering sidebar forms in headless mode',async()=>{
   const {state}=await mount({headless:true});expect(state.draft.targets).toHaveLength(1);expect(targetDraftLines('XAUUSD').some(row=>row.orderId===order.id)).toBe(true);
   const html=await renderToString(createSSRApp(Editor,{order,snapshot,headless:true,online:false,api:vi.fn()}));

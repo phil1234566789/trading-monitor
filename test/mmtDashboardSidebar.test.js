@@ -20,5 +20,6 @@ it('shows all account/asset positions and active searches without any TP-managem
  expect(fixture.editors.find(e=>e.order?.id==='managed')?.online).toBe(true);
  statuses.one.bridge.heartbeat_at=new Date(Date.now()-60000).toISOString();fixture.editors=[];await renderToString(app);
  expect(fixture.editors.find(e=>e.order?.id==='managed')?.online).toBe(false);
+ expect(fixture.editors.find(e=>e.position?.ticket===123&&e.position?.accountId==='one')).toBeUndefined();
  expect(html).not.toContain('TP verwalten');expect(html).not.toContain('<details');expect(html).not.toContain('<form');
 });

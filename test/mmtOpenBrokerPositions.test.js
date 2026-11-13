@@ -35,6 +35,11 @@ it('does not lose positions on a failed or stale account and removes them only o
  expect(collectMmtBrokerPositions(accounts,{...statuses,b:state(2,[])},now).map(row=>row.key)).toEqual(['a:10','a:20']);
  expect(collectMmtBrokerPositions(accounts,{a:statuses.b,b:statuses.a},now)).toEqual([]);
 });
+it('keeps a known newly inactive account as stale, never as live, without inventing archived positions',()=>{
+ const archived=accounts.map(a=>a.id==='b'?{...a,archived:true}:a);
+ const rows=collectMmtBrokerPositions(archived,{...statuses,b:{...statuses.b,online:false,inactive:true}},now);
+ expect(rows).toHaveLength(4);expect(rows.filter(row=>row.account.id==='b').every(row=>!row.online&&row.account.archived)).toBe(true);
+});
 it('renders all four positions with visible account identity, per-account values and a retained failure warning',async()=>{
  const positions=collectMmtBrokerPositions(accounts,{...statuses,b:{...statuses.b,online:false,status_error:'Timeout'}},now).map(row=>({...row,commission:row.account.id==='a'?-4:-7}));
  const html=await renderToString(Vue.createSSRApp(Positions,{positions,issues:[{account:accounts[1],message:'Timeout'}]}));

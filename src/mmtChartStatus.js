@@ -1,4 +1,7 @@
 import {mmtRiskReason} from './mmtRiskReasons.js';
+export function mmtChartVisibility(panel,positions,cockpit,snapshot){
+ return {controller:!snapshot&&(panel||positions),sidebar:!snapshot&&(panel||cockpit),positions:!snapshot&&positions,panel:!snapshot&&panel};
+}
 export function mmtSearchFeedback(orders,previous,submittedIds){
  let result=null;
  const labels={rejected:'Abgelehnt',expired:'Suche abgelaufen',cancelled:'Suche abgebrochen'};

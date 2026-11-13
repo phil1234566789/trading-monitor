@@ -31,11 +31,3 @@ export function editTradeIdea(annotation,level,point) {
  return {...annotation,from:{...annotation.from,time:formatDatedTime(idea.time),price:idea.entry},
   to:{...annotation.to,time:formatDatedTime(idea.endTime),price:idea.sl},tradeIdea:idea};
 }
-export function confirmedOrderTrade(order,entryTime) {
- if(order.status!=='executed'||!positive(order.result?.price)||!positive(entryTime))return null;
- const life=order.result.position_lifecycle,closed=life?.state==='closed';
- return {id:`mmt:${order.id}`,instrument:chartInstrument(order.intent.symbol),direction:order.intent.direction,
-  entryTime,entryPrice:order.result.price,stopLoss:order.result.initial_sl??order.intent.stop_loss,
-  exitTime:closed?life.closed_at_sec:null,exitPrice:closed?life.exit_price:null,
-  outcome:closed?(life.net_profit>0?'win':life.net_profit<0?'loss':'open'):'open'};
-}

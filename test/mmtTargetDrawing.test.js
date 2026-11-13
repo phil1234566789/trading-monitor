@@ -12,6 +12,21 @@ vi.mock('../src/liquidity.js',()=>({LiquidityLinePrimitive:class {constructor(le
 const renderer=createRenderer({createElement:()=>({children:[]}),createText:()=>({}),createComment:()=>({}),setText:()=>{},setElementText:()=>{},patchProp:()=>{},insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
 let app;afterEach(()=>{app?.unmount();chartMode.value='navigate';removeTargetDraft('one');removeTargetDraft('other');vi.unstubAllGlobals();});
 describe('existing TP line dragging',()=>{
+ it('hides all SL/TP controls and primitives, releases a drag and stops RAF until positions are shown again',async()=>{
+  const handlers={},doc={body:{},addEventListener:(event,fn)=>handlers[event==='pointerdown'?'outside':event]=fn,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn(),querySelectorAll:()=>[]})};
+  vi.stubGlobal('document',doc);const raf=vi.fn(),cancelRaf=vi.fn();vi.stubGlobal('requestAnimationFrame',raf);vi.stubGlobal('cancelAnimationFrame',cancelRaf);
+  const visible=ref(true);let drawing;app=renderer.createApp({setup(){drawing=useMmtTargetDrawing(()=>visible.value);return()=>h('div');}});app.mount({children:[]});
+  const element={clientHeight:430,clientWidth:550,style:{},ownerDocument:{defaultView:{addEventListener:vi.fn(),removeEventListener:vi.fn()}},appendChild:vi.fn(),addEventListener:(event,fn)=>handlers[event]=fn,removeEventListener:vi.fn(),contains:()=>false,getBoundingClientRect:()=>({left:0,top:0})};
+  const scrolling={pressedMouseMove:true};const chart={timeScale:()=>({width:()=>500}),panes:()=>[{getHeight:()=>400}],options:()=>({handleScroll:scrolling}),applyOptions:vi.fn(value=>Object.assign(scrolling,value.handleScroll===false?{pressedMouseMove:false}:value.handleScroll))};
+  const series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn(),priceToCoordinate:price=>price-2000,coordinateToPrice:y=>2000+y};
+  setTargetDraft('one',{symbol:'XAUUSD',entryPrice:2000,positionVolume:1,targets:[{price:2010,volume:1}],stops:[{price:1990,volume:1}],direction:'long',quote:{volume_step:.01,minimum_volume:.01},dirty:false});
+  drawing.create(chart,series,element);drawing.refresh({symbol:'XAUUSD',candles:[{time:100}],currentBar:'1m'});await nextTick();raf.mock.calls.at(-1)[0]();expect(renderOverlay.value().props.rows.length).toBeGreaterThan(0);
+  selectTargetDraft('one',0,'target');await nextTick();handlers.pointerdown({button:0,target:{tagName:'CANVAS'},clientX:20,clientY:10,preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(scrolling.pressedMouseMove).toBe(false);
+  visible.value=false;await nextTick();expect(scrolling.pressedMouseMove).toBe(true);expect(renderOverlay.value().props.rows).toEqual([]);expect(renderOverlay.value().props.guide).toBeNull();expect(drawing.cursorAt(20,10)).toBeNull();expect(cancelRaf).toHaveBeenCalled();expect(series.detachPrimitive).toHaveBeenCalled();
+  const frames=raf.mock.calls.length;raf.mock.calls.at(-1)[0]();expect(raf).toHaveBeenCalledTimes(frames);
+  expect(useTargetDraft('one').value.targets[0].price).toBe(2010);
+  visible.value=true;await nextTick();raf.mock.calls.at(-1)[0]();expect(renderOverlay.value().props.rows.length).toBeGreaterThan(0);
+ });
  it('keeps a newly added offscreen SL manageable and Escape cancels its entire unsaved plan',async()=>{
   const handlers={},body={tagName:'BODY'},doc={body,addEventListener:(e,f)=>handlers[e]=f,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn(),querySelectorAll:()=>[]})};
   vi.stubGlobal('document',doc);const raf=vi.fn();vi.stubGlobal('requestAnimationFrame',raf);vi.stubGlobal('cancelAnimationFrame',vi.fn());

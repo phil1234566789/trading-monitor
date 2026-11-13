@@ -3,6 +3,7 @@ import {watchM1FvgPreviewContext} from '../composables/useM1FvgPreviewContext.js
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { liveMonthViewId } from "../liveWatcherMonth.js";
+import {mmtChartVisibility} from '../mmtChartStatus.js';
 import DashboardMmt from '../components/DashboardMmt.vue';
 import PriceChart from "../components/PriceChart.vue";
 import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
@@ -157,7 +158,7 @@ const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
 // Linien) — Untermenü-Feinschalter unter dem übergeordneten "Trades"-Toggle (showTradeSetups),
 // siehe Kommentar im Template.
 const showMmt = useLocalStorageRef("showMmt", false);
-const brokerTrades=ref([]);
+const showMmtPositions=useLocalStorageRef("showMmtPositions",showMmt.value);
 const brokerPositions=ref([]);
 const showTrades = useLocalStorageRef("showTrades", true);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
@@ -330,6 +331,9 @@ const tradeSetup2RunId = computed(() => typeof route.query.run === "string" ? li
 const snapshotView = computed(() => isTradeSetup2SnapshotView({
   tradeSetup2RunId: tradeSetup2RunId.value, selectedTradeSetup2Id: selectedTradeSetup2Id.value,
 }));
+const mmtVisibility=computed(()=>mmtChartVisibility(showMmt.value,showMmtPositions.value,showTradeSetupCockpit.value,snapshotView.value));
+const mmtControllerStarted=ref(showMmt.value||showMmtPositions.value);
+watch(()=>mmtVisibility.value.controller,enabled=>{if(enabled)mmtControllerStarted.value=true;});
 const showTradeSetupChecklist = useSnapshotVisitToggle(savedTradeSetupChecklist,snapshotView);
 const showTradeSetup2 = useSnapshotVisitToggle(savedTradeSetup2,snapshotView);
 function closeTradeSetup2Selection() {
@@ -1943,6 +1947,7 @@ watch(selectedTradingAccountId, () => {
             Trades
           </ToggleButton>
           <ToggleButton variant="menu" :class="{active:showMmt}" :aria-pressed="showMmt" @click="showMmt=!showMmt">MMT</ToggleButton>
+          <ToggleButton variant="menu" :class="{active:showMmtPositions}" :aria-pressed="showMmtPositions" @click="showMmtPositions=!showMmtPositions">MMT-Positionen</ToggleButton>
 
           <div class="toggle-dropdown-divider"></div>
 
@@ -2283,8 +2288,8 @@ watch(selectedTradingAccountId, () => {
       :symbol="currentSymbol"
     :current-bar="currentBar"
     :trades="isolatedTrades"
-    :broker-trades="showMmt ? brokerTrades : []"
-    :broker-positions="showMmt ? brokerPositions : []"
+    :broker-positions="mmtVisibility.positions ? brokerPositions : []"
+    :show-broker-positions="mmtVisibility.positions"
     :hovered-trade-id="hoveredTradeId"
     :pin-trade-ids="pinTradeIds"
     :pin-ob-zone-keys="pinObZoneKeys"
@@ -2382,8 +2387,8 @@ watch(selectedTradingAccountId, () => {
     @add-target-from-picker="onAddTargetFromPicker"
     @add-anti-confluence-from-picker="onAddAntiConfluenceFromPicker"
     />
-    <aside v-if="(showMmt || showTradeSetupCockpit) && !snapshotView" class="chart-trading-sidebar">
-    <DashboardMmt v-if="showMmt" :symbol="currentSymbol" :annotations="visibleAnnotations" :last-candle-time="priceChartRef?.lastCandleTime" :replay="replayActive" @trades="brokerTrades=$event" @broker-positions="brokerPositions=$event" />
+    <aside v-if="mmtControllerStarted||mmtVisibility.sidebar" v-show="mmtVisibility.sidebar" class="chart-trading-sidebar">
+    <DashboardMmt v-if="mmtControllerStarted" v-show="mmtVisibility.panel" :enabled="mmtVisibility.controller" :symbol="currentSymbol" :annotations="visibleAnnotations" :last-candle-time="priceChartRef?.lastCandleTime" :replay="replayActive" @broker-positions="brokerPositions=$event" />
     <TradeSetupCockpit
       @setup-saved="refreshTscRange"
       v-if="showTradeSetupCockpit && !snapshotView"
