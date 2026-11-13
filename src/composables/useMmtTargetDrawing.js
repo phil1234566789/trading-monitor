@@ -66,8 +66,8 @@ export function useMmtTargetDrawing(){
   const height=chart.panes?.()[0]?.getHeight?.()??element.clientHeight-30,right=Math.max(0,element.clientWidth-chart.timeScale().width());
   const rows=[...primitives.map(({line})=>line),...stopEntryDraftLines(context.value?.symbol)].map(line=>{
    const lineY=series.priceToCoordinate(line.price),inside=lineY!=null&&lineY>=0&&lineY<=height;
-   // Ein neuer SL darf außerhalb der Preisansicht liegen; nur seine Bedienung wird am Rand gehalten.
-   return {...line,y:inside?lineY:line.selected?Math.min(height,Math.max(0,lineY??height)):null,lineY,right,offscreen:!inside,saveState:targetSaveState(line.orderId)};
+   // Auch Sidebar-Entwürfe brauchen Speichern/Abbrechen außerhalb der Preisansicht; Linienpreise bleiben echt.
+   return {...line,y:inside?lineY:(line.selected||line.dirty)?Math.min(height,Math.max(0,lineY??height)):null,lineY,right,offscreen:!inside,saveState:targetSaveState(line.orderId)};
   }).filter(row=>row.y!=null).sort((a,b)=>a.y-b.y);
   const saveRows=new Map();for(const row of rows)if(row.kind!=='entry'&&(!saveRows.has(row.orderId)||row.selected))saveRows.set(row.orderId,row);
   for(const row of rows)row.showSave=saveRows.get(row.orderId)===row;

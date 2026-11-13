@@ -10,7 +10,7 @@ const {renderOverlay}=vi.hoisted(()=>({renderOverlay:{value:null}}));
 vi.mock('vue',async original=>({...await original(),createApp:options=>{renderOverlay.value=options.render;return {mount:vi.fn(),unmount:vi.fn()};}}));
 vi.mock('../src/liquidity.js',()=>({LiquidityLinePrimitive:class {constructor(level,options){this.level=level;this.options=options;}distanceTo(){return 0;}}}));
 const renderer=createRenderer({createElement:()=>({children:[]}),createText:()=>({}),createComment:()=>({}),setText:()=>{},setElementText:()=>{},patchProp:()=>{},insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
-let app;afterEach(()=>{app?.unmount();chartMode.value='navigate';removeTargetDraft('one');vi.unstubAllGlobals();});
+let app;afterEach(()=>{app?.unmount();chartMode.value='navigate';removeTargetDraft('one');removeTargetDraft('other');vi.unstubAllGlobals();});
 describe('existing TP line dragging',()=>{
  it('keeps a newly added offscreen SL manageable and Escape cancels its entire unsaved plan',async()=>{
   const handlers={},body={tagName:'BODY'},doc={body,addEventListener:(e,f)=>handlers[e]=f,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn(),querySelectorAll:()=>[]})};
@@ -27,6 +27,30 @@ describe('existing TP line dragging',()=>{
   const row=renderOverlay.value().props.rows.find(r=>r.kind==='stop');expect(row).toMatchObject({price:1990,offscreen:true,selected:true,showSave:true});expect(row.y).toBeGreaterThanOrEqual(0);expect(row.lineY).toBe(-10);
   handlers.keydown({key:'Escape',target:body,preventDefault:vi.fn(),stopPropagation:vi.fn()});await nextTick();
   expect(cancel).toHaveBeenCalledOnce();expect(useTargetDraft('one').value.stops).toEqual([]);cleanup();
+ });
+ it('keeps a sidebar-edited native SL with no TP docked without chart selection and cancels only that position',async()=>{
+  const doc={body:{},addEventListener:vi.fn(),removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn(),querySelectorAll:()=>[]})};
+  vi.stubGlobal('document',doc);const raf=vi.fn();vi.stubGlobal('requestAnimationFrame',raf);vi.stubGlobal('cancelAnimationFrame',vi.fn());
+  let drawing;app=renderer.createApp({setup(){drawing=useMmtTargetDrawing();return()=>h('div');}});app.mount({children:[]});
+  const element={clientHeight:430,clientWidth:550,style:{},ownerDocument:{defaultView:{addEventListener:vi.fn(),removeEventListener:vi.fn()}},appendChild:vi.fn(),addEventListener:vi.fn(),removeEventListener:vi.fn(),contains:()=>false};
+  const chart={timeScale:()=>({width:()=>500}),panes:()=>[{getHeight:()=>400}],options:()=>({handleScroll:true}),applyOptions:vi.fn()};
+  const series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn(),priceToCoordinate:p=>p-3890};
+  const baseline={symbol:'XAUUSD',accountLabel:'Konto 3',positionId:123,entryPrice:3890,positionVolume:.8,targets:[],stops:[{price:3895.65,volume:.8}],direction:'short',quote:{volume_step:.01,minimum_volume:.01},dirty:false,stopsDirty:false,selectedIndex:null,selectedKind:null};
+  setTargetDraft('one',baseline);
+  setTargetDraft('other',{...baseline,accountLabel:'Konto 2',positionId:456,stops:[{price:5100,volume:.8}],dirty:true});
+  const cancel=vi.fn(()=>{setTargetDraft('one',baseline);return true;}),cleanup=registerTargetSave('one',vi.fn(),ref({disabled:false,cancelDisabled:false}),cancel);
+  drawing.create(chart,series,element);drawing.refresh({symbol:'XAUUSD',candles:[{time:100}],currentBar:'1m'});await nextTick();
+  // Derselbe Entwurfswechsel wie Editor.update: kein Chart-Event und keine ausgewählte Linie.
+  setTargetDraft('one',{...useTargetDraft('one').value,stops:[{price:5000,volume:.8}],dirty:true,stopsDirty:true});await nextTick();raf.mock.calls.at(-1)[0]();
+  const rows=renderOverlay.value().props.rows,row=rows.find(r=>r.orderId==='one');
+  expect(row).toMatchObject({kind:'stop',price:5000,selected:false,offscreen:true,showSave:true});
+  expect(row.lineY).toBe(1110);expect(row.y).toBeGreaterThanOrEqual(0);expect(row.y).toBeLessThanOrEqual(400);
+  expect(rows.find(r=>r.orderId==='other')).toMatchObject({price:5100,showSave:true});
+  for(let n=0;n<4;n++)raf.mock.calls.at(-1)[0]();
+  expect(renderOverlay.value().props.rows).toBe(rows);
+  renderOverlay.value().props.onCancel(row);await nextTick();
+  expect(cancel).toHaveBeenCalledOnce();expect(useTargetDraft('one').value.stops[0].price).toBe(3895.65);expect(useTargetDraft('one').value.dirty).toBe(false);
+  expect(useTargetDraft('other').value.stops[0].price).toBe(5100);expect(useTargetDraft('other').value.dirty).toBe(true);cleanup();
  });
  it('moves a browser draft only and restores chart scrolling on release',async()=>{
   const handlers={},doc={addEventListener:(e,f)=>handlers[e==='pointerdown'?'outside':e]=f,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn()})};vi.stubGlobal('document',doc);vi.stubGlobal('requestAnimationFrame',vi.fn());vi.stubGlobal('cancelAnimationFrame',vi.fn());
