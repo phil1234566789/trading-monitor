@@ -19,10 +19,23 @@ async function mount(extra={}){
  const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api,snapshot:current};
 }
 describe('TP edits require Save',()=>{
+ it('marks only a healthy clean plan as unchanged and reports unavailable trading even before editing',async()=>{
+  const {state,snapshot:current}=await mount();
+  expect(state.saveState.unchanged).toBe(true);
+  for(const status of ['paused','rejected','failed']){
+   state.plan={state:status,reason:'target_position_changed',plan:{targets:[{price:2010,volume:.01}]},next_index:0};await nextTick();
+   expect(state.saveState.unchanged).toBe(false);
+  }
+  state.plan=null;
+  current.trade_allowed=false;await nextTick();
+  expect(state.saveState.unchanged).toBe(false);expect(state.saveState.reason).toBe('Frischer Brokerstand oder TP-Handelsfreigabe fehlt.');
+  expect(state.saveState.disabled).toBe(true);
+ });
  it('splits a native XAU position without SL only after the worker advertises support',async()=>{
   const current=structuredClone(snapshot);current.positions[0].volume=1;current.positions[0].sl=0;current.positions[0].magic=0;
   const nativePosition={accountId:'account',login:42,server:'Demo',ticket:123,symbol:'XAUUSD.gbe',direction:'long',entryPrice:2000,magic:0,type:0};
   const {state,api,snapshot:live}=await mount({snapshot:current,nativePosition});
+  expect(state.saveState.unchanged).toBe(false);expect(state.saveReason).toContain('Position hat keinen SL');
   splitTargetDraft(nativeTargetKey('account',123),0);await nextTick();
   expect(state.allocation.targets.map(t=>t.volume)).toEqual([.5,.5]);
   expect(state.saveReason).toContain('Position hat keinen SL');await state.save();expect(api).toHaveBeenCalledTimes(1);
@@ -193,6 +206,14 @@ describe('one confirmed plan for partial SL and TP',()=>{
   actual.positions[0].sl=0;await nextTick();expect(state.draft.stops).toEqual([]);expect(state.canAddStop).toBe(true);
   addStopDraft(state.context.key,'risky');moveTargetDraft(state.context.key,0,1997,'stop');actual.positions[0].sl=1999;await nextTick();
   expect(state.draft.stops[0].price).toBe(1997);expect(state.draft.stopsDirty).toBe(true);
+ });
+ it('does not mark missing SL capability or an external broker SL change as a healthy unchanged plan',async()=>{
+  const stored={revision:'stored',state:'active',next_index:0,next_stop_index:0,checkpoint:{sl:1997.75},plan:{targets:[{price:2010,volume:1}],stops:[{price:1997.75,volume:1}],risk_basis_sl:1997.75,risk_mode:'risky',exit_version:1}};
+  const live=current();live.positions[0].sl=1997.75;live.exit_plans_ready=false;
+  const {state,snapshot:actual}=await mount({nativePosition:native,snapshot:live,api:apiFor(stored)});
+  expect(state.saveState.unchanged).toBe(false);expect(state.saveReason).toBe('SL-Verwaltung benötigt ein Worker-Update.');
+  actual.exit_plans_ready=true;actual.positions[0].sl=1998;await nextTick();
+  expect(state.saveState.unchanged).toBe(false);expect(state.saveReason).toContain('Broker-SL wurde außerhalb dieses Plans geändert');
  });
  it('distinguishes a TP-only edit from explicit SL intent on a stored shared plan',async()=>{
   const stored={revision:'stored',state:'active',next_index:0,next_stop_index:0,plan:{targets:[{price:2010,volume:1}],stops:[{price:1997.75,volume:1}],risk_basis_sl:1997.75,risk_mode:'risky',exit_version:1}};

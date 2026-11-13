@@ -9,6 +9,7 @@ const editing=ref(null),percent=ref('');
 const key=row=>`${row.orderId}:${row.kind??'target'}:${row.index}`;
 const label=row=>exitKindLabel(row.kind);
 const editingOrder=row=>editing.value?.startsWith(row.orderId+':');
+const idle=row=>row.saveState.unchanged&&!row.dirty&&!editingOrder(row)&&!props.dragging;
 watch(()=>props.cancellation,value=>{if(value&&editing.value?.startsWith(value.orderId+':'))editing.value=null;});
 const percentLabel=value=>Number(value.toFixed(2));
 function edit(row){editing.value=key(row);percent.value=percentLabel(row.percent);}
@@ -39,7 +40,7 @@ function keyboard(event,row,action){if(event.key==='Enter'||event.key===' '){eve
     <label>Anteil %<input v-model="percent" type="number" min="0.01" :max="row.totalPercent-0.01" step="any" required :aria-label="`Anteil ${label(row)} ${row.index+1} in Prozent`"></label>
     <ActionButton type="submit">OK</ActionButton><IconButton class="tp-icon" aria-label="Anteilbearbeitung abbrechen" title="Abbrechen" @click="editing=null">×</IconButton>
    </form>
-   <div v-if="row.showSave" class="tp-savebar" :aria-label="`SL-/TP-Plan ${row.accountLabel} · Position ${row.positionId}`">
+   <div v-if="row.showSave&&!idle(row)" class="tp-savebar" :aria-label="`SL-/TP-Plan ${row.accountLabel} · Position ${row.positionId}`">
     <span :title="editingOrder(row)?'Anteil zuerst mit OK übernehmen':row.saveState.reason||'Speichert den gesamten SL-/TP-Plan dieser Position'">
      <ActionButton class="tp-save" :disabled="row.saveState.disabled||editingOrder(row)" :title="editingOrder(row)?'Anteil zuerst mit OK übernehmen':row.saveState.reason||undefined" @click="emit('save',row)">Speichern</ActionButton>
     </span>

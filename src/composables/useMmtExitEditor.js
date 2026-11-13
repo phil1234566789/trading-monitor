@@ -8,6 +8,7 @@ import {registerTargetSave,targetSaveRejected,nativeTargetKey} from '../mmtTarge
 
 const stateNames={pending:'Wird beim Worker installiert',sending:'Brokeränderung läuft – Ausgang wird abgeglichen',active:'Aktiv',paused:'Pausiert',unknown:'Ausgang ungeklärt – kein automatischer Retry',completed:'Plan beendet'};
 const messages={invalid_target_precision:'TP-Preis passt nicht zur Broker-Preispräzision.',invalid_target_count:'Ein bis fünf TPs angeben.',invalid_target_volume:'TP-Aufteilung mit Broker-Mindestlot und Lot-Schritt nicht ausführbar.',invalid_remaining_volume:'Der Rest wäre kleiner als das Broker-Mindestlot.',target_volume_exceeds_position:'TP-Mengen überschreiten das offene Volumen.',invalid_position_volume:'Broker-Volumen passt nicht zum Lot-Schritt.',invalid_target_price:'TPs müssen in Gewinnrichtung noch vor uns liegen, mit Broker-Mindestabstand.',target_specs_unavailable:'Native Broker-Spezifikation fehlt; Worker aktualisieren.',invalid_target_basis:'Entry und Risikobasis müssen belegt sein.',invalid_position_stop:'Ungültiger SL im Brokerstand.',invalid_stop_count:'Ein bis fünf SLs angeben.',invalid_stop_volume:'SL-Aufteilung mit Broker-Mindestlot und Lot-Schritt nicht ausführbar.',invalid_stop_price:'SL muss hinter dem aktuellen Brokerkurs liegen, mit Broker-Mindestabstand.',invalid_stop_precision:'SL-Preis passt nicht zur Broker-Preispräzision.',stop_volume_must_cover_position:'SL-Anteile müssen zusammen die gesamte offene Position absichern.',invalid_stop_basis:'Frischer Brokerkurs für den SL fehlt.'};
+const noChangesReason='Keine ungespeicherten Änderungen.';
 const draftKey=d=>JSON.stringify({targets:d?.targets,stops:d?.stops,riskMode:d?.riskMode,stopsDirty:d?.stopsDirty});
 
 export function useMmtExitEditor(props,emit){
@@ -44,16 +45,16 @@ export function useMmtExitEditor(props,emit){
   if(uncertain.value||plan.value?.state==='unknown')return 'Speicherausgang ungeklärt. Status wird abgeglichen; kein erneuter Versand.';
   if(['pending','sending'].includes(plan.value?.state))return stateNames[plan.value.state];
   if(!position.value)return 'Keine passende offene Brokerposition.';
-  if(!draft.value?.dirty)return 'Keine ungespeicherten Änderungen.';
+  if(!ready.value)return 'Frischer Brokerstand oder TP-Handelsfreigabe fehlt.';
   if(hasSavedStops.value&&!draft.value.stopsDirty&&plan.value?.checkpoint?.sl!=null&&position.value.sl!==plan.value.checkpoint.sl)return 'Broker-SL wurde außerhalb dieses Plans geändert. SL-Plan ausdrücklich prüfen und anpassen.';
   if(withStops.value&&!props.snapshot?.exit_plans_ready)return 'SL-Verwaltung benötigt ein Worker-Update.';
   if(!withStops.value&&position.value.sl===0&&!props.snapshot?.target_without_sl_ready)return 'Position hat keinen SL. TP-Verwaltung benötigt ein Worker-Update; der SL bleibt unverändert.';
+  if(!draft.value?.dirty)return noChangesReason;
   if(validation.value.error)return messages[validation.value.error]??validation.value.error;
-  if(!ready.value)return 'Frischer Brokerstand oder TP-Handelsfreigabe fehlt.';
   return '';
  });
  const cancelReason=computed(()=>busy.value?'Plan wird bereits gespeichert.':uncertain.value||plan.value?.state==='unknown'?'Speicherausgang ungeklärt; bereits gesendete Änderungen können nicht zurückgenommen werden.':['pending','sending'].includes(plan.value?.state)?'Gespeicherter Plan wird bereits vom Worker verarbeitet.':!loaded.value?'Gespeicherter Plan wird geladen.':!position.value?'Keine passende offene Brokerposition.':'');
- const saveState=computed(()=>({cancelDisabled:!!cancelReason.value,cancelReason:cancelReason.value,disabled:!!saveReason.value,reason:saveReason.value,status:busy.value?'Wird gespeichert …':uncertain.value?'Ausgang ungeklärt':error.value?`Ungespeichert · Fehler: ${error.value}`:refreshError.value?`Statusfehler: ${refreshError.value}`:draft.value?.dirty?'Ungespeichert':receipt.value||stateNames[plan.value?.state]||(loaded.value?'Keine Änderungen':'Wird geladen'),dirty:!!draft.value?.dirty}));
+ const saveState=computed(()=>({unchanged:saveReason.value===noChangesReason&&!cancelReason.value&&!error.value&&!refreshError.value&&(!plan.value||(['active','completed'].includes(plan.value.state)&&!plan.value.reason)),cancelDisabled:!!cancelReason.value,cancelReason:cancelReason.value,disabled:!!saveReason.value,reason:saveReason.value,status:busy.value?'Wird gespeichert …':uncertain.value?'Ausgang ungeklärt':error.value?`Ungespeichert · Fehler: ${error.value}`:refreshError.value?`Statusfehler: ${refreshError.value}`:draft.value?.dirty?'Ungespeichert':receipt.value||stateNames[plan.value?.state]||(loaded.value?'Keine Änderungen':'Wird geladen'),dirty:!!draft.value?.dirty}));
  const runtimeMetadata=()=>({symbol:chartInstrument(context.value.symbol),entryTime:props.entryTime??position.value?.opened_at_sec??null,digits:quote.value?.digits,
   entryPrice:context.value.entry,initialSl:context.value.initialSl,basisSl:plan.value?.plan.risk_basis_sl??context.value.initialSl,basisSource:plan.value?.plan.risk_basis_source??null,direction:context.value.direction,
   accountLabel:props.accountName||`Konto ${context.value.login}`,positionId:context.value.ticket,positionVolume:position.value?.volume,
