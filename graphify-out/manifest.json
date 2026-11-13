@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1794610537.9946604,
-    "seen": 1794610823.149507,
-    "ast_hash": "18aebebf8be60c610b2e7043f2102007",
+    "mtime": 1794611458.5140674,
+    "seen": 1794611658.6811674,
+    "ast_hash": "cac81b1085187cbf53546e65d78fc0e0",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1794610538.1511266,
-    "seen": 1794610823.150507,
-    "ast_hash": "bc59040e5466c3b9e82a9421e1ab55fc",
+    "mtime": 1794611112.480503,
+    "seen": 1794611658.8931866,
+    "ast_hash": "297dfadbbeb14f7072007d219842e023",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -8304,9 +8304,9 @@
     "semantic_hash": ""
   },
   "src/entryPattern2OrderBlock.js": {
-    "mtime": 1794610538.0465767,
-    "seen": 1794610823.150507,
-    "ast_hash": "d048eb5ff15790819cf86af7cafef841",
+    "mtime": 1794610999.298037,
+    "seen": 1794611658.7536755,
+    "ast_hash": "49f865e80d04b26fca105926bcf6c7eb",
     "semantic_hash": ""
   },
   "test/entryPattern2FrozenObRegression.integration.mjs": {
@@ -9261,6 +9261,126 @@
     "mtime": 1794610724.36899,
     "seen": 1794610823.150507,
     "ast_hash": "a5067b5a11b0c504b00f4d87a90277fd",
+    "semantic_hash": ""
+  },
+  "analysis/dob/reference-diagnostics.json": {
+    "mtime": 1794611207.8523936,
+    "seen": 1794611658.554659,
+    "ast_hash": "444aebdf97889cf8c9b8987d40c364b5",
+    "semantic_hash": ""
+  },
+  "scripts/dobReferenceDiagnostics.mjs": {
+    "mtime": 1794611204.069434,
+    "seen": 1794611658.5936584,
+    "ast_hash": "1a64232124514d37e2ed53be69c5ce21",
+    "semantic_hash": ""
+  },
+  "src/components/DoubleOrderBlockStatus.vue": {
+    "mtime": 1794611458.3339992,
+    "seen": 1794611658.6641676,
+    "ast_hash": "61cfa8eb26012498738709ac8643da09",
+    "semantic_hash": ""
+  },
+  "src/composables/useDoubleOrderBlockChart.js": {
+    "mtime": 1794611498.7750785,
+    "seen": 1794611658.7071693,
+    "ast_hash": "462c320d489cbf6b7a7d841b472c6b04",
+    "semantic_hash": ""
+  },
+  "src/composables/useDoubleOrderBlockConfirmations.js": {
+    "mtime": 1794611184.4655218,
+    "seen": 1794611658.7071693,
+    "ast_hash": "268ee468c687363c6a87aa794cb832ed",
+    "semantic_hash": ""
+  },
+  "src/doubleOrderBlockChartWorker.js": {
+    "mtime": 1794610961.5877998,
+    "seen": 1794611658.746676,
+    "ast_hash": "d3ea8ab92daf3deedf765eae5feb8af6",
+    "semantic_hash": ""
+  },
+  "src/doubleOrderBlockOutcome.js": {
+    "mtime": 1794610938.6689959,
+    "seen": 1794611658.746676,
+    "ast_hash": "a7bf90f5dc0edcf0bc035a02d7412c18",
+    "semantic_hash": ""
+  },
+  "src/doubleOrderBlockRendering.js": {
+    "mtime": 1794611457.9521527,
+    "seen": 1794611658.746676,
+    "ast_hash": "8562b77a24f2100ff0b5625f43ea0b84",
+    "semantic_hash": ""
+  },
+  "src/doubleOrderBlocks.js": {
+    "mtime": 1794611203.866747,
+    "seen": 1794611658.746676,
+    "ast_hash": "435ed118fb3466cea035562d7bc2a3e3",
+    "semantic_hash": ""
+  },
+  "src/indicatorGroupToggle.js": {
+    "mtime": 1794610911.5873182,
+    "seen": 1794611658.7656755,
+    "ast_hash": "a637969f59a46083b1124cd8bda70fad",
+    "semantic_hash": ""
+  },
+  "src/orderBlockPenetration.js": {
+    "mtime": 1794610999.1059191,
+    "seen": 1794611658.8056817,
+    "ast_hash": "08bef9bff1e8e13022cd02607fc4fce9",
+    "semantic_hash": ""
+  },
+  "test/dashboardDobMount.test.js": {
+    "mtime": 1794611159.7403474,
+    "seen": 1794611658.9876945,
+    "ast_hash": "03ec137051b57fb5921041761f359e38",
+    "semantic_hash": ""
+  },
+  "test/doubleOrderBlockConfirmations.test.js": {
+    "mtime": 1794611241.9729238,
+    "seen": 1794611658.9926946,
+    "ast_hash": "a4df38b7537b694d0c978a1ef1bcb637",
+    "semantic_hash": ""
+  },
+  "test/doubleOrderBlockDisplay.test.js": {
+    "mtime": 1794610939.192988,
+    "seen": 1794611658.9926946,
+    "ast_hash": "98de837e439c9f98713cad6e649c5b54",
+    "semantic_hash": ""
+  },
+  "test/doubleOrderBlockOutcome.test.js": {
+    "mtime": 1794610828.6453376,
+    "seen": 1794611658.9926946,
+    "ast_hash": "84a23553b36db8977cdbb19ec23f4ea3",
+    "semantic_hash": ""
+  },
+  "test/doubleOrderBlockRendering.test.js": {
+    "mtime": 1794611498.9547024,
+    "seen": 1794611658.9926946,
+    "ast_hash": "8ba339372500662689ba5352ab98c325",
+    "semantic_hash": ""
+  },
+  "test/doubleOrderBlocks.test.js": {
+    "mtime": 1794611134.162122,
+    "seen": 1794611658.9926946,
+    "ast_hash": "4815a8eb86fad7b8aaacee371831cc79",
+    "semantic_hash": ""
+  },
+  "test/indicatorGroupToggle.test.js": {
+    "mtime": 1794610888.972662,
+    "seen": 1794611659.039202,
+    "ast_hash": "71829201fb6f06c1c5000eb3d5644bf9",
+    "semantic_hash": ""
+  },
+  "test/orderBlockPenetration.test.js": {
+    "mtime": 1794610975.7839892,
+    "seen": 1794611659.0962074,
+    "ast_hash": "47c1ef651857c6fe7ccc13d34f916787",
+    "semantic_hash": ""
+  },
+  "test/useDoubleOrderBlockChart.test.js": {
+    "mtime": 1794611499.1629598,
+    "seen": 1794611659.1707263,
+    "ast_hash": "00ea8daef57afc24cbdf05329b503247",
     "semantic_hash": ""
   }
 }
