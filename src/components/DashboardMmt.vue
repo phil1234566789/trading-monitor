@@ -28,7 +28,7 @@ const managedPositions=computed(()=>orders.value.filter(o=>findOrderPosition(o,s
 const brokerPositions=computed(()=>projectBrokerPositions(openPositions.value,managedPositions.value));
 const searchStatus={searching:'Entry wird gesucht',sending:'Wird gesendet',unknown:'Ausführung ungeklärt'};
 const lastResult=ref(null),submittedIds=new Set();
-function afterSubmit(ids=[]){for(const id of ids)submittedIds.add(id);void refresh();}
+function afterSubmit(ids=[]){for(const id of ids)submittedIds.add(id);void refresh({sections:['orders','snapshots'],orderIds:ids});}
 watch(orders,(orders,previous)=>{
  const result=mmtSearchFeedback(orders,previous,submittedIds);
  if(result)lastResult.value=result;

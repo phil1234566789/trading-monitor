@@ -1,8 +1,6 @@
-export function mmtPollDelay(status) {
-  return status?.bridge?.snapshot?.positions?.length||status?.bridge?.snapshot?.pending_orders
-    ||status?.orders?.some(order=>['searching','sending','unknown'].includes(order.status))?1000:8000;
-}
-export function mmtStaleSeconds(delay) { return delay===1000?5:15; }
+// Browseranzeige alle acht Sekunden; die unabhängige Worker-/Fillprüfung behält ihre eigenen Fristen.
+export const mmtPollDelay=()=>8000;
+export const mmtStaleSeconds=()=>15;
 // Ein Chat-Wechsel muss auch in einer bereits geöffneten MMT-Seite sichtbar werden.
 export const mmtSelectedAccountId=(status,previous)=>Object.hasOwn(status,'active_account_id')?status.active_account_id:previous;
 export function mmtConnectionStatus({unlocked,active,status,snapshot,age,error,delay}) {
@@ -10,6 +8,7 @@ export function mmtConnectionStatus({unlocked,active,status,snapshot,age,error,d
   if(!active)return {label:'Kein Handelskonto',state:''};
   if(error)return {label:'Verbindung gestört',state:'dead'};
   if(snapshot?.worker_error)return {label:'Worker gestört',state:'dead'};
+  if(status?.ui_cached)return {label:'Gespeicherter Stand · Prüfung bei Aktion',state:''};
   if(!status)return {label:'Verbinde …',state:''};
   if(!status.online)return {label:'Worker offline',state:'dead'};
   if(!snapshot||age==null||age>mmtStaleSeconds(delay))return {label:'Daten veraltet',state:'dead'};

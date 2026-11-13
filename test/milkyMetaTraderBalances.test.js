@@ -72,3 +72,5 @@ it('uses the same fixed scale for both accounts while moving the floor independe
  expect(profit.floor).toBeGreaterThan(baseline.floor);
  expect(challengeGauge(49500,47500,54000).position).toBeLessThan(baseline.position);
 });
+
+it('keeps known monitoring incidents visible even in the idle cache',()=>{expect(balanceHealth({ui_cached:true,health:{incident:{code:'fault'}}},false,{},Date.now()).label).toBe('Betrieb gestört');});

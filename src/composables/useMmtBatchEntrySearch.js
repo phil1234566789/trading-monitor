@@ -28,12 +28,14 @@ watch(()=>[props.statuses,props.symbol,props.accounts],()=>{
 function details(a){
  const s=props.statuses?.[a.id],snapshot=s?.bridge?.snapshot;
  const quotes=(snapshot?.quotes??[]).filter(q=>chartInstrument(q.symbol)===props.symbol);
- if(!s?.online||!snapshot)return {reason:'Brokerverbindung offline'};
+ if((!s?.online&&!s?.ui_cached)||!snapshot)return {reason:'Brokerverbindung offline'};
  if(snapshot.account_login!==Number(a.login)||snapshot.account_server!==a.server)return {reason:'Brokerkonto stimmt nicht überein'};
  const stopReason=entryDailyStopReason(s,props.now);if(stopReason)return {reason:stopReason};
  const symbols=quotes.length?quotes.map(q=>q.symbol):brokerSymbols.value[symbolKey(a)]??[];
  if(symbols.length!==1)return {reason:symbols.length?'Broker-Symbol mehrdeutig':'Broker-Symbol für '+props.symbol+' noch nicht zugeordnet'};
- if(!snapshot.execution_ready||!snapshot.trade_allowed)return {reason:'Handel nicht bereit · Details unter Konten'};
+ if(snapshot.worker_error)return {reason:'Worker gestört · Details unter Konten'};
+ // Der gespeicherte Idle-Stand ersetzt nicht die frische serverseitige Vorschau vor dem Auftrag.
+ if(!s.ui_cached&&(!snapshot.execution_ready||!snapshot.trade_allowed))return {reason:'Handel nicht bereit · Details unter Konten'};
  const order={symbol:symbols[0],direction:props.idea?.direction,stop_loss:props.idea?.sl,take_profit:props.idea?.tp??null,risk_mode:riskMode.value};
  try{
   return {order,metrics:riskPreviewMetrics(order,snapshot,s.risk_policy,props.now/1000)};
@@ -55,7 +57,7 @@ const canSubmit=computed(()=>!blockedReason.value);
 const feedbackRows=computed(()=>rows.value.filter(row=>!['searching','sending'].includes(row.state)||!findMmtBatchOrder(row,props.statuses)));
 function persist(){sessionStorage.setItem(storageKey,JSON.stringify(rows.value));}
 function reportFailures(batch){error.value=batch.filter(r=>['rejected','unknown'].includes(r.state)).map(r=>`${r.name}: ${r.message}`).join(' · ');}
-function submitted(){emit('submitted',rows.value.flatMap(row=>row.preview?.intent?.id?[row.preview.intent.id]:[]));}
+function submitted(){emit('submitted',rows.value.flatMap(row=>['searching','sending','unknown'].includes(row.state)&&row.preview?.intent?.id?[row.preview.intent.id]:[]));}
 watch(()=>props.statuses,()=>{if(reconcileMmtBatchRows(rows.value,props.statuses)){reportFailures(rows.value);try{persist();}catch(e){error.value='Status bestätigt, Sitzungsspeicher nicht verfügbar: '+e.message;}}},{deep:true});
 onMounted(()=>{if(rows.value.length)submitted();});
 async function submit(){

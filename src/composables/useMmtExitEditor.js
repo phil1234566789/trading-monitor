@@ -5,6 +5,7 @@ import {targetDraftAllocation,validateTargetAllocation} from '../../supabase/fun
 import {validateStopAllocation,stopDraftAllocation} from '../../supabase/functions/trading-monitor-mcp/stopPlanContract.js';
 import {setTargetDraft,removeTargetDraft,useTargetDraft,selectTargetDraft,addStopDraft,draftRiskBasis,targetDraftLines} from '../mmtTargetDrafts.js';
 import {registerTargetSave,targetSaveRejected,nativeTargetKey} from '../mmtTargetSave.js';
+import {subscribeMmtPlans} from '../mmtUiInvalidation.js';
 
 const stateNames={pending:'Wird beim Worker installiert',sending:'Brokeränderung läuft – Ausgang wird abgeglichen',active:'Aktiv',paused:'Pausiert',unknown:'Ausgang ungeklärt – kein automatischer Retry',completed:'Plan beendet'};
 const messages={invalid_target_precision:'TP-Preis passt nicht zur Broker-Preispräzision.',invalid_target_count:'Ein bis fünf TPs angeben.',invalid_target_volume:'TP-Aufteilung mit Broker-Mindestlot und Lot-Schritt nicht ausführbar.',invalid_remaining_volume:'Der Rest wäre kleiner als das Broker-Mindestlot.',target_volume_exceeds_position:'TP-Mengen überschreiten das offene Volumen.',invalid_position_volume:'Broker-Volumen passt nicht zum Lot-Schritt.',invalid_target_price:'TPs müssen in Gewinnrichtung noch vor uns liegen, mit Broker-Mindestabstand.',target_specs_unavailable:'Native Broker-Spezifikation fehlt; Worker aktualisieren.',invalid_target_basis:'Entry und Risikobasis müssen belegt sein.',invalid_position_stop:'Ungültiger SL im Brokerstand.',invalid_stop_count:'Ein bis fünf SLs angeben.',invalid_stop_volume:'SL-Aufteilung mit Broker-Mindestlot und Lot-Schritt nicht ausführbar.',invalid_stop_price:'SL muss hinter dem aktuellen Brokerkurs liegen, mit Broker-Mindestabstand.',invalid_stop_precision:'SL-Preis passt nicht zur Broker-Preispräzision.',stop_volume_must_cover_position:'SL-Anteile müssen zusammen die gesamte offene Position absichern.',invalid_stop_basis:'Frischer Brokerkurs für den SL fehlt.'};
@@ -13,7 +14,7 @@ const draftKey=d=>JSON.stringify({targets:d?.targets,stops:d?.stops,riskMode:d?.
 
 export function useMmtExitEditor(props,emit){
  const plan=ref(null),busy=ref(false),error=ref(''),receipt=ref(''),loaded=ref(false),refreshError=ref(''),uncertain=ref(null),costs=ref(null),stopPreviews=ref({});
- let disposed=false,generation=0,refreshRequest=null;
+ let disposed=false,generation=0,refreshRequest=null,plansVersion=0,loadedPlansVersion=0;
  const context=computed(()=>props.nativePosition?{
   key:nativeTargetKey(props.nativePosition.accountId,props.nativePosition.ticket),request:{position_ticket:props.nativePosition.ticket},
   symbol:props.nativePosition.symbol,direction:props.nativePosition.direction,entry:props.nativePosition.entryPrice,initialSl:null,
@@ -82,14 +83,14 @@ export function useMmtExitEditor(props,emit){
  }
  function changeRiskMode(mode){setTargetDraft(context.value.key,{...draft.value,riskMode:mode,dirty:true,stopsDirty:true});}
  function refresh(){
-  if(disposed||busy.value||!props.online)return;
+  if(disposed||busy.value||!props.online||globalThis.document?.visibilityState==='hidden')return;
   if(refreshRequest?.generation===generation)return refreshRequest.promise;
-  const requested=generation;
+  const requested=generation,requestedPlansVersion=plansVersion;
   const request={generation,promise:null};refreshRequest=request;
   request.promise=(async()=>{
   try{
    const value=await props.api('target_state',context.value.request,{background:true});
-   if(disposed||requested!==generation)return;plan.value=value.plan;costs.value=value.costs??null;stopPreviews.value=value.stop_previews??{};loaded.value=true;refreshError.value='';
+   if(disposed||requested!==generation)return;plan.value=value.plan;costs.value=value.costs??null;stopPreviews.value=value.stop_previews??{};loaded.value=true;loadedPlansVersion=requestedPlansVersion;refreshError.value='';
    if(uncertain.value&&value.plan?.revision===uncertain.value.revision){
     if(draftKey(draft.value)===uncertain.value.key)initTargets(uncertain.value.targets,uncertain.value.stops);
     uncertain.value=null;error.value='';receipt.value='Gespeichert. Worker-/Brokerbestätigung steht noch aus.';
@@ -128,8 +129,10 @@ export function useMmtExitEditor(props,emit){
   const stops=!draft.value.stopsDirty?(changedOutside?(position.value?.sl?[{price:position.value.sl,volume:position.value.volume}]:[]):savedLevels('stop')):draft.value.stops;
   setTargetDraft(context.value.key,{...draft.value,...metadata,stops});
  },{deep:true});
- const timer=setInterval(()=>{if(document.visibilityState==='visible')void refresh();},2000);
- onUnmounted(()=>{disposed=true;generation++;clearInterval(timer);});
+ watch(()=>JSON.stringify([props.online,position.value?.ticket,position.value?.volume,position.value?.sl,position.value?.tp,props.snapshot?.balance]),()=>{if(props.online)void refresh();});
+ const unsubscribePlans=subscribeMmtPlans(()=>{plansVersion++;if(document.visibilityState==='visible')void refresh();});
+ const timer=setInterval(()=>{if(document.visibilityState==='visible'&&(plansVersion!==loadedPlansVersion||uncertain.value||['pending','sending','unknown'].includes(plan.value?.state)||refreshError.value||!loaded.value))void refresh();},8000);
+ onUnmounted(()=>{disposed=true;generation++;clearInterval(timer);unsubscribePlans();});
  const lines=computed(()=>targetDraftLines(chartInstrument(context.value.symbol)).filter(line=>line.orderId===context.value.key));
  const legs=computed(()=>[{kind:'target',label:'TP',levels:draft.value?.targets??[],allocation:allocation.value},{kind:'stop',label:'SL',levels:draft.value?.stops??[],allocation:stopAllocation.value}]);
  return {context,position,quote,draft,ready,allocation,stopAllocation,validation,saveReason,cancelReason,saveState,plan,busy,error,receipt,loaded,refreshError,uncertain,costs,stopPreviews,stopReason,canAddStop,legs,lines,stateNames,messages,

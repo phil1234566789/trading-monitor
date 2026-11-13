@@ -9,6 +9,7 @@ import { mt5JournalAction } from '../trading-monitor-mcp/mt5Journal.ts';
 import { marketPreviewAction } from '../trading-monitor-mcp/marketPreview.ts';
 import { manageMt5Accounts, readActiveMt5AccountId, ACCOUNT_SELECTION_ERRORS } from '../trading-monitor-mcp/mt5AccountManagement.ts';
 import { cancelExecutionOrder, getExecutionStatus, getAccountExecutionStatus } from '../trading-monitor-mcp/mt5Execution.ts';
+import {readMt5UiState} from '../trading-monitor-mcp/mt5UiState.ts';
 
 Deno.serve(async req => {
   const origin=req.headers.get('Origin')??'';
@@ -36,6 +37,7 @@ Deno.serve(async req => {
     else if(['statistics_summary','statistics_page','statistics_series'].includes(body.action)) result=await statisticsAction(body);
     else if(['history_refresh','history_refresh_status'].includes(body.action)) result=await historyRefreshAction(body);
     else if(typeof body.action==='string'&&body.action.startsWith('journal_')) result=await mt5JournalAction(body);
+    else if(body.action==='ui_state'||body.action==='ui_activity') result=await readMt5UiState(body);
     else if(body.action==='account_status') result=await getAccountExecutionStatus(body.account_id);
     else if(body.action==='status') {
       result=await getExecutionStatus(body.id,body.account_id);

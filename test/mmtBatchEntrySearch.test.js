@@ -124,3 +124,9 @@ it('names the daily stop on the correct account instead of the generic trading b
  expect(html).not.toContain('Handel nicht bereit');
  expect(html).toMatch(/<button[^>]*disabled[^>]*title="Hauptkonto: Tagesstopp/);
 });
+
+it('allows fresh server preview after an offline idle cache without hiding a known worker fault',async()=>{
+ const statuses=Object.fromEntries(accounts.map(a=>{const value=status(a,{online:false,ui_cached:true});value.bridge.snapshot.execution_ready=false;return [a.id,value];}));
+ expect(await render({statuses})).not.toMatch(/<button[^>]*disabled/);
+ statuses.normal.bridge.snapshot.worker_error='fault';expect(await render({statuses})).toContain('Worker gestört');
+});

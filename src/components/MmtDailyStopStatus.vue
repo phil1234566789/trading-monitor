@@ -8,15 +8,15 @@ const props=defineProps({status:Object,now:{type:Number,required:true},staleSeco
 const stop=computed(()=>props.status?.daily_stop);
 const age=computed(()=>snapshotAgeSeconds(props.status?.bridge?.heartbeat_at,props.now));
 // Im Leerlauf kommen UI-Daten alle acht Sekunden; dieselbe Frist wie die Verbindungsanzeige verwenden.
-const ready=computed(()=>props.status?.online&&stop.value?.daily_stop_ready&&age.value!=null&&age.value<=props.staleSeconds);
-const hp=computed(()=>ready.value?dailyHealth(props.status?.bridge?.snapshot,stop.value,props.now):null);
+const ready=computed(()=>props.status?.online&&stop.value?.daily_stop_ready&&age.value!=null&&(props.status.ui_cached||age.value<=props.staleSeconds));
+const hp=computed(()=>ready.value?dailyHealth(props.status?.bridge?.snapshot,stop.value,props.now,props.status.ui_cached):null);
 const money=value=>fmtMoney(value,'USD');
 const activeCommands=computed(()=>(stop.value?.commands??[]).filter(c=>c.status!=='executed'));
 const labels={pending:'Notfallauftrag wartet',sending:'Brokerannahme wird abgeglichen',unknown:'Ausgang ungeklärt · kein erneuter Versand',rejected:'Brokerauftrag abgelehnt'};
 </script>
 <template>
  <section class="mmt-daily-status" aria-label="Tagesstopp" :role="stop?.latched?'alert':'status'">
-  <div class="mmt-daily-heading"><strong>Tages-HP <template v-if="hp">{{money(hp.remaining)}} / {{money(hp.limit)}}</template><template v-else>—</template></strong><span>{{stop?.latched?'Tagesstopp / offener Abgleich sperrt Entries':ready?'Tagesprüfung aktuell':'Schutzprüfung fehlt oder ist veraltet'}}</span></div>
+  <div class="mmt-daily-heading"><strong>Tages-HP <template v-if="hp">{{money(hp.remaining)}} / {{money(hp.limit)}}</template><template v-else>—</template></strong><span>{{stop?.latched?'Tagesstopp / offener Abgleich sperrt Entries':ready?(status.ui_cached?'Gespeicherter Schutzstand':'Tagesprüfung aktuell'):'Schutzprüfung fehlt oder ist veraltet'}}</span></div>
   <div class="mmt-daily-hp" :class="{unknown:!hp}" :role="hp?'progressbar':undefined" aria-label="Verbleibende Tages-HP" :aria-valuenow="hp?.remaining" :aria-valuemin="hp?0:undefined" :aria-valuemax="hp?.limit" :aria-valuetext="hp?money(hp.remaining)+' von '+money(hp.limit):undefined"><div v-if="hp" :style="{width:hp.percent+'%'}" :class="{low:hp.percent<=25}" /></div>
   <p v-if="hp">Netto abgeschlossen {{money(hp.realized)}} · Offene Verluste {{money(hp.openLoss)}} · Reset 00:00 Berlin</p>
   <p v-else>Keine aktuellen Tageswerte · Reset 00:00 Berlin</p>

@@ -8,7 +8,7 @@ it('reports the confirmed daily loss latch before generic execution readiness',(
  const riskOnly=current();delete riskOnly.daily_stop;expect(entryDailyStopReason(riskOnly,now)).toContain('Tagesstopp aktiv');
 });
 it('does not claim a current latch from old, missing or previous-day data',()=>{
- expect(entryDailyStopReason(current(),now+16000)).toBe('');
+ expect(entryDailyStopReason(current(),now+16000)).toContain('Tagesstopp aktiv');
  const old=current();old.daily_stop.day='2000-01-01';old.bridge.snapshot.risk.day='2000-01-01';expect(entryDailyStopReason(old,now)).toBe('');
  const missing=current();delete missing.daily_stop;delete missing.bridge.snapshot.risk;expect(entryDailyStopReason(missing,now)).toBe('');
 });

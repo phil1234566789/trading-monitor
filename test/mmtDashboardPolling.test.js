@@ -15,9 +15,8 @@ function mount(){enabled=ref(true);app=renderer.createApp({setup(){mmt=useDashbo
 beforeEach(()=>{
  vi.useFakeTimers();fixture.key='private-key';listeners={};doc={visibilityState:'visible',addEventListener:vi.fn((event,fn)=>{listeners[event]=fn;}),removeEventListener:vi.fn()};vi.stubGlobal('document',doc);
  fixture.api.mockReset().mockImplementation(async(action,fields)=>{
-  if(action==='accounts')return {accounts,active_account_id:'a'};
-  if(action==='status')return state(1);
-  if(action==='account_status')return state(fields.account_id==='b'?2:3);
+  if(action==='ui_activity')return {revisions:{catalog:1,snapshots:1,orders:1}};
+  if(action==='ui_state')return {accounts,active_account_id:'a',account_statuses:{a:state(1),b:state(2)},orders:[],revisions:{catalog:1,snapshots:1,orders:1}};
   throw new Error(`Unexpected ${action}`);
  });
 });
@@ -29,16 +28,13 @@ it('keeps live positions independent from the sidebar and suppresses every live 
   expect(mmtChartVisibility(panel,positions,cockpit,true)).toEqual({controller:false,sidebar:false,positions:false,panel:false});
  }
 });
-it('uses one primary and one bounded account read, no archive/history/journal calls, and an 8 second idle interval',async()=>{
- mount();await flush();
- expect(fixture.api.mock.calls.map(c=>c[0])).toEqual(['accounts','status','account_status']);
- expect(fixture.api.mock.calls.at(-1)[1]).toEqual({account_id:'b'});
- await vi.advanceTimersByTimeAsync(7000);expect(fixture.api).toHaveBeenCalledTimes(3);
- await vi.advanceTimersByTimeAsync(1000);await flush();expect(fixture.api).toHaveBeenCalledTimes(6);
- expect(fixture.api.mock.calls.every(c=>!['history_page','journal_context'].includes(c[0]))).toBe(true);
+it('uses one boot read and only an activity signal after thirty idle seconds',async()=>{
+ mount();await flush();expect(fixture.api.mock.calls.map(c=>c[0])).toEqual(['ui_state']);
+ await vi.advanceTimersByTimeAsync(29000);expect(fixture.api).toHaveBeenCalledTimes(1);
+ await vi.advanceTimersByTimeAsync(1000);await flush();expect(fixture.api.mock.calls.map(c=>c[0])).toEqual(['ui_state','ui_activity']);
 });
 it('does not overlap polls, ignores results after unmount, and removes visibility subscriptions',async()=>{
- let resolve;fixture.api.mockImplementation(action=>action==='accounts'?new Promise(r=>{resolve=r;}):Promise.resolve(state(1)));
+ let resolve;fixture.api.mockImplementation(action=>action==='ui_state'?new Promise(r=>{resolve=r;}):Promise.resolve(state(1)));
  mount();await flush();const count=fixture.api.mock.calls.length;
  await vi.advanceTimersByTimeAsync(15000);expect(fixture.api).toHaveBeenCalledTimes(count);
  app.unmount();app=null;resolve({accounts,active_account_id:'a'});await flush();
@@ -47,22 +43,21 @@ it('does not overlap polls, ignores results after unmount, and removes visibilit
 it('suspends hidden tabs and refreshes immediately when shown again',async()=>{
  doc.visibilityState='hidden';mount();await flush();expect(fixture.api).not.toHaveBeenCalled();
  await vi.advanceTimersByTimeAsync(30000);expect(fixture.api).not.toHaveBeenCalled();
- doc.visibilityState='visible';listeners.visibilitychange();await flush();expect(fixture.api).toHaveBeenCalledTimes(3);
+ doc.visibilityState='visible';listeners.visibilitychange();await flush();expect(fixture.api).toHaveBeenCalledTimes(1);
 });
 it('pauses an already mounted controller without losing bound state and resumes without a new instance',async()=>{
  mount();await flush();const statuses=mmt.accountStatuses.value;
- enabled.value=false;await nextTick();await vi.advanceTimersByTimeAsync(30000);expect(fixture.api).toHaveBeenCalledTimes(3);expect(mmt.accountStatuses.value).toBe(statuses);
- enabled.value=true;await nextTick();await flush();expect(fixture.api).toHaveBeenCalledTimes(6);
+ enabled.value=false;await nextTick();await vi.advanceTimersByTimeAsync(30000);expect(fixture.api).toHaveBeenCalledTimes(1);expect(mmt.accountStatuses.value).toBe(statuses);
+ enabled.value=true;await nextTick();await flush();expect(fixture.api).toHaveBeenCalledTimes(2);
 });
-it('polls exposure on another account at one second and keeps a failing account visibly stale',async()=>{
- fixture.api.mockImplementation(async(action)=>action==='accounts'?{accounts,active_account_id:'a'}:action==='status'?state(1):state(2,[position(8)]));
- mount();await flush();await vi.advanceTimersByTimeAsync(1000);await flush();expect(fixture.api).toHaveBeenCalledTimes(6);
- fixture.api.mockImplementation(async(action)=>{if(action==='accounts')return {accounts,active_account_id:'a'};if(action==='status')return state(1);throw new Error('Timeout');});
- await mmt.refresh();await flush();expect(mmt.accountStatuses.value.b).toMatchObject({online:false,status_error:'Timeout'});
+it('reads exposure on another account every eight seconds and preserves failed last-known snapshots',async()=>{
+ fixture.api.mockImplementation(async()=>({accounts,active_account_id:'a',account_statuses:{a:state(1),b:state(2,[position(8)])},orders:[],revisions:{catalog:1,snapshots:1,orders:1}}));
+ mount();await flush();await vi.advanceTimersByTimeAsync(8000);await flush();expect(fixture.api).toHaveBeenCalledTimes(2);
+ fixture.api.mockRejectedValue(new Error('Timeout'));await mmt.refresh();await flush();expect(mmt.accountStatuses.value.b).toMatchObject({online:false,status_error:'Timeout'});
  expect(mmt.accountStatuses.value.b.bridge.snapshot.positions).toEqual([position(8)]);
 });
 it('discards late responses after locking and never reconstructs a closed order from history',async()=>{
- let resolve;fixture.api.mockImplementation(action=>action==='accounts'?new Promise(r=>{resolve=r;}):Promise.resolve(state(1)));
- mount();fixture.key='';resolve({accounts,active_account_id:'a'});await flush();await mmt.refresh();
+ let resolve;fixture.api.mockImplementation(action=>action==='ui_state'?new Promise(r=>{resolve=r;}):Promise.resolve(state(1)));
+ mount();await flush();fixture.key='';resolve({accounts,active_account_id:'a'});await flush();await mmt.refresh();
  expect(mmt.accounts.value).toEqual([]);expect(mmt.accountStatuses.value).toEqual({});expect(mmt.entryTimeFor({status:'executed',intent:{account_login:1,account_server:'s'},result:{position:8,position_lifecycle:{state:'closed'}}})).toBeNull();
 });

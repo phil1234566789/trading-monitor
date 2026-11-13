@@ -31,10 +31,11 @@ export function challengeGauge(balance,floor,target){
   gain:position!=null&&start!=null?Math.max(0,position-start):0};
 }
 export function balanceHealth(status,fresh,account,now){
- if(!fresh||!status?.online||!mmtAccountSnapshot(account,status?.bridge))return {ok:false,label:'Verbindung prüfen'};
  if(status?.bridge?.snapshot?.worker_error||status?.health?.incident)return {ok:false,label:'Betrieb gestört'};
+ if(status?.ui_cached)return {ok:false,label:'Gespeicherter Stand'};
+ if(!fresh||!status?.online||!mmtAccountSnapshot(account,status?.bridge))return {ok:false,label:'Verbindung prüfen'};
  const checked=Date.parse(status?.health?.checked_at);
- if(!Number.isFinite(checked)||checked>now||now-checked>150000)return {ok:false,label:'Überwachung prüfen'};
+ if(!Number.isFinite(checked)||checked>now||now-checked>(status?.ui_health_read_at?960000:150000))return {ok:false,label:'Überwachung prüfen'};
  if(!mmtExecutionReady(account,status,status?.bridge?.snapshot))return {ok:false,label:'Handel gesperrt'};
- return {ok:true,label:'Alles OK'};
+ return {ok:true,label:status?.ui_health_read_at?'Letzte Prüfung OK':'Alles OK'};
 }

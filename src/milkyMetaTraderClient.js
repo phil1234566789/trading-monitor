@@ -1,5 +1,6 @@
 import { HTTP_BACKGROUND } from './composables/useHttpActivity.js';
 import {isTargetPlanRejection} from '../supabase/functions/trading-monitor-mcp/targetPlanErrors.js';
+import {notifyMmtWrite} from './mmtUiInvalidation.js';
 const messages={
  daily_stop_not_ready:'Frische Tagesstopp-Prüfung fehlt oder ist gesperrt.',
  daily_stop_latched:'Tagesstopp aktiv: keine neuen Entries.',
@@ -57,6 +58,6 @@ export function createMilkyMetaTraderClient(baseUrl, token, fetchImpl = fetch) {
       error.definitiveRejection=response.status===401||isTargetPlanRejection(code)||['preview_expired','invalid_preview','live_not_enabled'].includes(code);
       throw error;
     }
-    return response.json();
+    const result=await response.json();notifyMmtWrite(action);return result;
   };
 }

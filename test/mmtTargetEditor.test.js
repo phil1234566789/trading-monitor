@@ -151,7 +151,7 @@ describe('TP edits require Save',()=>{
   const {state,api,snapshot:current}=await mount();state.update(0,'percent',50);state.add();state.update(1,'percent',50);await nextTick();
   current.positions[0].volume=.04;await nextTick();
   expect(state.draft.positionVolume).toBe(.04);expect(state.allocation.targets.map(t=>t.volume)).toEqual([.02,.02]);
-  expect(api.mock.calls.map(x=>x[0])).toEqual(['target_state']);
+  expect(api.mock.calls.map(x=>x[0])).toEqual(['target_state','target_state']);
  });
  it('does not send after drag, rounds to broker digits, and saves the exact explicit allocation',async()=>{
   const {state,api}=await mount();moveTargetDraft(order.id,0,2012.345);await nextTick();

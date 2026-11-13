@@ -12,7 +12,7 @@ it('does not display a stale or offline worker as a current daily guard',async()
  }
 });
 it('keeps an idle confirmation current between eight-second polls and expires busy data sooner',async()=>{
- for(const [positions,age,current] of [[[],8000,true],[[],15000,true],[[],16000,false],[[{}],6000,false]]){
+ for(const [positions,age,current] of [[[],8000,true],[[],15000,true],[[],16000,false],[[{}],6000,true]]){
   const s={...status,bridge:{...status.bridge,snapshot:{positions}}};
   const staleSeconds=mmtStaleSeconds(mmtPollDelay(s));
   const html=await renderToString(createSSRApp(Status,{status:s,now:now+age,staleSeconds}));

@@ -31,7 +31,7 @@ it('does not lose positions on a failed or stale account and removes them only o
  const failed={...statuses,b:{...statuses.b,online:false,status_error:'Timeout'}};
  const rows=collectMmtBrokerPositions(accounts,failed,now);
  expect(rows).toHaveLength(4);expect(rows.filter(row=>!row.online).map(row=>row.key)).toEqual(['b:10','b:30']);
- expect(collectMmtBrokerPositions(accounts,statuses,now+10000).every(row=>!row.online)).toBe(true);
+ expect(collectMmtBrokerPositions(accounts,statuses,now+16000).every(row=>!row.online)).toBe(true);
  expect(collectMmtBrokerPositions(accounts,{...statuses,b:state(2,[])},now).map(row=>row.key)).toEqual(['a:10','a:20']);
  expect(collectMmtBrokerPositions(accounts,{a:statuses.b,b:statuses.a},now)).toEqual([]);
 });

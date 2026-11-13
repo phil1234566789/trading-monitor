@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useStatusBar } from '../composables/useStatusBar.js';
-import { mmtPollDelay, mmtStaleSeconds, mmtConnectionStatus, mmtSelectedAccountId, mmtAccountSnapshot } from '../milkyMetaTraderPolling.js';
+import { mmtStaleSeconds, mmtConnectionStatus, mmtAccountSnapshot } from '../milkyMetaTraderPolling.js';
 import { positionCommissions } from '../milkyMetaTraderStatistics.js';
 import { cssColor } from '../chartColors.js';
 import MilkyMetaTraderStatistics from '../components/MilkyMetaTraderStatistics.vue';
@@ -12,7 +12,7 @@ import { snapshotAgeSeconds, executionPositionId } from '../milkyMetaTraderMonit
 import MilkyMetaTraderOrderCard from '../components/MilkyMetaTraderOrderCard.vue';
 import '../milkyMetaTrader.css';
 import ActionButton from '../components/ui/ActionButton.vue';
-import {readAccountDailyStatuses} from '../mmtAccountDailyStatus.js';
+import {useMmtUiData} from '../composables/useMmtUiData.js';
 import MmtRiskPolicyEditor from '../components/MmtRiskPolicyEditor.vue';
 import MilkyMetaTraderEntrySearch from '../components/MilkyMetaTraderEntrySearch.vue';
 import { createMilkyMetaTraderClient } from '../milkyMetaTraderClient.js';
@@ -32,22 +32,21 @@ const commissionPositions=computed(()=>[...new Map([
  ...allPositions.value.map(row=>({account_id:row.account.id,position_id:row.position.position_id??row.position.identifier??row.position.ticket})),
  ...(status.value?.orders??[]).map(order=>({account_id:accountForOrder(order),position_id:executionPositionId(order)})),
 ].filter(row=>row.account_id&&Number.isSafeInteger(row.position_id)&&row.position_id>0).map(row=>[`${row.account_id}:${row.position_id}`,row])).values()].slice(0,100));
-const token=ref(readMilkyMetaTraderKey()), unlocked=ref(false), accounts=ref([]), activeId=ref(null);
+const token=ref(readMilkyMetaTraderKey()),unlocked=ref(false);
+const api=(action,fields,options)=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,token.value)(action,fields,options);
+const data=useMmtUiData({api,credential:()=>token.value,enabled:()=>unlocked.value,balances:true,health:true});
+const {accounts,activeId,status,accountStatuses,now,error:pollError,refresh}=data;
 const accountGroups=computed(()=>{
  const {active,inactive}=accountAvailability(accounts.value);
  return [{inactive:false,label:'Aktive Konten',accounts:active},{inactive:true,label:'Inaktive Konten',accounts:inactive}];
 });
-const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
-const accountStatuses=ref({});
+const busy=ref(false),error=ref(''),message=ref('');
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
-let timer=null, nextPoll=0, statusRequest=null, dailyRequest=null, viewEpoch=0;
-const pollError=ref('');
 const { setPageStatus, clearPageStatus }=useStatusBar();
-const pollDelay=computed(()=>Math.min(mmtPollDelay(status.value),...Object.values(accountStatuses.value).map(mmtPollDelay)));
+const pollDelay=computed(()=>8000);
 const staleSeconds=computed(()=>mmtStaleSeconds(pollDelay.value));
-const now=ref(Date.now());
 const dataAge=computed(()=>snapshot.value&&!snapshot.value.worker_error?snapshotAgeSeconds(status.value?.bridge?.heartbeat_at,now.value):null);
-const statusesByAccount=computed(()=>({...accountStatuses.value,...(mmtAccountSnapshot(active.value,status.value?.bridge)?{[activeId.value]:pollError.value?{...status.value,online:false,status_error:pollError.value}:status.value}:{})}));
+const statusesByAccount=accountStatuses;
 const allPositions=computed(()=>collectMmtBrokerPositions(accounts.value,statusesByAccount.value,now.value).map(row=>({...row,commission:commissionFor(row.account.id,row.position.position_id??row.position.identifier??row.position.ticket),commissionAt:historyTime(row.account.id)})));
 const positionIssues=computed(()=>accountAvailability(accounts.value).active.flatMap(account=>{
  const state=statusesByAccount.value[account.id];
@@ -60,47 +59,11 @@ const orderAge=order=>snapshotAgeSeconds(orderStatus(order)?.bridge?.heartbeat_a
 const workerProblem=computed(()=>status.value?.bridge?.snapshot?.worker_error??status.value?.health?.incident);
 const deliveryLabels={pending:'wartet',claimed:'wird gesendet',accepted:'angenommen',failed:'fehlgeschlagen',uncertain:'Annahme unklar'};
 const active=computed(()=>accounts.value.find(a=>a.id===activeId.value));
-const api=(action,fields,options)=>createMilkyMetaTraderClient(import.meta.env.VITE_SUPABASE_URL,token.value)(action,fields,options);
 const time=value=>value ? new Date(value).toLocaleString('de-DE',{timeZone:'Europe/Berlin'}) : '—';
 const snapshot=computed(()=>mmtAccountSnapshot(active.value,status.value?.bridge));
 const currentOrders=computed(()=>(status.value?.orders??[]).filter(order=>['searching','sending','unknown'].includes(order.status)||(order.status==='executed'&&order.result?.position_lifecycle?.state!=='closed')));
 const previousOrders=computed(()=>(status.value?.orders??[]).filter(order=>!currentOrders.value.includes(order)));
 
-async function refresh() {
-  const data=await api('accounts');
-  accounts.value=data.accounts; activeId.value=data.active_account_id;
-  // Ein bewusster Refresh muss auch nach einem bereits laufenden Poll einen neuen Stand lesen.
-  if(statusRequest)await statusRequest.catch(()=>{});
-  await refreshStatus();
-}
-function refreshStatus(options={}) {
-  if(statusRequest)return statusRequest;
-  const accountId=activeId.value, epoch=viewEpoch;
-  statusRequest=(async()=>{
-    try {
-      const value=await api('status',{},options);
-      if(epoch===viewEpoch&&accountId===activeId.value){
-        status.value=value;activeId.value=mmtSelectedAccountId(value,activeId.value);pollError.value='';
-        const selectedId=activeId.value;
-        // Zusatzkonten dürfen den sekündlichen Brokerabgleich des Hauptkontos nicht verzögern.
-        if(!dailyRequest)dailyRequest=readAccountDailyStatuses(api,accounts.value,selectedId,value,options,accountStatuses.value)
-          .then(dailyStatuses=>{if(epoch===viewEpoch&&selectedId===activeId.value)accountStatuses.value=dailyStatuses;})
-          .finally(()=>{dailyRequest=null;});
-      }
-    } finally {statusRequest=null;nextPoll=Date.now()+pollDelay.value;}
-  })();
-  return statusRequest;
-}
-async function poll() {
-  if(!unlocked.value||busy.value||document.visibilityState!=='visible'||statusRequest)return;
-  const epoch=viewEpoch;
-  try {await refreshStatus({background:true});}
-  catch(e){if(epoch===viewEpoch)pollError.value=e.message;}
-}
-function visibilityChanged() {
-  now.value=Date.now();
-  if(document.visibilityState==='visible'){nextPoll=0;void poll();}
-}
 watchEffect(()=>setPageStatus('/milky-meta-trader',{
   ...mmtConnectionStatus({unlocked:unlocked.value,active:active.value,status:status.value,snapshot:snapshot.value,age:dataAge.value,error:pollError.value,delay:pollDelay.value}),
   updatedAt:snapshot.value?status.value?.bridge?.heartbeat_at:null,
@@ -111,41 +74,39 @@ async function run(action) {
   try {await action();} catch(e) {error.value=e.message;} finally {busy.value=false;}
 }
 async function unlock() {
-  await run(async()=>{
-    await refresh(); unlocked.value=true;
-    if(!saveMilkyMetaTraderKey(token.value)) message.value='Browser-Speicherung nicht verfügbar. Der Schlüssel gilt nur für diese Ansicht.';
-    clearInterval(timer);
-    nextPoll=Date.now()+pollDelay.value;
-    timer=setInterval(()=>{now.value=Date.now();if(now.value>=nextPoll)void poll();},1000);
-  });
+ await run(async()=>{
+  unlocked.value=true;await refresh();
+  if(pollError.value){unlocked.value=false;throw new Error(pollError.value);}
+  if(!saveMilkyMetaTraderKey(token.value))message.value='Browser-Speicherung nicht verfügbar. Der Schlüssel gilt nur für diese Ansicht.';
+ });
 }
 function clearView() {
-  viewEpoch++;clearInterval(timer); timer=null;pollError.value=''; token.value=''; unlocked.value=false;
-  brokerHistory.value={rows:[],sync:[]};statisticsAccount.value='';form.value.password=''; accounts.value=[]; status.value=null;accountStatuses.value={}; activeId.value=null;
+  token.value='';unlocked.value=false;data.clear();
+  brokerHistory.value={rows:[],sync:[]};statisticsAccount.value='';form.value.password='';
 }
 function lock() {
   if(!forgetMilkyMetaTraderKey()) {error.value='Der gespeicherte Schlüssel konnte nicht entfernt werden. Bitte die Website-Daten im Browser löschen.';return;}
   clearView();
 }
-onMounted(()=>{document.addEventListener('visibilitychange',visibilityChanged);if(token.value) unlock();});
-onUnmounted(()=>{clearView();document.removeEventListener('visibilitychange',visibilityChanged);clearPageStatus('/milky-meta-trader');});
+onMounted(()=>{if(token.value)unlock();});
+onUnmounted(()=>{clearView();clearPageStatus('/milky-meta-trader');});
 async function save() {
   const fields={...form.value,login:Number(form.value.login)};
   // Ein fehlgeschlagener Request darf das Passwort nicht in einer Fehlermeldung oder einem Store hinterlassen.
   form.value.password='';
   await run(async()=>{
     await api('save_account',fields); fields.password='';
-    await refresh(); form.value.name='';form.value.login='';
+    await refresh({sections:['catalog']}); form.value.name='';form.value.login='';
     message.value='Konto verschlüsselt gespeichert. Noch nicht als Handelskonto ausgewählt.';
   });
   fields.password='';
 }
-async function assignRole(id,role) {await run(async()=>{await api('assign_account_role',{id,role:role||null});await refresh();});}
+async function assignRole(id,role) {await run(async()=>{await api('assign_account_role',{id,role:role||null});await refresh({sections:['catalog']});});}
 async function selectTradingAccount(id) {
-  await run(async()=>{await api('select_account',{id});await refresh();
+  await run(async()=>{await api('select_account',{id});activeId.value=id;await refresh({sections:['catalog','snapshots','guards']});
     message.value=id ? 'Handelskonto ausgewählt. Python-Worker für dieses Konto starten bzw. neu starten. Erst nach bestätigter Verbindung können neue Aufträge ausgeführt werden.' : 'Kein aktives Handelskonto.';});
 }
-async function cancel(id) {await run(async()=>{await api('cancel',{id});await refresh();});}
+async function cancel(id) {await run(async()=>{await api('cancel',{id});await refresh({sections:['orders']});});}
 </script>
 
 <template>
@@ -167,7 +128,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p v-if="workerProblem" role="alert" class="mmt-error">Ausführung gestört: {{workerProblem.code}}<span v-if="workerProblem.stage"> in {{workerProblem.stage}}</span>. Entry-Aufträge und Brokerstatus prüfen; nichts blind erneut senden.</p>
         <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
         <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>
-        <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>150000" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
+        <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>960000" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
       <MmtOpenBrokerPositions :positions="allPositions" :issues="positionIssues" />
       <div class="mmt-workspace">
         <div class="mmt-main-column">
@@ -176,7 +137,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <aside class="mmt-side-column" aria-label="Entry-Suche und Aufträge">
           <section class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">
             <div class="mmt-section-heading"><h2 id="mmt-orders-title">Aktuelle Entry-Aufträge</h2><ActionButton v-if="currentOrders.length" :disabled="busy" @click="run(refresh)">Aktualisieren</ActionButton></div>
-            <p v-if="currentOrders.length" class="mmt-muted">Abgleich {{pollDelay===1000?'etwa jede Sekunde':'alle 8 Sekunden'}} · kein erneuter Auftrag durch Aktualisieren.</p>
+            <p v-if="currentOrders.length" class="mmt-muted">Abgleich alle 8 Sekunden · kein erneuter Auftrag durch Aktualisieren.</p>
             <ul v-if="currentOrders.length" class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in currentOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" :snapshot="orderSnapshot(order)" :age="orderAge(order)" :show-position="false" :account-name="accounts.find(account=>account.id===accountForOrder(order))?.name" @cancel="cancel" /></ul>
             <p v-else class="mmt-muted">Keine laufende Entry-Suche.</p>
             <details v-if="previousOrders.length" class="mmt-technical-history"><summary>Technischer Auftragsverlauf · {{previousOrders.length}} letzte erledigte Aufträge</summary><p>Suchaufträge sind keine vollständige Brokerhistorie und zählen nicht als Statistikdaten.</p><ul class="mmt-order-list"><MilkyMetaTraderOrderCard v-for="order in previousOrders" :key="order.id" :order="order" :commission="orderCommission(order)" :commission-at="historyTime(accountForOrder(order))" :busy="busy" /></ul></details>
@@ -185,7 +146,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         </aside>
       </div>
       <div class="mmt-settings"><h2>Konten &amp; Einstellungen</h2>
-      <MmtRiskPolicyEditor :api="api" :policy="status?.risk_policy" :account="active" @saved="run(refresh)" />
+      <MmtRiskPolicyEditor :api="api" :policy="status?.risk_policy" :account="active" @saved="run(()=>refresh({sections:['catalog','guards']}))" />
       <details class="mmt-panel"><summary>Brokerkonten verwalten <span class="mmt-muted">· {{accounts.length}} gespeichert</span></summary>
         <p>Das ausgewählte Handelskonto gilt für neue Einzelaufträge. Mehrere Konten wählst du in der Entry-Suche im Chart. Laufende Suchen bleiben an ihr Konto gebunden; offene Positionen oder unklare Aufträge sperren den Wechsel.</p>
         <p v-if="!accounts.length">Noch keine Brokerkonten hinterlegt.</p>
