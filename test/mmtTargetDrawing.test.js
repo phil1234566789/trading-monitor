@@ -3,20 +3,22 @@ import {createRenderer,h,nextTick} from 'vue';
 import {useMmtTargetDrawing} from '../src/composables/useMmtTargetDrawing.js';
 import {registerTargetSave} from '../src/mmtTargetSave.js';
 import {ref} from 'vue';
+import {chartMode} from '../src/chartModes.js';
 import {setTargetDraft,removeTargetDraft,useTargetDraft,selectTargetDraft} from '../src/mmtTargetDrafts.js';
 vi.mock('../src/chartColors.js',()=>({cssColor:()=> '#00ff00'}));
 const {renderOverlay}=vi.hoisted(()=>({renderOverlay:{value:null}}));
 vi.mock('vue',async original=>({...await original(),createApp:options=>{renderOverlay.value=options.render;return {mount:vi.fn(),unmount:vi.fn()};}}));
 vi.mock('../src/liquidity.js',()=>({LiquidityLinePrimitive:class {constructor(level,options){this.level=level;this.options=options;}distanceTo(){return 0;}}}));
 const renderer=createRenderer({createElement:()=>({children:[]}),createText:()=>({}),createComment:()=>({}),setText:()=>{},setElementText:()=>{},patchProp:()=>{},insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
-let app;afterEach(()=>{app?.unmount();removeTargetDraft('one');vi.unstubAllGlobals();});
+let app;afterEach(()=>{app?.unmount();chartMode.value='navigate';removeTargetDraft('one');vi.unstubAllGlobals();});
 describe('existing TP line dragging',()=>{
  it('moves a browser draft only and restores chart scrolling on release',async()=>{
   const handlers={},doc={addEventListener:(e,f)=>handlers[e==='pointerdown'?'outside':e]=f,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn()})};vi.stubGlobal('document',doc);vi.stubGlobal('requestAnimationFrame',vi.fn());vi.stubGlobal('cancelAnimationFrame',vi.fn());
   let drawing,draft;
   app=renderer.createApp({setup(){drawing=useMmtTargetDrawing();draft=useTargetDraft('one');return()=>h('div');}});app.mount({children:[]});
-  const element={style:{},appendChild:vi.fn(),addEventListener:(e,f)=>handlers[e]=f,removeEventListener:vi.fn(),getBoundingClientRect:()=>({left:100,top:20})};
-  const chart={timeScale:()=>({width:()=>500}),panes:()=>[{getHeight:()=>400}],options:()=>({handleScroll:{mouseWheel:true}}),applyOptions:vi.fn()};
+  const element={style:{},ownerDocument:{defaultView:{addEventListener:(e,f)=>handlers['window:'+e]=f,removeEventListener:vi.fn()}},appendChild:vi.fn(),addEventListener:(e,f)=>handlers[e]=f,removeEventListener:vi.fn(),getBoundingClientRect:()=>({left:100,top:20})};
+  const scrolling={mouseWheel:true,pressedMouseMove:true,horzTouchDrag:false,vertTouchDrag:true};
+  const chart={timeScale:()=>({width:()=>500}),panes:()=>[{getHeight:()=>400}],options:()=>({handleScroll:scrolling}),applyOptions:vi.fn(options=>Object.assign(scrolling,options.handleScroll===false?Object.fromEntries(Object.keys(scrolling).map(key=>[key,false])):options.handleScroll))};
   const series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn(),coordinateToPrice:y=>2000+y,priceToCoordinate:price=>price-2000};
   setTargetDraft('one',{symbol:'XAUUSD',targets:[{price:2010,volume:.01},{price:2010,volume:''}],entryPrice:2000,initialSl:1990,direction:'long',digits:2,dirty:false});
   drawing.create(chart,series,element);drawing.refresh({symbol:'XAUUSD',candles:[{time:100}],currentBar:'1m'});await nextTick();
@@ -28,7 +30,7 @@ describe('existing TP line dragging',()=>{
   handlers.pointerdown(event);handlers.pointermove({...event,clientY:60});await nextTick();
   expect(draft.value.targets[0].price).toBe(2010);expect(draft.value.targets[1].price).toBe(2020);expect(draft.value.dirty).toBe(true);expect(element.style.cursor).toBe('ns-resize');
   expect(renderOverlay.value().props.guide).toEqual({y:20,left:0,width:500});
-  handlers.pointerup();expect(chart.applyOptions).toHaveBeenLastCalledWith({handleScroll:{mouseWheel:true}});
+  handlers.pointerup();expect(scrolling).toEqual({mouseWheel:true,pressedMouseMove:true,horzTouchDrag:false,vertTouchDrag:true});
   expect(renderOverlay.value().props.guide).toBeNull();
   const baseline={...draft.value,targets:[{price:2010,volume:.01}],dirty:false};
   const cancel=vi.fn(()=>{setTargetDraft('one',baseline);return true;}),cleanup=registerTargetSave('one',vi.fn(),ref({cancelDisabled:false}),cancel);
@@ -42,7 +44,20 @@ describe('existing TP line dragging',()=>{
   selectTargetDraft('one',0);await nextTick();handlers.pointerdown(event);handlers.pointerup();
   handlers.keydown({key:'Escape',target:{tagName:'BUTTON',closest:()=>({dataset:{tpKey:'other:0'}})},preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(cancel).toHaveBeenCalledTimes(2);
   handlers.keydown({key:'Escape',target:{tagName:'INPUT'},preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(cancel).toHaveBeenCalledTimes(2);
-  handlers.outside({target:{tagName:'BUTTON'}});handlers.keydown({key:'Escape',preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(cancel).toHaveBeenCalledTimes(2);cleanup();
+  handlers.outside({target:{tagName:'BUTTON'}});handlers.keydown({key:'Escape',preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(cancel).toHaveBeenCalledTimes(2);
+  handlers.pointerdown(event);renderOverlay.value().props.onCancel({orderId:'one'});
+  expect(cancel).toHaveBeenCalledTimes(3);expect(scrolling.pressedMouseMove).toBe(true);
+  for(const end of ['pointercancel','lostpointercapture','window:blur']){
+   handlers.pointerdown(event);expect(scrolling.pressedMouseMove).toBe(false);handlers[end]();
+   expect(scrolling.pressedMouseMove).toBe(true);expect(renderOverlay.value().props.guide).toBeNull();
+  }
+  handlers.pointerdown(event);chartMode.value='measure';expect(scrolling.pressedMouseMove).toBe(true);
+  handlers.pointerdown(event);expect(scrolling.pressedMouseMove).toBe(true);expect(drawing.cursorAt(20,30)).toBeNull();
+  chartMode.value='navigate';handlers.pointerdown(event);drawing.refresh({symbol:'GBPUSD',candles:[{time:100}],currentBar:'1m'});await nextTick();
+  expect(scrolling.pressedMouseMove).toBe(true);
+  drawing.refresh({symbol:'XAUUSD',candles:[{time:100}],currentBar:'1m'});await nextTick();handlers.pointerdown(event);
+  expect(scrolling.pressedMouseMove).toBe(false);cleanup();app.unmount();app=null;
+  expect(scrolling).toEqual({mouseWheel:true,pressedMouseMove:true,horzTouchDrag:false,vertTouchDrag:true});
   drawing.dispose();expect(element.removeEventListener).toHaveBeenCalled();
  });
 });

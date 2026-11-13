@@ -10,7 +10,8 @@ function fixture(saveResult=true){
  const row={id:'existing',visible:true,annotations:makeTradeIdea('long',{time:100,price:10},{time:160,price:9},{time:220,price:12}).annotations};
  const store={drawings:ref([row]),updateAnnotation:vi.fn().mockResolvedValue(saveResult)};
  const original=store.drawings.value[0].annotations[0];
- const refresh=vi.fn(),chart={options:()=>({handleScroll:{mouseWheel:true}}),applyOptions:vi.fn()};
+ const scrolling={mouseWheel:true,pressedMouseMove:true,horzTouchDrag:false,vertTouchDrag:true};
+ const refresh=vi.fn(),chart={options:()=>({handleScroll:scrolling}),applyOptions:vi.fn(options=>Object.assign(scrolling,options.handleScroll===false?Object.fromEntries(Object.keys(scrolling).map(key=>[key,false])):options.handleScroll))};
  scope=effectScope();const editor=scope.run(()=>useTradeIdeaEditing({store,pointAt:(x,y)=>({time:x,price:y}),refresh}));
  chartMode.value='navigate';
  editor.create(chart,{getBoundingClientRect:()=>({left:0,top:0}),addEventListener:(key,fn)=>handlers[key]=fn,removeEventListener:vi.fn()});
@@ -25,7 +26,7 @@ it('previews a drag, updates the existing row once on release and restores navig
  expect(original.tradeIdea.sl).toBe(9);expect(store.updateAnnotation).not.toHaveBeenCalled();
  await handlers.pointerup(event);
  expect(store.updateAnnotation).toHaveBeenCalledExactlyOnceWith('existing',0,expect.objectContaining({tradeIdea:expect.objectContaining({sl:8})}));
- expect(chart.applyOptions).toHaveBeenLastCalledWith({handleScroll:{mouseWheel:true}});
+ expect(chart.options().handleScroll).toEqual({mouseWheel:true,pressedMouseMove:true,horzTouchDrag:false,vertTouchDrag:true});
  expect(editor.status.value).toBe('Idee gespeichert');
 });
 it('cancels without saving and rolls back a failed save',async()=>{

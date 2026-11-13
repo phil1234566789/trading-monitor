@@ -1,19 +1,23 @@
-import {createApp,h,shallowRef,watchEffect,onScopeDispose} from 'vue';
+import {createApp,h,shallowRef,watch,watchEffect,onScopeDispose} from 'vue';
 import {LiquidityLinePrimitive} from '../liquidity.js';
 import {targetDraftLines,moveTargetDraft,selectTargetDraft,splitTargetDraft,changeTargetShare} from '../mmtTargetDrafts.js';
 import {barSecondsFor} from '../timeframes.js';
 import {cssColor} from '../chartColors.js';
 import MmtTargetChartControls from '../components/MmtTargetChartControls.vue';
 import {targetSaveState,saveTargetDraft,cancelTargetDraft} from '../mmtTargetSave.js';
+import {suspendChartScrolling} from '../chartScrollSuspension.js';
+import {chartMode} from '../chartModes.js';
 export function useMmtTargetDrawing(){
- let chart,series,element,drag=null,activeTarget=null,scrollOptions,overlay,app,frame;
+ let chart,series,element,drag=null,activeTarget=null,restoreScrolling,overlay,app,frame,windowTarget;
  const context=shallowRef(null),controls=shallowRef([]),dragging=shallowRef(false),guide=shallowRef(null),cancellation=shallowRef(null),primitives=[];
  function clear(){if(series)for(const {primitive} of primitives)series.detachPrimitive(primitive);primitives.length=0;}
  const stop=watchEffect(()=>{
   const c=context.value;if(!series||!c)return;
+  const lines=targetDraftLines(c.symbol);
+  if(drag&&!lines.some(line=>line.orderId===drag.orderId&&line.index===drag.index))up();
   clear();const candles=c.candles;if(!candles.length)return;
   const last=candles[candles.length-1].time,bar=barSecondsFor(c.currentBar);
-  for(const line of targetDraftLines(c.symbol).sort((a,b)=>Number(a.selected)-Number(b.selected))){
+  for(const line of lines.sort((a,b)=>Number(a.selected)-Number(b.selected))){
    const risk=line.initialSl==null?null:Math.abs(line.entryPrice-line.initialSl),rr=risk>0?(line.direction==='long'?line.price-line.entryPrice:line.entryPrice-line.price)/risk:null;
    const primitive=new LiquidityLinePrimitive({price:line.price,pivotTime:line.entryTime??last,endTime:last+bar*12},
     {color:cssColor('candleUp'),lineWidth:line.selected?3:2,label:`${line.label} · ${line.price} · RR ${rr?.toFixed(2)??'—'}`,labelSide:'end-above',lenientLabels:true,forceLabel:line.selected,futureBarSeconds:bar,extendToRight:true},candles);
@@ -24,7 +28,7 @@ export function useMmtTargetDrawing(){
   const hits=primitives.filter(p=>p.primitive.distanceTo(x,y)<=7),selected=hits.filter(p=>p.line.selected);
   return selected.length===1?selected[0]:hits.length===1?hits[0]:null;
  }
- function cursorAt(x,y){return drag||hitAt(x,y)?'ns-resize':null;}
+ function cursorAt(x,y){return drag||(chartMode.value==='navigate'&&hitAt(x,y))?'ns-resize':null;}
  function updateGuide(){
   if(!drag||!series||!chart){guide.value=null;return;}
   const line=targetDraftLines(context.value?.symbol).find(line=>line.orderId===drag.orderId&&line.index===drag.index);
@@ -50,7 +54,7 @@ export function useMmtTargetDrawing(){
   if(drag)up();activeTarget=line;
   selectTargetDraft(line.orderId,line.index);
   if(!event)return;
-  drag={...line,startY:event.clientY,startPrice:line.price};dragging.value=true;scrollOptions=chart.options().handleScroll;chart.applyOptions({handleScroll:false});
+  drag={...line,startY:event.clientY,startPrice:line.price};dragging.value=true;restoreScrolling=suspendChartScrolling(chart);
   updateGuide();element.style.cursor='ns-resize';event.preventDefault();event.stopPropagation();
  }
  function split(line,event){const index=splitTargetDraft(line.orderId,line.index);if(index!=null)start({...line,index},event);}
@@ -71,7 +75,7 @@ export function useMmtTargetDrawing(){
  }
  function point(event){const rect=element.getBoundingClientRect();return {x:event.clientX-rect.left,y:event.clientY-rect.top};}
  function down(event){
-  if(event.button!==0||event.target.tagName!=='CANVAS')return;
+  if(chartMode.value!=='navigate'||event.button!==0||event.target.tagName!=='CANVAS')return;
   const p=point(event),hit=hitAt(p.x,p.y);
   if(!hit)return;
   start(hit.line,event);
@@ -81,16 +85,19 @@ export function useMmtTargetDrawing(){
   const initial=series.priceToCoordinate(drag.startPrice),price=series.coordinateToPrice(initial+event.clientY-drag.startY);
   moveTargetDraft(drag.orderId,drag.index,price);updateGuide();event.preventDefault();event.stopPropagation();
  }
- function up(){if(drag&&chart)chart.applyOptions({handleScroll:scrollOptions});drag=null;dragging.value=false;guide.value=null;if(element)element.style.cursor='';}
+ function up(){restoreScrolling?.();restoreScrolling=null;drag=null;dragging.value=false;guide.value=null;if(element)element.style.cursor='';}
+ function blur(){up();activeTarget=null;}
+ watch(chartMode,blur,{flush:'sync'});
  function create(nextChart,nextSeries,nextElement){
   chart=nextChart;series=nextSeries;element=nextElement;
-  element.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',leave,true);document.addEventListener('focusin',leave,true);
+  windowTarget=element.ownerDocument?.defaultView;windowTarget?.addEventListener('blur',blur);
+  element.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('lostpointercapture',up,true);document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',leave,true);document.addEventListener('focusin',leave,true);
   overlay=document.createElement('div');element.appendChild(overlay);
   app=createApp({render:()=>h(MmtTargetChartControls,{rows:controls.value,dragging:dragging.value,guide:guide.value,cancellation:cancellation.value,onCancel:cancel,onMove:start,onSplit:split,onNudge:nudge,onShare:(line,value)=>{activeTarget=line;changeTargetShare(line.orderId,line.index,value);},onSave:line=>saveTargetDraft(line.orderId)})});app.mount(overlay);
   frame=requestAnimationFrame(tick);
  }
  function refresh(value){context.value=value;}
- function dispose(){up();clear();cancelAnimationFrame(frame);app?.unmount();overlay?.remove();app=null;overlay=null;controls.value=[];element?.removeEventListener('pointerdown',down,true);document.removeEventListener('pointermove',move,true);document.removeEventListener('pointerup',up,true);document.removeEventListener('pointercancel',up,true);document.removeEventListener('keydown',escape,true);document.removeEventListener('pointerdown',leave,true);document.removeEventListener('focusin',leave,true);activeTarget=null;chart=null;series=null;element=null;context.value=null;}
+ function dispose(){up();clear();cancelAnimationFrame(frame);app?.unmount();overlay?.remove();app=null;overlay=null;controls.value=[];windowTarget?.removeEventListener('blur',blur);windowTarget=null;element?.removeEventListener('pointerdown',down,true);document.removeEventListener('pointermove',move,true);document.removeEventListener('pointerup',up,true);document.removeEventListener('pointercancel',up,true);document.removeEventListener('lostpointercapture',up,true);document.removeEventListener('keydown',escape,true);document.removeEventListener('pointerdown',leave,true);document.removeEventListener('focusin',leave,true);activeTarget=null;chart=null;series=null;element=null;context.value=null;}
  onScopeDispose(()=>{stop();dispose();});
  return {create,refresh,dispose,cursorAt};
 }

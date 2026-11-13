@@ -1,12 +1,13 @@
 import {ref,watch,onScopeDispose} from 'vue';
 import {chartMode} from '../chartModes.js';
 import {editTradeIdea} from '../tradeIdeas.js';
+import {suspendChartScrolling} from '../chartScrollSuspension.js';
 
 export function useTradeIdeaEditing({store,pointAt,refresh}) {
  const status=ref('');
- let chart,element,drag=null,original=null,preview=null,lines=[],scrollOptions,saving=false;
+ let chart,element,drag=null,original=null,preview=null,lines=[],restoreScrolling,saving=false;
  function point(event){const r=element.getBoundingClientRect();return {x:event.clientX-r.left,y:event.clientY-r.top};}
- function stop(){if(drag&&chart)chart.applyOptions({handleScroll:scrollOptions});drag=null;}
+ function stop(){restoreScrolling?.();restoreScrolling=null;drag=null;}
  function cancel(){if(!drag)return;stop();preview=null;original=null;refresh();}
  function down(event){
   if(saving||chartMode.value!=='navigate'||event.button!==0||event.target.tagName!=='CANVAS')return;
@@ -17,7 +18,7 @@ export function useTradeIdeaEditing({store,pointAt,refresh}) {
   const start=pointAt(p.x,p.y);if(!row||!start)return;
   drag={...hit,id:row.id,index:row.annotations.indexOf(hit.annotation),start};
   original=hit.annotation;preview=hit.annotation;status.value='Idee anpassen · Loslassen speichert · Esc verwirft';
-  scrollOptions=chart.options().handleScroll;chart.applyOptions({handleScroll:false});
+  restoreScrolling=suspendChartScrolling(chart);
   event.preventDefault();event.stopImmediatePropagation();
  }
  function move(event){
