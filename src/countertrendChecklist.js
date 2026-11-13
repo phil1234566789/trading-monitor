@@ -147,7 +147,7 @@ export function evaluateCountertrendChecklist({ instrument, evaluatedAt, m5Candl
     if (candidate.targetSelection?.status === 'passed') {
       const memo=setupMemo?.get(memoKeys.get(candidate.sourceId));
       if(memo) memo.lifecycleProgress ??= {};
-      candidate.lifecycle = evaluateCountertrendLifecycle({selection:candidate.targetSelection,invalidation:candidate.invalidation,
+      candidate.lifecycle = evaluateCountertrendLifecycle({candidate,dataRevision,selection:candidate.targetSelection,invalidation:candidate.invalidation,
         candles:m5,evaluatedAt,entries:entryOutcomes.get(candidate.id) ?? [],progress:memo?.lifecycleProgress});
       candidate.validity = candidate.lifecycle.main;
       if(!finalObservation(candidate.checks.antiConfluences,'antiConfluences') || !finalObservation(candidate.checks.confluences,'confluences'))

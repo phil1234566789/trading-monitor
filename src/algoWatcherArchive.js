@@ -5,7 +5,7 @@ const labels = {m5Countertrend:'M5-Countertrend',m5Bos:'M5-BOS',m5Choch:'M5-CHoC
  m1PivotBreak:'M1-Pivotbruch',m1Choch:'M1-CHoCH',m1Bos:'M1-BOS',retest:'M5-OB-Retest',fvg:'M1-FVG'};
 export const watcherEndLabels = {invalidation:'Invalidation-Level erreicht',target1:'T1 erreicht, daher Entry-Suche beendet',
  target2:'T2 erreicht',both:'Invalidation und Ziel in derselben Kerze',entriesClosed:'Alle Entries geschlossen',
- twoConsecutiveJointLosses:'Risikosperre nach zwei aufeinanderfolgenden Verlusten'};
+ twoConsecutiveJointLosses:'Risikosperre nach zwei aufeinanderfolgenden Verlusten',retestExtremeBroken:'Erstes M1-Retest-Extrem gebrochen'};
 
 export function watcherArchivedBlock(snapshot, cutoff) {
  const check = snapshot?.m1Check;

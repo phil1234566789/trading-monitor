@@ -1,4 +1,4 @@
-export const SOURCE_IDEA_BINDING_VERSION='known-poi-target-alias-binding-v1';
+export const SOURCE_IDEA_BINDING_VERSION='known-poi-target-alias-retest-binding-v2';
 const target=level=>level?Object.fromEntries(['id','price','knownAt','selectedAt','sourceTime','pivotTime','timeframe','source']
  .filter(key=>level[key]!=null).map(key=>[key,level[key]])):null;
 const lifecycleSelection=selection=>({status:selection.status,selectedAt:selection.selectedAt,direction:selection.direction,
@@ -19,7 +19,9 @@ export function bindKnownSourceIdeas(candidates,asOf,state,signature){
   }
   if(!binding){
    binding={version:SOURCE_IDEA_BINDING_VERSION,key,familyKey:candidate.sourceFamilyKey,knownAt,canonicalSourceKey:candidate.id,
-    selection:structuredClone(lifecycleSelection(candidate.targetSelection)),invalidation:candidate.invalidation};
+    selection:structuredClone(lifecycleSelection(candidate.targetSelection)),invalidation:candidate.invalidation,
+    retestSource:structuredClone(Object.fromEntries(['sourceKind','sourceRetest','reactionOB','direction']
+      .filter(key=>candidate[key]!=null).map(key=>[key,candidate[key]])))};
    state.set(key,binding);
   }
   resolved.set(candidate,{...candidate,ideaKey:key,ideaBinding:{...binding,status:'known'}});

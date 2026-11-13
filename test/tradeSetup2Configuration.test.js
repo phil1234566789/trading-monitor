@@ -4,7 +4,7 @@ import {OBSERVATION_RULE_VERSION} from '../src/checklistObservationRules.js';
 import {setupMemoKey} from '../src/setup2Memo.js';
 it('versions observation-only F while retaining the old run reader and separating memo keys',()=>{
   const config=buildTradeSetup2Configuration({instrument:'GBPUSD'});
-  expect(config).toMatchObject({setupVersion:'ls-entry-patterns-no-rsi-anti-confluence-v30',entryPattern:'countertrend-entry-model-1-v11',includeSweepRetestSources:true,
+  expect(config).toMatchObject({setupVersion:'ls-entry-patterns-m1-retest-invalidation-v31',entryPattern:'countertrend-entry-model-1-v11',includeSweepRetestSources:true,
     entryPattern2OrderBlockRule:{version:'ob-beyond-ls-max-depth-until-entry-v1',maxRetestFraction:.5},
     entryPattern1SweepAgeRule:{version:'p1-sweep-level-business-age-4h-v1',minimumAgeSeconds:{GBPUSD:14400,XAUUSD:14400}},
     entryPatterns:['countertrend-entry-model-1-v11','m1-structure-fvg-retest-v1'],m1Periods:{'countertrend-entry-model-1-v11':5,'m1-structure-fvg-retest-v1':2},drRiskVersion:'joint-sl-loss-streak-v2',
@@ -38,5 +38,5 @@ it('reads the exact frozen recognition snapshot version without broad future-ver
   for(const version of ['xau-v30-both-frozen-recognition-v2','countertrend-entry-model-1-v31','xau-v30-unknown',undefined,null,''])
     expect(supportsSnapshotIndicators(version)).toBe(false);
   expect(buildTradeSetup2Configuration({instrument:metadata.instrument}).setupVersion)
-    .toBe('ls-entry-patterns-no-rsi-anti-confluence-v30');
+    .toBe('ls-entry-patterns-m1-retest-invalidation-v31');
 });

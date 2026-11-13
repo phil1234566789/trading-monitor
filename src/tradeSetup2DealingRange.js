@@ -64,6 +64,7 @@ export function dealingRangeLabel(snapshot) {
   const status = savedDealingRangeStatus(snapshot);
   const riskLabel=status==='invalidated' && savedRiskInvalidationLabel(snapshot.dealingRange,snapshot.knownAt);
   if (riskLabel) return riskLabel;
+  if (status === 'invalidated' && snapshot.dealingRange.reason === 'retestExtremeBroken') return 'DR invalidiert · erstes M1-Retest-Extrem gebrochen';
   if (status === 'invalidated' && snapshot.dealingRange.reason === 'priceInvalidation')
     return 'DR beendet · Invalidierungslevel erreicht';
   if (isDisqualifiedDealingRange(snapshot)) return DEALING_RANGE_LABELS.disqualified;

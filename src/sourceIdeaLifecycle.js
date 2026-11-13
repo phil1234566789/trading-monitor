@@ -16,7 +16,7 @@ export function evaluateSourceIdeaLifecycles(candidates,{evaluatedAt,bindings,si
   if(!evaluated.has(key))evaluated.set(key,terminal?.main?.state==='ended'&&terminal.main.recognizedAt<=evaluatedAt
    ?{...terminal,evaluatedAt}:evaluateLifecycle({...input,
    selection:candidate.ideaBinding?.selection??candidate.targetSelection,
-   invalidation:candidate.invalidation,evaluatedAt,
+   invalidation:candidate.invalidation,candidate:binding?.retestSource??candidate,evaluatedAt,
    entries,progress:progressFor?.(key)}));
   let lifecycle=evaluated.get(key);
   if(candidate.ideaKey&&lifecycle.sourceIdeaKey!==candidate.ideaKey){

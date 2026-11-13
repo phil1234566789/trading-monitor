@@ -59,7 +59,7 @@ export function buildTradeSetup2CandidateSnapshot({checklist,candidate}) {
   // schützt seinen früheren Wissensstand; setupKey hält die gemeinsame Range zusammen.
   return restoreTradeSetup2Snapshot(JSON.parse(JSON.stringify({schemaVersion:3,id:`${candidate.id}:stand:${candidate.knownAsOf}`,instrument:checklist.instrument,
     setupKey:candidate.id,direction:candidate.direction,knownAt:candidate.knownAsOf,entry:null,
-    dealingRange,...(checklist.model==='countertrend' && (dealingRange.status==='validated' || dealingRange.reason==='twoConsecutiveJointLosses')
+    dealingRange,...(checklist.model==='countertrend' && (dealingRange.status==='validated' || ['twoConsecutiveJointLosses','retestExtremeBroken'].includes(dealingRange.reason))
       ? {rangeCourse:countertrendRangeCourse(candidate)} : {}),checklist:state,m1Check:null,evidence:tradeSetup2Evidence({checklist:state})})));
 }
 

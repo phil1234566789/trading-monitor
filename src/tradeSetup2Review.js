@@ -118,7 +118,7 @@ export function setupEntryConditions(snapshot,selectedPattern=null) {
   add('active', checklist?.model==='countertrend' ? 'DR aktiv / Entry-Suche vor T1' : 'Setup noch nicht durch T1 oder Invalidierung beendet',
     searchEnded ? 'unmet' : validity?.state === 'active' ? 'passed' : validity?.state === 'ended' && known(validity.recognizedAt) ? 'unmet' : 'unknown',
     riskReason?[riskReason,...dr?.details ?? []]:[searchEnded ? 'Entry-Suche nach T1 oder Lifecycle-Ende beendet.' : validity?.state === 'active' ? 'Am Bewertungsstand aktiv.' : validity?.state === 'ended' && known(validity.recognizedAt)
-      ? `Beendet: ${ { target1: 'T1 vor Invalidation', target2:'T2 erreicht', entriesClosed:'alle Entries geschlossen', invalidation: 'Invalidation vor T1', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
+      ? `Beendet: ${ { target1: 'T1 vor Invalidation', target2:'T2 erreicht', retestExtremeBroken:'erstes M1-Retest-Extrem gebrochen', entriesClosed:'alle Entries geschlossen', invalidation: 'Invalidation vor T1', both: 'T1 und Invalidierung' }[validity.reason] ?? 'Grund unbekannt' }.`
       : 'Gültigkeit nicht abschließend gespeichert. Nur ein bestätigtes Ende sperrt die M1-Auswertung.']);
   const pivotPattern=usesPivotBreakEntryPattern1(version)||pattern2;
   const anchor = pivotPattern ? m1?.structureStart : checks.m5Trend?.m1Anchor;

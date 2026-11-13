@@ -17,6 +17,7 @@ import {evaluateEntryPattern2} from './entryPattern2.js';
 import {buildM1PivotStructure} from './m1PivotStructure.js';
 import {M1_FVG_RETEST_PATTERN_VERSION} from './m1FvgRetestSequence.js';
 import {M1_FVG_RETEST_STRUCTURE_PERIOD} from './m1StructureSettings.js';
+import {evaluateSweepRetestInvalidation} from './sweepRetestInvalidation.js';
 
 const waiting = {
   abc: 'M1-Struktur wartet auf A, B und C.',
@@ -38,6 +39,12 @@ export function inactiveM1Checklist(reason) {
 }
 
 export function evaluateM1Checklist({ context, structure, candles, evaluatedAt, closeReactionCache,entryProgress }) {
+  const knownRetest=context.primary?.lifecycle?.sweepRetest;
+  const sweepRetest=context.primary?.knownAsOf===evaluatedAt&&knownRetest?.checkedThrough===evaluatedAt
+    ?knownRetest:evaluateSweepRetestInvalidation({candidate:context.primary,m1Candles:candles,evaluatedAt});
+  if(['invalidated','unknown'].includes(sweepRetest.status))return {...inactiveM1Checklist('ended'),
+    status:sweepRetest.status==='unknown'?'unknown':'pending',reason:sweepRetest.reason,evaluatedAt,sweepRetest,
+    details:[sweepRetest.status==='unknown'?'M1-Abdeckung des ersten M5-OB-Retests fehlt.':'DR invalidiert: erstes M1-Retest-Extrem gebrochen.']};
   const primary=evaluateSingleM1Checklist({context,structure,candles,evaluatedAt,closeReactionCache,entryProgress});
   if(!context.entryPatterns?.includes(M1_FVG_RETEST_PATTERN_VERSION)||isEntryPattern2(entryPatternVersion(context)))return primary;
   const secondStructure=buildM1PivotStructure(candles,context.primary,evaluatedAt,M1_FVG_RETEST_STRUCTURE_PERIOD);

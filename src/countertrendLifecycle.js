@@ -2,6 +2,7 @@ import { skipSpreadHourGaps } from './spreadHourGaps.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { candleTouchesPrice } from './structurePivotTime';
 import { evaluateJointLossRisk } from './dealingRangeRisk.js';
+import {evaluateSweepRetestInvalidation} from './sweepRetestInvalidation.js';
 export const COUNTERTREND_RANGE_COURSE_VERSION='countertrend-joint-loss-risk-v4';
 export const isCountertrendRangeCourseVersion = version =>
   [COUNTERTREND_RANGE_COURSE_VERSION,'countertrend-joint-loss-risk-v3','countertrend-validation-t1-be-t2-v2'].includes(version);
@@ -25,6 +26,21 @@ export function countertrendLifecycleEnd({ invalid, target1, target2, hasTarget2
 
 /** T1 sperrt neue Entries, beendet eine DR mit offenen Restpositionen aber noch nicht. */
 export function evaluateCountertrendLifecycle(input) {
+  const retest=evaluateSweepRetestInvalidation(input);
+  const result=evaluateCountertrendLifecycleBeforeRetest({...input,
+    evaluatedAt:retest.status==='invalidated'?Math.min(input.evaluatedAt,retest.recognizedAt):input.evaluatedAt});
+  result.evaluatedAt=input.evaluatedAt;
+  if(retest.status==='notApplicable')return result;
+  if(result.main.state==='ended'&&result.main.recognizedAt<=retest.recognizedAt)return {...result,sweepRetest:retest};
+  if(retest.status==='invalidated')return {...result,sweepRetest:retest,entrySearchAllowed:false,
+    main:{state:'ended',reason:'retestExtremeBroken',endedAt:retest.breachTime,recognizedAt:retest.recognizedAt},
+    events:[...result.events,{type:'retestInvalidation',time:retest.breachTime,recognizedAt:retest.recognizedAt}]};
+  return retest.status==='unknown'&&result.main.state!=='ended'
+    ?{...result,sweepRetest:retest,entrySearchAllowed:false,main:{state:'unknown',reason:'missingRetestHistory',recognizedAt:null}}
+    :{...result,sweepRetest:retest};
+}
+
+function evaluateCountertrendLifecycleBeforeRetest(input) {
   const {evaluatedAt,entries=[]} = input;
   const risk = evaluateJointLossRisk(entries,evaluatedAt);
   // Preisereignisse nach der Risikosperre dürfen deren früheren Grund nicht überschreiben.

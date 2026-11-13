@@ -24,6 +24,9 @@ export function evaluateCountertrendDealingRange(checklist, candidate) {
     return {...result,reason:missing?'targetsUnavailable':'targetsUnchecked',details:[missing?'Targets nicht bestimmbar.':'Zielprüfung offen.']};
   }
   const confirmed = {...result,status:'confirmed',reason:'validationOpen',details:['A bis E erfüllt; Anti-Confluence-Prüfung noch offen.']};
+  const retest=candidate.lifecycle?.sweepRetest;
+  if(candidate.lifecycle?.main?.reason==='retestExtremeBroken'&&retest?.status==='invalidated'&&known(retest.recognizedAt))return {...confirmed,status:'invalidated',reason:'retestExtremeBroken',
+    details:[`Erster M1-OB-Retest ${retest.price} gebrochen; bekannt ${formatDatedTime(retest.recognizedAt)}.`]};
   // Nur die historische v1 machte aus einem Preisende eine DR-Stufe.
   const validity = candidate.validity;
   if (version === 'countertrend-abcdef-v1' && validity?.state === 'ended' && ['invalidation','both'].includes(validity.reason) && known(validity.recognizedAt))

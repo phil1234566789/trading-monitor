@@ -36,3 +36,16 @@ it('retains a proven two-loss end across checkpoint even after old executions le
  const later=run([candidate('legacy',2400)],restored,2400,{m1Candles})[0];
  expect(later.lifecycle.main).toMatchObject({state:'ended',reason:'twoConsecutiveJointLosses',recognizedAt:1920});
 });
+
+it('freezes the original retest across reverse alias order, removal and checkpoint restore',()=>{
+ const original={...candidate('original',1800),sourceKind:'liquidity-sweep-existing-m5-ob-retest-v1',
+  sourceRetest:{candleTime:1800,recognizedAt:2100},reactionOB:{dir:-1,top:110,bottom:100}};
+ const alias={...original,id:'later',recognizedAt:2100,targetSelection:{...original.targetSelection,selectedAt:2100},
+  sourceRetest:{candleTime:2100,recognizedAt:2400}};
+ const m1Candles=Array.from({length:10},(_,i)=>({time:1800+i*60,high:i===6?106:105,low:95,close:100}));
+ const state=new Map(),first=run([alias,original],state,2400,{m1Candles});
+ expect(first.every(c=>c.lifecycle.main.reason==='retestExtremeBroken')).toBe(true);
+ expect(first[0].lifecycle.sweepRetest).toMatchObject({retestTime:1800,price:105,recognizedAt:2220});
+ const restored=new Map(JSON.parse(JSON.stringify([...state])));
+ expect(run([alias],restored,2400,{m1Candles})[0].lifecycle.main).toEqual(first[0].lifecycle.main);
+});

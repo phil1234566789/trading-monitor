@@ -118,9 +118,9 @@ export async function scanCountertrendWindow(input) {
     const outcomes=outcomesAt(at,sources,bound);
     const candidates=input.includeSweepRetestSources?evaluateSourceIdeaLifecycles(bound,{evaluatedAt:at,
       bindings:sourceIdeaBindings,signature:knownSourceIdeaKey,outcomes,evaluateLifecycle:evaluateCountertrendLifecycle,
-      candles:m5,m1Candles:m1,allowSpreadHourGaps:input.settings?.allowSpreadHourGaps,
+      candles:m5,m1Candles:m1,dataRevision:input.dataRevision??0,allowSpreadHourGaps:input.settings?.allowSpreadHourGaps,
       progressFor:useMemo?lifecycleProgress:undefined}):bound.map(candidate=>{
-      const lifecycle=evaluateCountertrendLifecycle({selection:candidate.targetSelection,invalidation:candidate.invalidation,
+      const lifecycle=evaluateCountertrendLifecycle({candidate,dataRevision:input.dataRevision??0,selection:candidate.targetSelection,invalidation:candidate.invalidation,
         candles:m5,m1Candles:m1,evaluatedAt:at,entries:outcomes.get(candidate.id) ?? [],
         allowSpreadHourGaps:input.settings?.allowSpreadHourGaps,
         progress:useMemo ? lifecycleProgress(candidate.id) : undefined});
