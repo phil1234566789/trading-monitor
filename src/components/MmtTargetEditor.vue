@@ -44,7 +44,8 @@ const saveReason=computed(()=>{
  if(!ready.value)return 'Frischer Brokerstand oder TP-Handelsfreigabe fehlt.';
  return '';
 });
-const saveState=computed(()=>({disabled:!!saveReason.value,reason:saveReason.value,status:busy.value?'Wird gespeichert …':uncertain.value?'Ausgang ungeklärt':error.value?`Ungespeichert · Fehler: ${error.value}`:refreshError.value?`Statusfehler: ${refreshError.value}`:draft.value?.dirty?'Ungespeichert':receipt.value||stateNames[plan.value?.state]||(loaded.value?'Keine Änderungen':'Wird geladen'),dirty:!!draft.value?.dirty}));
+const cancelReason=computed(()=>busy.value?'TP-Plan wird bereits gespeichert.':uncertain.value||plan.value?.state==='unknown'?'Speicherausgang ungeklärt; bereits gesendete Änderungen können nicht zurückgenommen werden.':['pending','sending'].includes(plan.value?.state)?'Gespeicherter Plan wird bereits vom Worker verarbeitet.':!loaded.value?'Gespeicherter TP-Plan wird geladen.':!position.value?'Keine passende offene Brokerposition.':'');
+const saveState=computed(()=>({cancelDisabled:!!cancelReason.value,cancelReason:cancelReason.value,disabled:!!saveReason.value,reason:saveReason.value,status:busy.value?'Wird gespeichert …':uncertain.value?'Ausgang ungeklärt':error.value?`Ungespeichert · Fehler: ${error.value}`:refreshError.value?`Statusfehler: ${refreshError.value}`:draft.value?.dirty?'Ungespeichert':receipt.value||stateNames[plan.value?.state]||(loaded.value?'Keine Änderungen':'Wird geladen'),dirty:!!draft.value?.dirty}));
 function initTargets(targets){
  setTargetDraft(context.value.key,{symbol:chartInstrument(context.value.symbol),entryTime:props.entryTime??position.value?.opened_at_sec??null,digits:quote.value?.digits,
   entryPrice:context.value.entry,initialSl:context.value.initialSl,direction:context.value.direction,
@@ -99,10 +100,10 @@ async function save(){
   return false;
  }finally{if(!disposed&&requested===generation)busy.value=false;}
 }
-function reset(){initTargets(plan.value?.plan.targets.slice(plan.value.next_index)??(position.value?.tp?[{price:position.value.tp,volume:position.value.volume}]:[]));error.value='';}
+function reset(){if(cancelReason.value)return false;initTargets(plan.value?.plan.targets.slice(plan.value.next_index)??(position.value?.tp?[{price:position.value.tp,volume:position.value.volume}]:[]));error.value='';refreshError.value='';receipt.value='';return true;}
 watch(()=>context.value.key,(id,previous,onCleanup)=>{
  generation++;loaded.value=false;busy.value=false;plan.value=null;error.value='';receipt.value='';uncertain.value=null;
- const unregister=registerTargetSave(id,()=>context.value.key===id?save():false,saveState);
+ const unregister=registerTargetSave(id,()=>context.value.key===id?save():false,saveState,()=>context.value.key===id?reset():false);
  onCleanup(()=>{if(unregister())removeTargetDraft(id);});
  void refresh();
 },{immediate:true});
@@ -133,7 +134,7 @@ onUnmounted(()=>{disposed=true;generation++;clearInterval(timer);});
    <p v-if="validation.error" role="status">{{messages[validation.error]??validation.error}}</p>
    <p v-if="draft?.dirty">Menge pro Teilziel frei angeben. Entwurf: Ziehen und Eingaben ändern noch keinen Broker-TP.</p>
    <ActionButton :disabled="!!saveReason" :title="saveReason||undefined" @click="save">TP-Plan verbindlich speichern</ActionButton>
-   <ActionButton :disabled="busy" @click="reset">Entwurf verwerfen</ActionButton>
+   <ActionButton :disabled="!!cancelReason" :title="cancelReason||undefined" @click="reset">Entwurf verwerfen</ActionButton>
   </template>
   <p v-if="error||refreshError" role="alert">{{error||refreshError}}</p><p v-if="receipt" role="status">{{receipt}}</p>
  </section>

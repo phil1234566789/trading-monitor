@@ -2,9 +2,10 @@ import {afterEach,describe,it,expect,vi} from 'vitest';
 import {createRenderer,h,nextTick,reactive,ssrContextKey} from 'vue';
 import {renderToString} from '@vue/server-renderer';
 import {createSSRApp} from 'vue';
+import Controls from '../src/components/MmtTargetChartControls.vue';
 import Editor from '../src/components/MmtTargetEditor.vue';
 import {moveTargetDraft,splitTargetDraft,changeTargetShare,targetDraftLines} from '../src/mmtTargetDrafts.js';
-import {saveTargetDraft,targetSaveState,nativeTargetKey} from '../src/mmtTargetSave.js';
+import {saveTargetDraft,targetSaveState,nativeTargetKey,cancelTargetDraft} from '../src/mmtTargetSave.js';
 const renderer=createRenderer({createElement:tag=>({tag,children:[],props:{}}),createText:text=>({text}),createComment:()=>({}),setText:(n,t)=>n.text=t,setElementText:(n,t)=>n.text=t,patchProp:(n,k,o,v)=>n.props[k]=v,insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
 let app;afterEach(()=>{app?.unmount();vi.unstubAllGlobals();vi.restoreAllMocks();});
 const order={id:'e297afbf-172c-4304-99e7-eb1198191050',status:'executed',intent:{symbol:'XAUUSD.gbe',direction:'long',stop_loss:1990,account_login:42,account_server:'Demo'},result:{price:2000,volume:.01,position:123}};
@@ -18,6 +19,16 @@ async function mount(extra={}){
  const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api,snapshot:current};
 }
 describe('TP edits require Save',()=>{
+ it('cancels the entire position draft through the editor registry without an API write',async()=>{
+  const {state,api}=await mount();splitTargetDraft(order.id,0);changeTargetShare(order.id,0,25);moveTargetDraft(order.id,0,2015);state.error='old failure';
+  expect(cancelTargetDraft(order.id)).toBe(true);expect(state.draft.targets).toEqual([{price:2010,volume:.01}]);expect(state.draft.dirty).toBe(false);expect(state.error).toBe('');expect(api.mock.calls.filter(c=>c[0]==='target_save')).toHaveLength(0);
+ });
+ it('cannot pretend to cancel an in-flight or uncertain save',async()=>{
+  const {state,api}=await mount();moveTargetDraft(order.id,0,2012);
+  let reject;api.mockImplementationOnce(()=>new Promise((resolve,r)=>{reject=r;}));const saving=saveTargetDraft(order.id);
+  expect(cancelTargetDraft(order.id)).toBe(false);reject(new Error('network'));await saving;
+  expect(cancelTargetDraft(order.id)).toBe(false);expect(state.draft.dirty).toBe(true);
+ });
  it('does not misclassify a newer worker quote as future data between UI timer ticks',async()=>{
   const {state,snapshot:current}=await mount(),time=state.now+1500;
   vi.spyOn(Date,'now').mockReturnValue(time);current.quotes[0].time=time/1000;await nextTick();
@@ -116,4 +127,13 @@ describe('native broker position target management',()=>{
   const {state}=await mount({nativePosition:native,snapshot:current});expect(state.position).toBeUndefined();
   expect(await saveTargetDraft(nativeTargetKey(native.accountId,native.ticket))).toBe(false);
  });
+});
+
+
+it('closes only the cancelled position percent form after capture-phase drag Escape',async()=>{
+ const row={orderId:'one',index:0,percent:50,totalPercent:100,targetCount:2,saveState:{},y:10,lineY:10};
+ const current=reactive({rows:[row],cancellation:null}),TestControls={...Controls,render:()=>h('div')};app=renderer.createApp({render:()=>h(TestControls,current)});app.provide(ssrContextKey,{});
+ app.mount({children:[]});const state=app._instance.subTree.component.setupState;state.edit(row);expect(state.editing).toBe('one:0');
+ current.cancellation={orderId:'other'};await nextTick();expect(state.editing).toBe('one:0');
+ current.cancellation={orderId:'one'};await nextTick();expect(state.editing).toBeNull();
 });

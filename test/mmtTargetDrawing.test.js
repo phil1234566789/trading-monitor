@@ -1,19 +1,22 @@
 import {afterEach,describe,it,expect,vi} from 'vitest';
 import {createRenderer,h,nextTick} from 'vue';
 import {useMmtTargetDrawing} from '../src/composables/useMmtTargetDrawing.js';
+import {registerTargetSave} from '../src/mmtTargetSave.js';
+import {ref} from 'vue';
 import {setTargetDraft,removeTargetDraft,useTargetDraft,selectTargetDraft} from '../src/mmtTargetDrafts.js';
 vi.mock('../src/chartColors.js',()=>({cssColor:()=> '#00ff00'}));
-vi.mock('vue',async original=>({...await original(),createApp:()=>({mount:vi.fn(),unmount:vi.fn()})}));
+const {renderOverlay}=vi.hoisted(()=>({renderOverlay:{value:null}}));
+vi.mock('vue',async original=>({...await original(),createApp:options=>{renderOverlay.value=options.render;return {mount:vi.fn(),unmount:vi.fn()};}}));
 vi.mock('../src/liquidity.js',()=>({LiquidityLinePrimitive:class {constructor(level,options){this.level=level;this.options=options;}distanceTo(){return 0;}}}));
 const renderer=createRenderer({createElement:()=>({children:[]}),createText:()=>({}),createComment:()=>({}),setText:()=>{},setElementText:()=>{},patchProp:()=>{},insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
 let app;afterEach(()=>{app?.unmount();removeTargetDraft('one');vi.unstubAllGlobals();});
 describe('existing TP line dragging',()=>{
  it('moves a browser draft only and restores chart scrolling on release',async()=>{
-  const handlers={},doc={addEventListener:(e,f)=>handlers[e]=f,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn()})};vi.stubGlobal('document',doc);vi.stubGlobal('requestAnimationFrame',vi.fn());vi.stubGlobal('cancelAnimationFrame',vi.fn());
+  const handlers={},doc={addEventListener:(e,f)=>handlers[e==='pointerdown'?'outside':e]=f,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn()})};vi.stubGlobal('document',doc);vi.stubGlobal('requestAnimationFrame',vi.fn());vi.stubGlobal('cancelAnimationFrame',vi.fn());
   let drawing,draft;
   app=renderer.createApp({setup(){drawing=useMmtTargetDrawing();draft=useTargetDraft('one');return()=>h('div');}});app.mount({children:[]});
   const element={style:{},appendChild:vi.fn(),addEventListener:(e,f)=>handlers[e]=f,removeEventListener:vi.fn(),getBoundingClientRect:()=>({left:100,top:20})};
-  const chart={options:()=>({handleScroll:{mouseWheel:true}}),applyOptions:vi.fn()};
+  const chart={timeScale:()=>({width:()=>500}),panes:()=>[{getHeight:()=>400}],options:()=>({handleScroll:{mouseWheel:true}}),applyOptions:vi.fn()};
   const series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn(),coordinateToPrice:y=>2000+y,priceToCoordinate:price=>price-2000};
   setTargetDraft('one',{symbol:'XAUUSD',targets:[{price:2010,volume:.01},{price:2010,volume:''}],entryPrice:2000,initialSl:1990,direction:'long',digits:2,dirty:false});
   drawing.create(chart,series,element);drawing.refresh({symbol:'XAUUSD',candles:[{time:100}],currentBar:'1m'});await nextTick();
@@ -24,7 +27,22 @@ describe('existing TP line dragging',()=>{
   selectTargetDraft('one',1);await nextTick();
   handlers.pointerdown(event);handlers.pointermove({...event,clientY:60});await nextTick();
   expect(draft.value.targets[0].price).toBe(2010);expect(draft.value.targets[1].price).toBe(2020);expect(draft.value.dirty).toBe(true);expect(element.style.cursor).toBe('ns-resize');
+  expect(renderOverlay.value().props.guide).toEqual({y:20,left:0,width:500});
   handlers.pointerup();expect(chart.applyOptions).toHaveBeenLastCalledWith({handleScroll:{mouseWheel:true}});
+  expect(renderOverlay.value().props.guide).toBeNull();
+  const baseline={...draft.value,targets:[{price:2010,volume:.01}],dirty:false};
+  const cancel=vi.fn(()=>{setTargetDraft('one',baseline);return true;}),cleanup=registerTargetSave('one',vi.fn(),ref({cancelDisabled:false}),cancel);
+  selectTargetDraft('one',0);await nextTick();handlers.pointerdown(event);handlers.pointermove({...event,clientY:70});
+  handlers.keydown({key:'Escape',preventDefault:vi.fn(),stopPropagation:vi.fn()});await nextTick();
+  expect(cancel).toHaveBeenCalledOnce();expect(draft.value.targets).toEqual(baseline.targets);expect(renderOverlay.value().props.guide).toBeNull();
+  handlers.pointermove({...event,clientY:90});expect(draft.value.targets).toEqual(baseline.targets);
+  selectTargetDraft('one',0);await nextTick();handlers.pointerdown(event);handlers.pointermove({...event,clientY:70});handlers.pointerup();
+  handlers.keydown({key:'Escape',preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(cancel).toHaveBeenCalledTimes(2);expect(draft.value.dirty).toBe(false);
+  expect(renderOverlay.value().props.cancellation.orderId).toBe('one');
+  selectTargetDraft('one',0);await nextTick();handlers.pointerdown(event);handlers.pointerup();
+  handlers.keydown({key:'Escape',target:{tagName:'BUTTON',closest:()=>({dataset:{tpKey:'other:0'}})},preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(cancel).toHaveBeenCalledTimes(2);
+  handlers.keydown({key:'Escape',target:{tagName:'INPUT'},preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(cancel).toHaveBeenCalledTimes(2);
+  handlers.outside({target:{tagName:'BUTTON'}});handlers.keydown({key:'Escape',preventDefault:vi.fn(),stopPropagation:vi.fn()});expect(cancel).toHaveBeenCalledTimes(2);cleanup();
   drawing.dispose();expect(element.removeEventListener).toHaveBeenCalled();
  });
 });
