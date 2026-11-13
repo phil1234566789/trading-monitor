@@ -20,7 +20,7 @@ const rows=computed(()=>accountAvailability(props.accounts??[]).active.map(accou
  const age=snapshotAgeSeconds(value.balance_at,props.now);
  const fresh=value.balance_source==='MT5-Worker'&&age!=null&&age<=props.staleSeconds&&Date.parse(value.balance_at)<=props.now;
  const readerFresh=value.balance_source==='MT5-Reader'&&age!=null&&age>=0&&age<=90;
- const dailyStatus=accountDailyStatus(account,props.accountStatuses[account.id]??(account.id===props.activeId?props.status:null));
+ const dailyStatus=accountDailyStatus(account,account.id===props.activeId?props.status:props.accountStatuses[account.id]);
  return {account,...value,stats,readerFresh,dailyStatus,dailyStaleSeconds:mmtStaleSeconds(mmtPollDelay(dailyStatus)),gauge:challengeGauge(value.balance,value.loss_floor,value.target),health:balanceHealth(props.status,fresh,account,props.now)};
 }));
 const time=value=>fmtDateTime(value,{year:'numeric',timeZone:'Europe/Berlin'});

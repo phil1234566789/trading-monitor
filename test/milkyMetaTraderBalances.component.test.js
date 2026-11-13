@@ -93,7 +93,7 @@ it('hides breached accounts from the semicircle strip without deleting their arc
 it('places separate daily HP below every active account gauge without mixing account values',async()=>{
  const now=Date.parse('2026-11-13T10:00:00Z'),accounts=[{id:'a',name:'A',login:1,server:'s'},{id:'b',name:'B',login:2,server:'s'},{id:'old',name:'Old',archived:true}];
  const daily=(login,realized)=>({online:true,bridge:{heartbeat_at:new Date(now).toISOString(),snapshot:{account_login:login,account_server:'s',currency:'USD',risk:{day:'2026-11-13',time:now/1000,realized_net_day:realized,open_loss:0}}},daily_stop:{day:'2026-11-13',daily_loss_limit:1000,latched:false,daily_stop_ready:true}});
- const html=await renderToString(Vue.createSSRApp(Balances,{accounts,activeId:'a',accountStatuses:{a:daily(1,-466.6),b:daily(2,-120)},now,staleSeconds:15}));
+ const html=await renderToString(Vue.createSSRApp(Balances,{accounts,activeId:'a',status:daily(1,-466.6),accountStatuses:{a:daily(1,-900),b:daily(2,-120)},now,staleSeconds:15}));
  const cards=html.match(/<article[\s\S]*?<\/article>/g);
  expect(cards).toHaveLength(2);
  for(const [i,hp] of [[0,'$533.40'],[1,'$880.00']]){

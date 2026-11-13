@@ -33,7 +33,7 @@ const accountGroups=computed(()=>{
 const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
 const accountStatuses=ref({});
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
-let timer=null, nextPoll=0, statusRequest=null, viewEpoch=0;
+let timer=null, nextPoll=0, statusRequest=null, dailyRequest=null, viewEpoch=0;
 const pollError=ref('');
 const { setPageStatus, clearPageStatus }=useStatusBar();
 const pollDelay=computed(()=>Math.min(mmtPollDelay(status.value),...Object.values(accountStatuses.value).map(mmtPollDelay)));
@@ -66,8 +66,10 @@ function refreshStatus(options={}) {
       if(epoch===viewEpoch&&accountId===activeId.value){
         status.value=value;activeId.value=mmtSelectedAccountId(value,activeId.value);pollError.value='';
         const selectedId=activeId.value;
-        const dailyStatuses=await readAccountDailyStatuses(api,accounts.value,selectedId,value,options);
-        if(epoch===viewEpoch&&selectedId===activeId.value)accountStatuses.value=dailyStatuses;
+        // Zusatzkonten dürfen den sekündlichen Brokerabgleich des Hauptkontos nicht verzögern.
+        if(!dailyRequest)dailyRequest=readAccountDailyStatuses(api,accounts.value,selectedId,value,options)
+          .then(dailyStatuses=>{if(epoch===viewEpoch&&selectedId===activeId.value)accountStatuses.value=dailyStatuses;})
+          .finally(()=>{dailyRequest=null;});
       }
     } finally {statusRequest=null;nextPoll=Date.now()+pollDelay.value;}
   })();
