@@ -1,3 +1,4 @@
+import {readHistoryJournalLinks} from './mt5HistoryJournal.js';
 import { activeMt5Account,checked,mt5Database } from './mt5Credentials.ts';
 import { validateHistoryBatch } from './mt5HistoryContract.js';
 import {readImportedTrades} from './mt5ImportedTrades.ts';
@@ -51,5 +52,5 @@ export async function readHistoryPage(body:Record<string,any>) {
  const db=mt5Database();
  const rows=checked(await db.from('mt5_broker_deals').select('*').gt('id',cursor).order('id').limit(500))??[];
  const sync=cursor===0?await readHistorySync(db):undefined;
- return {rows,next_cursor:rows.length?rows[rows.length-1].id:null,sync,...(cursor===0?{imports:await readImportedTrades(db)}:{})};
+ return {rows,next_cursor:rows.length?rows[rows.length-1].id:null,sync,...(cursor===0?{imports:await readImportedTrades(db),journal_links:await readHistoryJournalLinks(db)}:{})};
 }
