@@ -1,0 +1,698 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Native candle and OB input contract only, not DOB recognition or entry acceptance",
+  "instrument": "XAUUSD",
+  "source": "Philip pins439–470, original read-only pin snapshots",
+  "sourcePinNotes": [
+    {
+      "pin": 439,
+      "note": "DOB"
+    },
+    {
+      "pin": 440,
+      "note": "DOB"
+    },
+    {
+      "pin": 441,
+      "note": "DOB"
+    },
+    {
+      "pin": 442,
+      "note": "DOB"
+    },
+    {
+      "pin": 443,
+      "note": "DOB"
+    },
+    {
+      "pin": 444,
+      "note": "DOB"
+    },
+    {
+      "pin": 445,
+      "note": "DOB"
+    },
+    {
+      "pin": 446,
+      "note": "DOB"
+    },
+    {
+      "pin": 447,
+      "note": "DOB"
+    },
+    {
+      "pin": 448,
+      "note": "DOB"
+    },
+    {
+      "pin": 449,
+      "note": "DOB"
+    },
+    {
+      "pin": 450,
+      "note": "DOB"
+    },
+    {
+      "pin": 451,
+      "note": "DOB"
+    },
+    {
+      "pin": 452,
+      "note": "DOB"
+    },
+    {
+      "pin": 453,
+      "note": "DOB"
+    },
+    {
+      "pin": 454,
+      "note": "DOB"
+    },
+    {
+      "pin": 455,
+      "note": "DOB"
+    },
+    {
+      "pin": 456,
+      "note": "DOB"
+    },
+    {
+      "pin": 457,
+      "note": "DOB"
+    },
+    {
+      "pin": 458,
+      "note": "DOB"
+    },
+    {
+      "pin": 459,
+      "note": "DOB"
+    },
+    {
+      "pin": 460,
+      "note": "DOB"
+    },
+    {
+      "pin": 461,
+      "note": "DOB"
+    },
+    {
+      "pin": 462,
+      "note": "DOB"
+    },
+    {
+      "pin": 463,
+      "note": "DOB"
+    },
+    {
+      "pin": 464,
+      "note": "DOB"
+    },
+    {
+      "pin": 465,
+      "note": "DOB"
+    },
+    {
+      "pin": 466,
+      "note": "DOB"
+    },
+    {
+      "pin": 467,
+      "note": "DOB"
+    },
+    {
+      "pin": 468,
+      "note": "DOB"
+    },
+    {
+      "pin": 469,
+      "note": "DOB2"
+    },
+    {
+      "pin": 470,
+      "note": "DOB2"
+    }
+  ],
+  "codeBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
+  "policy": {
+    "source": "obMinimum(XAUUSD,5m)",
+    "capturedMinimum": 0,
+    "positiveGapRequired": true
+  },
+  "days": [
+    "2026-11-11",
+    "2026-11-09",
+    "2026-11-06",
+    "2026-11-05",
+    "2026-11-04",
+    "2026-11-03",
+    "2026-11-02",
+    "2026-10-30",
+    "2026-10-22",
+    "2026-10-21",
+    "2026-10-16",
+    "2026-10-08"
+  ],
+  "pairs": [
+    {
+      "id": "P1",
+      "pins": [
+        440,
+        439
+      ]
+    },
+    {
+      "id": "P2",
+      "pins": [
+        441,
+        442
+      ]
+    },
+    {
+      "id": "P3",
+      "pins": [
+        443,
+        444
+      ]
+    },
+    {
+      "id": "P4",
+      "pins": [
+        445,
+        446
+      ]
+    },
+    {
+      "id": "P5",
+      "pins": [
+        448,
+        447
+      ]
+    },
+    {
+      "id": "P6",
+      "pins": [
+        449,
+        450
+      ]
+    },
+    {
+      "id": "P7",
+      "pins": [
+        451,
+        452
+      ]
+    },
+    {
+      "id": "P8",
+      "pins": [
+        453,
+        454
+      ]
+    },
+    {
+      "id": "P9",
+      "pins": [
+        455,
+        456
+      ]
+    },
+    {
+      "id": "P10",
+      "pins": [
+        457,
+        458
+      ]
+    },
+    {
+      "id": "P11",
+      "pins": [
+        459,
+        460
+      ]
+    },
+    {
+      "id": "P12",
+      "pins": [
+        461,
+        462
+      ]
+    },
+    {
+      "id": "P13",
+      "pins": [
+        463,
+        464
+      ]
+    },
+    {
+      "id": "P14",
+      "pins": [
+        465,
+        466
+      ]
+    },
+    {
+      "id": "P15",
+      "pins": [
+        467,
+        468
+      ]
+    },
+    {
+      "id": "P16",
+      "pins": [
+        469,
+        470
+      ]
+    }
+  ],
+  "references": [
+    {
+      "pin": 439,
+      "obId": 4682288,
+      "instrument": "XAUUSD",
+      "day": "2026-11-11",
+      "startTime": 1794386700,
+      "knownAt": 1794387300,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4061.66,
+        "bottom": 4059.19
+      }
+    },
+    {
+      "pin": 440,
+      "obId": 4590713,
+      "instrument": "XAUUSD",
+      "setupId": 42644,
+      "day": "2026-11-11",
+      "startTime": 1794383100,
+      "knownAt": 1794383700,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4066.88,
+        "bottom": 4061.17
+      }
+    },
+    {
+      "pin": 441,
+      "obId": 4682836,
+      "instrument": "XAUUSD",
+      "day": "2026-11-09",
+      "startTime": 1794212400,
+      "knownAt": 1794213000,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4092.5,
+        "bottom": 4089.48
+      }
+    },
+    {
+      "pin": 442,
+      "obId": 4682837,
+      "instrument": "XAUUSD",
+      "day": "2026-11-09",
+      "startTime": 1794216600,
+      "knownAt": 1794217200,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4094.34,
+        "bottom": 4091.43
+      }
+    },
+    {
+      "pin": 443,
+      "obId": 4571965,
+      "instrument": "XAUUSD",
+      "day": "2026-11-06",
+      "startTime": 1793980800,
+      "knownAt": 1793981400,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4056.18,
+        "bottom": 4050.67
+      }
+    },
+    {
+      "pin": 444,
+      "obId": 4571964,
+      "instrument": "XAUUSD",
+      "day": "2026-11-06",
+      "startTime": 1793987700,
+      "knownAt": 1793988300,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4058.84,
+        "bottom": 4055.06
+      }
+    },
+    {
+      "pin": 445,
+      "obId": 4456968,
+      "instrument": "XAUUSD",
+      "day": "2026-11-05",
+      "startTime": 1793889300,
+      "knownAt": 1793889900,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4135.88,
+        "bottom": 4121.43
+      }
+    },
+    {
+      "pin": 446,
+      "obId": 4460748,
+      "instrument": "XAUUSD",
+      "day": "2026-11-05",
+      "startTime": 1793899200,
+      "knownAt": 1793899800,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4125.5,
+        "bottom": 4117.49
+      }
+    },
+    {
+      "pin": 447,
+      "obId": 4682842,
+      "instrument": "XAUUSD",
+      "day": "2026-11-04",
+      "startTime": 1793767500,
+      "knownAt": 1793768100,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 3947.75,
+        "bottom": 3937.72
+      }
+    },
+    {
+      "pin": 448,
+      "obId": 4682843,
+      "instrument": "XAUUSD",
+      "day": "2026-11-04",
+      "startTime": 1793764800,
+      "knownAt": 1793765400,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 3938.3,
+        "bottom": 3932.92
+      }
+    },
+    {
+      "pin": 449,
+      "obId": 4682844,
+      "instrument": "XAUUSD",
+      "day": "2026-11-03",
+      "startTime": 1793688900,
+      "knownAt": 1793689500,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3919.87,
+        "bottom": 3913.55
+      }
+    },
+    {
+      "pin": 450,
+      "obId": 4682845,
+      "instrument": "XAUUSD",
+      "day": "2026-11-03",
+      "startTime": 1793692500,
+      "knownAt": 1793693100,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3913.32,
+        "bottom": 3910.15
+      }
+    },
+    {
+      "pin": 451,
+      "obId": 4682850,
+      "instrument": "XAUUSD",
+      "day": "2026-11-03",
+      "startTime": 1793669400,
+      "knownAt": 1793670000,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3959.32,
+        "bottom": 3952.48
+      }
+    },
+    {
+      "pin": 452,
+      "obId": 4682851,
+      "instrument": "XAUUSD",
+      "day": "2026-11-03",
+      "startTime": 1793671200,
+      "knownAt": 1793671800,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3953.26,
+        "bottom": 3947.19
+      }
+    },
+    {
+      "pin": 453,
+      "obId": 4682852,
+      "instrument": "XAUUSD",
+      "day": "2026-11-02",
+      "startTime": 1793600700,
+      "knownAt": 1793601300,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3914.72,
+        "bottom": 3910.08
+      }
+    },
+    {
+      "pin": 454,
+      "obId": 4682853,
+      "instrument": "XAUUSD",
+      "day": "2026-11-02",
+      "startTime": 1793604600,
+      "knownAt": 1793605200,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3908.82,
+        "bottom": 3904.96
+      }
+    },
+    {
+      "pin": 455,
+      "obId": 4682854,
+      "instrument": "XAUUSD",
+      "day": "2026-10-30",
+      "startTime": 1793358600,
+      "knownAt": 1793359200,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3982.37,
+        "bottom": 3977.28
+      }
+    },
+    {
+      "pin": 456,
+      "obId": 4682855,
+      "instrument": "XAUUSD",
+      "day": "2026-10-30",
+      "startTime": 1793360700,
+      "knownAt": 1793361300,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3979.21,
+        "bottom": 3969.76
+      }
+    },
+    {
+      "pin": 457,
+      "obId": 4682856,
+      "instrument": "XAUUSD",
+      "day": "2026-10-30",
+      "startTime": 1793339400,
+      "knownAt": 1793340000,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4005.29,
+        "bottom": 3998.8
+      }
+    },
+    {
+      "pin": 458,
+      "obId": 4309928,
+      "instrument": "XAUUSD",
+      "day": "2026-10-30",
+      "startTime": 1793351100,
+      "knownAt": 1793351700,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 3998.93,
+        "bottom": 3994.27
+      }
+    },
+    {
+      "pin": 459,
+      "obId": 4682858,
+      "instrument": "XAUUSD",
+      "day": "2026-10-22",
+      "startTime": 1792684800,
+      "knownAt": 1792685400,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4054.9,
+        "bottom": 4050.38
+      }
+    },
+    {
+      "pin": 460,
+      "obId": 4682859,
+      "instrument": "XAUUSD",
+      "day": "2026-10-22",
+      "startTime": 1792686600,
+      "knownAt": 1792687200,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4050.83,
+        "bottom": 4047.29
+      }
+    },
+    {
+      "pin": 461,
+      "obId": 4682860,
+      "instrument": "XAUUSD",
+      "day": "2026-10-22",
+      "startTime": 1792627800,
+      "knownAt": 1792628400,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4126.19,
+        "bottom": 4122.33
+      }
+    },
+    {
+      "pin": 462,
+      "obId": 4682861,
+      "instrument": "XAUUSD",
+      "day": "2026-10-22",
+      "startTime": 1792636800,
+      "knownAt": 1792637400,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4123.87,
+        "bottom": 4117.9
+      }
+    },
+    {
+      "pin": 463,
+      "obId": 4682862,
+      "instrument": "XAUUSD",
+      "day": "2026-10-21",
+      "startTime": 1792545600,
+      "knownAt": 1792546200,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4111.79,
+        "bottom": 4106.87
+      }
+    },
+    {
+      "pin": 464,
+      "obId": 4682863,
+      "instrument": "XAUUSD",
+      "day": "2026-10-21",
+      "startTime": 1792566000,
+      "knownAt": 1792566600,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4112.33,
+        "bottom": 4110.62
+      }
+    },
+    {
+      "pin": 469,
+      "obId": 4050909,
+      "instrument": "XAUUSD",
+      "day": "2026-10-21",
+      "startTime": 1792545900,
+      "knownAt": 1792546500,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4113.03,
+        "bottom": 4107.16
+      }
+    },
+    {
+      "pin": 470,
+      "obId": 4053499,
+      "instrument": "XAUUSD",
+      "day": "2026-10-21",
+      "startTime": 1792552500,
+      "knownAt": 1792553100,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4116.82,
+        "bottom": 4112.95
+      }
+    },
+    {
+      "pin": 465,
+      "obId": 4682864,
+      "instrument": "XAUUSD",
+      "day": "2026-10-16",
+      "startTime": 1792147500,
+      "knownAt": 1792148100,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4183.9,
+        "bottom": 4181.03
+      }
+    },
+    {
+      "pin": 466,
+      "obId": 4682865,
+      "instrument": "XAUUSD",
+      "day": "2026-10-16",
+      "startTime": 1792150200,
+      "knownAt": 1792150800,
+      "dir": -1,
+      "sourceGeometry": {
+        "top": 4181.98,
+        "bottom": 4178.9
+      }
+    },
+    {
+      "pin": 467,
+      "obId": 3767536,
+      "instrument": "XAUUSD",
+      "day": "2026-10-08",
+      "startTime": 1791456000,
+      "knownAt": 1791456600,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4113.62,
+        "bottom": 4109.8
+      }
+    },
+    {
+      "pin": 468,
+      "obId": 4682867,
+      "instrument": "XAUUSD",
+      "day": "2026-10-08",
+      "startTime": 1791464700,
+      "knownAt": 1791465300,
+      "dir": 1,
+      "sourceGeometry": {
+        "top": 4121.23,
+        "bottom": 4115.39
+      }
+    }
+  ],
+  "sourceDiscrepancy": {
+    "pin": 440,
+    "status": "unresolved-source-discrepancy",
+    "nativeGeometry": {
+      "top": 4066.1,
+      "bottom": 4061.17
+    },
+    "note": "Setup42644 snapshot top4066.88 differs from native candle geometry4066.10 at the same impulse. Preserve both; no source mutation or algorithm adjustment."
+  }
+}
