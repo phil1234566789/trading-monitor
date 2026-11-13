@@ -7260,9 +7260,9 @@
     "semantic_hash": ""
   },
   "src/components/MmtDailyStopStatus.vue": {
-    "mtime": 1794400674.14787,
-    "seen": 1794564498.2140725,
-    "ast_hash": "c6cff0a6e232a18015c8dc51326fa0e2",
+    "mtime": 1794576979.9355342,
+    "seen": 1794577093.7069192,
+    "ast_hash": "9bfe1f8eb76b8511e0d1229da057a2ad",
     "semantic_hash": ""
   },
   "src/components/MmtRiskPolicyEditor.vue": {
@@ -8694,9 +8694,9 @@
     "semantic_hash": ""
   },
   "test/mmtBatchEntrySearch.test.js": {
-    "mtime": 1794576390.9446235,
-    "seen": 1794576735.9008896,
-    "ast_hash": "f2a610669007d2591324105d873357e1",
+    "mtime": 1794576960.2149992,
+    "seen": 1794577093.9871418,
+    "ast_hash": "1c9e454d82d117b1448d7bacd043a42c",
     "semantic_hash": ""
   },
   "test/riskPolicyContext.test.js": {
@@ -9036,9 +9036,9 @@
     "semantic_hash": ""
   },
   "src/composables/useMmtBatchEntrySearch.js": {
-    "mtime": 1794576553.0975678,
-    "seen": 1794576735.6422346,
-    "ast_hash": "fed54159f3699ca686b1bf58f128572b",
+    "mtime": 1794576995.029363,
+    "seen": 1794577093.7314258,
+    "ast_hash": "cea4344667ef7f09fe901dd70735d70c",
     "semantic_hash": ""
   },
   "test/mmtEquityChart.component.test.js": {
@@ -9060,9 +9060,21 @@
     "semantic_hash": ""
   },
   "test/mmtDashboardSidebar.test.js": {
-    "mtime": 1794576620.6857214,
-    "seen": 1794576735.9018896,
-    "ast_hash": "2ee0f78dd5cfd9a1bcfa5c734c8dfc76",
+    "mtime": 1794576750.493792,
+    "seen": 1794577093.98914,
+    "ast_hash": "b697c63702e0767af4bd36fe5706a299",
+    "semantic_hash": ""
+  },
+  "src/mmtDailyStopReason.js": {
+    "mtime": 1794576979.9345312,
+    "seen": 1794577093.7839408,
+    "ast_hash": "b4b5832b6d0d9f69e7d2c0df157eb75a",
+    "semantic_hash": ""
+  },
+  "test/mmtDailyStopReason.test.js": {
+    "mtime": 1794576960.2139978,
+    "seen": 1794577093.98814,
+    "ast_hash": "87ef41ff1f53587e74c4f8b0ac69c880",
     "semantic_hash": ""
   }
 }
