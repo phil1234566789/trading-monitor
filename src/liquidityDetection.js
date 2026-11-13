@@ -99,7 +99,7 @@ function buildLevel(candles, p, period, dir) {
   };
 }
 
-function liquidityTouch(candle, price, dir) {
+export function liquidityTouch(candle, price, dir) {
   return dir === 1 ? candle.high >= price : candle.low <= price;
 }
 

@@ -21,7 +21,7 @@ import { tradeSetupParameters } from "../tradeSetupParameters.js";
 import { obMinimum } from '../instrumentConfig.js';
 import { detectLiquidityLevels } from "../liquidity.js";
 import { collectStructureLqLevels } from "../marketStructureRendering";
-import { detectSetupObs, detectTradeSetups, TRADE_SETUP_DETECTOR_VERSION } from "../tradeSetup.js";
+import { detectSetupObs, detectTradeSetups, TRADE_SETUP_DETECTOR_VERSION, hasUninterruptedSweepReaction } from "../tradeSetup.js";
 import { setup1Configuration } from '../../supabase/functions/_shared/tradeSetupProvenance.js';
 import { mergeDbTradeSetups } from "../tradeSetups.js";
 import { setupInvalidationTarget } from "../setupInvalidationTarget.js";
@@ -100,7 +100,8 @@ export function usePriceChartTradeSetups() {
       forbiddenSessions: symbolSessions.filter(s => s.danger === 'forbidden')
         .map(s => ({ fromMinutes: s.fromMinutes, toMinutes: s.toMinutes, days: s.days })) });
     const tzOffsetMinutes = (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset();
-    const notForbidden = (s) => !isForbiddenAt(symbolSessions, s.obStartTime, tzOffsetMinutes);
+    // Alte DB-Treffer dürfen die inzwischen widerlegte Sweep-Reaktion nicht zurück in den Chart mischen.
+    const notForbidden = (s) => !isForbiddenAt(symbolSessions, s.obStartTime, tzOffsetMinutes) && hasUninterruptedSweepReaction(s, setupObs, kerzenOhneIgnorierte);
     // IMMER beide Richtungen berechnen (unabhängig von showTradeSetupsLong/-Short, siehe Chat
     // 2026-07-19: "TSC soll den aktuellsten und wahren Stand anzeigen") — die Long/Short-Toggles
     // filtern erst beim ZEICHNEN (renderTradeSetupsInternal in PriceChart.vue).

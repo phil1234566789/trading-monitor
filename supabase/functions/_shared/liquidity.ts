@@ -4,6 +4,10 @@
 // src/liquidity.js diese Kopie mitziehen.
 import type { Candle } from "./orderBlocks.ts";
 
+export function liquidityTouch(candle: Candle, price: number, dir: 1 | -1): boolean {
+  return dir === 1 ? candle.high >= price : candle.low <= price;
+}
+
 export interface LiquidityLevel {
   price: number;
   pivotTime: number;
@@ -72,7 +76,7 @@ function buildLevel(candles: Candle[], p: number, period: number, dir: 1 | -1): 
   let touchedTime: number | null = null;
   for (let i = p + period; i < candles.length; i++) {
     const c = candles[i];
-    const cross = dir === 1 ? c.high >= price : c.low <= price;
+    const cross = liquidityTouch(c, price, dir);
     if (cross) {
       touched = true;
       touchedTime = c.time;

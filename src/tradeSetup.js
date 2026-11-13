@@ -8,6 +8,7 @@
 // supabase/functions/_shared/tradeSetup.ts) mitziehen.
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
+import { liquidityTouch } from "./liquidityDetection.js";
 
 // Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
 export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-top3-sweeps-v2';
@@ -26,6 +27,20 @@ export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-top3-sweeps-v2';
 // bleibt nur noch die Reduktion aufs von tradeSetup.js erwartete Feld-Subset.
 export function detectSetupObs(candles, minGapOverride = null) {
   return detectOrderBlocks(candles, "5m", true, minGapOverride).map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, fvg: z.fvg }));
+}
+
+// Eine bestätigte Gegen-FVG zwischen Sweep und Umkehr-OB belegt Fortsetzung statt Sweep-Reaktion.
+// Beide Impulszeiten haben denselben M5-Bestätigungsvorlauf; spätere FVGs ändern die Historie nicht.
+export function hasUninterruptedSweepReaction(setup, setupObs, m5Candles = []) {
+  let touch = setup.ls?.touchedTime;
+  if (!Number.isFinite(touch)) return true;
+  if (setup.sweeps?.[0]?.timeframe === '1H') {
+    // H1-Touch ist nur der Stundenanfang: eine M5-FVG davor darf keinen späteren Sweep entwerten.
+    const crossed = m5Candles.find(c => c.time >= touch && c.time < touch + 3600 && liquidityTouch(c, setup.ls.price, setup.dir));
+    if (!crossed) return true;
+    touch = crossed.time;
+  }
+  return !setupObs.some(ob => ob.dir === setup.dir && ob.startTime > touch && ob.startTime < setup.obStartTime);
 }
 
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber
@@ -265,11 +280,13 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
   const baueSetup = (ob, ownLs, fractal, pathType) => {
     const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params, dir, m5Candles);
     if (!sweeps) return null;
-    const ls = sweeps[0].level;
-    const fensterVon = Math.min(...sweeps.map((sw) => sw.level.touchedTime));
+    const validSweeps = sweeps.filter(sw => hasUninterruptedSweepReaction({ dir, ls: sw.level, sweeps: [sw], obStartTime: ob.startTime }, setupObs, m5Candles));
+    if (!validSweeps.length) return null;
+    const ls = validSweeps[0].level;
+    const fensterVon = Math.min(...validSweeps.map((sw) => sw.level.touchedTime));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
-    // Das Extrem braucht weiterhin alle Touches; nur das fertige Setup trägt höchstens drei Sweeps.
-    return { dir, fractal: fractal ?? ls, ls, sweeps: strongestSetupSweeps(sweeps), obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
+    // Das Extrem braucht alle gültigen Touches; das fertige Setup trägt höchstens drei Sweeps.
+    return { dir, fractal: fractal ?? ls, ls, sweeps: strongestSetupSweeps(validSweeps), obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
   };
 
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {
