@@ -14,7 +14,7 @@ async function render(extra={}){
 afterEach(()=>vi.unstubAllGlobals());
 it('explains separate account blockers visibly and on the disabled button',async()=>{
  const html=await render({statuses:{normal:status(accounts[0],{risk_policy:null}),risky:status(accounts[1],{online:false})}});
- expect(html).toContain('Hauptkonto: Heutige Risikobasis und Kontogrenzen zuerst unter MMT bestätigen.');
+ expect(html).toContain('Hauptkonto: Gespeicherte Risikoregeln oder Kontogrenzen fehlen. Unter MMT prüfen.');
  expect(html).toContain('Risikokonto: Brokerverbindung offline');
  expect(html).toMatch(/<button[^>]*disabled[^>]*title="Hauptkonto:/);
  expect(html).toContain('tabindex="0"');

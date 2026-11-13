@@ -1,12 +1,9 @@
 import {RISK_BASE} from './mt5RiskContract.js';
 import {accountBridge,activeMt5Account,checked,mt5Database} from './mt5Credentials.ts';
-import {berlinDateStrFor,berlinDayRangeUtcMs} from '../_shared/berlinTime.ts';
+import {riskPolicyDay,riskPolicyContext} from './riskPolicyContext.js';
 export async function readRiskPolicy(accountId:string){
- return checked(await mt5Database().from('mt5_risk_policies').select('*').eq('account_id',accountId).maybeSingle());
-}
-export function riskPolicyDay(now:number){
- const day=berlinDateStrFor(now),next=new Date(day+'T12:00:00Z');next.setUTCDate(next.getUTCDate()+1);
- return {day,valid_until_sec:Math.floor(berlinDayRangeUtcMs(next.toISOString().slice(0,10)).startUtcMs/1000)};
+ const policy=checked(await mt5Database().from('mt5_risk_policies').select('*').eq('account_id',accountId).maybeSingle());
+ return riskPolicyContext(policy,Math.floor(Date.now()/1000));
 }
 export async function riskPolicyAction(body:Record<string,any>){
  const account=await activeMt5Account(body.account_id),db=mt5Database();
