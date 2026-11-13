@@ -141,14 +141,28 @@ behoben auszugeben; separate Wartung mit Reachability-Prüfung bis 12.11.2026, k
 
 ## Asynchrone Entry-Suche als Standard
 
-In MMT Symbol, Richtung, SL/TP und Suchdauer (1 bis 60 Minuten, Standard 10) vorbereiten
-und einmal bestaetigen. Die Bestaetigungsansicht gilt 30 Sekunden; die bestaetigte Suche
-wartet danach ohne weitere Rueckfrage auf die passende neu geschlossene M1-Kerze.
+Im Chart Symbol, Richtung, SL/TP und Suchdauer (1 bis 60 Minuten, Standard 30) vorbereiten.
+Ein Klick auf **Entry suchen** führt intern die signierte Vorprüfung (`search_preview`)
+und danach das kontogebundene Enqueue (`search_confirm`) aus. Es gibt keinen zweiten Startbutton.
+Die angenommene Suche wartet asynchron auf die passende neu geschlossene M1-Kerze.
 Die Suchfrist steht explizit in der Ansicht. Der aktuelle Brokerkurs, SL/TP-Seite,
 Mindestlotgroesse und Risikobudget werden beim tatsaechlichen Entry erneut geprueft.
 Ein ausgefuehrter Auftrag endet; keine automatische Wiederholung oder Vervielfachung.
 `search_preview` erzeugt nur eine signierte Ansicht, `search_confirm` aktiviert die Queue.
 Keine Bindung an den Vorbereitungskurs und keine 0,5-Pip-Grenze fuer diesen Suchauftrag.
+
+Vor dem Enqueue wird dieselbe Auftrags-ID dauerhaft als ungeklärt reserviert. Doppelklicks
+senden nicht erneut; ein unklarer Ausgang bleibt bis zum exakten Statusabgleich an diese ID
+gebunden. Änderungen an Chartidee oder Kontoauswahl löschen keine Rückmeldungen. Ablehnungen,
+Timeouts und abgelaufene Suchen bleiben sichtbar. Pro Konto wird unabhängig rückgemeldet;
+ein Teilerfolg darf einen Fehler des anderen Kontos nicht verdecken. Replay oder eine geänderte
+Idee während der Vorprüfung verhindern das anschließende Enqueue.
+
+Die Dashboard-Sidebar zeigt Suchen und Positionen aller Konten und Assets mit gemeinsamer
+Konten-/Snapshot-Identitätsprüfung. Die alten TP-Verwaltungsformulare entfallen dort; unsichtbare
+Editorcontroller erhalten die Chartbedienung. Fehler beim initialen Planladen bleiben als
+kompakte Konto-/Positionsmeldung sichtbar. Broker- und Risikoguards werden nicht umgangen.
+
 
 ## Technischer Marktorder-Endpunkt mit Vorschau und Bestaetigung
 

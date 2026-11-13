@@ -4,7 +4,7 @@ const rows=()=>['one','two'].map(accountId=>({accountId,state:'prepared',confirm
 describe('account-bound batch confirmation',()=>{
  it('persists uncertainty before each dispatch and keeps successful accounts on retry',async()=>{
   const batch=rows(),persist=vi.fn(),api=vi.fn()
-   .mockResolvedValueOnce({order:{status:'searching'}}).mockRejectedValueOnce(new Error('timeout'));
+   .mockResolvedValueOnce({order:{id:'order-one',status:'searching'}}).mockRejectedValueOnce(new Error('timeout'));
   await confirmMmtBatch(api,batch,persist);
   expect(batch.map(r=>r.state)).toEqual(['searching','unknown']);
   expect(api.mock.calls.map(c=>c[1].account_id)).toEqual(['one','two']);
@@ -13,7 +13,7 @@ describe('account-bound batch confirmation',()=>{
  });
  it('continues with another account after a definitive rejection',async()=>{
   const batch=rows(),api=vi.fn().mockRejectedValueOnce(Object.assign(new Error('expired'),{definitiveRejection:true}))
-   .mockResolvedValueOnce({order:{status:'searching'}});
+   .mockResolvedValueOnce({order:{id:'order-two',status:'searching'}});
   await confirmMmtBatch(api,batch,()=>{});
   expect(batch.map(r=>r.state)).toEqual(['rejected','searching']);
  });
@@ -22,4 +22,10 @@ describe('account-bound batch confirmation',()=>{
   await expect(confirmMmtBatch(api,rows(),()=>{throw new Error('storage');})).rejects.toThrow('storage');
   expect(api).not.toHaveBeenCalled();
  });
+});
+
+it('never treats a malformed acknowledgement as permission to repeat an uncertain request',async()=>{
+ const batch=rows(),api=vi.fn().mockResolvedValue({order:{id:'wrong',status:'searching'}});
+ await confirmMmtBatch(api,batch,()=>{});expect(batch.every(r=>r.state==='unknown')).toBe(true);
+ await confirmMmtBatch(api,batch,()=>{});expect(api).toHaveBeenCalledTimes(2);
 });

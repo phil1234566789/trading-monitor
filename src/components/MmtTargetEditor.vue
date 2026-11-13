@@ -2,14 +2,15 @@
 import ActionButton from './ui/ActionButton.vue';
 import {useMmtExitEditor} from '../composables/useMmtExitEditor.js';
 import {exitForecastLabel,stopChoiceLabel,stopPreviewReason} from '../mmtExitPresentation.js';
-const props=defineProps({order:Object,nativePosition:Object,api:{type:Function,required:true},snapshot:Object,online:Boolean,entryTime:Number,accountName:String});
+const props=defineProps({headless:Boolean,order:Object,nativePosition:Object,api:{type:Function,required:true},snapshot:Object,online:Boolean,entryTime:Number,accountName:String});
 const emit=defineEmits(['saved']);
 const {context,position,quote,draft,ready,allocation,stopAllocation,validation,saveReason,cancelReason,saveState,plan,busy,error,receipt,loaded,refreshError,uncertain,costs,stopPreviews,stopReason,canAddStop,legs,lines,stateNames,messages,
  initTargets,update,add,remove,refresh,save,reset,changeRiskMode,selectForDrag,addStop}=useMmtExitEditor(props,emit);
 const forecast=(kind,index)=>lines.value.find(line=>line.kind===kind&&line.index===index)?.forecast;
 </script>
 <template>
- <section class="mmt-target-editor" aria-label="SL- und TP-Verwaltung">
+ <p v-if="headless&&(error||refreshError||!online||!loaded)" :class="error||refreshError||!online?'mmt-error':'mmt-muted'" :role="error||refreshError||!online?'alert':'status'">SL/TP · {{accountName||`Konto ${context.login}`}} · #{{context.ticket}} · {{error||refreshError||(!online?'Worker nicht verbunden; Verwaltung nicht bereit.':'Verwaltung wird geladen.')}}</p>
+ <section v-if="!headless" class="mmt-target-editor" aria-label="SL- und TP-Verwaltung">
   <h3>SL / TP · {{context.symbol}}</h3>
   <p>Entry {{context.entry}}<template v-if="context.initialSl"> · initialer SL {{context.initialSl}}</template><template v-else-if="draft?.basisSl"> · R-Basis {{draft.basisSl}} (SL-Plan)</template><template v-else> · ursprünglicher SL unbekannt · RR —</template></p>
   <p v-if="!position">Keine passende offene Brokerposition im aktuellen Stand.</p>

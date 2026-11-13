@@ -14,11 +14,23 @@ async function mount(extra={}){
  vi.stubGlobal('document',{visibilityState:'visible'});
  const api=extra.api??vi.fn().mockImplementation(async(action,body)=>action==='target_state'?{plan:null}:{plan:{revision:body.revision,state:'pending',next_index:0,plan:{targets:body.targets}}});
  const current=reactive(structuredClone(extra.snapshot??snapshot));
- app=renderer.createApp({...Editor,render:()=>h('div')},{order:extra.nativePosition?undefined:extra.order??order,nativePosition:extra.nativePosition,api,snapshot:current,online:extra.online??true,entryTime:100});
+ app=renderer.createApp({...Editor,render:()=>h('div')},{order:extra.nativePosition?undefined:extra.order??order,nativePosition:extra.nativePosition,api,snapshot:current,online:extra.online??true,entryTime:100,headless:extra.headless});
  app.provide(ssrContextKey,{});
  const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api,snapshot:current};
 }
 describe('TP edits require Save',()=>{
+ it('keeps the controller and chart draft registered without rendering sidebar forms in headless mode',async()=>{
+  const {state}=await mount({headless:true});expect(state.draft.targets).toHaveLength(1);expect(targetDraftLines('XAUUSD').some(row=>row.orderId===order.id)).toBe(true);
+  const html=await renderToString(createSSRApp(Editor,{order,snapshot,headless:true,online:false,api:vi.fn()}));
+  expect(html).not.toContain('<form');expect(html).not.toContain('SL / TP');expect(html).not.toContain('TP verwalten');
+ });
+ it('keeps an initial target-state failure visible in headless mode without rendering the old form',async()=>{
+  const {state}=await mount({headless:true,api:async()=>{throw new Error('Planstatus nicht erreichbar');}});
+  expect(state.refreshError).toBe('Planstatus nicht erreichbar');
+  const html=await renderToString(createSSRApp({...Editor,setup:()=>({...state})},{order,snapshot,headless:true,online:true,accountName:'Hauptkonto',api:vi.fn()}));
+  expect(html).toContain('role="alert"');expect(html).toContain('Planstatus nicht erreichbar');expect(html).toContain('Hauptkonto');
+  expect(html).not.toContain('<form');expect(html).not.toContain('<section');
+ });
  it('marks only a healthy clean plan as unchanged and reports unavailable trading even before editing',async()=>{
   const {state,snapshot:current}=await mount();
   expect(state.saveState.unchanged).toBe(true);

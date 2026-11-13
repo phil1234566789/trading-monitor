@@ -1,0 +1,24 @@
+import {it,expect,vi} from 'vitest';
+import {createSSRApp,ref,h} from 'vue';
+import {renderToString} from '@vue/server-renderer';
+const fixture=vi.hoisted(()=>({value:null,editors:[]}));
+vi.mock('../src/composables/useDashboardMmt.js',()=>({useDashboardMmt:()=>fixture.value}));
+vi.mock('../src/components/MmtBatchEntrySearch.vue',()=>({default:{render:()=>null}}));
+vi.mock('../src/components/MmtTargetEditor.vue',()=>({default:{props:{headless:Boolean,online:Boolean,order:Object,nativePosition:Object},render(){fixture.editors.push({order:this.order,position:this.nativePosition,online:this.online});return this.headless?null:h('form',{},'TP verwalten');}}}));
+import Dashboard from '../src/components/DashboardMmt.vue';
+it('shows all account/asset positions and active searches without any TP-management form or details',async()=>{
+ const accounts=[{id:'one',name:'Hauptkonto',login:42,server:'Demo'},{id:'two',name:'Sicheres Konto',login:43,server:'Demo'}];
+ const positions=[{ticket:123,symbol:'XAUUSD.gbe',type:1,volume:.8,profit:25,magic:0,price_open:3900,sl:3905,tp:0},{ticket:123,symbol:'EURUSD.gbe',type:0,volume:.1,profit:-5,magic:0,price_open:1.1,sl:1.09,tp:1.2}];
+ const statuses=Object.fromEntries(accounts.map((a,i)=>[a.id,{online:true,bridge:{heartbeat_at:new Date().toISOString(),snapshot:{account_login:a.login,account_server:a.server,currency:'USD',positions:[positions[i]]}}}]));
+ const managed={id:'managed',status:'executed',intent:{account_login:42,account_server:'Demo',symbol:'XAUUSD.gbe',direction:'short'},result:{position:999,position_lifecycle:{state:'open',position:123}}};
+ const orders=[managed,{id:'s1',status:'searching',intent:{account_login:42,account_server:'Demo',symbol:'GBPUSD.gbe',direction:'long'}},{id:'s2',status:'unknown',intent:{account_login:43,account_server:'Demo',symbol:'XAUUSD.gbe',direction:'short'}}];
+ fixture.value={api:vi.fn(),status:ref({orders}),orders:ref(orders),accounts:ref(accounts),accountStatuses:ref(statuses),activeId:ref('one'),account:ref(accounts[0]),snapshot:ref(null),brokerQuote:ref(null),activeOrders:ref(orders.filter(o=>['searching','sending','unknown'].includes(o.status))),trades:ref([]),history:ref([]),entryTimeFor:()=>null,links:ref({}),error:ref(''),key:ref('mock'),now:ref(Date.now()),refresh:vi.fn(),cancel:vi.fn()};
+ const app=createSSRApp(Dashboard,{symbol:'XAUUSD',annotations:[]});app.component('RouterLink',{render:()=>h('a','Konten / Status')});
+ fixture.editors=[];const html=await renderToString(app);
+ expect(html).toContain('Hauptkonto');expect(html).toContain('Sicheres Konto');expect(html).toContain('EURUSD.gbe');expect(html).toContain('GBPUSD.gbe');expect(html).toContain('XAUUSD.gbe');
+ expect(html).toContain('Entry wird gesucht');expect(html).toContain('Ausführung ungeklärt');expect(html).toContain('positive');expect(html).toContain('negative');
+ expect(fixture.editors.find(e=>e.order?.id==='managed')?.online).toBe(true);
+ statuses.one.bridge.heartbeat_at=new Date(Date.now()-60000).toISOString();fixture.editors=[];await renderToString(app);
+ expect(fixture.editors.find(e=>e.order?.id==='managed')?.online).toBe(false);
+ expect(html).not.toContain('TP verwalten');expect(html).not.toContain('<details');expect(html).not.toContain('<form');
+});

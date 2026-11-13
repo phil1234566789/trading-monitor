@@ -1,96 +1,11 @@
 <script setup>
-import {computed,ref,watch} from 'vue';
 import ActionButton from './ui/ActionButton.vue';
-import {chartInstrument} from '../tradeIdeas.js';
-import {riskPreviewMetrics} from '../../supabase/functions/trading-monitor-mcp/mt5RiskContract.js';
-import {confirmMmtBatch} from '../mmtBatchSearch.js';
+import IconButton from './ui/IconButton.vue';
 import {MMT_ACCOUNT_SELECTIONS,accountsForRole} from '../mmtAccountRoles.js';
-import {mmtRiskReason} from '../mmtRiskReasons.js';
+import {useMmtBatchEntrySearch} from '../composables/useMmtBatchEntrySearch.js';
 const props=defineProps({api:Function,accounts:Array,statuses:Object,activeId:String,symbol:String,idea:Object,disabled:Boolean,disabledReason:String,now:Number});
 const emit=defineEmits(['submitted']);
-const role=ref('normal'),riskMode=ref('risky'),duration=ref(30),rows=ref([]),busy=ref(false),error=ref('');
-const storageKey='mmt-batch-entry';
-try{role.value=sessionStorage.getItem('mmt-entry-role')??'normal';}catch{}
-try{rows.value=JSON.parse(sessionStorage.getItem(storageKey)??'[]').filter(r=>r.state!=='prepared');}catch{}
-watch(role,value=>{try{sessionStorage.setItem('mmt-entry-role',value);}catch{}});
-const unresolved=computed(()=>rows.value.some(r=>r.state==='unknown'));
-const selectedAccounts=computed(()=>accountsForRole(props.accounts??[],role.value));
-const brokerSymbols=ref({});
-const symbolKey=a=>JSON.stringify([a.id,a.login,a.server,props.symbol]);
-watch(()=>[props.statuses,props.symbol,props.accounts],()=>{
- for(const a of props.accounts??[]){
-  const snapshot=props.statuses?.[a.id]?.bridge?.snapshot;
-  if(snapshot?.account_login!==Number(a.login)||snapshot.account_server!==a.server)continue;
-  const matches=(snapshot.quotes??[]).filter(q=>chartInstrument(q.symbol)===props.symbol);
-  if(matches.length)brokerSymbols.value[symbolKey(a)]=matches.map(q=>q.symbol);
- }
-},{immediate:true,deep:true});
-function details(a){
- const s=props.statuses?.[a.id],snapshot=s?.bridge?.snapshot;
- const quotes=(snapshot?.quotes??[]).filter(q=>chartInstrument(q.symbol)===props.symbol);
- if(!s?.online||!snapshot)return {reason:'Brokerverbindung offline'};
- if(snapshot.account_login!==Number(a.login)||snapshot.account_server!==a.server)return {reason:'Brokerkonto stimmt nicht überein'};
- const symbols=quotes.length?quotes.map(q=>q.symbol):brokerSymbols.value[symbolKey(a)]??[];
- if(symbols.length!==1)return {reason:symbols.length?'Broker-Symbol mehrdeutig':'Broker-Symbol für '+props.symbol+' noch nicht zugeordnet'};
- if(!snapshot.execution_ready||!snapshot.trade_allowed)return {reason:'Handel nicht bereit · Details unter Konten'};
- const order={symbol:symbols[0],direction:props.idea?.direction,stop_loss:props.idea?.sl,take_profit:props.idea?.tp??null,risk_mode:riskMode.value};
- try{
-  return {order,metrics:riskPreviewMetrics(order,snapshot,s.risk_policy,props.now/1000)};
- }catch(e){return {order,reason:e.message==='quote_stale'?'Lot/RR beim Entry · Suchauftrag möglich':`Prüfung beim Start: ${mmtRiskReason(e.message)}`};}
-}
-const accountDetails=computed(()=>selectedAccounts.value.map(account=>({account,...details(account)})));
-const blockedReason=computed(()=>{
- if(busy.value)return 'Eine Anfrage wird gerade verarbeitet.';
- if(unresolved.value)return 'Unklare Rückmeldungen zuerst prüfen; kein erneuter Versand.';
- if(props.disabled)return props.disabledReason||'Entry-Suche im aktuellen Chartzustand gesperrt.';
- if(!props.idea)return 'Eine eindeutige Long-/Short-Idee mit SL im Chart fehlt.';
- if(!selectedAccounts.value.length)return 'Kontozuordnung fehlt oder ist mehrdeutig. Konto-Tags unter MMT prüfen.';
- return accountDetails.value.filter(row=>!row.order).map(row=>`${row.account.name}: ${row.reason}`).join('\n');
-});
-const canPrepare=computed(()=>!blockedReason.value);
-const feedbackRows=computed(()=>rows.value.filter(r=>['prepared','unknown','rejected'].includes(r.state)));
-const expired=computed(()=>rows.value.some(r=>r.state==='prepared'&&props.now>=r.preview.confirmation_expires_sec*1000));
-const draftKey=computed(()=>JSON.stringify([selectedAccounts.value.map(a=>a.id),props.symbol,props.idea,riskMode.value,duration.value]));
-watch(draftKey,()=>{if(!busy.value&&!unresolved.value){rows.value=[];persist(rows.value);}});
-function persist(value){sessionStorage.setItem(storageKey,JSON.stringify(value));}
-async function prepare(){
- if(busy.value||unresolved.value||!canPrepare.value)return;
- busy.value=true;error.value='';rows.value=[];
- const key=draftKey.value;
- try{
-  const results=await Promise.allSettled(selectedAccounts.value.map(async a=>{
-   const order={...details(a).order,duration_sec:Number(duration.value)*60};
-   let data;
-   try{data=await props.api('search_preview',{account_id:a.id,order});}
-   catch(e){throw new Error(`${a.name}: ${mmtRiskReason(e.message)}`);}
-   return {accountId:a.id,name:a.name,...data,state:'prepared',message:''};
-  }));
-  if(key!==draftKey.value)return;
-  rows.value=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
-  if(results.some(r=>r.status==='rejected')){rows.value=[];throw new Error(results.filter(r=>r.status==='rejected').map(r=>r.reason.message).join(' · '));}
-  persist(rows.value);
- }catch(e){error.value=e.message;}finally{busy.value=false;}
-}
-async function confirm(){
- if(busy.value||expired.value||props.disabled||unresolved.value)return;
- busy.value=true;error.value='';
- try{await confirmMmtBatch(props.api,rows.value,persist);emit('submitted',rows.value.map(r=>r.preview.intent.id));}
- catch(e){error.value='Sitzungsspeicher nicht verfügbar. '+e.message;}
- finally{busy.value=false;}
-}
-async function reconcile(){
- busy.value=true;error.value='';
- try{
-  for(const row of rows.value.filter(r=>r.state==='unknown')){
-   let order=await props.api('status',{id:row.preview.intent.id,account_id:row.accountId});
-   if(!order&&props.now>=row.preview.confirmation_expires_sec*1000){
-    order=(await props.api('search_abandon',{account_id:row.accountId,confirmation:row.confirmation})).order;
-   }
-   if(order){row.state=order.status;row.message='Status abgeglichen';}
-  }
-  persist(rows.value);emit('submitted',rows.value.map(r=>r.preview.intent.id));
- }catch(e){error.value=e.message;}finally{busy.value=false;}
-}
+const {role,riskMode,duration,rows,busy,error,unresolved,selectedAccounts,accountDetails,blockedReason,canSubmit,feedbackRows,submit,reconcile,dismiss,stateLabel,rowIntent}=useMmtBatchEntrySearch(props,emit);
 </script>
 <template>
  <section class="mmt-panel mmt-ticket" aria-label="Entry auf ausgewählten Konten suchen">
@@ -100,21 +15,23 @@ async function reconcile(){
   <p v-if="idea"><strong>{{idea.direction==='long'?'Long':'Short'}} · SL {{idea.sl}} · {{symbol}}</strong></p>
   <p v-for="row in accountDetails" :key="row.account.id"><strong>{{row.account.name}}</strong> · <template v-if="row.metrics">{{row.metrics.volume}} Lot · RR {{row.metrics.rr?.toFixed(2)??'—'}} · {{row.metrics.risk.toFixed(2)}} {{row.metrics.currency}}</template><span v-else role="status">{{row.reason}}</span></p>
   <p v-if="selectedAccounts.length>1" class="mmt-muted">{{selectedAccounts.length}} getrennte Suchen · Risiko je Konto · Ausführung kann je Konto abweichen.</p>
-  <form class="compact-controls" @submit.prevent="prepare">
+  <form class="compact-controls" @submit.prevent="submit">
    <label>Risiko<select v-model="riskMode" :disabled="busy||unresolved"><option value="risky">Risky · 0,5 %</option><option value="full">Full · 0,9 %</option></select></label>
    <label>Gültig · Minuten<input v-model="duration" type="number" min="1" max="60" required :disabled="busy||unresolved"></label>
    <span class="entry-submit mmt-wide" :title="blockedReason||undefined" :tabindex="blockedReason?0:undefined" :aria-label="blockedReason?`Entry suchen gesperrt: ${blockedReason}`:undefined">
-    <ActionButton type="submit" class="mmt-primary mmt-wide" :disabled="!canPrepare" :title="blockedReason||undefined">{{busy?'Wird verarbeitet …':'Entry suchen'}}</ActionButton>
+    <ActionButton type="submit" class="mmt-primary mmt-wide" :disabled="!canSubmit" :title="blockedReason||undefined">{{busy?'Wird verarbeitet …':'Entry suchen'}}</ActionButton>
    </span>
   </form>
-  <p v-if="error" role="alert">{{error}}</p>
-  <div v-if="feedbackRows.length" class="mmt-preview" aria-label="Kontogebundene Bestätigung">
-   <p v-for="row in feedbackRows" :key="row.accountId"><strong>{{row.name}}</strong> · {{row.preview.volume==null?'Lotgröße beim Entry':`${row.preview.volume} Lot (Vorschau)`}} · SL {{row.preview.intent.stop_loss}} · TP {{row.preview.intent.take_profit??'offen'}}<br>{{row.state==='prepared'?'Bereit zur Bestätigung':row.state}} {{row.message}}</p>
-
-   <p v-if="expired">Vorschau abgelaufen. Bitte neu vorbereiten.</p>
-   <ActionButton v-if="rows.every(r=>r.state==='prepared')" class="mmt-primary" :disabled="busy||expired||disabled" @click="confirm">{{rows.length}} Entry-Suchen verbindlich starten</ActionButton>
-   <ActionButton v-if="unresolved" :disabled="busy" @click="reconcile">Unklare Rückmeldungen prüfen</ActionButton>
-  </div>
+  <p v-if="error" class="mmt-error" role="alert">{{error}}</p>
+  <ul v-if="feedbackRows.length" class="mmt-order-list" aria-label="Suchaufträge und Rückmeldungen" aria-live="polite">
+   <li v-for="row in feedbackRows" :key="row.preview?.intent.id||row.attempt+row.accountId" class="mmt-order-card" :data-state="row.state">
+    <div class="mmt-order-heading"><strong>{{row.name}} · {{rowIntent(row).symbol}} · {{rowIntent(row).direction==='long'?'Long':'Short'}}</strong><span class="mmt-order-state">{{stateLabel(row.state)}}</span>
+     <IconButton v-if="['rejected','expired','cancelled','executed'].includes(row.state)" aria-label="Rückmeldung schließen" title="Rückmeldung schließen" @click="dismiss(row)">×</IconButton>
+    </div>
+    <p v-if="row.message" :role="['rejected','unknown'].includes(row.state)?'alert':undefined" :class="{'mmt-error':['rejected','unknown'].includes(row.state)}">{{row.message}}</p>
+   </li>
+  </ul>
+  <ActionButton v-if="unresolved" :disabled="busy" @click="reconcile">Unklaren Status prüfen · kein erneuter Versand</ActionButton>
  </section>
 </template>
 <style scoped>

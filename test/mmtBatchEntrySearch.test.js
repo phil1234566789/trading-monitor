@@ -34,11 +34,11 @@ it('retains broker symbol knowledge only for the same account, server and asset'
  app.provide(ssrContextKey,{});
  try{
   const state=app.mount({children:[]}).$.setupState;
-  expect(state.canPrepare).toBe(true);
+  expect(state.canSubmit).toBe(true);
   statuses.normal.bridge.snapshot.quotes=[];await nextTick();
-  expect(state.canPrepare).toBe(true);expect(state.accountDetails[0].order.symbol).toBe('XAUUSD.gbe');
+  expect(state.canSubmit).toBe(true);expect(state.accountDetails[0].order.symbol).toBe('XAUUSD.gbe');
   account.server='Other';statuses.normal.bridge.snapshot.account_server='Other';await nextTick();
-  expect(state.canPrepare).toBe(false);expect(state.blockedReason).toContain('noch nicht zugeordnet');
+  expect(state.canSubmit).toBe(false);expect(state.blockedReason).toContain('noch nicht zugeordnet');
  }finally{app.unmount();}
 });
 it('keeps a valid draft enabled without a misleading tooltip',async()=>{
@@ -49,4 +49,67 @@ it('keeps a valid draft enabled without a misleading tooltip',async()=>{
 it('explains replay and missing account assignments without sending anything',async()=>{
  expect(await render({disabled:true,disabledReason:'Replay aktiv'})).toContain('title="Replay aktiv"');
  expect(await render({accounts:[]})).toContain('Kontozuordnung fehlt oder ist mehrdeutig.');
+});
+
+
+const stateRenderer=createRenderer({createElement:tag=>({tag,children:[]}),createText:text=>({text}),createComment:()=>({}),setText:()=>{},setElementText:()=>{},patchProp:()=>{},insert:(node,parent)=>parent.children.push(node),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
+async function mountSubmission(api,storage={}){
+ vi.stubGlobal('sessionStorage',{getItem:key=>key==='mmt-entry-role'?'normal+risky':storage[key]??null,setItem:(key,value)=>{storage[key]=value;}});
+ const props=reactive({accounts,statuses:Object.fromEntries(accounts.map(a=>[a.id,status(a)])),now,symbol:'XAUUSD',idea:{direction:'long',sl:3990},api});
+ const TestEntry={...EntrySearch,render:()=>h('div')};
+ const app=stateRenderer.createApp({render:()=>h(TestEntry,{...props})});app.provide(ssrContextKey,{});
+ app.mount({children:[]});const state=app._instance.subTree.component.setupState;await nextTick();return {app,state,props,storage};
+}
+function previewFor(id){const a=accounts.find(a=>a.id===id);return {confirmation:'signed-'+id,preview:{confirmation_expires_sec:now/1000+30,intent:{id:'order-'+id,symbol:'XAUUSD.gbe',direction:'long',stop_loss:3990,account_login:a.login,account_server:a.server,expires_sec:now/1000+1800}}};}
+it('starts the signed account-bound searches in one click and prevents repeated dispatch',async()=>{
+ const api=vi.fn(async(action,body)=>action==='search_preview'?previewFor(body.account_id):{order:{id:'order-'+body.account_id,status:'searching'}});
+ const {app,state}=await mountSubmission(api);
+ try{
+  await Promise.all([state.submit(),state.submit()]);await nextTick();await state.submit();
+  expect(api.mock.calls.map(c=>c[0])).toEqual(['search_preview','search_preview','search_confirm','search_confirm']);
+  expect(state.rows.map(r=>r.state)).toEqual(['searching','searching']);expect(state.canSubmit).toBe(false);
+  expect(state.feedbackRows).toHaveLength(2);
+ }finally{app.unmount();}
+});
+it('keeps partial rejection and uncertain dispatch across idea changes and reload without retry',async()=>{
+ const api=vi.fn(async(action,body)=>{
+  if(action==='search_preview')return previewFor(body.account_id);
+  if(body.account_id==='normal')throw Object.assign(new Error('Policy blocked'),{definitiveRejection:true});
+  throw new Error('timeout');
+ });
+ const first=await mountSubmission(api);
+ try{
+  await first.state.submit();expect(first.state.rows.map(r=>r.state)).toEqual(['rejected','unknown']);expect(first.state.error).toContain('Policy blocked');
+  first.props.idea={direction:'short',sl:4010};await nextTick();expect(first.state.rows).toHaveLength(2);
+  first.app.unmount();const second=await mountSubmission(api,first.storage);
+  try{await second.state.submit();expect(api).toHaveBeenCalledTimes(4);expect(second.state.unresolved).toBe(true);expect(second.state.rows).toHaveLength(2);}finally{second.app.unmount();}
+ }finally{first.app.unmount();}
+});
+it('reconciles a local accepted search by exact account identity and retains failures from other accounts',async()=>{
+ const api=vi.fn(async(action,body)=>action==='search_preview'?previewFor(body.account_id):{order:{id:'order-'+body.account_id,status:'searching'}});
+ const {app,state,props}=await mountSubmission(api);
+ try{
+  await state.submit();
+  props.statuses.normal.orders=[{id:'order-normal',status:'expired',intent:{...previewFor('normal').preview.intent,account_login:99},result:{reason:'expired'}}];await nextTick();
+  expect(state.rows[0].state).toBe('searching');
+  props.statuses.normal.orders=[{id:'order-normal',status:'expired',intent:previewFor('normal').preview.intent,result:{reason:'expired'}}];await nextTick();
+  expect(state.rows.map(r=>r.state)).toEqual(['expired','searching']);expect(api).toHaveBeenCalledTimes(4);
+ }finally{app.unmount();}
+});
+
+it('does not enqueue if replay starts while the signed preview is pending',async()=>{
+ let release;const gate=new Promise(resolve=>{release=resolve;});
+ const api=vi.fn(async(action,body)=>{if(action==='search_preview'){await gate;return previewFor(body.account_id);}throw new Error('must not enqueue');});
+ const {app,state,props}=await mountSubmission(api);
+ try{const pending=state.submit();props.disabled=true;props.disabledReason='Replay aktiv';await nextTick();release();await pending;
+  expect(api.mock.calls.map(c=>c[0])).toEqual(['search_preview','search_preview']);expect(state.rows.every(r=>r.state==='rejected')).toBe(true);expect(state.error).toContain('Replay aktiv');
+ }finally{app.unmount();}
+});
+it('clears an uncertain warning only after an exact backend acknowledgement',async()=>{
+ const api=vi.fn(async(action,body)=>{if(action==='search_preview')return previewFor(body.account_id);throw new Error('timeout');});
+ const {app,state,props}=await mountSubmission(api);
+ try{await state.submit();expect(state.unresolved).toBe(true);expect(state.error).toContain('timeout');
+  for(const a of accounts)props.statuses[a.id].orders=[{id:'order-'+a.id,status:'searching',intent:previewFor(a.id).preview.intent}];await nextTick();
+  expect(state.unresolved).toBe(false);expect(state.error).toBe('');expect(api).toHaveBeenCalledTimes(4);
+ }finally{app.unmount();}
 });
