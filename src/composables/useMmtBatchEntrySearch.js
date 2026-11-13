@@ -3,6 +3,7 @@ import {chartInstrument} from '../tradeIdeas.js';
 import {riskPreviewMetrics} from '../../supabase/functions/trading-monitor-mcp/mt5RiskContract.js';
 import {confirmMmtBatch,batchIntent,findMmtBatchOrder,reconcileMmtBatchRows,isMmtSearchState} from '../mmtBatchSearch.js';
 import {accountsForRole} from '../mmtAccountRoles.js';
+import {entryDailyStopReason} from '../mmtDailyStopReason.js';
 import {mmtRiskReason} from '../mmtRiskReasons.js';
 
 const activeStates=['preparing','prepared','searching','sending','unknown'];
@@ -29,6 +30,7 @@ function details(a){
  const quotes=(snapshot?.quotes??[]).filter(q=>chartInstrument(q.symbol)===props.symbol);
  if(!s?.online||!snapshot)return {reason:'Brokerverbindung offline'};
  if(snapshot.account_login!==Number(a.login)||snapshot.account_server!==a.server)return {reason:'Brokerkonto stimmt nicht überein'};
+ const stopReason=entryDailyStopReason(s,props.now);if(stopReason)return {reason:stopReason};
  const symbols=quotes.length?quotes.map(q=>q.symbol):brokerSymbols.value[symbolKey(a)]??[];
  if(symbols.length!==1)return {reason:symbols.length?'Broker-Symbol mehrdeutig':'Broker-Symbol für '+props.symbol+' noch nicht zugeordnet'};
  if(!snapshot.execution_ready||!snapshot.trade_allowed)return {reason:'Handel nicht bereit · Details unter Konten'};

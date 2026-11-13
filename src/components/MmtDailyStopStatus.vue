@@ -1,6 +1,7 @@
 <script setup>
 import {computed} from 'vue';
 import {snapshotAgeSeconds} from '../milkyMetaTraderMonitoring.js';
+import {dailyStopReason} from '../mmtDailyStopReason.js';
 import {dailyHealth} from '../mmtDailyHealth.js';
 import {fmtMoney} from '../format.js';
 const props=defineProps({status:Object,now:{type:Number,required:true},staleSeconds:{type:Number,default:15}});
@@ -12,7 +13,6 @@ const hp=computed(()=>ready.value?dailyHealth(props.status?.bridge?.snapshot,sto
 const money=value=>fmtMoney(value,'USD');
 const activeCommands=computed(()=>(stop.value?.commands??[]).filter(c=>c.status!=='executed'));
 const labels={pending:'Notfallauftrag wartet',sending:'Brokerannahme wird abgeglichen',unknown:'Ausgang ungeklärt · kein erneuter Versand',rejected:'Brokerauftrag abgelehnt'};
-const reasons={daily_loss:'Tagesverlustgrenze erreicht',broker_drawdown:'Bestätigte Drawdown-Grenze erreicht'};
 </script>
 <template>
  <section class="mmt-daily-status" aria-label="Tagesstopp" :role="stop?.latched?'alert':'status'">
@@ -20,7 +20,7 @@ const reasons={daily_loss:'Tagesverlustgrenze erreicht',broker_drawdown:'Bestät
   <div class="mmt-daily-hp" :class="{unknown:!hp}" :role="hp?'progressbar':undefined" aria-label="Verbleibende Tages-HP" :aria-valuenow="hp?.remaining" :aria-valuemin="hp?0:undefined" :aria-valuemax="hp?.limit" :aria-valuetext="hp?money(hp.remaining)+' von '+money(hp.limit):undefined"><div v-if="hp" :style="{width:hp.percent+'%'}" :class="{low:hp.percent<=25}" /></div>
   <p v-if="hp">Netto abgeschlossen {{money(hp.realized)}} · Offene Verluste {{money(hp.openLoss)}} · Reset 00:00 Berlin</p>
   <p v-else>Keine aktuellen Tageswerte · Reset 00:00 Berlin</p>
-  <p v-if="stop?.reason">{{reasons[stop.reason]??stop.reason}} · Berlin-Tag {{stop.day}}. Erholung hebt die Tages-Sperre nicht auf.</p>
+  <p v-if="stop?.reason">{{dailyStopReason(stop.reason)}} · Berlin-Tag {{stop.day}}. Erholung hebt die Tages-Sperre nicht auf.</p>
   <p class="mmt-daily-warning" :style="{visibility:ready?'hidden':'visible'}" :aria-hidden="ready">Keine aktuelle Schutzbestätigung. Brokerseitig gesetzte SL/TP bleiben unabhängig bestehen.</p>
   <ul v-if="activeCommands.length"><li v-for="command in activeCommands" :key="command.id">{{command.symbol}} #{{command.ticket}} · {{command.kind==='close'?'Schließen':'Order stornieren'}}: {{labels[command.status]??command.status}}<span v-if="command.result?.reason"> · {{command.result.reason}}</span></li></ul>
  </section>

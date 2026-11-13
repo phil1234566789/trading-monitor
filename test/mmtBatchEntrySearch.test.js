@@ -1,6 +1,7 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {createSSRApp,createRenderer,h,nextTick,reactive,ssrContextKey} from 'vue';
 import {renderToString} from '@vue/server-renderer';
+import {berlinDateStrFor} from '../src/berlinTime.js';
 import EntrySearch from '../src/components/MmtBatchEntrySearch.vue';
 const now=1800000000000;
 const accounts=[{id:'normal',name:'Hauptkonto',login:42,server:'Demo',trade_role:'normal'},{id:'risky',name:'Risikokonto',login:43,server:'Demo',trade_role:'risky'}];
@@ -112,4 +113,14 @@ it('clears an uncertain warning only after an exact backend acknowledgement',asy
   for(const a of accounts)props.statuses[a.id].orders=[{id:'order-'+a.id,status:'searching',intent:previewFor(a.id).preview.intent}];await nextTick();
   expect(state.unresolved).toBe(false);expect(state.error).toBe('');expect(api).toHaveBeenCalledTimes(4);
  }finally{app.unmount();}
+});
+
+it('names the daily stop on the correct account instead of the generic trading blocker',async()=>{
+ const halted=status(accounts[0]);halted.bridge.heartbeat_at=new Date(now).toISOString();halted.bridge.snapshot.execution_ready=false;
+ halted.bridge.snapshot.risk={...halted.bridge.snapshot.risk,day:berlinDateStrFor(now/1000),latched:true};
+ halted.daily_stop={day:berlinDateStrFor(now/1000),checked_at_sec:now/1000,latched:true,reason:'daily_loss'};
+ const html=await render({statuses:{normal:halted,risky:status(accounts[1])}});
+ expect(html).toContain('Hauptkonto: Tagesstopp aktiv: Tagesverlustgrenze erreicht');
+ expect(html).not.toContain('Handel nicht bereit');
+ expect(html).toMatch(/<button[^>]*disabled[^>]*title="Hauptkonto: Tagesstopp/);
 });
