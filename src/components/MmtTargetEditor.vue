@@ -8,7 +8,7 @@ import {registerTargetSave,targetSaveRejected,nativeTargetKey} from '../mmtTarge
 import ActionButton from './ui/ActionButton.vue';
 const props=defineProps({order:Object,nativePosition:Object,api:{type:Function,required:true},snapshot:Object,online:Boolean,entryTime:Number,accountName:String});
 const emit=defineEmits(['saved']);
-const plan=ref(null),busy=ref(false),error=ref(''),receipt=ref(''),now=ref(Date.now());
+const plan=ref(null),busy=ref(false),error=ref(''),receipt=ref('');
 const loaded=ref(false),refreshError=ref(''),uncertain=ref(null);
 const context=computed(()=>props.nativePosition?{
  key:nativeTargetKey(props.nativePosition.accountId,props.nativePosition.ticket),request:{position_ticket:props.nativePosition.ticket},
@@ -21,9 +21,8 @@ const position=computed(()=>props.nativePosition?(props.snapshot?.account_login=
 const quote=computed(()=>props.snapshot?.quotes?.find(q=>q.symbol===context.value.symbol));
 const draft=useTargetDraft(()=>context.value.key);
 const ready=computed(()=>{
- // Ein neuer Worker-Tick darf gegenüber dem zweisekündigen UI-Timer nicht fälschlich als Zukunft gelten.
- const time=Math.max(now.value,Date.now())/1000;
- return props.online&&props.snapshot?.target_plans_ready&&props.snapshot?.execution_ready&&props.snapshot?.trade_allowed&&!props.snapshot?.worker_error&&quote.value&&time-quote.value.time<=5&&quote.value.time<=time+1;
+ // UI-Polling kann länger als die Tickfrist dauern; API und Worker prüfen Frische beim Speichern/Anwenden.
+ return props.online&&props.snapshot?.target_plans_ready&&props.snapshot?.execution_ready&&props.snapshot?.trade_allowed&&!props.snapshot?.worker_error&&quote.value;
 });
 const stateNames={pending:'Wird beim Worker installiert',sending:'Brokeränderung läuft – Ausgang wird abgeglichen',active:'Aktiv',paused:'Pausiert',unknown:'Ausgang ungeklärt – kein automatischer Retry',completed:'Plan beendet'};
 let timer,disposed=false,generation=0;
@@ -109,7 +108,7 @@ watch(()=>context.value.key,(id,previous,onCleanup)=>{
  void refresh();
 },{immediate:true});
 watch(()=>position.value?.volume,volume=>{if(draft.value)setTargetDraft(context.value.key,{...draft.value,positionVolume:volume});});
-timer=setInterval(()=>{now.value=Date.now();if(document.visibilityState==='visible')void refresh();},2000);
+timer=setInterval(()=>{if(document.visibilityState==='visible')void refresh();},2000);
 onUnmounted(()=>{disposed=true;generation++;clearInterval(timer);});
 </script>
 <template>

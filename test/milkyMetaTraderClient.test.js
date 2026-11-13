@@ -40,3 +40,9 @@ it('explains account-switch guards without exposing server details',async()=>{
   await expect(createMilkyMetaTraderClient('https://project.supabase.co','key',fetch)('select_account',{id:'a'})).rejects.toThrow('Kontowechsel gesperrt');
  }
 });
+
+it('clearly reports a rejected TP save while preserving the error code',async()=>{
+ const fetch=vi.fn().mockResolvedValue({ok:false,status:400,json:async()=>({code:'target_position_unavailable'})});
+ await expect(createMilkyMetaTraderClient('https://project.supabase.co','key',fetch)('target_save')).rejects.toMatchObject({code:'target_position_unavailable',message:'TP-Plan nicht gespeichert: Aktueller Brokerstand oder Kurs fehlt. Entwurf bleibt erhalten.'});
+ expect(fetch).toHaveBeenCalledTimes(1);
+});

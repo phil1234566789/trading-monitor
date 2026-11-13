@@ -14,7 +14,7 @@ async function mount(extra={}){
  vi.stubGlobal('document',{visibilityState:'visible'});
  const api=extra.api??vi.fn().mockImplementation(async(action,body)=>action==='target_state'?{plan:null}:{plan:{revision:body.revision,state:'pending',next_index:0,plan:{targets:body.targets}}});
  const current=reactive(structuredClone(extra.snapshot??snapshot));
- app=renderer.createApp({...Editor,render:()=>h('div')},{order:extra.nativePosition?undefined:extra.order??order,nativePosition:extra.nativePosition,api,snapshot:current,online:true,entryTime:100});
+ app=renderer.createApp({...Editor,render:()=>h('div')},{order:extra.nativePosition?undefined:extra.order??order,nativePosition:extra.nativePosition,api,snapshot:current,online:extra.online??true,entryTime:100});
  app.provide(ssrContextKey,{});
  const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api,snapshot:current};
 }
@@ -27,7 +27,12 @@ describe('TP edits require Save',()=>{
   expect(state.allocation.targets.map(t=>t.volume)).toEqual([.5,.5]);
   expect(state.saveReason).toContain('Position hat keinen SL');await state.save();expect(api).toHaveBeenCalledTimes(1);
   live.target_without_sl_ready=true;await nextTick();expect(state.saveReason).toBe('');
+  for(const age of [6,15]){live.quotes[0].time=Date.now()/1000-age;await nextTick();expect(state.saveReason).toBe('');}
   await state.save();expect(api.mock.calls[1][1]).toMatchObject({position_ticket:123,observed:{volume:1,sl:0,tp:2010},targets:[{price:2010,volume:.5},{price:2010,volume:.5}]});
+ });
+ it('keeps offline workers and missing native specifications blocked',async()=>{
+  let mounted=await mount({online:false});moveTargetDraft(order.id,0,2012);await nextTick();expect(mounted.state.saveReason).not.toBe('');await mounted.state.save();expect(mounted.api).not.toHaveBeenCalled();
+  app.unmount();mounted=await mount();moveTargetDraft(order.id,0,2012);delete mounted.snapshot.quotes[0].volume_step;await nextTick();expect(mounted.state.saveReason).not.toBe('');await mounted.state.save();expect(mounted.api).toHaveBeenCalledTimes(1);
  });
  it('cancels the entire position draft through the editor registry without an API write',async()=>{
   const {state,api}=await mount();splitTargetDraft(order.id,0);changeTargetShare(order.id,0,25);moveTargetDraft(order.id,0,2015);state.error='old failure';
@@ -39,10 +44,14 @@ describe('TP edits require Save',()=>{
   expect(cancelTargetDraft(order.id)).toBe(false);reject(new Error('network'));await saving;
   expect(cancelTargetDraft(order.id)).toBe(false);expect(state.draft.dirty).toBe(true);
  });
- it('does not misclassify a newer worker quote as future data between UI timer ticks',async()=>{
-  const {state,snapshot:current}=await mount(),time=state.now+1500;
-  vi.spyOn(Date,'now').mockReturnValue(time);current.quotes[0].time=time/1000;await nextTick();
-  expect(state.ready).toBe(true);
+ it('keeps a valid draft saveable between status polls and reports an authoritative rejection without retry',async()=>{
+  const {state,api,snapshot:current}=await mount();moveTargetDraft(order.id,0,2012);
+  current.quotes[0].time=Date.now()/1000-30;await nextTick();
+  expect(state.ready).toBeTruthy();expect(state.saveReason).toBe('');
+  api.mockRejectedValueOnce(Object.assign(new Error('target_position_unavailable'),{code:'target_position_unavailable'}));
+  await state.save();expect(state.error).toBe('target_position_unavailable');expect(state.draft.dirty).toBe(true);
+  expect(api.mock.calls.filter(c=>c[0]==='target_save')).toHaveLength(1);expect(state.uncertain).toBeNull();
+  current.trade_allowed=false;await nextTick();expect(state.ready).toBe(false);
  });
  it('saves 25/75 through the chart binding using the editor API and restores the saved plan after remount',async()=>{
   let stored=null;

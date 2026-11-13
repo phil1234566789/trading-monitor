@@ -39,10 +39,12 @@ Deno.test('native TP requests read without creation and save only fresh account-
   subject={id:result.plan.order_id};assert.deepEqual(await targetPlanAction({action:'target_state',account_id:account.id,position_ticket:123}),{plan:stored});
   const before=calls.filter(c=>c.method==='POST').length;
   await assert.rejects(targetPlanAction({...request,observed:{...request.observed,sl:1980}}),/target_position_changed/);
+  snapshot.positions[0].volume=.03;await assert.rejects(targetPlanAction(request),/target_position_changed/);snapshot=structuredClone(base);
   await assert.rejects(targetPlanAction({...request,position_ticket:999}),/target_position_unavailable/);
   snapshot.account_login=43;await assert.rejects(targetPlanAction(request),/account_mismatch/);snapshot=structuredClone(base);
   snapshot.positions[0].magic=.5;await assert.rejects(targetPlanAction(request),/target_position_unavailable/);snapshot=structuredClone(base);
   snapshot.quotes[0].time=Date.now()/1000+20;await assert.rejects(targetPlanAction(request),/target_position_unavailable/);snapshot=structuredClone(base);
+  snapshot.quotes[0].time=Date.now()/1000-6;await assert.rejects(targetPlanAction(request),/target_position_unavailable/);snapshot=structuredClone(base);
   heartbeat=new Date(Date.now()-6000).toISOString();await assert.rejects(targetPlanAction(request),/bridge_offline/);heartbeat=new Date().toISOString();
   const {position_ticket:_,...legacy}=request;await assert.rejects(targetPlanAction({...legacy,order_id:orderId}),/target_position_unavailable/);
   assert.equal(calls.filter(c=>c.method==='POST').length,before);

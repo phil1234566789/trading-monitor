@@ -9,6 +9,8 @@ const messages={
  risk_exposure_unavailable:'Offenes Broker-Risiko ist noch ungeklärt.',
  risk_sizing_unavailable:'Native Broker-Lotspezifikation fehlt.',
  target_position_changed:'Brokerposition wurde inzwischen verändert. Entwurf mit frischem Brokerstand abgleichen.',
+ target_position_unavailable:'TP-Plan nicht gespeichert: Aktueller Brokerstand oder Kurs fehlt. Entwurf bleibt erhalten.',
+ target_without_sl_worker_required:'TP-Plan nicht gespeichert: Dieser Worker unterstützt Positionen ohne SL noch nicht.',
  target_daily_stop:'Tagesstopp aktiv. TP-Änderung ist gesperrt.',
  target_command_unresolved:'Vorheriger Brokerauftrag ist ungeklärt. Kein erneuter Versand.',
 

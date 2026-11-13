@@ -98,6 +98,12 @@ class TargetBrokerTests(unittest.TestCase):
         request=self.broker.prepare(row,'install',-1)
         self.assertEqual(request,dict(action=6,position=123,symbol='EURUSD',sl=1.29,tp=1.32))
 
+    def test_install_still_requires_a_fresh_native_tick(self):
+        self.api.symbol_info_tick.return_value.time=0
+        with self.assertRaisesRegex(ValueError,'quote_stale'):
+            self.broker.prepare(plan(native_tp=1.32),'install',-1)
+        self.api.order_send.assert_not_called()
+
     def test_no_sl_install_and_partial_close_preserve_zero_and_recheck_manual_changes(self):
         row=plan(native_tp=1.32);row['checkpoint']['sl']=0;row['plan']['initial_sl']=None
         self.api.positions_get.return_value=(position(sl=0),)
