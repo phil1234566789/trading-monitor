@@ -6,8 +6,8 @@ import {validateTargetAllocation} from './targetPlanContract.js';
 const uuid=z.string().uuid(),number=z.number().finite(),positive=number.positive();
 const identity={order_id:uuid.optional(),position_ticket:z.number().int().positive().safe().optional()};
 const oneIdentity=(v:{order_id?:string;position_ticket?:number})=>(v.order_id!=null)!==(v.position_ticket!=null);
-const request=z.object({...identity,revision:uuid,expected_revision:uuid.nullable(),targets:z.array(z.object({price:positive,volume:positive}).strict()).min(1).max(5),observed:z.object({volume:positive,sl:positive,tp:number.nonnegative()}).strict()}).strict().refine(oneIdentity);
-const resultSchema=z.object({status:z.enum(['executed','rejected','unknown']),reason:z.string().max(100).optional(),remaining_volume:number.nonnegative().optional(),sl:positive.optional(),tp:number.nonnegative().optional(),deal:z.number().int().positive().optional()}).strict();
+const request=z.object({...identity,revision:uuid,expected_revision:uuid.nullable(),targets:z.array(z.object({price:positive,volume:positive}).strict()).min(1).max(5),observed:z.object({volume:positive,sl:number.nonnegative(),tp:number.nonnegative()}).strict()}).strict().refine(oneIdentity);
+const resultSchema=z.object({status:z.enum(['executed','rejected','unknown']),reason:z.string().max(100).optional(),remaining_volume:number.nonnegative().optional(),sl:number.nonnegative().optional(),tp:number.nonnegative().optional(),deal:z.number().int().positive().optional()}).strict();
 export async function targetPlanAction(body:Record<string,unknown>,worker=false){
  const db=mt5Database(),action=body.action;
  if(!worker&&action==='target_state'){
@@ -35,6 +35,7 @@ export async function targetPlanAction(body:Record<string,unknown>,worker=false)
   const p=s.positions.find((p:any)=>p.ticket===ticket&&(!order||(p.symbol===order.intent.symbol&&p.type===(order.intent.direction==='long'?0:1)&&p.magic===order.result.magic)));
   const q=s.quotes?.find((q:any)=>q.symbol===p?.symbol);
   if(!p||!q||now/1000-q.time>5||q.time>now/1000+1||!(p.price_open>0)||!Number.isSafeInteger(p.magic)||p.magic<0)throw new Error('target_position_unavailable');
+  if(p.sl===0&&!s.target_without_sl_ready)throw new Error('target_without_sl_worker_required');
   if(['volume','sl','tp'].some(key=>Math.abs(p[key]-input.observed[key as keyof typeof input.observed])>1e-9))throw new Error('target_position_changed');
   const entry=order?order.result.price:p.price_open,initialSl=order?(order.result.initial_sl??order.intent.stop_loss):null;
   const allocation=validateTargetAllocation(input.targets,p,q,entry,initialSl);

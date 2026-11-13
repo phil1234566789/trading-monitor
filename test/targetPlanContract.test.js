@@ -17,7 +17,8 @@ describe('broker TP allocations',()=>{
  it('manages a native position without inventing its original SL or RR',()=>{
   const plan=validateTargetAllocation([{price:2010,volume:.01}],position,quote,2000,null);
   expect(plan.targets[0].rr).toBeNull();expect(plan.native_tp).toBe(2010);
-  expect(()=>validateTargetAllocation([{price:2010,volume:.01}],{...position,sl:0},quote,2000,null)).toThrow('target_specs_unavailable');
+  expect(validateTargetAllocation([{price:2010,volume:.01}],{...position,sl:0},quote,2000,null).targets[0].rr).toBeNull();
+  for(const sl of [-1,NaN,undefined])expect(()=>validateTargetAllocation([{price:2010,volume:.01}],{...position,sl},quote,2000,null)).toThrow('invalid_position_stop');
  });
  it('supports up to five representable lots and leaves a protected remainder',()=>{
   const plan=validateTargetAllocation([{price:2010,volume:.01},{price:2020,volume:.02}],{...position,volume:.05},quote,2000,1990);

@@ -40,7 +40,8 @@ const saveReason=computed(()=>{
  if(['pending','sending'].includes(plan.value?.state))return stateNames[plan.value.state];
  if(!position.value)return 'Keine passende offene Brokerposition.';
  if(!draft.value?.dirty)return 'Keine ungespeicherten Änderungen.';
- if(validation.value.error)return messages[validation.value.error]??validation.value.error;
+ if(position.value.sl===0&&!props.snapshot?.target_without_sl_ready)return 'Position hat keinen SL. TP-Verwaltung benötigt ein Worker-Update; der SL bleibt unverändert.';
+ if(validation.value.error)return validation.value.error==='invalid_position_stop'?'Ungültiger SL im Brokerstand.':messages[validation.value.error]??validation.value.error;
  if(!ready.value)return 'Frischer Brokerstand oder TP-Handelsfreigabe fehlt.';
  return '';
 });

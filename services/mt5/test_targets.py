@@ -98,6 +98,23 @@ class TargetBrokerTests(unittest.TestCase):
         request=self.broker.prepare(row,'install',-1)
         self.assertEqual(request,dict(action=6,position=123,symbol='EURUSD',sl=1.29,tp=1.32))
 
+    def test_no_sl_install_and_partial_close_preserve_zero_and_recheck_manual_changes(self):
+        row=plan(native_tp=1.32);row['checkpoint']['sl']=0;row['plan']['initial_sl']=None
+        self.api.positions_get.return_value=(position(sl=0),)
+        request=self.broker.prepare(row,'install',-1)
+        self.assertEqual(request['sl'],0)
+        self.assertEqual(request['tp'],1.32)
+        self.api.positions_get.side_effect=[(position(sl=0),),(position(sl=0,tp=1.32),)]
+        self.api.order_send.return_value=NS(retcode=10009)
+        self.assertEqual(self.broker.send(row,'install',-1,request),dict(status='executed',remaining_volume=.02,sl=0,tp=1.32))
+        self.api.positions_get.side_effect=None
+        row['plan']['native_tp']=0;self.api.positions_get.return_value=(position(sl=0),)
+        self.api.symbol_info_tick.return_value.bid=1.315;self.api.symbol_info_tick.return_value.ask=1.3151
+        close=self.broker.prepare(row,'close',0)
+        self.assertEqual(close['position'],123);self.assertEqual(close['volume'],.01)
+        self.api.order_send.reset_mock();self.api.positions_get.return_value=(position(sl=1.29),)
+        self.assertEqual(self.broker.send(row,'close',0,close)['status'],'rejected');self.api.order_send.assert_not_called()
+
     def test_partial_close_has_position_ticket_and_native_step(self):
         self.api.symbol_info_tick.return_value.bid=1.315
         self.api.symbol_info_tick.return_value.ask=1.3151

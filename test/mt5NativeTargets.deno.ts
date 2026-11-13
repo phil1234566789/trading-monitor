@@ -22,6 +22,8 @@ Deno.test('native TP requests read without creation and save only fresh account-
    return Response.json(subject);
   }
   if(url.pathname.endsWith('mt5_target_plans'))return Response.json(stored);
+  if(url.pathname.endsWith('mt5_target_commands'))return Response.json({id:'1e25a364-09a6-4336-8de5-f56f6e385296',kind:'install'});
+  if(url.pathname.endsWith('/rpc/mt5_finish_target'))return Response.json(true);
   if(url.pathname.endsWith('mt5_execution_orders'))return Response.json({id:orderId,status:'executed',intent:{account_login:42,account_server:'Demo',mode:'demo',symbol:'XAUUSD',direction:'long',stop_loss:1990},result:{position:123,magic:9,price:2000,volume:.04,initial_sl:1990}});
   if(url.pathname.endsWith('/rpc/mt5_save_target_plan')){stored={order_id:body.p_order,revision:body.p_revision,plan:body.p_plan,checkpoint:body.p_checkpoint,state:'pending'};return Response.json(stored);}
   throw new Error('Unexpected test-only fetch '+url.pathname);
@@ -44,6 +46,14 @@ Deno.test('native TP requests read without creation and save only fresh account-
   heartbeat=new Date(Date.now()-6000).toISOString();await assert.rejects(targetPlanAction(request),/bridge_offline/);heartbeat=new Date().toISOString();
   const {position_ticket:_,...legacy}=request;await assert.rejects(targetPlanAction({...legacy,order_id:orderId}),/target_position_unavailable/);
   assert.equal(calls.filter(c=>c.method==='POST').length,before);
+  snapshot=structuredClone(base);snapshot.positions[0].sl=0;
+  const noSl={...request,revision:crypto.randomUUID(),observed:{...request.observed,sl:0}};
+  await assert.rejects(targetPlanAction(noSl),/target_without_sl_worker_required/);
+  (snapshot as any).target_without_sl_ready=true;
+  const withoutStop:any=await targetPlanAction(noSl);
+  assert.equal(withoutStop.plan.checkpoint.sl,0);assert.equal(withoutStop.plan.plan.initial_sl,null);
+  assert.deepEqual(await targetPlanAction({action:'target_result',account_id:account.id,order_id:stored.order_id,revision:stored.revision,operation_id:'1e25a364-09a6-4336-8de5-f56f6e385296',result:{status:'executed',remaining_volume:.04,sl:0,tp:0}},true),{recorded:true});
+  await assert.rejects(targetPlanAction({...noSl,observed:{...noSl.observed,sl:-1}}));
  }finally{
   globalThis.fetch=oldFetch;
   keys.forEach((key,index)=>oldEnv[index]==null?Deno.env.delete(key):Deno.env.set(key,oldEnv[index]!));

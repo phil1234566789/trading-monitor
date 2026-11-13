@@ -7,7 +7,9 @@ export function targetDraftAllocation(drafts,volume,step) {
 }
 export function validateTargetAllocation(targets,position,quote,entry,initialSl) {
  if(!Array.isArray(targets)||targets.length<1||targets.length>5)throw new Error('invalid_target_count');
- if(![position?.volume,quote?.minimum_volume,quote?.volume_step,quote?.maximum_volume,entry,position?.sl].every(positive))throw new Error('target_specs_unavailable');
+ if(![position?.volume,quote?.minimum_volume,quote?.volume_step,quote?.maximum_volume,entry].every(positive))throw new Error('target_specs_unavailable');
+ // Ein manueller Trade ohne SL darf seine TPs verwalten; der vorhandene SL wird niemals verändert.
+ if(typeof position.sl!=='number'||!Number.isFinite(position.sl)||position.sl<0)throw new Error('invalid_position_stop');
  const step=quote.volume_step,min=quote.minimum_volume,max=quote.maximum_volume;
  const units=v=>Math.abs(v/step-Math.round(v/step))<1e-7;
  if(!units(position.volume))throw new Error('invalid_position_volume');

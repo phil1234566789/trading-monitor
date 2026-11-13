@@ -19,6 +19,16 @@ async function mount(extra={}){
  const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api,snapshot:current};
 }
 describe('TP edits require Save',()=>{
+ it('splits a native XAU position without SL only after the worker advertises support',async()=>{
+  const current=structuredClone(snapshot);current.positions[0].volume=1;current.positions[0].sl=0;current.positions[0].magic=0;
+  const nativePosition={accountId:'account',login:42,server:'Demo',ticket:123,symbol:'XAUUSD.gbe',direction:'long',entryPrice:2000,magic:0,type:0};
+  const {state,api,snapshot:live}=await mount({snapshot:current,nativePosition});
+  splitTargetDraft(nativeTargetKey('account',123),0);await nextTick();
+  expect(state.allocation.targets.map(t=>t.volume)).toEqual([.5,.5]);
+  expect(state.saveReason).toContain('Position hat keinen SL');await state.save();expect(api).toHaveBeenCalledTimes(1);
+  live.target_without_sl_ready=true;await nextTick();expect(state.saveReason).toBe('');
+  await state.save();expect(api.mock.calls[1][1]).toMatchObject({position_ticket:123,observed:{volume:1,sl:0,tp:2010},targets:[{price:2010,volume:.5},{price:2010,volume:.5}]});
+ });
  it('cancels the entire position draft through the editor registry without an API write',async()=>{
   const {state,api}=await mount();splitTargetDraft(order.id,0);changeTargetShare(order.id,0,25);moveTargetDraft(order.id,0,2015);state.error='old failure';
   expect(cancelTargetDraft(order.id)).toBe(true);expect(state.draft.targets).toEqual([{price:2010,volume:.01}]);expect(state.draft.dirty).toBe(false);expect(state.error).toBe('');expect(api.mock.calls.filter(c=>c[0]==='target_save')).toHaveLength(0);

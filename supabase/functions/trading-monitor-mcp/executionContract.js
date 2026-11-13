@@ -57,13 +57,13 @@ export function validateExecutionIntent(value, config, now) {
 
 export function validateWorkerSnapshot(value, config) {
   fields(value, ['account_login','account_server','mode','balance','equity','currency',
-    'trade_allowed','positions','pending_orders','quotes','execution_ready','worker_error','hedging','risk','risk_error','risk_guards_ready','target_plans_ready']);
+    'trade_allowed','positions','pending_orders','quotes','execution_ready','worker_error','hedging','risk','risk_error','risk_guards_ready','target_plans_ready','target_without_sl_ready']);
   account(value, config);
   if (!finite(value.balance) || !finite(value.equity) || typeof value.currency !== 'string'
     || !/^[A-Z]{3,8}$/.test(value.currency) || typeof value.trade_allowed !== 'boolean'
     || !Array.isArray(value.positions) || value.positions.length > 100
     || !Number.isSafeInteger(value.pending_orders) || value.pending_orders < 0) throw new Error('invalid_snapshot');
-  for(const key of ['hedging','risk_guards_ready','target_plans_ready'])if(value[key]!=null&&typeof value[key]!=='boolean')throw new Error('invalid_snapshot');
+  for(const key of ['hedging','risk_guards_ready','target_plans_ready','target_without_sl_ready'])if(value[key]!=null&&typeof value[key]!=='boolean')throw new Error('invalid_snapshot');
   if(value.risk_error!=null&&value.risk_error!=='risk_history_unavailable')throw new Error('invalid_risk_snapshot');
   if(value.risk!=null){
     const r=value.risk;fields(r,['time','day','realized_net_day','open_loss','latched']);

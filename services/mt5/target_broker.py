@@ -29,7 +29,7 @@ class TargetBroker:
         p=self.position(row)
         if p is None:raise ValueError('target_position_closed')
         c=row['checkpoint']
-        if not all(same(getattr(p,k),c[k]) for k in ('volume','sl','tp')) or not positive(p.sl):
+        if not all(same(getattr(p,k),c[k]) for k in ('volume','sl','tp')) or not (p.sl == 0 or positive(p.sl)):
             raise ValueError('target_position_changed')
         return p
 
