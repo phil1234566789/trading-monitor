@@ -6954,15 +6954,15 @@
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderEquityChart.vue": {
-    "mtime": 1794390713.821414,
-    "seen": 1794564498.2140725,
-    "ast_hash": "fcc6ba96e899c52222f757b2fe7dc705",
+    "mtime": 1794575683.0778568,
+    "seen": 1794575719.7847424,
+    "ast_hash": "28e7d4135cb968f3c81d12f2af54bfd1",
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderStatistics.vue": {
-    "mtime": 1794566208.9946523,
-    "seen": 1794572295.2018085,
-    "ast_hash": "c60120c79378fb0e89a9832f30b3c95e",
+    "mtime": 1794575550.747829,
+    "seen": 1794575719.7857423,
+    "ast_hash": "2a2ad04220c99dca7bb4f32e532efe51",
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderStatisticsBreakdown.vue": {
@@ -8964,9 +8964,9 @@
     "semantic_hash": ""
   },
   "test/mmtStatisticsPaging.test.js": {
-    "mtime": 1794566116.2939146,
-    "seen": 1794572295.520494,
-    "ast_hash": "cf15fd17d1b38bccd7cca0c98e7a3aed",
+    "mtime": 1794575642.279188,
+    "seen": 1794575720.0693808,
+    "ast_hash": "089f6fa5d61aa312a06ef604ed8c9429",
     "semantic_hash": ""
   },
   "test/mmtStopPlan.test.js": {
@@ -8982,9 +8982,9 @@
     "semantic_hash": ""
   },
   "test/mt5StatisticsReadModel.integration.mjs": {
-    "mtime": 1794566256.6058052,
-    "seen": 1794572295.530272,
-    "ast_hash": "a5e4416817c0318ef7405d785f2ba790",
+    "mtime": 1794575575.1394248,
+    "seen": 1794575720.0793834,
+    "ast_hash": "ac7e52cac482320944d97848edcb254c",
     "semantic_hash": ""
   },
   "test/mt5StatisticsReadModel.performance.mjs": {
@@ -9015,6 +9015,18 @@
     "mtime": 1794572795.1704452,
     "seen": 1794572957.353,
     "ast_hash": "2ae06b1caf3be2e987bb765338bc5072",
+    "semantic_hash": ""
+  },
+  "src/mmtEquityPlot.js": {
+    "mtime": 1794575550.3261712,
+    "seen": 1794575719.8622918,
+    "ast_hash": "69999a5973efba66e306abf281af9892",
+    "semantic_hash": ""
+  },
+  "test/mmtEquityPlot.test.js": {
+    "mtime": 1794575574.9266152,
+    "seen": 1794575720.0673842,
+    "ast_hash": "abe703850db2999288c98cdd936106b8",
     "semantic_hash": ""
   }
 }
