@@ -8,10 +8,10 @@ import MmtBatchEntrySearch from './MmtBatchEntrySearch.vue';
 import {mmtSearchFeedback} from '../mmtChartStatus.js';
 import {positionCommissions} from '../milkyMetaTraderStatistics.js';
 import {fmtPrice,pnlClass} from '../format.js';
-import {unmanagedBrokerTakeProfits} from '../mmtBrokerTakeProfits.js';
+import {projectBrokerPositions} from '../mmtBrokerPositions.js';
 import '../milkyMetaTrader.css';
 const props=defineProps({symbol:String,annotations:Array,lastCandleTime:Number,replay:Boolean});
-const emit=defineEmits(['trades','broker-take-profits']);
+const emit=defineEmits(['trades','broker-positions']);
 const mmt=useDashboardMmt(toRef(props,'symbol'));
 const {api,status,accounts,accountStatuses,activeId,account,snapshot,brokerQuote,activeOrders,trades,history,entryTimeFor,links,error,key,now,refresh,cancel}=mmt;
 const nearest=computed(()=>nearestTradeIdea(props.annotations??[],props.lastCandleTime));
@@ -20,6 +20,7 @@ const entryDisabledReason=computed(()=>props.replay?'Replay aktiv: Entry-Suche n
 const accountFor=o=>accounts.value.find(a=>Number(a.login)===o.intent.account_login&&a.server===o.intent.account_server);
 const snapshotFor=o=>accountStatuses.value[accountFor(o)?.id]?.bridge?.snapshot;
 const apiFor=o=>(action,fields,options)=>api(action,{...fields,account_id:accountFor(o)?.id},options);
+const apiForNativePosition=position=>(action,fields,options)=>api(action,{...fields,account_id:position.accountId},options);
 const openPositions=computed(()=>accounts.value.flatMap(a=>{
  const state=accountStatuses.value[a.id];
  const snap=state?.bridge?.snapshot;
@@ -27,7 +28,11 @@ const openPositions=computed(()=>accounts.value.flatMap(a=>{
  return (snap.positions??[]).map(p=>({account:a,position:p,currency:snap.currency,online:state.online}));
 }));
 const managedPositions=computed(()=>(status.value?.orders??[]).filter(o=>findOrderPosition(o,snapshotFor(o))));
-const brokerTakeProfits=computed(()=>unmanagedBrokerTakeProfits(openPositions.value,managedPositions.value));
+const brokerPositions=computed(()=>projectBrokerPositions(openPositions.value,managedPositions.value));
+const chartTrades=computed(()=>{
+ const nativeEntries=new Set(brokerPositions.value.filter(position=>position.entryPrice&&position.managedOrderId).map(position=>`mmt:${position.managedOrderId}`));
+ return trades.value.filter(trade=>!nativeEntries.has(trade.id));
+});
 const searchStatus={searching:'Entry wird gesucht',sending:'Wird gesendet',unknown:'Ausführung ungeklärt'};
 const lastResult=ref(null),submittedIds=new Set();
 function afterSubmit(ids=[]){for(const id of ids)submittedIds.add(id);void refresh();}
@@ -36,8 +41,8 @@ watch(()=>status.value?.orders??[],(orders,previous)=>{
  const result=mmtSearchFeedback(orders,previous,submittedIds);
  if(result)lastResult.value=result;
 });
-watch(trades,value=>emit('trades',value),{immediate:true});
-watch(brokerTakeProfits,value=>emit('broker-take-profits',value),{immediate:true});
+watch(chartTrades,value=>emit('trades',value),{immediate:true});
+watch(brokerPositions,value=>emit('broker-positions',value),{immediate:true});
 </script>
 <template>
  <section class="mmt-page mmt-chart-card" aria-label="MMT im Chart">
@@ -55,6 +60,7 @@ watch(brokerTakeProfits,value=>emit('broker-take-profits',value),{immediate:true
    <li v-for="p in openPositions" :key="p.account.id+':'+p.position.ticket"><strong>{{p.position.symbol}} · {{p.position.type===0?'Long':'Short'}} · {{p.position.volume}} Lot</strong><br>{{p.account.name}} · <span :class="pnlClass(p.position.profit)">{{fmtPrice(p.position.profit,2)}} {{p.currency}}</span> Broker-PnL<br><small>Ohne Kosten/Swap · Commission {{fmtPrice(commissions.get(p.account.id+':'+(p.position.position_id??p.position.ticket))??null,2)}} {{p.currency}}</small><span v-if="!p.online"> · Stand veraltet</span></li>
   </ul>
   <details v-for="o in managedPositions" :key="o.id"><summary>{{o.intent.symbol}} · TP verwalten</summary><MmtTargetEditor :order="o" :api="apiFor(o)" :snapshot="snapshotFor(o)" :online="!!accountStatuses[accountFor(o)?.id]?.online&&!error" :entry-time="entryTimeFor(o)" :account-name="accountFor(o)?.name" @saved="refresh" /></details>
+  <details v-for="position in brokerPositions.filter(position=>!position.managedOrderId)" :key="position.id"><summary>{{position.symbol}} · {{position.accountName}} · TP verwalten</summary><MmtTargetEditor :native-position="position" :api="apiForNativePosition(position)" :snapshot="accountStatuses[position.accountId]?.bridge?.snapshot" :online="position.online&&!error" :entry-time="position.openedAt" :account-name="position.accountName" @saved="refresh" /></details>
  </section>
 </template>
 <style scoped>
