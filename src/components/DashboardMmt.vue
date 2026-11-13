@@ -15,6 +15,7 @@ const mmt=useDashboardMmt(toRef(props,'symbol'));
 const {api,status,accounts,accountStatuses,activeId,account,snapshot,brokerQuote,activeOrders,trades,history,entryTimeFor,links,error,key,now,refresh,cancel}=mmt;
 const nearest=computed(()=>nearestTradeIdea(props.annotations??[],props.lastCandleTime));
 const ambiguity=computed(()=>nearest.value.reason==='tie');
+const entryDisabledReason=computed(()=>props.replay?'Replay aktiv: Entry-Suche nur im Live-Chart möglich.':error.value||(!nearest.value.idea?(ambiguity.value?'Zwei Ideen sind gleich nah: eine ausblenden.':'Eine Long-/Short-Idee mit SL im Chart fehlt.') :''));
 const accountFor=o=>accounts.value.find(a=>Number(a.login)===o.intent.account_login&&a.server===o.intent.account_server);
 const snapshotFor=o=>accountStatuses.value[accountFor(o)?.id]?.bridge?.snapshot;
 const apiFor=o=>(action,fields,options)=>api(action,{...fields,account_id:accountFor(o)?.id},options);
@@ -42,7 +43,7 @@ watch(trades,value=>emit('trades',value),{immediate:true});
   <p v-if="error" role="alert">{{error}}</p>
   <p v-if="replay" role="status">Replay · Entry-Suche gesperrt</p>
   <p v-if="ambiguity" role="status">Zwei Ideen gleich nah · eine ausblenden</p>
-  <MmtBatchEntrySearch v-if="key" :api="api" :accounts="accounts" :statuses="accountStatuses" :active-id="activeId" :symbol="symbol" :idea="nearest.idea" :now="now" :disabled="replay||!!error||!nearest.idea" @submitted="afterSubmit" />
+  <MmtBatchEntrySearch v-if="key" :api="api" :accounts="accounts" :statuses="accountStatuses" :active-id="activeId" :symbol="symbol" :idea="nearest.idea" :now="now" :disabled="!!entryDisabledReason" :disabled-reason="entryDisabledReason" @submitted="afterSubmit" />
   <p v-if="lastResult" role="status">{{lastResult.text}}<span v-if="lastResult.reason"> · {{lastResult.reason}}</span> <button aria-label="Rückmeldung schließen" @click="lastResult=null">×</button></p>
   <ul v-if="activeOrders.length" class="live-state" aria-label="Laufende Entry-Suchen" aria-live="polite">
    <li v-for="o in activeOrders" :key="o.id"><strong>{{o.intent.symbol}} · {{o.intent.direction==='long'?'Long':'Short'}}</strong><br>{{accountFor(o)?.name}} · {{searchStatus[o.status]}} <button v-if="o.status==='searching'" @click="cancel(o.id)">Abbrechen</button></li>

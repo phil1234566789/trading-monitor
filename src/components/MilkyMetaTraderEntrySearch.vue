@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue';
 import ActionButton from './ui/ActionButton.vue';
+import {mmtRiskReason} from '../mmtRiskReasons.js';
 import {riskPreviewMetrics} from '../../supabase/functions/trading-monitor-mcp/mt5RiskContract.js';
 import { useRoute } from 'vue-router';
 const props=defineProps({api:{type:Function,required:true},status:Object,account:Object,compact:Boolean,chartSymbol:String,idea:Object,disabled:Boolean});
@@ -53,7 +54,6 @@ const liveMetrics=computed(()=>{
  }catch(e){return {value:null,reason:e.message};}
 });
 const metrics=computed(()=>liveMetrics.value.value);
-const riskReasons={risk_limits_unconfirmed:'Heutige Risikobasis und Kontogrenzen zuerst unter MMT bestätigen.',risk_guard_unavailable:'Frische Tagesstopp-/Risikoprüfung des Workers fehlt oder ist gesperrt.',risk_floor_reconfirmation_required:'Neuer Kontohöchststand: aktuelle Drawdown-Grenze erneut unter MMT bestätigen.',risk_exposure_unavailable:'Offene Risiken oder Brokeraufträge noch nicht vollständig geklärt.',risk_budget_exhausted:'Kein freies Markt-/Tages-/Drawdownbudget.',risk_sizing_unavailable:'Native Broker-Lotspezifikation fehlt.',quote_stale:'Frischer Brokerkurs oder native Spezifikation fehlt.',invalid_stop_or_target:'SL oder Ziel passt nicht zum aktuellen Brokerkurs.',minimum_volume_exceeds_budget:'Das Restbudget reicht nicht für das Broker-Mindestlot.'};
 const ready=computed(()=>props.status?.online&&quotes.value.length>0);
 const executionReady=computed(()=>props.status?.bridge?.snapshot?.execution_ready&&props.status?.bridge?.snapshot?.trade_allowed);
 const expired=computed(()=>!preview.value||now.value>=preview.value.confirmation_expires_sec*1000);
@@ -107,7 +107,7 @@ async function confirm() {
       <p>RR {{metrics?.rr?.toFixed(2)??'—'}} · {{metrics?.volume??'—'}} Lot {{riskMode?'dynamisch':'(Pilot)'}}<br>Risiko bis SL {{metrics?.risk?.toFixed(2)??'—'}} {{status?.bridge?.snapshot?.currency}}</p>
       <small>Brokerkurs {{metrics?.price??'—'}} · native Brokerberechnung. {{riskMode?'Lotgröße wird vor dem Fill erneut geprüft.':'Pilot: Mindestlot, maximal 0,01.'}}</small>
     </div>
-    <p v-if="liveMetrics.reason" role="status">{{riskReasons[liveMetrics.reason]??'Risikoberechnung noch nicht verfügbar.'}}</p>
+    <p v-if="liveMetrics.reason" role="status">{{mmtRiskReason(liveMetrics.reason)}}</p>
     <p v-if="metrics?.budget">Markt frei {{metrics.budget.market_left.toFixed(2)}} · Tagesrest {{metrics.budget.daily_left.toFixed(2)}} · Drawdownrest {{metrics.budget.drawdown_left.toFixed(2)}} {{metrics.currency}}. Puffer {{metrics.budget.cost_buffer.toFixed(2)}}.</p>
     <form class="mmt-form" @submit.prevent="showPreview">
       <label v-if="!compact" class="mmt-wide">Broker-Symbol<select v-model="symbol" required :disabled="busy"><option value="" disabled>Symbol wählen</option><option v-for="q in quotes" :key="q.symbol" :value="q.symbol">{{q.symbol}}</option></select></label>
