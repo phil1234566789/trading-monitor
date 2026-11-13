@@ -80,6 +80,7 @@ import {
 import { buildActiveMetadataSnapshot, hasActiveMetadata as hasActiveMetadataFor, saveDebugMetadataSection } from "../debugMetadata.js";
 import { usePriceChartDrawings } from "../composables/usePriceChartDrawings.js";
 import {useMmtTargetDrawing} from '../composables/useMmtTargetDrawing.js';
+import {useBrokerTakeProfitDrawing} from '../composables/useBrokerTakeProfitDrawing.js';
 import {useTradeIdeaDrawing} from '../composables/useTradeIdeaDrawing.js';
 import {useDrawings} from '../composables/useDrawings.js';
 import {renderBrokerTrades} from '../tradeIdeaRendering.js';
@@ -322,6 +323,7 @@ const props = defineProps({
   // Mess-Modus (Philip 2026-09-23) — eigener Klick-Modus neben dem Trade-Modus, nicht innerhalb:
   // gemessen wird frei zwischen zwei Punkten, ohne Treffer auf irgendein Chart-Objekt.
   brokerTrades: {type:Array,default:()=>[]},
+  brokerTakeProfits: {type:Array,default:()=>[]},
   measureModeActive: { type: Boolean, default: false },
   // Trade-Modus (Chat 2026-07-27: "damit ich nicht versehentlich in den Chart reinklicke") — nur
   // wenn aktiv, wertet der Klick-Handler unten Klicks auf Trade-Setup-OB-Boxen aus. Sonst bleibt
@@ -385,6 +387,7 @@ const emit = defineEmits([
 ]);
 
 const targetDrawing=useMmtTargetDrawing();
+const brokerTakeProfitDrawing=useBrokerTakeProfitDrawing(()=>props.brokerTakeProfits,()=>props.symbol);
 const lastCandleTime=ref(null);
 const ideaStore=useDrawings();
 function ideaPointAt(x,y){
@@ -2109,6 +2112,7 @@ onMounted(() => {
   priceChartRsi.create(chart, candleSeries);
   createDrawings(chart, candleSeries,chartContainerRef.value);
   targetDrawing.create(chart,candleSeries,chartContainerRef.value);
+  brokerTakeProfitDrawing.create(candleSeries);
   createMarketStructure(chart, candleSeries);
   m1Structure.create(candleSeries);
   setup2.create(chart,candleSeries);
@@ -2314,6 +2318,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   targetDrawing.dispose();
+  brokerTakeProfitDrawing.dispose();
   disposeDrawings();
   disposeMarketStructure();
   disposeTradeSetupDrawing();

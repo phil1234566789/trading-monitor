@@ -8,9 +8,10 @@ import MmtBatchEntrySearch from './MmtBatchEntrySearch.vue';
 import {mmtSearchFeedback} from '../mmtChartStatus.js';
 import {positionCommissions} from '../milkyMetaTraderStatistics.js';
 import {fmtPrice,pnlClass} from '../format.js';
+import {unmanagedBrokerTakeProfits} from '../mmtBrokerTakeProfits.js';
 import '../milkyMetaTrader.css';
 const props=defineProps({symbol:String,annotations:Array,lastCandleTime:Number,replay:Boolean});
-const emit=defineEmits(['trades']);
+const emit=defineEmits(['trades','broker-take-profits']);
 const mmt=useDashboardMmt(toRef(props,'symbol'));
 const {api,status,accounts,accountStatuses,activeId,account,snapshot,brokerQuote,activeOrders,trades,history,entryTimeFor,links,error,key,now,refresh,cancel}=mmt;
 const nearest=computed(()=>nearestTradeIdea(props.annotations??[],props.lastCandleTime));
@@ -26,6 +27,7 @@ const openPositions=computed(()=>accounts.value.flatMap(a=>{
  return (snap.positions??[]).map(p=>({account:a,position:p,currency:snap.currency,online:state.online}));
 }));
 const managedPositions=computed(()=>(status.value?.orders??[]).filter(o=>findOrderPosition(o,snapshotFor(o))));
+const brokerTakeProfits=computed(()=>unmanagedBrokerTakeProfits(openPositions.value,managedPositions.value));
 const searchStatus={searching:'Entry wird gesucht',sending:'Wird gesendet',unknown:'Ausführung ungeklärt'};
 const lastResult=ref(null),submittedIds=new Set();
 function afterSubmit(ids=[]){for(const id of ids)submittedIds.add(id);void refresh();}
@@ -35,6 +37,7 @@ watch(()=>status.value?.orders??[],(orders,previous)=>{
  if(result)lastResult.value=result;
 });
 watch(trades,value=>emit('trades',value),{immediate:true});
+watch(brokerTakeProfits,value=>emit('broker-take-profits',value),{immediate:true});
 </script>
 <template>
  <section class="mmt-page mmt-chart-card" aria-label="MMT im Chart">

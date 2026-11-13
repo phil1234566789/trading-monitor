@@ -158,6 +158,7 @@ const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
 // siehe Kommentar im Template.
 const showMmt = useLocalStorageRef("showMmt", false);
 const brokerTrades=ref([]);
+const brokerTakeProfits=ref([]);
 const showTrades = useLocalStorageRef("showTrades", true);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
 // tv-indikator (dort default 5, 0-50) — 0 zeigt nur das gerade aktive/letzte Setup.
@@ -2283,6 +2284,7 @@ watch(selectedTradingAccountId, () => {
     :current-bar="currentBar"
     :trades="isolatedTrades"
     :broker-trades="showMmt ? brokerTrades : []"
+    :broker-take-profits="showMmt ? brokerTakeProfits : []"
     :hovered-trade-id="hoveredTradeId"
     :pin-trade-ids="pinTradeIds"
     :pin-ob-zone-keys="pinObZoneKeys"
@@ -2381,7 +2383,7 @@ watch(selectedTradingAccountId, () => {
     @add-anti-confluence-from-picker="onAddAntiConfluenceFromPicker"
     />
     <aside v-if="(showMmt || showTradeSetupCockpit) && !snapshotView" class="chart-trading-sidebar">
-    <DashboardMmt v-if="showMmt" :symbol="currentSymbol" :annotations="visibleAnnotations" :last-candle-time="priceChartRef?.lastCandleTime" :replay="replayActive" @trades="brokerTrades=$event" />
+    <DashboardMmt v-if="showMmt" :symbol="currentSymbol" :annotations="visibleAnnotations" :last-candle-time="priceChartRef?.lastCandleTime" :replay="replayActive" @trades="brokerTrades=$event" @broker-take-profits="brokerTakeProfits=$event" />
     <TradeSetupCockpit
       @setup-saved="refreshTscRange"
       v-if="showTradeSetupCockpit && !snapshotView"
