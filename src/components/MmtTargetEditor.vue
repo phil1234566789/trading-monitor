@@ -5,7 +5,7 @@ import {findOrderPosition} from '../milkyMetaTraderMonitoring.js';
 import {targetDraftAllocation,validateTargetAllocation} from '../../supabase/functions/trading-monitor-mcp/targetPlanContract.js';
 import {setTargetDraft,removeTargetDraft,useTargetDraft,selectTargetDraft} from '../mmtTargetDrafts.js';
 import ActionButton from './ui/ActionButton.vue';
-const props=defineProps({order:{type:Object,required:true},api:{type:Function,required:true},snapshot:Object,online:Boolean,entryTime:Number});
+const props=defineProps({order:{type:Object,required:true},api:{type:Function,required:true},snapshot:Object,online:Boolean,entryTime:Number,accountName:String});
 const emit=defineEmits(['saved']);
 const plan=ref(null),busy=ref(false),error=ref(''),receipt=ref(''),now=ref(Date.now());
 const position=computed(()=>findOrderPosition(props.order,props.snapshot));
@@ -23,6 +23,7 @@ const messages={invalid_target_precision:'Zielpreis passt nicht zur Broker-Preis
 function initTargets(targets){
  setTargetDraft(props.order.id,{symbol:chartInstrument(props.order.intent.symbol),entryTime:props.entryTime??position.value?.opened_at_sec??null,digits:quote.value?.digits,
   entryPrice:props.order.result.price,initialSl:(props.order.result.initial_sl??props.order.intent.stop_loss),direction:props.order.intent.direction,
+  accountLabel:props.accountName||`Konto ${props.order.intent.account_login}`,positionId:props.order.result.position??props.order.result.order,positionVolume:position.value?.volume,
   targets,dirty:false,selectedIndex:null});
 }
 function update(index,key,value){
@@ -64,6 +65,7 @@ async function save(){
 }
 function reset(){initTargets(plan.value?.plan.targets.slice(plan.value.next_index)??(position.value?.tp?[{price:position.value.tp,volume:position.value.volume}]:[]));error.value='';}
 watch(()=>props.order.id,()=>{void refresh();},{immediate:true});
+watch(()=>position.value?.volume,volume=>{if(draft.value)setTargetDraft(props.order.id,{...draft.value,positionVolume:volume});});
 timer=setInterval(()=>{now.value=Date.now();if(document.visibilityState==='visible')void refresh();},2000);
 onUnmounted(()=>{disposed=true;clearInterval(timer);removeTargetDraft(props.order.id);});
 </script>

@@ -2235,6 +2235,8 @@ onMounted(() => {
     const rect = chartContainerRef.value.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+    const targetCursor=targetDrawing.cursorAt(x,y);
+    if(targetCursor){chartContainerRef.value.style.cursor=targetCursor;return;}
     ideaDrawing.move({x,y});
     if(ideaDrawing.active.value){chartContainerRef.value.style.cursor="crosshair";return;}
     if (props.measureModeActive) {
@@ -2891,6 +2893,7 @@ defineExpose({
 }
 
 .chart-container {
+  position: relative;
   flex: 1;
   /* Die Canvas-Breite darf das Verkleinern neben der Checklist nicht verhindern. */
   min-width: 0;

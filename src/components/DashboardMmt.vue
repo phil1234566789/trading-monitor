@@ -51,7 +51,7 @@ watch(trades,value=>emit('trades',value),{immediate:true});
   <ul v-if="openPositions.length" class="live-state" aria-label="Offene Positionen" aria-live="polite">
    <li v-for="p in openPositions" :key="p.account.id+':'+p.position.ticket"><strong>{{p.position.symbol}} · {{p.position.type===0?'Long':'Short'}} · {{p.position.volume}} Lot</strong><br>{{p.account.name}} · <span :class="pnlClass(p.position.profit)">{{fmtPrice(p.position.profit,2)}} {{p.currency}}</span> Broker-PnL<br><small>Ohne Kosten/Swap · Commission {{fmtPrice(commissions.get(p.account.id+':'+(p.position.position_id??p.position.ticket))??null,2)}} {{p.currency}}</small><span v-if="!p.online"> · Stand veraltet</span></li>
   </ul>
-  <details v-for="o in managedPositions" :key="o.id"><summary>{{o.intent.symbol}} · TP verwalten</summary><MmtTargetEditor :order="o" :api="apiFor(o)" :snapshot="snapshotFor(o)" :online="!!accountStatuses[accountFor(o)?.id]?.online&&!error" :entry-time="entryTimeFor(o)" @saved="refresh" /></details>
+  <details v-for="o in managedPositions" :key="o.id"><summary>{{o.intent.symbol}} · TP verwalten</summary><MmtTargetEditor :order="o" :api="apiFor(o)" :snapshot="snapshotFor(o)" :online="!!accountStatuses[accountFor(o)?.id]?.online&&!error" :entry-time="entryTimeFor(o)" :account-name="accountFor(o)?.name" @saved="refresh" /></details>
  </section>
 </template>
 <style scoped>

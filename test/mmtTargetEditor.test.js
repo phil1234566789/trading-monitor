@@ -1,5 +1,5 @@
 import {afterEach,describe,it,expect,vi} from 'vitest';
-import {createRenderer,h,nextTick,ssrContextKey} from 'vue';
+import {createRenderer,h,nextTick,reactive,ssrContextKey} from 'vue';
 import Editor from '../src/components/MmtTargetEditor.vue';
 import {moveTargetDraft} from '../src/mmtTargetDrafts.js';
 const renderer=createRenderer({createElement:tag=>({tag,children:[],props:{}}),createText:text=>({text}),createComment:()=>({}),setText:(n,t)=>n.text=t,setElementText:(n,t)=>n.text=t,patchProp:(n,k,o,v)=>n.props[k]=v,insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
@@ -9,11 +9,18 @@ const snapshot={account_login:42,account_server:'Demo',target_plans_ready:true,e
 async function mount(){
  vi.stubGlobal('document',{visibilityState:'visible'});
  const api=vi.fn().mockImplementation(async(action,body)=>action==='target_state'?{plan:null}:{plan:{revision:body.revision,state:'pending',next_index:0,plan:{targets:body.targets}}});
- app=renderer.createApp({...Editor,render:()=>h('div')},{order,api,snapshot,online:true,entryTime:100});
+ const current=reactive(structuredClone(snapshot));
+ app=renderer.createApp({...Editor,render:()=>h('div')},{order,api,snapshot:current,online:true,entryTime:100});
  app.provide(ssrContextKey,{});
- const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api};
+ const vm=app.mount({children:[]});await nextTick();await nextTick();return {state:vm.$.setupState,api,snapshot:current};
 }
 describe('TP edits require Save',()=>{
+ it('uses the current open volume even while percentage drafts are dirty',async()=>{
+  const {state,api,snapshot:current}=await mount();state.update(0,'percent',50);state.add();state.update(1,'percent',50);await nextTick();
+  current.positions[0].volume=.04;await nextTick();
+  expect(state.draft.positionVolume).toBe(.04);expect(state.allocation.targets.map(t=>t.volume)).toEqual([.02,.02]);
+  expect(api.mock.calls.map(x=>x[0])).toEqual(['target_state']);
+ });
  it('does not send after drag, rounds to broker digits, and saves the exact explicit allocation',async()=>{
   const {state,api}=await mount();moveTargetDraft(order.id,0,2012.345);await nextTick();
   expect(api.mock.calls.map(x=>x[0])).toEqual(['target_state']);expect(state.draft.targets[0].price).toBe(2012.35);
