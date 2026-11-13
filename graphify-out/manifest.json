@@ -8826,27 +8826,27 @@
     "semantic_hash": ""
   },
   "services/mt5/build_release_manifest.py": {
-    "mtime": 1794571856.4617326,
-    "seen": 1794572295.1513426,
-    "ast_hash": "c2be02cd6ceb4cd921a8a93020b6294d",
+    "mtime": 1794572606.0710924,
+    "seen": 1794572957.3409965,
+    "ast_hash": "f4caa02482d663773948c6cb179688d6",
     "semantic_hash": ""
   },
   "services/mt5/deploy_release.ps1": {
-    "mtime": 1794572229.595564,
-    "seen": 1794572295.1523418,
-    "ast_hash": "4fb6ff3589d91ffbe83cb90dd4a75b78",
+    "mtime": 1794572488.6969707,
+    "seen": 1794572957.341997,
+    "ast_hash": "aba29bc8c75184bcc17a077deb286498",
     "semantic_hash": ""
   },
   "services/mt5/history_deals.py": {
-    "mtime": 1794572110.7480595,
-    "seen": 1794572295.154341,
-    "ast_hash": "410e426d5c01f4644aa1fe4c9cb6bf52",
+    "mtime": 1794572453.5293822,
+    "seen": 1794572957.3429961,
+    "ast_hash": "9a30b3bde18a0efe7f0a9b35f93f18eb",
     "semantic_hash": ""
   },
   "services/mt5/position_costs.py": {
-    "mtime": 1794572270.9896393,
-    "seen": 1794572295.154341,
-    "ast_hash": "9b6763da6a75949463c8bfe34a21b9fe",
+    "mtime": 1794572358.6400652,
+    "seen": 1794572957.343999,
+    "ast_hash": "417f12dc790568ba6a04df033105dedb",
     "semantic_hash": ""
   },
   "services/mt5/stop_risk.py": {
@@ -8856,9 +8856,9 @@
     "semantic_hash": ""
   },
   "services/mt5/test_position_costs.py": {
-    "mtime": 1794572270.9906394,
-    "seen": 1794572295.1623406,
-    "ast_hash": "b985f89129e321f779fd72a9be67a74e",
+    "mtime": 1794572358.6410651,
+    "seen": 1794572957.352005,
+    "ast_hash": "945a33dc9e12c6872c9ae075379c4078",
     "semantic_hash": ""
   },
   "services/mt5/test_stop_targets.py": {
@@ -8946,9 +8946,9 @@
     "semantic_hash": ""
   },
   "test/mmtExitDrafts.test.js": {
-    "mtime": 1794572066.4630451,
-    "seen": 1794572295.5194952,
-    "ast_hash": "26e9bd7dbb7f1e25523f49503d6f0e7c",
+    "mtime": 1794572453.5293822,
+    "seen": 1794572957.697657,
+    "ast_hash": "f2cbf996ffdcc133b7bc959a7701c3e2",
     "semantic_hash": ""
   },
   "test/mmtExitErrors.test.js": {
@@ -8997,6 +8997,24 @@
     "mtime": 1794572199.307595,
     "seen": 1794572295.530272,
     "ast_hash": "fdef4246a7f43468699cfbb181a25686",
+    "semantic_hash": ""
+  },
+  "services/mt5/release_manifest.json": {
+    "mtime": 1794572606.6561394,
+    "seen": 1794572957.3459985,
+    "ast_hash": "43fc30b6a4afa1ebf900ab02640de346",
+    "semantic_hash": ""
+  },
+  "services/mt5/test_deploy_release.ps1": {
+    "mtime": 1794572794.9045517,
+    "seen": 1794572957.3510027,
+    "ast_hash": "7ae927756985353bd578e7d146c6403f",
+    "semantic_hash": ""
+  },
+  "services/mt5/test_release_manifest.py": {
+    "mtime": 1794572795.1704452,
+    "seen": 1794572957.353,
+    "ast_hash": "2ae06b1caf3be2e987bb765338bc5072",
     "semantic_hash": ""
   }
 }
