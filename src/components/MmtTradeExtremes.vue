@@ -1,17 +1,17 @@
 <script setup>
-import {computed,ref} from 'vue';
+import {computed} from 'vue';
 import {fmtDateTime,fmtPrice} from '../format.js';
 import {tradeExtremes,tradeOutcomeClass} from '../milkyMetaTraderPerformance.js';
-const props=defineProps({trades:{type:Array,default:()=>[]},accountName:{type:Function,required:true},known:Boolean});
-const count=ref(5);
-const ranked=computed(()=>tradeExtremes(props.trades,count.value===''?5:count.value));
+const props=defineProps({trades:{type:Array,default:()=>[]},ranked:Object,accountName:{type:Function,required:true},known:Boolean});
+const count=defineModel('count',{type:Number,default:5});
+const ranked=computed(()=>props.ranked??tradeExtremes(props.trades,count.value===''?5:count.value));
 const groups=computed(()=>[{label:'Biggest Winners',rows:ranked.value.winners},{label:'Biggest Losers',rows:ranked.value.losers}]);
-function normalize(){count.value=Math.max(1,Math.trunc(Number(count.value)||5));}
+function normalize(){count.value=Math.min(100,Math.max(1,Math.trunc(Number(count.value)||5)));}
 </script>
 <template>
  <aside class="mmt-panel mmt-trade-extremes" aria-label="Größte Gewinner und Verlierer">
   <h2>Größte Trades</h2>
-  <label>Anzahl je Liste<input v-model.number="count" type="number" min="1" step="1" @change="normalize"></label>
+  <label>Anzahl je Liste<input v-model.number="count" type="number" min="1" max="100" step="1" @change="normalize"></label>
   <p class="mmt-muted">Nach Netto-PnL · ohne Break-even · gesamte Auswahl</p>
   <section v-for="group in groups" :key="group.label">
    <h3>{{group.label}}</h3>

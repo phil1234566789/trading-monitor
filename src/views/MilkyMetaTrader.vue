@@ -20,11 +20,14 @@ import {accountAvailability,accountArchiveLabel} from '../milkyMetaTraderAccount
 
 const brokerHistory=ref({rows:[],sync:[]});
 const statisticsAccount=ref('');
-const commissions=computed(()=>positionCommissions(brokerHistory.value.rows));
+const commissions=computed(()=>brokerHistory.value.position_commissions
+ ?new Map(brokerHistory.value.position_commissions.map(row=>[`${row.account_id}:${row.position_id}`,row.commission]))
+ :positionCommissions(brokerHistory.value.rows??[]));
 const commissionFor=(accountId,positionId)=>commissions.value.get(`${accountId}:${positionId}`)??null;
 const historyTime=accountId=>brokerHistory.value.sync.find(s=>s.account_id===accountId)?.synced_at;
 const accountForOrder=order=>accounts.value.find(a=>Number(a.login)===order.intent.account_login&&a.server===order.intent.account_server)?.id;
 const orderCommission=order=>commissionFor(accountForOrder(order),executionPositionId(order));
+const commissionPositions=computed(()=>(status.value?.orders??[]).map(order=>({account_id:accountForOrder(order),position_id:executionPositionId(order)})).filter(row=>row.account_id&&Number.isSafeInteger(row.position_id)&&row.position_id>0).slice(0,100));
 const token=ref(readMilkyMetaTraderKey()), unlocked=ref(false), accounts=ref([]), activeId=ref(null);
 const accountGroups=computed(()=>{
  const {active,inactive}=accountAvailability(accounts.value);
@@ -157,7 +160,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       </section>
       <div class="mmt-workspace">
         <div class="mmt-main-column">
-          <MilkyMetaTraderStatistics :api="api" :accounts="accounts" :account="statisticsAccount" @history="brokerHistory=$event" />
+          <MilkyMetaTraderStatistics :api="api" :accounts="accounts" :account="statisticsAccount" :commission-positions="commissionPositions" @history="brokerHistory=$event" />
         </div>
         <aside class="mmt-side-column" aria-label="Entry-Suche und Aufträge">
           <section class="mmt-panel mmt-orders" aria-labelledby="mmt-orders-title">

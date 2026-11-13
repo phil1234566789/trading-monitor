@@ -2,6 +2,7 @@ import {targetPlanAction} from '../trading-monitor-mcp/mt5TargetPlans.ts';
 import {riskPolicyAction} from '../trading-monitor-mcp/mt5Risk.ts';
 import { readHistoryPage } from '../trading-monitor-mcp/mt5History.ts';
 import {historyRefreshAction} from '../trading-monitor-mcp/mt5HistoryRefresh.ts';
+import {statisticsAction} from '../trading-monitor-mcp/mt5Statistics.ts';
 import { readAccountBalances } from './accountBalances.ts';
 import { mt5JournalAction } from '../trading-monitor-mcp/mt5Journal.ts';
 import { marketPreviewAction } from '../trading-monitor-mcp/marketPreview.ts';
@@ -31,6 +32,7 @@ Deno.serve(async req => {
     else if(typeof body.action==='string'&&body.action.startsWith('target_')) result=await targetPlanAction(body);
     else if(['risk_policy','risk_policy_save'].includes(body.action)) result=await riskPolicyAction(body);
     else if(body.action==='history_page') result=await readHistoryPage(body);
+    else if(['statistics_summary','statistics_page','statistics_series'].includes(body.action)) result=await statisticsAction(body);
     else if(['history_refresh','history_refresh_status'].includes(body.action)) result=await historyRefreshAction(body);
     else if(typeof body.action==='string'&&body.action.startsWith('journal_')) result=await mt5JournalAction(body);
     else if(body.action==='status') {

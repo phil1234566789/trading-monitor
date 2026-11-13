@@ -16,7 +16,7 @@ const result=computed(()=>closedBrokerTrades(props.history?.rows??[]));
 const rows=computed(()=>accountAvailability(props.accounts??[]).active.map(account=>{
  const value=accountBalance(account,props.status?.account_balances?.find(s=>s.account_id===account.id),props.status?.bridge);
  const sync=props.history?.sync?.find(s=>s.account_id===account.id);
- const stats=accountPerformance(account.id,value.currency,result.value,sync);
+ const stats=props.history?.account_totals?.find(row=>row.account_id===account.id&&row.currency===value.currency)??accountPerformance(account.id,value.currency,result.value,sync);
  const age=snapshotAgeSeconds(value.balance_at,props.now);
  const fresh=value.balance_source==='MT5-Worker'&&age!=null&&age<=props.staleSeconds&&Date.parse(value.balance_at)<=props.now;
  const readerFresh=value.balance_source==='MT5-Reader'&&age!=null&&age>=0&&age<=90;

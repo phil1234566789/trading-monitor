@@ -13,7 +13,7 @@ export async function loadMmtHistory(api,background=false,afterId=0){
  return {rows,sync,imports,journalLinks};
 }
 
-export async function refreshMmtHistory(api){
+export async function requestMmtHistoryRefresh(api){
  let refreshError='';
  try{
   const {requests}=await api('history_refresh',{});
@@ -28,5 +28,10 @@ export async function refreshMmtHistory(api){
  }catch{
   refreshError='Brokerhistorie konnte nicht aktualisiert werden. Angezeigt wird der gespeicherte Stand; bitte erneut versuchen.';
  }
+ return refreshError;
+}
+
+export async function refreshMmtHistory(api){
+ const refreshError=await requestMmtHistoryRefresh(api);
  return {...await loadMmtHistory(api),refreshError};
 }
