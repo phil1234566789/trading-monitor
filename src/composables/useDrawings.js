@@ -6,6 +6,7 @@ import {
   addDrawing,
   removeDrawing,
   updateDrawingVisible,
+  updateDrawingAnnotations,
 } from "../drawingsStore.js";
 
 // Modul-weiter Singleton (wie useStatusBar.js) — geteilt zwischen App.vue (Toggle-Button +
@@ -70,6 +71,17 @@ async function remove(id) {
   return ok;
 }
 
+async function updateAnnotation(id,index,annotation) {
+  const row=drawings.value.find(d=>d.id===id);
+  if(!row||!row.annotations[index])return false;
+  const annotations=row.annotations.map((a,i)=>i===index?annotation:a);
+  const saved=await updateDrawingAnnotations(id,annotations);
+  if(!saved)return false;
+  const current=drawings.value.findIndex(d=>d.id===id);
+  if(current!==-1)drawings.value[current]=saved;
+  return true;
+}
+
 // Pro-Zeichnung-Toggle (Checkbox-Liste in DrawingsModal.vue) — unabhängig vom globalen
 // "visible"-Toggle oben, der alle Zeichnungen auf einmal aus-/einblendet.
 async function setDrawingVisible(id, value) {
@@ -92,5 +104,5 @@ export function useDrawings({load:loadOnUse=true}={}) {
     if(users++===0){syncScope=effectScope(true);syncScope.run(()=>watch([instrument,dateStr],load,{immediate:true}));}
     onScopeDispose(()=>{if(--users===0){syncScope.stop();syncScope=null;revision++;drawings.value=[];loading.value=false;}});
   }
-  return { instrument, dateStr, drawings, visible, loading, flatAnnotations, load, add, remove, setDrawingVisible };
+  return { instrument, dateStr, drawings, visible, loading, flatAnnotations, load, add, remove, updateAnnotation, setDrawingVisible };
 }

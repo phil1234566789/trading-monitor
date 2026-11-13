@@ -387,15 +387,16 @@ const emit = defineEmits([
 const targetDrawing=useMmtTargetDrawing();
 const lastCandleTime=ref(null);
 const ideaStore=useDrawings();
-const ideaDrawing=useTradeIdeaDrawing({
- context:()=>[props.symbol,props.currentBar,props.replayUntil],
- pointAt:(x,y)=>{
+function ideaPointAt(x,y){
   if(!chart||!candleSeries||!allCandles.length)return null;
   const price=candleSeries.coordinateToPrice(y),scale=chart.timeScale();
   const candles=clipReplay(allCandles),logical=scale.coordinateToLogical(x),last=candles[candles.length-1];
   const time=scale.coordinateToTime(x)??(logical==null||!last?null:last.time+Math.round(logical-(candles.length-1))*barSecondsFor(props.currentBar));
   return price==null||time==null?null:{price,time};
- },save:d=>ideaStore.add(d.annotations,d.title),refresh:()=>{if(chart&&candleSeries)refreshDrawingsInternal();}
+}
+const ideaDrawing=useTradeIdeaDrawing({
+ context:()=>[props.symbol,props.currentBar,props.replayUntil],
+ pointAt:ideaPointAt,save:d=>ideaStore.add(d.annotations,d.title),refresh:()=>{if(chart&&candleSeries)refreshDrawingsInternal();}
 });
 const brokerPrimitives=[];
 function refreshBrokerTrades(){
@@ -440,7 +441,7 @@ const priceChartRsi = usePriceChartRsi();
 // bleibt aber Quelle fürs Debug-Metadaten-Panel (cockpitMetadata unten) — deshalb weiterhin berechnet.
 const { cockpitMetadata, refreshCockpit } = usePriceChartCockpit();
 // Zeichnungen-Zeichnung (siehe usePriceChartDrawings.js, Phase 6d).
-const { refresh: refreshDrawings, create: createDrawings, dispose: disposeDrawings } = usePriceChartDrawings();
+const { refresh: refreshDrawings, create: createDrawings, dispose: disposeDrawings, editingStatus:ideaEditingStatus } = usePriceChartDrawings({store:ideaStore,pointAt:ideaPointAt});
 // Trade-Setup-Erkennung + M5-Polling (siehe usePriceChartTradeSetups.js, Phase 6f) —
 // tradeSetupsMetadata direkt im Template gebunden (Debug-Metadaten-Panel), daher destructured.
 // Ersetzt das bisherige DOPPELTE currentTradeSetups(let)+tradeSetupsMetadata(ref) hier im File.
@@ -2106,7 +2107,7 @@ onMounted(() => {
   // EMA-Serien + RSI-Panel-Lifecycle leben in usePriceChartRsi.js (Phase 6b) — legt hier die
   // EMA-Serien an (RSI-Series+Pane erst bei Bedarf, siehe refreshRsiInternal/priceChartRsi.refreshRsi).
   priceChartRsi.create(chart, candleSeries);
-  createDrawings(chart, candleSeries);
+  createDrawings(chart, candleSeries,chartContainerRef.value);
   targetDrawing.create(chart,candleSeries,chartContainerRef.value);
   createMarketStructure(chart, candleSeries);
   m1Structure.create(candleSeries);
@@ -2735,6 +2736,7 @@ defineExpose({
       :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="closeTradeSetup2Selection" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
+    <div v-if="ideaEditingStatus && !ideaDrawing.active.value" class="idea-drawing-controls" role="status">{{ideaEditingStatus}}</div>
     <div v-if="ideaDrawing.active.value" class="idea-drawing-controls" role="status">
       {{ideaDrawing.error.value || 'Idee: Anker → SL → optionales Ziel'}}
       <button v-if="ideaDrawing.points.value.length===2" @click="ideaDrawing.finish()">Ohne TP abschließen</button>

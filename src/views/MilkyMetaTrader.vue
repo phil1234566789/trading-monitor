@@ -11,7 +11,7 @@ import { findOrderPosition, snapshotAgeSeconds, executionPositionId } from '../m
 import MilkyMetaTraderOrderCard from '../components/MilkyMetaTraderOrderCard.vue';
 import '../milkyMetaTrader.css';
 import ActionButton from '../components/ui/ActionButton.vue';
-import MmtDailyStopStatus from '../components/MmtDailyStopStatus.vue';
+import {readAccountDailyStatuses} from '../mmtAccountDailyStatus.js';
 import MmtRiskPolicyEditor from '../components/MmtRiskPolicyEditor.vue';
 import MilkyMetaTraderEntrySearch from '../components/MilkyMetaTraderEntrySearch.vue';
 import { createMilkyMetaTraderClient } from '../milkyMetaTraderClient.js';
@@ -31,11 +31,12 @@ const accountGroups=computed(()=>{
  return [{inactive:false,label:'Aktive Konten',accounts:active},{inactive:true,label:'Inaktive Konten',accounts:inactive}];
 });
 const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
+const accountStatuses=ref({});
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
 let timer=null, nextPoll=0, statusRequest=null, viewEpoch=0;
 const pollError=ref('');
 const { setPageStatus, clearPageStatus }=useStatusBar();
-const pollDelay=computed(()=>mmtPollDelay(status.value));
+const pollDelay=computed(()=>Math.min(mmtPollDelay(status.value),...Object.values(accountStatuses.value).map(mmtPollDelay)));
 const staleSeconds=computed(()=>mmtStaleSeconds(pollDelay.value));
 const now=ref(Date.now());
 const dataAge=computed(()=>snapshot.value&&!snapshot.value.worker_error?snapshotAgeSeconds(status.value?.bridge?.heartbeat_at,now.value):null);
@@ -62,7 +63,12 @@ function refreshStatus(options={}) {
   statusRequest=(async()=>{
     try {
       const value=await api('status',{},options);
-      if(epoch===viewEpoch&&accountId===activeId.value){status.value=value;activeId.value=mmtSelectedAccountId(value,activeId.value);pollError.value='';}
+      if(epoch===viewEpoch&&accountId===activeId.value){
+        status.value=value;activeId.value=mmtSelectedAccountId(value,activeId.value);pollError.value='';
+        const selectedId=activeId.value;
+        const dailyStatuses=await readAccountDailyStatuses(api,accounts.value,selectedId,value,options);
+        if(epoch===viewEpoch&&selectedId===activeId.value)accountStatuses.value=dailyStatuses;
+      }
     } finally {statusRequest=null;nextPoll=Date.now()+pollDelay.value;}
   })();
   return statusRequest;
@@ -97,7 +103,7 @@ async function unlock() {
 }
 function clearView() {
   viewEpoch++;clearInterval(timer); timer=null;pollError.value=''; token.value=''; unlocked.value=false;
-  brokerHistory.value={rows:[],sync:[]};statisticsAccount.value='';form.value.password=''; accounts.value=[]; status.value=null; activeId.value=null;
+  brokerHistory.value={rows:[],sync:[]};statisticsAccount.value='';form.value.password=''; accounts.value=[]; status.value=null;accountStatuses.value={}; activeId.value=null;
 }
 function lock() {
   if(!forgetMilkyMetaTraderKey()) {error.value='Der gespeicherte Schlüssel konnte nicht entfernt werden. Bitte die Website-Daten im Browser löschen.';return;}
@@ -139,8 +145,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       <ActionButton type="submit" :disabled="busy||!token">{{busy?'Verbinde …':'Entsperren'}}</ActionButton>
     </form>
     <template v-else>
-      <MmtDailyStopStatus :status="status" :now="now" :stale-seconds="staleSeconds" />
-      <MilkyMetaTraderBalances v-model:statistics-account="statisticsAccount" :accounts="accounts" :active-id="activeId" :status="status" :history="brokerHistory" :now="now" :stale-seconds="staleSeconds" />
+      <MilkyMetaTraderBalances v-model:statistics-account="statisticsAccount" :accounts="accounts" :active-id="activeId" :status="status" :account-statuses="accountStatuses" :history="brokerHistory" :now="now" :stale-seconds="staleSeconds" />
         <p v-if="workerProblem" role="alert" class="mmt-error">Ausführung gestört: {{workerProblem.code}}<span v-if="workerProblem.stage"> in {{workerProblem.stage}}</span>. Entry-Aufträge und Brokerstatus prüfen; nichts blind erneut senden.</p>
         <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
         <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>

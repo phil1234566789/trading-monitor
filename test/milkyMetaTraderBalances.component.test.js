@@ -5,6 +5,9 @@ import {parse,compileScript} from '@vue/compiler-sfc';
 import {compile} from '@vue/compiler-dom';
 import {readFileSync} from 'node:fs';
 import Balances from '../src/components/MilkyMetaTraderBalances.vue';
+import DailyStop from '../src/components/MmtDailyStopStatus.vue';
+const dailyDescriptor=parse(readFileSync(new URL('../src/components/MmtDailyStopStatus.vue',import.meta.url),'utf8')).descriptor;
+DailyStop.render=new Function('Vue',compile(dailyDescriptor.template.content,{mode:'function',prefixIdentifiers:true,bindingMetadata:compileScript(dailyDescriptor,{id:'daily'}).bindings}).code)(Vue);
 const {descriptor}=parse(readFileSync(new URL('../src/components/MilkyMetaTraderBalances.vue',import.meta.url),'utf8'));
 Balances.render=new Function('Vue',compile(descriptor.template.content,{mode:'function',prefixIdentifiers:true,bindingMetadata:compileScript(descriptor,{id:'balances'}).bindings}).code)(Vue);
 it('renders all four accounts without activation controls and marks unknown data honestly',async()=>{
@@ -85,4 +88,18 @@ it('hides breached accounts from the semicircle strip without deleting their arc
  expect(buttons).toMatch(/data-variant="plain"[^>]*>Inaktive Konten \(1\)<\/button>/);
  expect(buttons).toMatch(/data-variant="caret"[^>]*aria-label="Inaktive Konten-Untermenü"[^>]*>▾<\/button>/);
  expect(html).not.toContain('Inaktive Konten (1) ▾');
+});
+
+it('places separate daily HP below every active account gauge without mixing account values',async()=>{
+ const now=Date.parse('2026-11-13T10:00:00Z'),accounts=[{id:'a',name:'A',login:1,server:'s'},{id:'b',name:'B',login:2,server:'s'},{id:'old',name:'Old',archived:true}];
+ const daily=(login,realized)=>({online:true,bridge:{heartbeat_at:new Date(now).toISOString(),snapshot:{account_login:login,account_server:'s',currency:'USD',risk:{day:'2026-11-13',time:now/1000,realized_net_day:realized,open_loss:0}}},daily_stop:{day:'2026-11-13',daily_loss_limit:1000,latched:false,daily_stop_ready:true}});
+ const html=await renderToString(Vue.createSSRApp(Balances,{accounts,activeId:'a',accountStatuses:{a:daily(1,-466.6),b:daily(2,-120)},now,staleSeconds:15}));
+ const cards=html.match(/<article[\s\S]*?<\/article>/g);
+ expect(cards).toHaveLength(2);
+ for(const [i,hp] of [[0,'$533.40'],[1,'$880.00']]){
+  expect(cards[i]).toContain(hp);expect(cards[i]).toContain('role="progressbar"');
+  expect(cards[i].indexOf('mmt-daily-status')).toBeGreaterThan(cards[i].indexOf('mmt-balance-ends'));
+ }
+ const offline=await renderToString(Vue.createSSRApp(Balances,{accounts,accountStatuses:{a:daily(2,-466.6),b:{...daily(2,-120),online:false}},now,staleSeconds:15}));
+ expect(offline).not.toContain('role="progressbar"');expect(offline.match(/Keine aktuellen Tageswerte/g)).toHaveLength(2);
 });

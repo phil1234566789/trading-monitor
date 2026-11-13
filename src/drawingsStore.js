@@ -45,6 +45,12 @@ export async function removeDrawing(id) {
   return true;
 }
 
+export async function updateDrawingAnnotations(id, annotations) {
+  const {data,error}=await supabase.from('claude_annotations').update({annotations}).eq('id',id).select(ROW_COLUMNS).single();
+  if(error){console.error('Zeichnung ändern fehlgeschlagen:',error);return null;}
+  return data;
+}
+
 // Pro-Zeichnung-Toggle (Feature 2026-07-30) — zusätzlich zum bestehenden globalen Sichtbarkeits-
 // Toggle in App.vue, der alle Zeichnungen auf einmal aus-/einblendet.
 export async function updateDrawingVisible(id, visible) {

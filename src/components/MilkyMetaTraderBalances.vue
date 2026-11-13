@@ -2,14 +2,16 @@
 import {computed} from 'vue';
 import ToggleButton from './ui/ToggleButton.vue';
 import ArchivedAccounts from './MmtArchivedAccounts.vue';
+import MmtDailyStopStatus from './MmtDailyStopStatus.vue';
+import {accountDailyStatus} from '../mmtAccountDailyStatus.js';
 import {fmtMoney,fmtPrice,fmtDateTime} from '../format.js';
 import {closedBrokerTrades} from '../milkyMetaTraderStatistics.js';
 import {accountBalance,accountPerformance,challengeGauge,balanceHealth} from '../milkyMetaTraderBalances.js';
 import {snapshotAgeSeconds} from '../milkyMetaTraderMonitoring.js';
-import {mmtAccountSnapshot,mmtExecutionReady} from '../milkyMetaTraderPolling.js';
+import {mmtAccountSnapshot,mmtExecutionReady,mmtPollDelay,mmtStaleSeconds} from '../milkyMetaTraderPolling.js';
 import {accountAvailability} from '../milkyMetaTraderAccountSelection.js';
 const statisticsAccount=defineModel('statisticsAccount',{type:String,default:''});
-const props=defineProps({accounts:Array,activeId:String,status:Object,history:Object,now:Number,staleSeconds:Number});
+const props=defineProps({accounts:Array,activeId:String,status:Object,accountStatuses:{type:Object,default:()=>({})},history:Object,now:Number,staleSeconds:Number});
 const result=computed(()=>closedBrokerTrades(props.history?.rows??[]));
 const rows=computed(()=>accountAvailability(props.accounts??[]).active.map(account=>{
  const value=accountBalance(account,props.status?.account_balances?.find(s=>s.account_id===account.id),props.status?.bridge);
@@ -18,7 +20,8 @@ const rows=computed(()=>accountAvailability(props.accounts??[]).active.map(accou
  const age=snapshotAgeSeconds(value.balance_at,props.now);
  const fresh=value.balance_source==='MT5-Worker'&&age!=null&&age<=props.staleSeconds&&Date.parse(value.balance_at)<=props.now;
  const readerFresh=value.balance_source==='MT5-Reader'&&age!=null&&age>=0&&age<=90;
- return {account,...value,stats,readerFresh,gauge:challengeGauge(value.balance,value.loss_floor,value.target),health:balanceHealth(props.status,fresh,account,props.now)};
+ const dailyStatus=accountDailyStatus(account,props.accountStatuses[account.id]??(account.id===props.activeId?props.status:null));
+ return {account,...value,stats,readerFresh,dailyStatus,dailyStaleSeconds:mmtStaleSeconds(mmtPollDelay(dailyStatus)),gauge:challengeGauge(value.balance,value.loss_floor,value.target),health:balanceHealth(props.status,fresh,account,props.now)};
 }));
 const time=value=>fmtDateTime(value,{year:'numeric',timeZone:'Europe/Berlin'});
 const money=(value,currency)=>value==null?'unbekannt':fmtMoney(value,currency);
@@ -60,6 +63,7 @@ const brokerAge=computed(()=>activeSnapshot.value&&!activeSnapshot.value.worker_
     <div class="mmt-balance-value"><strong>{{money(row.balance,row.currency)}}</strong><small>{{row.gauge.progress==null?'Fortschritt unbekannt':fmtPrice(row.gauge.progress,1)+' % geschafft'}}</small><small>Winrate <strong>{{row.stats.winrate==null?(row.stats.breakeven?'—':'unbekannt'):fmtPrice(row.stats.winrate,1)+' %'}}</strong><template v-if="row.stats.count"> · {{row.stats.count}} Trades</template></small><small v-if="row.loss_floor==null" class="mmt-balance-floor">Verlustgrenze unbekannt</small></div>
    </div>
    <div class="mmt-balance-ends"><span>Skala<strong>{{money(row.gauge.scaleFloor,row.currency)}}</strong></span><span>Start<strong>50.000</strong></span><span>Ziel<strong>{{money(row.target,row.currency)}}</strong></span></div>
+   <MmtDailyStopStatus :status="row.dailyStatus" :now="now" :stale-seconds="row.dailyStaleSeconds" />
 
    <p v-if="row.balance!=null&&row.loss_floor!=null&&row.balance<row.loss_floor" class="mmt-error">Balance unter der zuletzt bestätigten Verlustgrenze.</p>
    <p v-else-if="row.balance!=null&&row.target!=null&&row.balance>row.target" class="mmt-muted">Balance über dem Challengeziel.</p>
