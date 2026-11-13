@@ -26,6 +26,17 @@ describe('TS1 Sweep-Reaktion ohne bestätigte Gegen-FVG',()=>{
   expect(hasUninterruptedSweepReaction(candidate,before)).toBe(true);
   expect(hasUninterruptedSweepReaction(candidate,after)).toBe(false);
  });
+ it('verwechselt den H1-Stundenanfang nicht mit dem tatsächlichen M5-Sweep',()=>{
+  const level={...ls,price:10,touchedTime:0};
+  const candidate={dir:-1,ls:level,sweeps:[{level,timeframe:'1H'}],obStartTime:1800};
+  const candles=[{time:0,high:12,low:11},{time:300,high:12,low:11},{time:600,high:11,low:9}];
+  const beforeSweep=[{dir:-1,startTime:300}];
+  const afterSweep=[{dir:-1,startTime:900}];
+  for(const valid of [hasUninterruptedSweepReaction,denoValid]){
+   expect(valid(candidate,beforeSweep,candles)).toBe(true);
+   expect(valid(candidate,afterSweep,candles)).toBe(false);
+  }
+ });
  for(const dir of [-1,1]) it(`behält gültige ${dir===-1?'Long':'Short'}-Reaktionen und ignoriert spätere Gegen-FVGs`,()=>{
   const candidate={dir,ls:{...ls,dir,touchedTime:1000},obStartTime:2000};
   const own={dir:-dir,top:10,bottom:9,startTime:2000};

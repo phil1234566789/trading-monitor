@@ -11,7 +11,7 @@ import { businessSecondsBetween } from "./chartTimeUtils.js";
 import { liquidityTouch } from "./liquidityDetection.js";
 
 // Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
-export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-top3-sweeps-v2';
+export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-uninterrupted-sweep-v3';
 
 // Bis Bug-Report Philip 2026-07-29 ("M5 OBs bei trade-setup passen noch nicht") eine EIGENE, von
 // detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Mindestgröße (jede

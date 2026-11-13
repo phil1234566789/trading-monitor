@@ -21,7 +21,7 @@ const BASE_CTX = {
 describe("computeTradeSetups", () => {
   it('mischt den alten DB-Treffer40972 nach bestätigten Gegen-FVGs nicht zurück',()=>{
     const ls={price:4133.54,dir:-1,pivotTime:1794265200,touched:true,touchedTime:1794269400};
-    const stored={dir:-1,ls,sweeps:[{level:ls,timeframe:'5M'}],obStartTime:1794271200,obTop:4124.09,obBottom:4121.55,tradeSetupId:40972};
+    const stored={instrument:'XAUUSD',dir:-1,ls,sweeps:[{level:ls,timeframe:'5M'}],obStartTime:1794271200,obTop:4124.09,obBottom:4121.55,tradeSetupId:40972};
     const {tradeSetupsMetadata,computeTradeSetups}=usePriceChartTradeSetups();
     computeTradeSetups({...BASE_CTX,symbol:'XAUUSD',candles:xauContinuation.filter(c=>c.time+300<=1794271800),dbTradeSetups:[stored],tradeSetupHistoryCount:10});
     expect(tradeSetupsMetadata.value.some(s=>s.tradeSetupId===40972)).toBe(false);
