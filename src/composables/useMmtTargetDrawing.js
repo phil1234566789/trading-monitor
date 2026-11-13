@@ -1,6 +1,7 @@
 import {createApp,h,shallowRef,watch,watchEffect,onScopeDispose} from 'vue';
 import {LiquidityLinePrimitive} from '../liquidity.js';
-import {targetDraftLines,moveTargetDraft,selectTargetDraft,splitTargetDraft,changeTargetShare} from '../mmtTargetDrafts.js';
+import {targetDraftLines,stopEntryDraftLines,addStopDraft,moveTargetDraft,selectTargetDraft,splitTargetDraft,changeTargetShare} from '../mmtTargetDrafts.js';
+import {exitForecastLabel} from '../mmtExitPresentation.js';
 import {barSecondsFor} from '../timeframes.js';
 import {cssColor} from '../chartColors.js';
 import MmtTargetChartControls from '../components/MmtTargetChartControls.vue';
@@ -14,13 +15,12 @@ export function useMmtTargetDrawing(){
  const stop=watchEffect(()=>{
   const c=context.value;if(!series||!c)return;
   const lines=targetDraftLines(c.symbol);
-  if(drag&&!lines.some(line=>line.orderId===drag.orderId&&line.index===drag.index))up();
+  if(drag&&!lines.some(line=>line.orderId===drag.orderId&&line.index===drag.index&&line.kind===drag.kind))up();
   clear();const candles=c.candles;if(!candles.length)return;
   const last=candles[candles.length-1].time,bar=barSecondsFor(c.currentBar);
   for(const line of lines.sort((a,b)=>Number(a.selected)-Number(b.selected))){
-   const risk=line.initialSl==null?null:Math.abs(line.entryPrice-line.initialSl),rr=risk>0?(line.direction==='long'?line.price-line.entryPrice:line.entryPrice-line.price)/risk:null;
    const primitive=new LiquidityLinePrimitive({price:line.price,pivotTime:line.entryTime??last,endTime:last+bar*12},
-    {color:cssColor('candleUp'),lineWidth:line.selected?3:2,label:`${line.label} · ${line.price} · RR ${rr?.toFixed(2)??'—'}`,labelSide:'end-above',lenientLabels:true,forceLabel:line.selected,futureBarSeconds:bar,extendToRight:true},candles);
+    {color:cssColor(line.kind==='stop'?'candleDown':'candleUp'),lineWidth:line.selected?3:2,label:`${line.label} · ${line.price} · ${exitForecastLabel(line.forecast)}`,labelSide:'end-above',lenientLabels:true,forceLabel:line.selected,futureBarSeconds:bar,extendToRight:true},candles);
    series.attachPrimitive(primitive);primitives.push({primitive,line});
   }
  });
@@ -31,7 +31,7 @@ export function useMmtTargetDrawing(){
  function cursorAt(x,y){return drag||(chartMode.value==='navigate'&&hitAt(x,y))?'ns-resize':null;}
  function updateGuide(){
   if(!drag||!series||!chart){guide.value=null;return;}
-  const line=targetDraftLines(context.value?.symbol).find(line=>line.orderId===drag.orderId&&line.index===drag.index);
+  const line=targetDraftLines(context.value?.symbol).find(line=>line.orderId===drag.orderId&&line.index===drag.index&&line.kind===drag.kind);
   const y=line&&series.priceToCoordinate(line.price),height=chart.panes?.()[0]?.getHeight?.()??element.clientHeight-30;
   guide.value=y!=null&&y>=0&&y<=height?{y,left:chart.priceScale?.('left')?.width?.()??0,width:chart.timeScale().width()}:null;
  }
@@ -52,23 +52,28 @@ export function useMmtTargetDrawing(){
  }
  function start(line,event){
   if(drag)up();activeTarget=line;
-  selectTargetDraft(line.orderId,line.index);
+  selectTargetDraft(line.orderId,line.index,line.kind);
   if(!event)return;
   drag={...line,startY:event.clientY,startPrice:line.price};dragging.value=true;restoreScrolling=suspendChartScrolling(chart);
   updateGuide();element.style.cursor='ns-resize';event.preventDefault();event.stopPropagation();
  }
- function split(line,event){const index=splitTargetDraft(line.orderId,line.index);if(index!=null)start({...line,index},event);}
- function nudge(line,direction){activeTarget=line;moveTargetDraft(line.orderId,line.index,line.price+direction*10**-(line.digits??2));}
+ function split(line,event){const index=splitTargetDraft(line.orderId,line.index,line.kind);if(index!=null)start({...line,index},event);}
+ function addStop(line,mode){if(addStopDraft(line.orderId,mode))activeTarget={...line,index:0,kind:'stop'};}
+ function nudge(line,direction){activeTarget=line;moveTargetDraft(line.orderId,line.index,line.price+direction*10**-(line.digits??2),line.kind);}
  function tick(){
   if(!chart||!element)return;
   updateGuide();
   const height=chart.panes?.()[0]?.getHeight?.()??element.clientHeight-30,right=Math.max(0,element.clientWidth-chart.timeScale().width());
-  const rows=primitives.map(({line})=>{const y=series.priceToCoordinate(line.price);return {...line,y,lineY:y,right,saveState:targetSaveState(line.orderId)};}).filter(row=>row.y!=null&&row.y>=0&&row.y<=height).sort((a,b)=>a.y-b.y);
-  const saveRows=new Map();for(const row of rows)if(!saveRows.has(row.orderId)||row.selected)saveRows.set(row.orderId,row);
+  const rows=[...primitives.map(({line})=>line),...stopEntryDraftLines(context.value?.symbol)].map(line=>{
+   const lineY=series.priceToCoordinate(line.price),inside=lineY!=null&&lineY>=0&&lineY<=height;
+   // Ein neuer SL darf außerhalb der Preisansicht liegen; nur seine Bedienung wird am Rand gehalten.
+   return {...line,y:inside?lineY:line.selected?Math.min(height,Math.max(0,lineY??height)):null,lineY,right,offscreen:!inside,saveState:targetSaveState(line.orderId)};
+  }).filter(row=>row.y!=null).sort((a,b)=>a.y-b.y);
+  const saveRows=new Map();for(const row of rows)if(row.kind!=='entry'&&(!saveRows.has(row.orderId)||row.selected))saveRows.set(row.orderId,row);
   for(const row of rows)row.showSave=saveRows.get(row.orderId)===row;
   const sizes=new Map([...(overlay?.querySelectorAll?.('[data-tp-key]')??[])].map(node=>[node.dataset.tpKey,{half:Math.max(14,node.offsetHeight/2),save:node.querySelector('.tp-savebar')?.offsetHeight??0}]));
   let bottom=0;
-  for(const row of rows){const size=sizes.get(`${row.orderId}:${row.index}`)??{half:14,save:row.showSave?32:0};row.y=Math.max(size.half,row.y,bottom+size.half+4);bottom=row.y+size.half+(row.showSave?size.save:0);}
+  for(const row of rows){const size=sizes.get(`${row.orderId}:${row.kind??'target'}:${row.index}`)??{half:14,save:row.showSave?32:0};row.y=Math.max(size.half,row.y,bottom+size.half+4);bottom=row.y+size.half+(row.showSave?size.save:0);}
   if(bottom>height){const overflow=bottom-height;for(const row of rows)row.y-=overflow;}
   if(JSON.stringify(rows)!==JSON.stringify(controls.value))controls.value=rows;
   frame=requestAnimationFrame(tick);
@@ -83,7 +88,7 @@ export function useMmtTargetDrawing(){
  function move(event){
   if(!drag||!series)return;
   const initial=series.priceToCoordinate(drag.startPrice),price=series.coordinateToPrice(initial+event.clientY-drag.startY);
-  moveTargetDraft(drag.orderId,drag.index,price);updateGuide();event.preventDefault();event.stopPropagation();
+  moveTargetDraft(drag.orderId,drag.index,price,drag.kind);updateGuide();event.preventDefault();event.stopPropagation();
  }
  function up(){restoreScrolling?.();restoreScrolling=null;drag=null;dragging.value=false;guide.value=null;if(element)element.style.cursor='';}
  function blur(){up();activeTarget=null;}
@@ -93,7 +98,7 @@ export function useMmtTargetDrawing(){
   windowTarget=element.ownerDocument?.defaultView;windowTarget?.addEventListener('blur',blur);
   element.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('lostpointercapture',up,true);document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',leave,true);document.addEventListener('focusin',leave,true);
   overlay=document.createElement('div');element.appendChild(overlay);
-  app=createApp({render:()=>h(MmtTargetChartControls,{rows:controls.value,dragging:dragging.value,guide:guide.value,cancellation:cancellation.value,onCancel:cancel,onMove:start,onSplit:split,onNudge:nudge,onShare:(line,value)=>{activeTarget=line;changeTargetShare(line.orderId,line.index,value);},onSave:line=>saveTargetDraft(line.orderId)})});app.mount(overlay);
+  app=createApp({render:()=>h(MmtTargetChartControls,{rows:controls.value,dragging:dragging.value,guide:guide.value,cancellation:cancellation.value,onCancel:cancel,onMove:start,onSplit:split,onNudge:nudge,onShare:(line,value)=>{activeTarget=line;changeTargetShare(line.orderId,line.index,value,line.kind);},onAddStop:addStop,onSave:line=>saveTargetDraft(line.orderId)})});app.mount(overlay);
   frame=requestAnimationFrame(tick);
  }
  function refresh(value){context.value=value;}

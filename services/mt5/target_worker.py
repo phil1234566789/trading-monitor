@@ -5,8 +5,9 @@ from target_broker import TargetBroker,same
 
 
 class TargetEngine:
-    def __init__(self,broker,cloud,db,execute):
+    def __init__(self,broker,cloud,db,execute,refresh_risk=None):
         self.broker=TargetBroker(broker);self.cloud,self.db,self.execute=cloud,db,execute
+        self.refresh_risk=refresh_risk;self.supports_stops=callable(refresh_risk)
         self.db.execute('CREATE TABLE IF NOT EXISTS target_sends (id TEXT PRIMARY KEY,body TEXT NOT NULL,result TEXT,delivered INTEGER NOT NULL DEFAULT 0)')
         self.db.commit()
 
@@ -19,6 +20,13 @@ class TargetEngine:
     def observed(self,row,state,reason):
         self.cloud.call('target_observed',dict(order_id=row['order_id'],revision=row['revision'],state=state,reason=reason))
 
+    def prepare(self,row,kind,index):
+        if kind=='install' and row['plan'].get('stops'):
+            if not self.supports_stops:raise ValueError('stop_risk_context_unavailable')
+            # Poll/Claim können länger als die Schutzfrist dauern; direkt vor jeder Prüfung neu beziehen.
+            self.refresh_risk()
+        return self.broker.prepare(row,kind,index)
+
     def consider(self,row):
         if not self.execute or row['state'] not in ('pending','active'):return
         p=self.broker.position(row)
@@ -28,20 +36,29 @@ class TargetEngine:
             self.observed(row,'paused','broker_position_changed');return
         plan=row['plan'];index=row['next_index'];kind='install' if row['state']=='pending' else 'close'
         if kind=='close':
-            if plan['native_tp']>0:return
-            if index>=len(plan['targets']):self.observed(row,'completed','targets_finished_with_remainder');return
+            stop_index=row.get('next_stop_index',0)
+            if stop_index<len(plan.get('stops',[])):
+                try:self.broker.prepare(row,'stop_close',stop_index)
+                except ValueError as error:
+                    if str(error)!='target_not_reached':self.observed(row,'paused','broker_precheck_failed');return
+                else:kind,index='stop_close',stop_index
+            if kind=='close':
+                if plan['native_tp']>0:return
+                if index>=len(plan['targets']):
+                    if plan.get('stops'):return
+                    self.observed(row,'completed','targets_finished_with_remainder');return
         else:index=-1
-        try:self.broker.prepare(row,kind,index)
+        try:self.prepare(row,kind,index)
         except ValueError as error:
             if str(error)=='target_not_reached':return
             self.observed(row,'paused','broker_precheck_failed');return
         id=str(uuid.uuid4());body=dict(order_id=row['order_id'],revision=row['revision'])
         # Das Cloud-Recht wird vor dem lokalen Journal vergeben; verlorene Bestätigung führt zu keinem Versand.
-        if self.cloud.call('target_claim',dict(**body,operation_id=id,kind=kind,target_index=index)).get('authorized') is not True:return
+        if self.cloud.call('target_claim',dict(**body,operation_id=id,kind=kind,target_index=index,**({'exit_plan_version':1} if plan.get('exit_version')==1 else {}))).get('authorized') is not True:return
         with self.db:self.db.execute('INSERT INTO target_sends(id,body) VALUES (?,?)',(id,json.dumps(body)))
         result=dict(status='unknown',reason='target_send_outcome_unknown')
         try:
-            try:request=self.broker.prepare(row,kind,index)
+            try:request=self.prepare(row,kind,index)
             except ValueError:result=dict(status='rejected',reason='target_position_or_price_changed')
             else:result=self.broker.send(row,kind,index,request)
         finally:
@@ -51,7 +68,7 @@ class TargetEngine:
         if not self.execute:return
         self.flush()
         if not risk_allowed:return
-        response=self.cloud.call('target_poll',{})
+        response=self.cloud.call('target_poll',dict(exit_plan_version=1) if self.supports_stops and getattr(self.broker,'supports_stops',False) is True else {})
         plans=response.get('plans')
         if not isinstance(plans,list) or len(plans)>100:raise ValueError('invalid_target_plan_list')
         for row in plans:self.consider(row)

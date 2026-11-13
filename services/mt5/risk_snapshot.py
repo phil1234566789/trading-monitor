@@ -7,7 +7,9 @@ COST_TYPES={4,7,8,9,10,11,12,15,16,17}
 
 def native_position(api,p,offset):
     result=dict(ticket=p.ticket,symbol=p.symbol,volume=p.volume,type=p.type,sl=p.sl,tp=p.tp,profit=p.profit,
-                magic=p.magic,price_open=p.price_open,price_current=p.price_current,risk_to_sl=None,remaining_risk_to_sl=None)
+                magic=p.magic,price_open=p.price_open,price_current=p.price_current,swap=getattr(p,'swap',None),risk_to_sl=None,remaining_risk_to_sl=None)
+    identifier=getattr(p,'identifier',None)
+    if type(identifier) is int and identifier>0:result['identifier']=identifier
     stamp=getattr(p,'time',None)
     if positive(stamp):result['opened_at_sec']=int(stamp)-offset
     if not positive(p.sl) or p.type not in (0,1):return result

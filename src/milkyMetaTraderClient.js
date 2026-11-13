@@ -1,4 +1,5 @@
 import { HTTP_BACKGROUND } from './composables/useHttpActivity.js';
+import {isTargetPlanRejection} from '../supabase/functions/trading-monitor-mcp/targetPlanErrors.js';
 const messages={
  daily_stop_not_ready:'Frische Tagesstopp-Prüfung fehlt oder ist gesperrt.',
  daily_stop_latched:'Tagesstopp aktiv: keine neuen Entries.',
@@ -13,6 +14,15 @@ const messages={
  target_without_sl_worker_required:'TP-Plan nicht gespeichert: Dieser Worker unterstützt Positionen ohne SL noch nicht.',
  target_daily_stop:'Tagesstopp aktiv. TP-Änderung ist gesperrt.',
  target_command_unresolved:'Vorheriger Brokerauftrag ist ungeklärt. Kein erneuter Versand.',
+ target_worker_not_ready:'SL-/TP-Verwaltung ist am Worker noch nicht bereit.',
+ stop_worker_required:'SL-Verwaltung benötigt ein Worker-Update. Der Entwurf bleibt erhalten.',
+ stop_risk_budget_exceeded:'Der äußerste SL überschreitet das verfügbare Risikobudget. SL näher setzen oder Risiko-Obergrenze prüfen.',
+ stop_risk_basis_changed:'Die bestätigte R-Basis hat sich geändert. Aktuellen Plan laden.',
+ stop_plan_refresh_required:'Der SL-/TP-Plan wurde inzwischen verändert. Aktuellen Plan laden.',
+ invalid_stop_price:'SL liegt auf der falschen Seite des Brokerkurses oder zu nah daran. Entwurf bleibt erhalten.',
+ invalid_stop_precision:'SL-Preis passt nicht zur Broker-Preispräzision.',
+ invalid_stop_volume:'SL-Menge passt nicht zu Broker-Mindestlot und Lot-Schritt.',
+ stop_volume_must_cover_position:'SL-Anteile müssen die gesamte offene Position absichern.',
 
   active_orders_block_account_switch:'Kontowechsel gesperrt: Es gibt laufende Suchen, Sendungen oder einen unklaren Versand. Bestehende Aufträge bleiben an ihr Konto gebunden.',
   active_positions_block_account_switch:'Kontowechsel gesperrt: Es gibt offene oder noch nicht abschließend abgeglichene Positionen/Brokeraufträge. Die Schutzüberwachung bleibt auf dem bisherigen Konto.',
@@ -44,7 +54,7 @@ export function createMilkyMetaTraderClient(baseUrl, token, fetchImpl = fetch) {
         :messages[code]??'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Aufträge prüfen.');
       // Nur Fehler vor dem Enqueue beweisen, dass kein Auftrag angenommen wurde.
       error.code=code;
-      error.definitiveRejection=response.status===401||['preview_expired','invalid_preview','live_not_enabled','bridge_offline','bridge_not_ready','quote_stale','risk_limits_unconfirmed','risk_guard_unavailable','risk_floor_reconfirmation_required','risk_budget_exhausted','risk_exposure_unavailable','risk_sizing_unavailable','daily_stop_not_ready','daily_stop_latched'].includes(code);
+      error.definitiveRejection=response.status===401||isTargetPlanRejection(code)||['preview_expired','invalid_preview','live_not_enabled'].includes(code);
       throw error;
     }
     return response.json();

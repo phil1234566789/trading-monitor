@@ -58,12 +58,16 @@ class Broker:
                 continue
             long_loss=self.api.order_calc_profit(self.api.ORDER_TYPE_BUY,symbol.name,info.volume_min,tick.ask,tick.ask-info.point)
             short_loss=self.api.order_calc_profit(self.api.ORDER_TYPE_SELL,symbol.name,info.volume_min,tick.bid,tick.bid+info.point)
+            long_profit=self.api.order_calc_profit(self.api.ORDER_TYPE_BUY,symbol.name,info.volume_min,tick.ask,tick.ask+info.point)
+            short_profit=self.api.order_calc_profit(self.api.ORDER_TYPE_SELL,symbol.name,info.volume_min,tick.bid,tick.bid-info.point)
             if long_loss is None or short_loss is None or not positive(-long_loss) or not positive(-short_loss):
                 continue
             result.append(dict(symbol=symbol.name,bid=tick.bid,ask=tick.ask,time=received,
                                point=info.point,digits=info.digits,minimum_volume=info.volume_min,
                                volume_step=info.volume_step,maximum_volume=info.volume_max,stops_level=info.trade_stops_level*info.point,
-                               loss_per_unit_long=-long_loss/info.point,loss_per_unit_short=-short_loss/info.point))
+                               loss_per_unit_long=-long_loss/info.point,loss_per_unit_short=-short_loss/info.point,
+                               profit_per_unit_long=long_profit/info.point if positive(long_profit) else None,
+                               profit_per_unit_short=short_profit/info.point if positive(short_profit) else None))
         return result
 
     def snapshot(self):

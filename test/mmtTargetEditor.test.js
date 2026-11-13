@@ -4,7 +4,7 @@ import {renderToString} from '@vue/server-renderer';
 import {createSSRApp} from 'vue';
 import Controls from '../src/components/MmtTargetChartControls.vue';
 import Editor from '../src/components/MmtTargetEditor.vue';
-import {moveTargetDraft,splitTargetDraft,changeTargetShare,targetDraftLines} from '../src/mmtTargetDrafts.js';
+import {moveTargetDraft,splitTargetDraft,changeTargetShare,targetDraftLines,addStopDraft} from '../src/mmtTargetDrafts.js';
 import {saveTargetDraft,targetSaveState,nativeTargetKey,cancelTargetDraft} from '../src/mmtTargetSave.js';
 const renderer=createRenderer({createElement:tag=>({tag,children:[],props:{}}),createText:text=>({text}),createComment:()=>({}),setText:(n,t)=>n.text=t,setElementText:(n,t)=>n.text=t,patchProp:(n,k,o,v)=>n.props[k]=v,insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
 let app;afterEach(()=>{app?.unmount();vi.unstubAllGlobals();vi.restoreAllMocks();});
@@ -64,7 +64,7 @@ describe('TP edits require Save',()=>{
   expect(targetSaveState(order.id).status).toContain('Worker-/Brokerbestätigung steht noch aus');
   stored={...stored,state:'active'};await state.refresh();expect(targetSaveState(order.id).status).toBe('Aktiv');
   app.unmount();expect(await saveTargetDraft(order.id)).toBe(false);
-  await mount({api,snapshot:current});expect(targetDraftLines('XAUUSD').map(line=>line.percent)).toEqual([25,75]);
+  await mount({api,snapshot:current});expect(targetDraftLines('XAUUSD').filter(line=>line.kind==='target').map(line=>line.percent)).toEqual([25,75]);
  });
  it('blocks duplicate saves and retains changes made while the request is in flight',async()=>{
   const {state,api}=await mount();moveTargetDraft(order.id,0,2012);
@@ -139,7 +139,7 @@ describe('native broker position target management',()=>{
   expect(await saveTargetDraft(key)).toBe(true);expect(stored.plan.targets.map(t=>t.volume)).toEqual([.01,.03]);
   expect(api.mock.calls.filter(c=>c[0]==='target_save')).toHaveLength(1);
   app.unmount();await mount({nativePosition:native,api,snapshot:current});
-  expect(targetDraftLines('XAUUSD').map(t=>t.percent)).toEqual([25,75]);
+  expect(targetDraftLines('XAUUSD').filter(t=>t.kind==='target').map(t=>t.percent)).toEqual([25,75]);
  });
  it('does not attach controls to the same ticket with a different magic or account',async()=>{
   const current=structuredClone(snapshot);Object.assign(current.positions[0],{magic:7});
@@ -148,11 +148,66 @@ describe('native broker position target management',()=>{
  });
 });
 
+describe('one confirmed plan for partial SL and TP',()=>{
+ const native={accountId:'exit-account',login:42,server:'Demo',ticket:123,magic:0,type:0,direction:'long',symbol:'XAUUSD.gbe',entryPrice:2000};
+ const costs={entry_costs:-5,entry_volume:1,estimated_exit_costs_per_lot:0,exit_sample_at:100};
+ const previews={risky:{price:1997.75,budget:{requested:250,allocation:250,available:225,cost_buffer:25,effective_percent:.5}},full:{price:1995.75,budget:{requested:450,allocation:450,available:425,cost_buffer:25,effective_percent:.9}}};
+ const current=()=>{const value=structuredClone(snapshot);value.exit_plans_ready=true;value.target_without_sl_ready=true;Object.assign(value.positions[0],{volume:1,sl:0,magic:0,swap:0});Object.assign(value.quotes[0],{loss_per_unit_long:1,profit_per_unit_long:1});return value;};
+ const apiFor=stored=>vi.fn(async(action,body)=>action==='target_state'?{plan:stored,costs,stop_previews:previews}:{plan:{revision:body.revision,state:'pending',next_index:0,next_stop_index:0,plan:{targets:body.targets,stops:body.stops,native_sl:body.stops?.at(-1)?.price,risk_basis_sl:1997.75,risk_basis_source:'manual_stop_plan',exit_version:1}}});
+ it('offers the cached 0.5 percent preview as a draft only and saves both legs together',async()=>{
+  const api=apiFor(null),{state}=await mount({nativePosition:native,snapshot:current(),api}),key=nativeTargetKey(native.accountId,123);
+  expect(addStopDraft(key,'risky')).toBe(true);expect(api.mock.calls.map(c=>c[0])).toEqual(['target_state']);
+  splitTargetDraft(key,0,'stop');changeTargetShare(key,0,75,'stop');await nextTick();
+  expect(state.draft.initialSl).toBeNull();expect(state.draft.basisSl).toBeNull();expect(state.saveReason).toBe('');
+  await state.save();expect(api.mock.calls[1][1]).toMatchObject({position_ticket:123,targets:[{price:2010,volume:1}],stops:[{price:1997.75,volume:.75},{price:1997.75,volume:.25}],risk_mode:'risky',stops_changed:true,observed:{volume:1,sl:0,tp:2010}});
+  expect(state.draft.basisSl).toBe(1997.75);expect(state.draft.dirty).toBe(false);
+ });
+ it('allows SL-only protection with an empty TP list without inventing a TP',async()=>{
+  const live=current();live.positions[0].tp=0;const {state,api}=await mount({nativePosition:native,snapshot:live,api:apiFor(null)});
+  expect(state.draft.targets).toEqual([]);expect(addStopDraft(state.context.key,'risky')).toBe(true);await nextTick();
+  expect(state.saveReason).toBe('');await state.save();expect(api.mock.calls[1][1]).toMatchObject({targets:[],stops:[{price:1997.75,volume:1}]});
+ });
+ it('keeps a failed or unsupported risk preview unavailable without a broker write',async()=>{
+  const live=current();live.exit_plans_ready=false;const {state,api}=await mount({nativePosition:native,snapshot:live,api:apiFor(null)});
+  expect(addStopDraft(state.context.key,'risky')).toBe(false);expect(api.mock.calls.map(c=>c[0])).toEqual(['target_state']);
+ });
+ it('does not resend untouched native SLs when only TP is edited on an older worker',async()=>{
+  const live=current();live.positions[0].sl=1990;live.exit_plans_ready=false;
+  const {state,api}=await mount({nativePosition:native,snapshot:live,api:apiFor(null)});moveTargetDraft(state.context.key,0,2012);await nextTick();await state.save();
+  expect(api.mock.calls[1][1]).not.toHaveProperty('stops');expect(api.mock.calls[1][1]).not.toHaveProperty('risk_mode');
+  expect(api.mock.calls[1][1].observed.sl).toBe(1990);
+ });
+ it('restores saved remaining SL/TP legs and their established risk basis',async()=>{
+  const stored={revision:'stored',state:'active',next_index:1,next_stop_index:1,plan:{targets:[{price:2010,volume:.4},{price:2020,volume:.6}],stops:[{price:1999,volume:.4},{price:1997,volume:.6}],risk_basis_sl:1995,risk_basis_source:'manual_stop_plan',risk_mode:'risky',exit_version:1}};
+  const live=current();live.positions[0].volume=.6;live.positions[0].sl=1997;
+  const {state}=await mount({nativePosition:native,snapshot:live,api:apiFor(stored)});
+  expect(state.draft.targets).toEqual([{price:2020,volume:.6}]);expect(state.draft.stops).toEqual([{price:1997,volume:.6}]);expect(state.draft.basisSl).toBe(1995);
+  moveTargetDraft(state.context.key,0,1996,'stop');moveTargetDraft(state.context.key,0,2025);state.reset();
+  expect(state.draft.stops[0].price).toBe(1997);expect(state.draft.targets[0].price).toBe(2020);expect(state.draft.dirty).toBe(false);
+ });
+ it('synchronizes externally tightened or removed native SLs during TP drafts, preserving explicit SL edits',async()=>{
+  const live=current();live.positions[0].sl=1997.75;
+  const {state,snapshot:actual}=await mount({nativePosition:native,snapshot:live,api:apiFor(null)});
+  moveTargetDraft(state.context.key,0,2015);actual.positions[0].sl=1998;await nextTick();
+  expect(state.draft.stops).toEqual([{price:1998,volume:1}]);expect(state.draft.targets[0].price).toBe(2015);
+  actual.positions[0].sl=0;await nextTick();expect(state.draft.stops).toEqual([]);expect(state.canAddStop).toBe(true);
+  addStopDraft(state.context.key,'risky');moveTargetDraft(state.context.key,0,1997,'stop');actual.positions[0].sl=1999;await nextTick();
+  expect(state.draft.stops[0].price).toBe(1997);expect(state.draft.stopsDirty).toBe(true);
+ });
+ it('distinguishes a TP-only edit from explicit SL intent on a stored shared plan',async()=>{
+  const stored={revision:'stored',state:'active',next_index:0,next_stop_index:0,plan:{targets:[{price:2010,volume:1}],stops:[{price:1997.75,volume:1}],risk_basis_sl:1997.75,risk_mode:'risky',exit_version:1}};
+  const live=current();live.positions[0].sl=1997.75;
+  const {state,api}=await mount({nativePosition:native,snapshot:live,api:apiFor(stored)});
+  moveTargetDraft(state.context.key,0,2015);await nextTick();await state.save();
+  expect(api.mock.calls[1][1]).toMatchObject({stops:[{price:1997.75,volume:1}],stops_changed:false});
+ });
+});
+
 
 it('closes only the cancelled position percent form after capture-phase drag Escape',async()=>{
  const row={orderId:'one',index:0,percent:50,totalPercent:100,targetCount:2,saveState:{},y:10,lineY:10};
  const current=reactive({rows:[row],cancellation:null}),TestControls={...Controls,render:()=>h('div')};app=renderer.createApp({render:()=>h(TestControls,current)});app.provide(ssrContextKey,{});
- app.mount({children:[]});const state=app._instance.subTree.component.setupState;state.edit(row);expect(state.editing).toBe('one:0');
- current.cancellation={orderId:'other'};await nextTick();expect(state.editing).toBe('one:0');
+ app.mount({children:[]});const state=app._instance.subTree.component.setupState;state.edit(row);expect(state.editing).toBe('one:target:0');
+ current.cancellation={orderId:'other'};await nextTick();expect(state.editing).toBe('one:target:0');
  current.cancellation={orderId:'one'};await nextTick();expect(state.editing).toBeNull();
 });

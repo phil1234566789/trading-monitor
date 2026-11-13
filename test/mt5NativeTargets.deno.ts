@@ -29,14 +29,14 @@ Deno.test('native TP requests read without creation and save only fresh account-
   throw new Error('Unexpected test-only fetch '+url.pathname);
  }) as typeof fetch;
  try{
-  assert.deepEqual(await targetPlanAction({action:'target_state',account_id:account.id,position_ticket:123}),{plan:null});
+  assert.deepEqual(await targetPlanAction({action:'target_state',account_id:account.id,position_ticket:123}),{plan:null,costs:null,stop_previews:{}});
   assert.ok(calls.every(call=>call.method==='GET'));
   const request={action:'target_save',account_id:account.id,position_ticket:123,revision:crypto.randomUUID(),expected_revision:null,targets:[{price:2010,volume:.01},{price:2020,volume:.03}],observed:{volume:.04,sl:1990,tp:0}};
   const result:any=await targetPlanAction(request);
   assert.equal(result.plan.plan.account_id,account.id);assert.equal(result.plan.plan.magic,0);assert.equal(result.plan.plan.entry_price,2000);
   assert.equal(result.plan.plan.initial_sl,null);assert.equal(result.plan.plan.targets[0].rr,null);assert.equal(result.plan.checkpoint.sl,1990);
   assert.ok(!calls.some(call=>call.url.pathname.endsWith('mt5_execution_orders')));
-  subject={id:result.plan.order_id};assert.deepEqual(await targetPlanAction({action:'target_state',account_id:account.id,position_ticket:123}),{plan:stored});
+  subject={id:result.plan.order_id};assert.deepEqual(await targetPlanAction({action:'target_state',account_id:account.id,position_ticket:123}),{plan:stored,costs:null,stop_previews:{}});
   const before=calls.filter(c=>c.method==='POST').length;
   await assert.rejects(targetPlanAction({...request,observed:{...request.observed,sl:1980}}),/target_position_changed/);
   snapshot.positions[0].volume=.03;await assert.rejects(targetPlanAction(request),/target_position_changed/);snapshot=structuredClone(base);

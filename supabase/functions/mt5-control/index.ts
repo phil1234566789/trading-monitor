@@ -1,4 +1,5 @@
 import {targetPlanAction} from '../trading-monitor-mcp/mt5TargetPlans.ts';
+import {TARGET_PLAN_REJECTIONS} from '../trading-monitor-mcp/targetPlanErrors.js';
 import {riskPolicyAction} from '../trading-monitor-mcp/mt5Risk.ts';
 import { readHistoryPage } from '../trading-monitor-mcp/mt5History.ts';
 import {historyRefreshAction} from '../trading-monitor-mcp/mt5HistoryRefresh.ts';
@@ -45,7 +46,7 @@ Deno.serve(async req => {
   } catch(error) {
     const reason=error instanceof Error?error.message:'';
     const code=['bridge_offline','bridge_not_ready','quote_stale','minimum_volume_exceeds_budget',
-      'daily_stop_not_ready','daily_stop_latched','risk_limits_unconfirmed','risk_guard_unavailable','risk_floor_reconfirmation_required','risk_exposure_unavailable','risk_budget_exhausted','risk_sizing_unavailable','target_position_changed','target_daily_stop','target_command_unresolved','invalid_risk_policy','invalid_stop_or_target','preview_expired','invalid_preview','live_not_enabled','bridge_not_ready',...ACCOUNT_SELECTION_ERRORS].includes(reason)?reason:'request_failed';
+      'daily_stop_not_ready','daily_stop_latched','risk_limits_unconfirmed','risk_guard_unavailable','risk_floor_reconfirmation_required','risk_exposure_unavailable','risk_budget_exhausted','risk_sizing_unavailable','target_position_changed','target_daily_stop','target_command_unresolved','invalid_risk_policy','invalid_stop_or_target','preview_expired','invalid_preview','live_not_enabled','bridge_not_ready',...TARGET_PLAN_REJECTIONS,...ACCOUNT_SELECTION_ERRORS].includes(reason)?reason:'request_failed';
     return Response.json({code,error:'Anfrage fehlgeschlagen. Konfiguration, Kontodaten und offene Aufträge prüfen.'},{status:400,headers});
   }
 });

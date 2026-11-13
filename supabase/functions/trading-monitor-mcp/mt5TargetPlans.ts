@@ -3,20 +3,37 @@ import {accountBridge,activeMt5Account,checked,mt5Database} from './mt5Credentia
 import {executionConfig} from './mt5Execution.ts';
 import {validateWorkerSnapshot,validateDispatchAccount} from './executionContract.js';
 import {validateTargetAllocation} from './targetPlanContract.js';
+import {stopRiskPreview,validateStopRisk} from './stopRiskContract.js';
+import {positionRiskMultiple,positionRiskBasis} from './targetPlanContract.js';
 const uuid=z.string().uuid(),number=z.number().finite(),positive=number.positive();
 const identity={order_id:uuid.optional(),position_ticket:z.number().int().positive().safe().optional()};
 const oneIdentity=(v:{order_id?:string;position_ticket?:number})=>(v.order_id!=null)!==(v.position_ticket!=null);
-const request=z.object({...identity,revision:uuid,expected_revision:uuid.nullable(),targets:z.array(z.object({price:positive,volume:positive}).strict()).min(1).max(5),observed:z.object({volume:positive,sl:number.nonnegative(),tp:number.nonnegative()}).strict()}).strict().refine(oneIdentity);
+const levels=z.array(z.object({price:positive,volume:positive}).strict()).max(5);
+const request=z.object({...identity,revision:uuid,expected_revision:uuid.nullable(),targets:levels,stops:levels.min(1).optional(),stops_changed:z.boolean().optional(),risk_mode:z.enum(['risky','full']).optional(),observed:z.object({volume:positive,sl:number.nonnegative(),tp:number.nonnegative()}).strict()}).strict().refine(oneIdentity);
 const resultSchema=z.object({status:z.enum(['executed','rejected','unknown']),reason:z.string().max(100).optional(),remaining_volume:number.nonnegative().optional(),sl:number.nonnegative().optional(),tp:number.nonnegative().optional(),deal:z.number().int().positive().optional()}).strict();
 export async function targetPlanAction(body:Record<string,unknown>,worker=false){
  const db=mt5Database(),action=body.action;
  if(!worker&&action==='target_state'){
   const input=z.object(identity).strict().refine(oneIdentity).parse({...(body.order_id!=null?{order_id:body.order_id}:{}),...(body.position_ticket!=null?{position_ticket:body.position_ticket}:{})});
   const account=await activeMt5Account(body.account_id);
-  let query=db.from('mt5_target_positions').select('id').eq('account_id',account.id).eq('account_login',account.login).eq('account_server',account.server);
+  let query=db.from('mt5_target_positions').select('id,position_ticket').eq('account_id',account.id).eq('account_login',account.login).eq('account_server',account.server);
   query=input.order_id?query.eq('execution_order_id',input.order_id):query.eq('position_ticket',input.position_ticket!);
   const subject:any=checked(await query.maybeSingle());
-  return {plan:subject?checked(await db.from('mt5_target_plans').select('*').eq('order_id',subject.id).maybeSingle()):null};
+  const plan:any=subject?checked(await db.from('mt5_target_plans').select('*').eq('order_id',subject.id).maybeSingle()):null;
+  const bridge:any=await accountBridge(account),snapshot=bridge?.snapshot;
+  const execution:any=input.order_id&&!subject?checked(await db.from('mt5_execution_orders').select('result').eq('id',input.order_id).eq('intent->>account_login',String(account.login)).eq('intent->>account_server',account.server).maybeSingle()):null;
+  const ticket=input.position_ticket??subject?.position_ticket??execution?.result?.position??execution?.result?.order,p=snapshot?.positions?.find((p:any)=>p.ticket===ticket);
+  const q=snapshot?.quotes?.find((q:any)=>q.symbol===p?.symbol),stop_previews:Record<string,unknown>={};
+  let costs=null;
+  if(snapshot?.exit_plans_ready&&p){
+   costs=checked(await db.rpc('mt5_position_forecast_costs',{p_account:account.id,p_position:p.identifier??p.ticket,p_symbol:p.symbol}));
+   const config=await executionConfig(account.id);
+   for(const mode of ['risky','full'])try{
+    if(!q)throw new Error('quote_stale');
+    stop_previews[mode]=stopRiskPreview(mode,p,snapshot,config.riskPolicy,q,Date.now()/1000);
+   }catch(e){stop_previews[mode]={error:e instanceof Error?e.message:'risk_sizing_unavailable'};}
+  }
+  return {plan,costs,stop_previews};
  }
  const config=await executionConfig(body.account_id);
  if(!worker&&action==='target_save'){
@@ -38,10 +55,25 @@ export async function targetPlanAction(body:Record<string,unknown>,worker=false)
   if(p.sl===0&&!s.target_without_sl_ready)throw new Error('target_without_sl_worker_required');
   if(['volume','sl','tp'].some(key=>Math.abs(p[key]-input.observed[key as keyof typeof input.observed])>1e-9))throw new Error('target_position_changed');
   const entry=order?order.result.price:p.price_open,initialSl=order?(order.result.initial_sl??order.intent.stop_loss):null;
-  const allocation=validateTargetAllocation(input.targets,p,q,entry,initialSl);
+  const subject:any=checked(await db.from('mt5_target_positions').select('id').eq('account_id',config.accountId).eq('account_login',config.login).eq('account_server',config.server).eq('position_ticket',ticket).maybeSingle());
+  const previous:any=subject?checked(await db.from('mt5_target_plans').select('*').eq('order_id',subject.id).maybeSingle()):null;
+  if(previous?.plan?.stops&&!input.stops_changed&&Math.abs(p.sl-previous.checkpoint.sl)>1e-9)throw new Error('stop_plan_refresh_required');
+  const stops=input.stops??previous?.plan?.stops?.slice(previous.next_stop_index??0).map(({price,volume}:any)=>({price,volume})),riskMode=input.risk_mode??previous?.plan?.risk_mode;
+  let stopAllocation:any=null;
+  if(stops){
+   if(!s.exit_plans_ready)throw new Error('stop_worker_required');
+   stopAllocation=validateStopRisk(riskMode,stops,p,s,config.riskPolicy,q,now/1000);
+  }
+  // Nur der erste belegte Verlustabstand ist eine R-Basis; BE/Gewinnsicherung bleibt bis dahin unbekannt.
+  const basis=previous?.plan?.risk_basis_sl??initialSl??positionRiskBasis(p.type===0?'long':'short',entry,stopAllocation?.native_sl);
+  const allocation=input.targets.length?validateTargetAllocation(input.targets,p,q,entry,basis):stopAllocation?{targets:[],native_tp:0,remainder:p.volume}:validateTargetAllocation(input.targets,p,q,entry,basis);
+  if(stopAllocation)stopAllocation.stops=stopAllocation.stops.map((stop:any)=>({...stop,rr:positionRiskMultiple(p.type===0?'long':'short',entry,stop.price,basis)}));
   const plan={...allocation,order_id:order?.id??crypto.randomUUID(),account_id:config.accountId,account_login:config.login,account_server:config.server,mode:config.mode,
    position:ticket,symbol:p.symbol,direction:p.type===0?'long':'short',magic:p.magic,
-   entry_price:entry,initial_sl:initialSl,filled_volume:order?order.result.volume:p.volume};
+   entry_price:entry,initial_sl:initialSl,filled_volume:order?order.result.volume:p.volume,
+   ...(stopAllocation?{exit_version:1,stops:stopAllocation.stops,native_sl:stopAllocation.native_sl,risk_mode:riskMode,risk_basis_sl:basis,
+    risk_basis_source:previous?.plan?.risk_basis_sl?previous.plan.risk_basis_source:initialSl?'execution_initial_sl':basis?'confirmed_stop_plan':null,volume_step:q.volume_step,minimum_volume:q.minimum_volume,budget:stopAllocation.budget}:{}),
+  };
   return {plan:checked(await db.rpc('mt5_save_target_plan',{p_order:plan.order_id,p_revision:input.revision,p_expected:input.expected_revision,p_plan:plan,p_checkpoint:input.observed}))};
  }
  if(!worker)throw new Error('invalid_target_action');
@@ -60,7 +92,8 @@ export async function targetPlanAction(body:Record<string,unknown>,worker=false)
    rows.push(...page);after=page[page.length-1].order_id;
    if(rows.length>100)throw new Error('invalid_target_plan_count');
   }
-  return {plans:rows};
+  const bridge:any=await accountBridge(await activeMt5Account(body.account_id));
+  return {plans:rows.filter(row=>row.plan?.exit_version!==1||(body.exit_plan_version===1&&bridge?.snapshot?.exit_plans_ready===true))};
  }
  const orderId=uuid.parse(body.order_id),revision=uuid.parse(body.revision);
  const row:any=checked(await db.from('mt5_target_plans').select('*').eq('order_id',orderId).single());
@@ -70,12 +103,13 @@ export async function targetPlanAction(body:Record<string,unknown>,worker=false)
   const cmd:any=checked(await db.from('mt5_target_commands').select('*').eq('id',id).eq('order_id',orderId).eq('revision',revision).single());
   if(cmd.result&&Object.keys(cmd.result).length===Object.keys(result).length&&Object.keys(result).every(k=>cmd.result[k]===result[k as keyof typeof result]))return {recorded:true};
   if(row.revision!==revision)throw new Error('target_revision_changed');
-  if(result.status==='executed'&&(result.remaining_volume==null||result.sl==null||result.tp==null||(cmd.kind==='close'&&!result.deal)))throw new Error('invalid_target_result');
+  if(result.status==='executed'&&(result.remaining_volume==null||result.sl==null||result.tp==null||(cmd.kind!=='install'&&!result.deal)))throw new Error('invalid_target_result');
   return {recorded:checked(await db.rpc('mt5_finish_target',{p_id:id,p_result:result}))===true};
  }
  if(row.revision!==revision)throw new Error('target_revision_changed');
  if(action==='target_claim'){
-  const id=uuid.parse(body.operation_id),kind=z.enum(['install','close']).parse(body.kind),index=z.number().int().min(-1).max(4).parse(body.target_index);
+  const id=uuid.parse(body.operation_id),kind=z.enum(['install','close','stop_close']).parse(body.kind),index=z.number().int().min(-1).max(4).parse(body.target_index);
+  if(row.plan?.exit_version===1){const bridge:any=await accountBridge(await activeMt5Account(body.account_id));if(body.exit_plan_version!==1||bridge?.snapshot?.exit_plans_ready!==true)return {authorized:false};}
   return {authorized:checked(await db.rpc('mt5_claim_target',{p_order:orderId,p_revision:revision,p_id:id,p_kind:kind,p_index:index}))===true};
  }
  if(action==='target_observed'){

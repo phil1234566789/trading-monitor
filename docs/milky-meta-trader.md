@@ -1,10 +1,11 @@
 # Milky Meta Trader (MMT)
 
 MMT ergänzt den trading-monitor um private Brokerkonten und asynchrone MT5-Entry-Aufträge.
-Gespräch → MCP → private Supabase-Queue → ausgehender Python-Worker → MT5.
+Dashboard/Chart → private Supabase-Queue → ausgehender Python-Worker → MT5.
+Chat und MCP sind für diesen Ausführungsweg nicht erforderlich. Bei mehreren gewählten eigenen
+Konten entstehen getrennte Aufträge mit eigenen Risikobudgets und unabhängigem Ausführungsstatus.
 Die bisherigen Journal-Konten bleiben getrennt: deren öffentliche Anon-Rechte sind für
-Brokerzugangsdaten ungeeignet. Genau ein ausdrücklich ausgewähltes Handelskonto empfängt
-neue Aufträge. Bis zur Supportklärung gibt es keine Ordervervielfachung auf weitere Konten.
+Brokerzugangsdaten ungeeignet.
 
 ## Erste Version
 
@@ -309,27 +310,43 @@ Für das Update zuerst die privaten Risiko-, TP- und Tagesstopp-Migrationen anwe
 und das Frontend veröffentlichen. Alte Worker erfüllen die neuen Schutz-Capabilities nicht;
 Entries bleiben dann gesperrt. Betrieb, Tests und Deployment dürfen keine echte Testorder erzeugen.
 
-## TP-Pläne nach bestätigtem Fill
+## Gemeinsame TP-/SL-Pläne offener Positionen
 
-`MmtTargetEditor` und `useMmtTargetDrawing` bearbeiten gemeinsame Browserentwürfe.
-Ziehen, Preise und Prozent-/Lotmengen werden erst mit **TP-Plan verbindlich speichern** wirksam.
-Fill, ausgeführte Lotgröße und initialer SL bleiben die feste RR-Basis; offenes Volumen und
-aktueller Broker-SL werden gesondert angezeigt. Bis fünf Ziele sind möglich. Native Broker-
-Mindestlots und Lot-Schritte gelten für jedes Teilziel und den Rest. Prozentmengen werden
-abgerundet, der verbleibende Rest wird angezeigt; nicht ausführbare Aufteilungen bleiben gesperrt.
+`MmtTargetEditor`, `useMmtExitEditor` und `useMmtTargetDrawing` bearbeiten einen gemeinsamen
+Browserentwurf. Erst **Speichern** übergibt ihn verbindlich; **Abbrechen** oder Escape verwirft
+beide Seiten. Je Seite sind bis fünf Linien möglich. Ohne SL bieten die Entry-Buttons 0,5 %
+oder 0,9 % an. Sie verwenden die bestehenden 250-/450-USD-Kontobudgets einschließlich
+Kostenreserve; begrenzendes Restbudget und effektiver Betrag werden ausgewiesen.
 
-Ein einzelnes Ziel für das gesamte Restvolumen wird als nativer Broker-TP installiert.
-Teilziele werden vom laufenden Worker überwacht; dabei wird der native TP entfernt, der
-vorhandene Broker-SL bleibt erhalten. Bei offline Worker bestehen keine brokerseitigen
-Teilziele. Änderungen am tatsächlichen Volumen, SL oder TP pausieren den Plan zum Neuabgleich.
+MT5 besitzt pro Position nur einen nativen SL. Deshalb schützt der äußerste SL immer das
+gesamte Restvolumen; innere Teil-SLs überwacht der Worker. Das Budget wird gegen den Verlust
+der gesamten Restmenge am äußersten SL geprüft, nicht gegen einen günstigeren gewichteten
+Teilclose-Verlauf. Bei Worker-Ausfall bleiben dieser Broker-SL und ein möglicher nativer TP
+bestehen; synthetische Teilcloses können ausfallen. Bei vollständiger SL-Prozentaufteilung
+geht ein Rundungsrest an den äußersten SL. Nicht ausführbare Mindestmengen bleiben gesperrt.
+TP-Reste werden weiterhin ausdrücklich unverplant belassen.
 
-Migration `20261101001500_mt5_target_plans.sql` enthält private Plan-/Befehlsdaten und atomare
-Versandrechte. `TargetEngine` verwendet zusätzlich `target_sends` im bestehenden SQLite-Journal.
-Nach verlorener Rückmeldung/Neustart wird kein Teilclose erneut versendet. `unknown` bleibt
-sichtbar und sperrt Folgeaktionen; nie durch neue Revision oder Journal-Löschen umgehen.
-Die priorisierte Tagesnotbremse muss vor `TargetEngine.cycle(risk_allowed=...)` laufen.
-Worker-Capability `target_plans_ready` und native Volumenspezifikationen müssen vorhanden sein;
-ein alter Worker kann keine TP-Pläne annehmen. Keine echte Brokerorder gehört zum Testablauf.
+Ein gemeinsamer Checkpoint und atomare Versandrechte verhindern konkurrierende TP-/SL-Closes.
+Nach einem Teilclose werden die noch offenen Mengen der Gegenseite proportional reduziert.
+Externe Änderungen an Volumen oder Brokerabsicherung pausieren den Plan; ein bloßer TP-Edit
+setzt einen inzwischen manuell engeren SL nicht wieder zurück. Ungeklärte Ergebnisse bleiben
+`unknown` und sperren weitere Aktionen; nie durch neue Revision oder Journal-Löschen umgehen.
+Die priorisierte Tagesnotbremse läuft vor der Exitplan-Engine.
 
-Broker-Schnittstelle: [MT5 order_send](https://www.mql5.com/en/docs/python_metatrader5/mt5ordersend_py)
-und [Positionsticket bei Modifikation/Close](https://www.mql5.com/en/docs/constants/structures/mqltraderequest).
+R verwendet den Preisabstand zum belegten initialen SL. Fehlt dieser, legt erst der erste
+bestätigte Verlust-SL eine unveränderliche neue Planbasis fest. Break-even oder Gewinnsicherung
+allein ergeben keine erfundene Verlustbasis: dann bleibt R unbekannt. Die Nettoanzeige ist eine
+Schätzung aus nativer Gewinn-/Verlustberechnung, anteiligen gespeicherten Entrykosten, aktuellem
+Swap und belegtem Exitkostenprofil. Fehlende Kosten bedeuten unbekannt, nicht null. Die
+25-USD-Reserve ist keine tatsächliche Gebühr. Neue offene Positionen liefern ihre Deals einmal
+gezielt nach; es gibt dafür keinen zusätzlichen Vollhistorien-Poll.
+
+Migration `20261113200000_mt5_split_stop_plans.sql` erweitert die privaten Pläne und Versandrechte;
+Altpläne werden dabei nicht verändert. Neue SL-Pläne benötigen `exit_plans_ready` und explizite
+Version 1 bei Poll/Claim. Neue Workerdateien werden vollständig versioniert bereitgestellt;
+private Konfiguration, Kontozuordnung und SQLite-Journal bleiben unverändert. Vor dem Worker
+werden Migration und Edge-Funktionen veröffentlicht. Keine echte Brokerorder gehört zum Testablauf.
+
+Broker-Schnittstelle: [MT5 order_send](https://www.mql5.com/en/docs/python_metatrader5/mt5ordersend_py),
+[Positions-SL/TP](https://www.mql5.com/en/docs/constants/tradingconstants/positionproperties)
+und [native Gewinnberechnung](https://www.mql5.com/en/docs/python_metatrader5/mt5ordercalcprofit_py).

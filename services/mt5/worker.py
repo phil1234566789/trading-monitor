@@ -14,6 +14,7 @@ from daily_stop import DailyStopEngine
 from target_worker import TargetEngine
 from terminal_connection import initialize_terminal
 from history_mailbox import HistoryMailbox
+from position_costs import PositionCosts
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -53,12 +54,13 @@ class Engine:
         self.broker, self.cloud, self.journal = broker, cloud, journal
         self.execute=execute
         self.daily_stop=DailyStopEngine(broker,cloud,journal.db,execute)
-        self.targets=TargetEngine(broker,cloud,journal.db,execute)
+        self.targets=TargetEngine(broker,cloud,journal.db,execute,self.refresh_risk_context)
         self.last_fault=None
         self.last_fault_report=0
         self.pending_notified=set()
         self.next_reconcile={}
         self.history_mailbox=HistoryMailbox()
+        self.position_costs=PositionCosts(broker,cloud)
 
     def report_fault(self,error):
         fault=fault_details(error,self.last_fault)
@@ -99,6 +101,7 @@ class Engine:
         snapshot['target_plans_ready']=self.execute
         # Beim gestaffelten Update zählt das tatsächlich geladene Broker-Modul, nicht nur diese Datei.
         snapshot['target_without_sl_ready']=self.execute and getattr(self.targets.broker,'supports_without_sl',False) is True
+        snapshot['exit_plans_ready']=self.execute and getattr(self.targets,'supports_stops',False) is True and getattr(self.targets.broker,'supports_stops',False) is True
         snapshot['risk_guards_ready']=self.execute and snapshot.get('risk_guards_ready') is True
         snapshot['execution_ready']=self.execute and self.last_fault is None and snapshot['risk_guards_ready'] and not snapshot.get('risk',{}).get('latched',True)
         if self.last_fault:snapshot['worker_error']=self.last_fault
@@ -187,6 +190,8 @@ class Engine:
                     self.targets.cycle(risk_allowed=daily_allowed)
                     try:self.history_mailbox.request(response.get('history_request'))
                     except (OSError,ValueError):print('history_request_delivery_failed',flush=True)
+                    try:self.position_costs.sync()
+                    except Exception:print('position_cost_sync_pending',flush=True)
                     checked_cycle=True
                     watched=response.get('watch_orders',[])
                     if not isinstance(watched,list) or len(watched)>20:raise ValueError('invalid_position_watch')

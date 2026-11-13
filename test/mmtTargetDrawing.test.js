@@ -12,6 +12,22 @@ vi.mock('../src/liquidity.js',()=>({LiquidityLinePrimitive:class {constructor(le
 const renderer=createRenderer({createElement:()=>({children:[]}),createText:()=>({}),createComment:()=>({}),setText:()=>{},setElementText:()=>{},patchProp:()=>{},insert:(n,p)=>p.children.push(n),remove:()=>{},parentNode:()=>null,nextSibling:()=>null});
 let app;afterEach(()=>{app?.unmount();chartMode.value='navigate';removeTargetDraft('one');vi.unstubAllGlobals();});
 describe('existing TP line dragging',()=>{
+ it('keeps a newly added offscreen SL manageable and Escape cancels its entire unsaved plan',async()=>{
+  const handlers={},body={tagName:'BODY'},doc={body,addEventListener:(e,f)=>handlers[e]=f,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn(),querySelectorAll:()=>[]})};
+  vi.stubGlobal('document',doc);const raf=vi.fn();vi.stubGlobal('requestAnimationFrame',raf);vi.stubGlobal('cancelAnimationFrame',vi.fn());
+  let drawing;app=renderer.createApp({setup(){drawing=useMmtTargetDrawing();return()=>h('div');}});app.mount({children:[]});
+  const element={clientHeight:430,clientWidth:550,style:{},ownerDocument:{defaultView:{addEventListener:vi.fn(),removeEventListener:vi.fn()}},appendChild:vi.fn(),addEventListener:vi.fn(),removeEventListener:vi.fn(),contains:()=>false};
+  const chart={timeScale:()=>({width:()=>500}),panes:()=>[{getHeight:()=>400}],options:()=>({handleScroll:true}),applyOptions:vi.fn()};
+  const series={attachPrimitive:vi.fn(),detachPrimitive:vi.fn(),priceToCoordinate:p=>p-2000};
+  const baseline={symbol:'XAUUSD',entryPrice:2000,positionVolume:1,targets:[],stops:[],needsStop:true,canAddStop:true,direction:'long',quote:{volume_step:.01,minimum_volume:.01},stopPreviews:{risky:{price:1990}},dirty:false};
+  setTargetDraft('one',baseline);
+  const cancel=vi.fn(()=>{setTargetDraft('one',baseline);return true;}),cleanup=registerTargetSave('one',vi.fn(),ref({disabled:false,cancelDisabled:false}),cancel);
+  drawing.create(chart,series,element);drawing.refresh({symbol:'XAUUSD',candles:[{time:100}],currentBar:'1m'});await nextTick();
+  renderOverlay.value().props.onAddStop({orderId:'one',kind:'entry',price:2000},'risky');await nextTick();raf.mock.calls.at(-1)[0]();
+  const row=renderOverlay.value().props.rows.find(r=>r.kind==='stop');expect(row).toMatchObject({price:1990,offscreen:true,selected:true,showSave:true});expect(row.y).toBeGreaterThanOrEqual(0);expect(row.lineY).toBe(-10);
+  handlers.keydown({key:'Escape',target:body,preventDefault:vi.fn(),stopPropagation:vi.fn()});await nextTick();
+  expect(cancel).toHaveBeenCalledOnce();expect(useTargetDraft('one').value.stops).toEqual([]);cleanup();
+ });
  it('moves a browser draft only and restores chart scrolling on release',async()=>{
   const handlers={},doc={addEventListener:(e,f)=>handlers[e==='pointerdown'?'outside':e]=f,removeEventListener:vi.fn(),createElement:()=>({remove:vi.fn()})};vi.stubGlobal('document',doc);vi.stubGlobal('requestAnimationFrame',vi.fn());vi.stubGlobal('cancelAnimationFrame',vi.fn());
   let drawing,draft;

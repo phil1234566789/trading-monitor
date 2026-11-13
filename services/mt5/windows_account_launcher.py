@@ -25,8 +25,9 @@ def launch(account_id, execute=False, root=Path(r'C:\MMT')):
         os.environ['MT5_ALLOW_LIVE'] = 'false'
     import certifi
     os.environ['SSL_CERT_FILE'] = certifi.where()
-    runtime = root / 'app' / 'services' / 'mt5'
-    os.chdir(runtime)
+    runtime = Path(__file__).resolve().parent
+    # Release-Code bleibt unveränderlich; private Daten und bisheriges Arbeitsverzeichnis bleiben bestehen.
+    os.chdir(root / 'app' / 'services' / 'mt5')
     sys.path.insert(0, str(runtime))
     ini = terminal.parent / ('trading.ini' if execute else 'read-only.ini')
     subprocess.Popen([str(terminal), '/portable', '/config:' + str(ini)], creationflags=0x08000000)

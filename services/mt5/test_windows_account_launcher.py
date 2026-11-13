@@ -19,15 +19,15 @@ class WindowsAccountLauncherTests(unittest.TestCase):
                           MT5_JOURNAL_PATH=str(root / 'private' / 'accounts' / ACCOUNT / 'execution.sqlite3'),
                           MT5_ALLOW_LIVE=str(permitted).lower())
             with patch.object(Path, 'read_text', return_value='\n'.join(k+'='+v for k,v in config.items())), \
-                 patch.dict(os.environ, {}, clear=True), patch('os.chdir'), patch('time.sleep'), \
+                 patch.dict(os.environ, {}, clear=True), patch('os.chdir') as chdir, patch('time.sleep'), \
                  patch('subprocess.Popen') as spawn, \
                  patch.dict('sys.modules', {'certifi': types.SimpleNamespace(where=lambda: 'trusted.pem'),
                     'worker': types.SimpleNamespace(main=lambda: None),
                     'worker_lock': types.SimpleNamespace(terminal_worker_lock=lambda path: nullcontext(),terminal_lock_path=lambda path:path)}), \
-                 patch('sys.argv', []), patch('sys.path', []):
+                 patch('sys.argv', []), patch('sys.path', []), patch('windows_account_launcher.__file__',str(root/'releases'/'pinned'/'windows_account_launcher.py')):
                 launch(ACCOUNT, execute, root)
                 import sys
-                return dict(live=os.environ['MT5_ALLOW_LIVE'], argv=list(sys.argv), terminal=spawn.call_args.args[0])
+                return dict(live=os.environ['MT5_ALLOW_LIVE'], argv=list(sys.argv), terminal=spawn.call_args.args[0],cwd=chdir.call_args.args[0],code=sys.path[0],journal=os.environ['MT5_JOURNAL_PATH'])
 
     def test_monitor_cannot_trade_even_when_config_permits_live(self):
         result = self.invoke()
@@ -46,6 +46,13 @@ class WindowsAccountLauncherTests(unittest.TestCase):
     def test_wrong_account_configuration_is_rejected_before_start(self):
         with self.assertRaisesRegex(ValueError, 'account_configuration_mismatch'):
             self.invoke(wrong_account=True)
+
+    def test_versioned_code_preserves_private_journal_and_legacy_working_directory(self):
+        result=self.invoke(True)
+        self.assertEqual(Path(result['code']).parts[-2:],('releases','pinned'))
+        self.assertEqual(Path(result['argv'][0]).parent,Path(result['code']))
+        self.assertEqual(Path(result['cwd']).parts[-3:],('app','services','mt5'))
+        self.assertEqual(Path(result['journal']).parts[-4:],('private','accounts',ACCOUNT,'execution.sqlite3'))
 
 
 if __name__ == '__main__':

@@ -57,13 +57,13 @@ export function validateExecutionIntent(value, config, now) {
 
 export function validateWorkerSnapshot(value, config) {
   fields(value, ['account_login','account_server','mode','balance','equity','currency',
-    'trade_allowed','positions','pending_orders','quotes','execution_ready','worker_error','hedging','risk','risk_error','risk_guards_ready','target_plans_ready','target_without_sl_ready']);
+    'trade_allowed','positions','pending_orders','quotes','execution_ready','worker_error','hedging','risk','risk_error','risk_guards_ready','target_plans_ready','target_without_sl_ready','exit_plans_ready']);
   account(value, config);
   if (!finite(value.balance) || !finite(value.equity) || typeof value.currency !== 'string'
     || !/^[A-Z]{3,8}$/.test(value.currency) || typeof value.trade_allowed !== 'boolean'
     || !Array.isArray(value.positions) || value.positions.length > 100
     || !Number.isSafeInteger(value.pending_orders) || value.pending_orders < 0) throw new Error('invalid_snapshot');
-  for(const key of ['hedging','risk_guards_ready','target_plans_ready','target_without_sl_ready'])if(value[key]!=null&&typeof value[key]!=='boolean')throw new Error('invalid_snapshot');
+  for(const key of ['hedging','risk_guards_ready','target_plans_ready','target_without_sl_ready','exit_plans_ready'])if(value[key]!=null&&typeof value[key]!=='boolean')throw new Error('invalid_snapshot');
   if(value.risk_error!=null&&value.risk_error!=='risk_history_unavailable')throw new Error('invalid_risk_snapshot');
   if(value.risk!=null){
     const r=value.risk;fields(r,['time','day','realized_net_day','open_loss','latched']);
@@ -75,7 +75,8 @@ export function validateWorkerSnapshot(value, config) {
   if(value.quotes!=null) {
     if(!Array.isArray(value.quotes)||value.quotes.length>10) throw new Error('invalid_quotes');
     for(const q of value.quotes) {
-      fields(q,['symbol','bid','ask','time','point','digits','minimum_volume','loss_per_unit_long','loss_per_unit_short','volume_step','maximum_volume','stops_level']);
+      fields(q,['symbol','bid','ask','time','point','digits','minimum_volume','loss_per_unit_long','loss_per_unit_short','profit_per_unit_long','profit_per_unit_short','volume_step','maximum_volume','stops_level']);
+      for(const key of ['profit_per_unit_long','profit_per_unit_short'])if(q[key]!=null&&!positive(q[key]))throw new Error('invalid_quotes');
       if((q.volume_step!=null&&!positive(q.volume_step))||(q.maximum_volume!=null&&!positive(q.maximum_volume))
         ||(q.stops_level!=null&&(!finite(q.stops_level)||q.stops_level<0)))throw new Error('invalid_quotes');
       if(typeof q.symbol!=='string'||!/^[A-Za-z0-9._-]{1,64}$/.test(q.symbol)
@@ -84,8 +85,10 @@ export function validateWorkerSnapshot(value, config) {
     }
   }
   for (const p of value.positions) {
-    fields(p,['ticket','symbol','volume','type','sl','tp','profit','magic','price_open','price_current','risk_to_sl','remaining_risk_to_sl','opened_at_sec']);
+    fields(p,['ticket','identifier','symbol','volume','type','sl','tp','profit','swap','magic','price_open','price_current','risk_to_sl','remaining_risk_to_sl','opened_at_sec']);
+    if(p.swap!=null&&!finite(p.swap))throw new Error('invalid_position_risk');
     for(const key of ['risk_to_sl','remaining_risk_to_sl'])if(p[key]!=null&&(!finite(p[key])||p[key]<0))throw new Error('invalid_position_risk');
+    if(p.identifier!=null&&(!Number.isSafeInteger(p.identifier)||p.identifier<=0))throw new Error('invalid_position_identifier');
     if(p.opened_at_sec!=null&&(!Number.isSafeInteger(p.opened_at_sec)||p.opened_at_sec<=0))throw new Error('invalid_position_time');
     for(const key of ['price_open','price_current'])if(p[key]!=null&&!positive(p[key]))throw new Error('invalid_position_price');
     if (!Number.isSafeInteger(p.ticket) || p.ticket <= 0 || !positive(p.volume)
