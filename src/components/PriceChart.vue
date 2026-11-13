@@ -14,6 +14,8 @@ import { useM5CandleClock } from "../composables/useM5CandleClock.js";
 import { isGoldInstrument } from '../goldChartPolicy.js';
 import { goldWeekendClosed } from '../fxcmGoldCalendar.js';
 import { useGoldChartHistory } from '../composables/useGoldChartHistory.js';
+import {useDoubleOrderBlockChart} from '../composables/useDoubleOrderBlockChart.js';
+import DoubleOrderBlockStatus from './DoubleOrderBlockStatus.vue';
 import { goldNativeZones } from '../priceChartObZones.js';
 import M5CandleClock from "./M5CandleClock.vue";
 import { createChart, CandlestickSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
@@ -216,6 +218,7 @@ const props = defineProps({
   // Jeder der drei Timeframes ist jetzt unabhängig an-/ausschaltbar, siehe refreshPoiZonesInternal.
   showObsM1: { type: Boolean, default: false },
   showObsM5: { type: Boolean, default: false },
+  showDoubleOrderBlocks: {type:Boolean,default:false},
   showObs1h: { type: Boolean, default: true },
   showObs4h: { type: Boolean, default: true },
   showHistoricalObs: { type: Boolean, default: false },
@@ -373,6 +376,7 @@ const emit = defineEmits([
   "select-target",
   'select-entry-fvg',
   "select-setup-confirmations",
+  'select-double-order-block',
   "pin-context-menu",
   // Generisch seit Chat 2026-08-30 (TradeEditModal.vue bekam dieselben Lupe-Buttons wie die TSC) —
   // openTargetPicker/openAntiConfluencePicker nehmen jetzt einen expliziten range-Parameter statt
@@ -578,6 +582,11 @@ let invalidationLinePrimitives = [];
 // tradeSetupPrimitives lebt seit Phase 6h in usePriceChartTradeSetupDrawing.js.
 // annotationPrimitives/-PriceLines leben seit Phase 6d in usePriceChartDrawings.js.
 let allCandles = [];
+const doubleOrderBlocks=useDoubleOrderBlockChart(()=>({series:candleSeries,candles:clipReplay(allCandles),
+  enabled:props.showDoubleOrderBlocks,snapshot:snapshotView.value,symbol:props.symbol,
+  replayUntil:props.replayUntil,
+  evaluatedAt:closedReplayEvaluationTime(props.replayUntil,Math.floor(Date.now()/1000),allCandles,props.currentBar)}));
+const dobStatus=doubleOrderBlocks.status;
 let candlesReady = false;
 let loadedCandleKey = null;
 const m5ClockEnabled = () => props.currentBar === "5m" && props.replayUntil == null;
@@ -1904,6 +1913,7 @@ function refreshChart({ structure = true } = {}) {
   // Komponente schon unmounted wurde (z.B. schnelle Navigation zu /protokoll) — chart
   // ist dann bereits disposed, ohne Guard wirft lightweight-charts "Object is disposed".
   if (!chart) return;
+  doubleOrderBlocks.refresh();
   checklist.setChartCandles(allCandles, candlesReady ? loadedCandleKey : null);
   applyCandleData();
   if (snapshotView.value) {
@@ -2173,6 +2183,8 @@ onMounted(() => {
       // Fläche wie eine generische OB-Zone überdeckt — sonst würde nie das Setup, nur das einzelne
       // Near-Edge-Target treffen.
       const setup = props.confirmationModeActive && findClickedSetup(param);
+      const dob=props.confirmationModeActive&&doubleOrderBlocks.hit(param.point);
+      if(dob){emit('select-double-order-block',dob);return;}
       if (setup) {
         emit("select-setup-confirmations", setup);
         return;
@@ -2252,6 +2264,7 @@ onMounted(() => {
       const hit =
         ((props.confluenceModeActive || props.antiConfluenceModeActive) && findClickedFibLevel(point)) ||
         ((props.confirmationModeActive || props.antiConfluenceModeActive) && findClickedDivergence(point)) ||
+        (props.confirmationModeActive && doubleOrderBlocks.hit(point.point)) ||
         (props.confirmationModeActive && findClickedSetup(point)) ||
         findClickedTarget(point);
       chartContainerRef.value.style.cursor = hit ? "pointer" : "";
@@ -2307,6 +2320,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  doubleOrderBlocks.dispose();
   targetDrawing.dispose();
   brokerPositionDrawing.dispose();
   disposeDrawings();
@@ -2388,6 +2402,7 @@ watch(() => props.showObs1h, refreshPoiZonesInternal);
 watch(() => props.showObs4h, refreshPoiZonesInternal);
 watch(() => props.showObsM1, refreshPoiZonesInternal);
 watch(() => props.showObsM5, refreshPoiZonesInternal);
+watch(()=>props.showDoubleOrderBlocks,()=>doubleOrderBlocks.refresh());
 watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
@@ -2731,6 +2746,7 @@ defineExpose({
       :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="closeTradeSetup2Selection" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
+    <DoubleOrderBlockStatus v-if="showDoubleOrderBlocks && dobStatus" :status="dobStatus" />
     <div v-if="ideaEditingStatus && !ideaDrawing.active.value" class="idea-drawing-controls" role="status">{{ideaEditingStatus}}</div>
     <div v-if="ideaDrawing.active.value" class="idea-drawing-controls" role="status">
       {{ideaDrawing.error.value || 'Idee: Anker → SL → optionales Ziel'}}

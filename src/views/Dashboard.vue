@@ -33,6 +33,8 @@ import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
 import { toPips } from "../pipConfig.js";
 import { fetchTrades } from "../trades.js";
 import { useSetupConfirmations } from "../composables/useSetupConfirmations.js";
+import {useDoubleOrderBlockConfirmations} from '../composables/useDoubleOrderBlockConfirmations.js';
+import {toggleIndicatorGroup} from '../indicatorGroupToggle.js';
 import { useTscRange } from "../composables/useTscRange.js";
 import { useReplayInput } from '../composables/useReplayInput.js';
 import { useReplayStructureDefaults } from "../composables/useReplayStructureDefaults.js";
@@ -145,6 +147,7 @@ const showHistoricalObs = useLocalStorageRef("showHistoricalObs", false);
 // (Untermenü) bleibt weiterhin ein gemeinsamer Filter für alle drei.
 const showObsM1 = useLocalStorageRef("showObsM1", false);
 const showObsM5 = useLocalStorageRef("showObsM5", false);
+const showDoubleOrderBlocks = useLocalStorageRef('showDoubleOrderBlocks',false);
 const showObs1h = useLocalStorageRef("showObs1h", true);
 const showObs4h = useLocalStorageRef("showObs4h", true);
 const showLiquidity = useLocalStorageRef("showLiquidity", true);
@@ -901,6 +904,13 @@ const { saving: setupSaving, error: setupSaveError, save: onSelectSetupConfirmat
   currentSymbol, confirmationAddTrade, rangeConfirmationAddTrade, tscBootstrapArmed,
   tscRangeId, refreshTscRange, refreshTrades: () => refreshJournalContext(),
 });
+const {saving:dobSaving,error:dobSaveError,save:onSelectDoubleOrderBlock}=useDoubleOrderBlockConfirmations({
+  currentSymbol,confirmationAddTrade,rangeConfirmationAddTrade,tscBootstrapArmed,tscRangeId,refreshTscRange,refreshTrades:()=>refreshJournalContext(),
+  getEvidence:(trade,rangeId,rangeLevel)=>{
+    if(rangeLevel&&tscRange.value?.id===rangeId)return tscRange.value.confirmations;
+    return (trades.value??[]).find(t=>rangeLevel?t.dealingRangeId===rangeId:t.id===trade?.id)?.confirmations??trade?.confirmations??[];
+  },
+});
 // Klick auf eine Zeile in TradesTable.vue: springt im Chart hin (siehe jumpToTrade, Chat
 // 2026-07-27, erste Runde) UND fokussiert den TSC auf das verknüpfte Trade-Setup, falls
 // vorhanden — kein trade_setup_id (älterer/manueller Trade ohne Verknüpfung) räumt einen evtl.
@@ -1502,7 +1512,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs, showObsM1];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs, showObsM1,showDoubleOrderBlocks];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 // War bis 2026-08-30 eine reine JS-Variable (nicht in localStorage) — ein Reload zwischen
 // Ausblenden und Wieder-Einblenden (z.B. Tab zu/wieder auf am nächsten Handelstag) verlor den
@@ -1511,13 +1521,7 @@ const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 // immer wieder von selbst aus". Bug-Report Philip 2026-08-30.
 const indikatorenSavedState = useLocalStorageRef("indikatorenSavedState", null);
 function toggleIndikatoren() {
-  if (indikatorenActive.value) {
-    indikatorenSavedState.value = INDIKATOREN_REFS.map((r) => r.value);
-    INDIKATOREN_REFS.forEach((r) => { r.value = false; });
-  } else if (indikatorenSavedState.value) {
-    INDIKATOREN_REFS.forEach((r, i) => { r.value = indikatorenSavedState.value[i] ?? false; });
-    indikatorenSavedState.value = null;
-  } else {
+  if (!toggleIndicatorGroup(INDIKATOREN_REFS,indikatorenSavedState)) {
     // Noch nie über diesen Button ausgeblendet (z.B. alle Sub-Toggles waren schon einzeln aus) —
     // fällt auf die App-Werkseinstellungen zurück (siehe useLocalStorageRef-Defaults oben).
     showEma.value = false;
@@ -1531,27 +1535,23 @@ function toggleIndikatoren() {
     showObs1h.value = true;
     showObs4h.value = true;
     showHistoricalObs.value = false;
+    showDoubleOrderBlocks.value = false;
   }
 }
 // Eigener Sammel-Toggle für den "OBs"-Hauptbutton (Chat 2026-07-30) — gleiches Snapshot/Restore-
 // Muster wie toggleIndikatoren oben, nur eine Ebene tiefer (nur die drei Timeframe-Schalter, nicht
 // showHistoricalObs — der bleibt unabhängig vom Ein-/Ausschalten aller OBs bestehen, wie bisher).
 // obsSavedState ebenfalls in localStorage (2026-08-30, gleicher Reload-Bug wie indikatorenSavedState).
-const OBS_REFS = [showObsM5, showObs1h, showObs4h, showObsM1];
+const OBS_REFS = [showObsM5, showObs1h, showObs4h, showObsM1,showDoubleOrderBlocks];
 const obsActive = computed(() => OBS_REFS.some((r) => r.value));
 const obsSavedState = useLocalStorageRef("obsSavedState", null);
 function toggleObs() {
-  if (obsActive.value) {
-    obsSavedState.value = OBS_REFS.map((r) => r.value);
-    OBS_REFS.forEach((r) => { r.value = false; });
-  } else if (obsSavedState.value) {
-    OBS_REFS.forEach((r, i) => { r.value = obsSavedState.value[i] ?? false; });
-    obsSavedState.value = null;
-  } else {
+  if (!toggleIndicatorGroup(OBS_REFS,obsSavedState)) {
     showObsM1.value = false;
     showObsM5.value = false;
     showObs1h.value = true;
     showObs4h.value = true;
+    showDoubleOrderBlocks.value = false;
   }
 }
 function closeMenusOutside(e) {
@@ -1917,6 +1917,7 @@ watch(selectedTradingAccountId, () => {
               <ToggleButton variant="menu" :class="{ active: showObsM5 }" @click="showObsM5 = !showObsM5">
                 M5
               </ToggleButton>
+              <ToggleButton variant="menu" :class="{active:showDoubleOrderBlocks}" :aria-pressed="showDoubleOrderBlocks" @click="showDoubleOrderBlocks=!showDoubleOrderBlocks">Doppelter Orderblock · DOB</ToggleButton>
               <ToggleButton variant="menu" :class="{ active: showObs1h }" @click="showObs1h = !showObs1h">
                 1H
               </ToggleButton>
@@ -2313,6 +2314,7 @@ watch(selectedTradingAccountId, () => {
     :pinned-rsi-divergences="pinnedRsiDivergences"
     :show-trades="showTrades"
     :show-obs-m5="showObsM5"
+    :show-double-order-blocks="showDoubleOrderBlocks"
     :show-obs-m1="showObsM1"
     :show-obs-1h="showObs1h"
     :show-obs-4h="showObs4h"
@@ -2382,6 +2384,7 @@ watch(selectedTradingAccountId, () => {
     @select-target="onSelectTarget"
     @select-entry-fvg="onSelectEntryFvg"
     @select-setup-confirmations="onSelectSetupConfirmations"
+    @select-double-order-block="onSelectDoubleOrderBlock"
     @measure-done="onMeasureDone"
     @pin-context-menu="onPinContextMenu"
     @add-target-from-picker="onAddTargetFromPicker"
@@ -2397,8 +2400,8 @@ watch(selectedTradingAccountId, () => {
       :now-sec="replayUntil"
       :range="tscRange"
       :from-journal="tscFromJournal"
-      :load-error="tscLoadError || setupSaveError"
-      :saving="setupSaving"
+      :load-error="tscLoadError || setupSaveError || dobSaveError"
+      :saving="setupSaving || dobSaving"
       :trend-chain="trendChain"
       :m5-trend="m5Trend"
       :armed-section="armedTscSection"
