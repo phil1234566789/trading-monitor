@@ -6720,9 +6720,9 @@
     "semantic_hash": ""
   },
   "src/views/MilkyMetaTrader.vue": {
-    "mtime": 1794566209.2043965,
-    "seen": 1794572295.3584025,
-    "ast_hash": "b3ac22ca5d3bb54b8cf154098c7b922c",
+    "mtime": 1794576202.7903392,
+    "seen": 1794576341.4330046,
+    "ast_hash": "a16da8a5dbc29fc14a4206916f9edb1d",
     "semantic_hash": ""
   },
   "supabase/functions/mt5-control/index.ts": {
@@ -6792,9 +6792,9 @@
     "semantic_hash": ""
   },
   "docs/milky-meta-trader.md": {
-    "mtime": 1794572181.471633,
-    "seen": 1794572295.6438363,
-    "ast_hash": "b317ec6548b04cddb5d8dd6dc999510b",
+    "mtime": 1794576696.5938835,
+    "seen": 1794576736.01824,
+    "ast_hash": "74b42d2996cfcfa6dfe566749ee6381b",
     "semantic_hash": ""
   },
   "services/mt5/requirements.txt": {
@@ -6894,9 +6894,9 @@
     "semantic_hash": ""
   },
   "src/components/MilkyMetaTraderOrderCard.vue": {
-    "mtime": 1794390713.8234146,
-    "seen": 1794564498.2140725,
-    "ast_hash": "ce20ce694efd90ab62fe8a0cdbca595e",
+    "mtime": 1794576111.7239885,
+    "seen": 1794576341.299263,
+    "ast_hash": "f31dd81a1850df17c466592d3b800afa",
     "semantic_hash": ""
   },
   "test/milkyMetaTraderOrderCard.test.js": {
@@ -7254,9 +7254,9 @@
     "semantic_hash": ""
   },
   "src/components/DashboardMmt.vue": {
-    "mtime": 1794563642.2922854,
-    "seen": 1794564498.2140725,
-    "ast_hash": "2cc6cdab9085075a686bd2b9eaddd977",
+    "mtime": 1794576620.6847205,
+    "seen": 1794576735.6119618,
+    "ast_hash": "b3d0b3659af9d2ad50d60760c5580bdd",
     "semantic_hash": ""
   },
   "src/components/MmtDailyStopStatus.vue": {
@@ -7272,15 +7272,15 @@
     "semantic_hash": ""
   },
   "src/components/MmtTargetEditor.vue": {
-    "mtime": 1794570903.521796,
-    "seen": 1794572295.2028112,
-    "ast_hash": "90f32bf5924bf6d377d34e4a4993b570",
+    "mtime": 1794576459.5413208,
+    "seen": 1794576735.6222298,
+    "ast_hash": "f58055daeb7fb9c62406d1695eb5924a",
     "semantic_hash": ""
   },
   "src/composables/useDashboardMmt.js": {
-    "mtime": 1794390713.8689275,
-    "seen": 1794564498.2140725,
-    "ast_hash": "a63e40fe96e156b2ff73c5e8f9f530b5",
+    "mtime": 1794576620.6857214,
+    "seen": 1794576735.6392345,
+    "ast_hash": "00edcc06ba457ea5f36d83d79eb162d8",
     "semantic_hash": ""
   },
   "src/composables/useMmtTargetDrawing.js": {
@@ -7374,9 +7374,9 @@
     "semantic_hash": ""
   },
   "test/mmtTargetEditor.test.js": {
-    "mtime": 1794575493.0604913,
-    "seen": 1794575506.285644,
-    "ast_hash": "cddc5b5f06ec264408290bc71b2c2bfe",
+    "mtime": 1794576486.916938,
+    "seen": 1794576735.90689,
+    "ast_hash": "7f252d3eb4503158cb5efdfc464b7211",
     "semantic_hash": ""
   },
   "test/mt5OrderRead.test.js": {
@@ -7638,21 +7638,21 @@
     "semantic_hash": ""
   },
   "src/components/MmtBatchEntrySearch.vue": {
-    "mtime": 1794559068.7313118,
-    "seen": 1794564498.2140725,
-    "ast_hash": "3bc22ddcdae71d1325e16936aa43c56f",
+    "mtime": 1794576307.485022,
+    "seen": 1794576341.3002632,
+    "ast_hash": "3666b54a67bfabe483d3b896f353de88",
     "semantic_hash": ""
   },
   "src/mmtBatchSearch.js": {
-    "mtime": 1794390713.961442,
-    "seen": 1794564498.2140725,
-    "ast_hash": "43ce595867b39c0750c41775ceb37b6d",
+    "mtime": 1794576553.0975678,
+    "seen": 1794576735.6917517,
+    "ast_hash": "d34a91dfb6d63c527adbd7fc3acdd697",
     "semantic_hash": ""
   },
   "test/mmtBatchSearch.test.js": {
-    "mtime": 1794390714.4005053,
-    "seen": 1794564498.2150729,
-    "ast_hash": "9a5d5f2cce73609513eaf1edaec3dc70",
+    "mtime": 1794576363.3711636,
+    "seen": 1794576735.9008896,
+    "ast_hash": "8eace2f4cb1230dbf9bbdcaf73100814",
     "semantic_hash": ""
   },
   "src/mmtAccountRoles.js": {
@@ -7662,9 +7662,9 @@
     "semantic_hash": ""
   },
   "src/mmtChartStatus.js": {
-    "mtime": 1794390713.961442,
-    "seen": 1794564498.2140725,
-    "ast_hash": "f8fb67f8881f65a854da4eb39031fa0c",
+    "mtime": 1794576553.0985656,
+    "seen": 1794576735.6927516,
+    "ast_hash": "637bdaed873737027e09820295987165",
     "semantic_hash": ""
   },
   "test/mmtAccountRoles.test.js": {
@@ -8682,9 +8682,9 @@
     "semantic_hash": ""
   },
   "src/mmtRiskReasons.js": {
-    "mtime": 1794558809.2612152,
-    "seen": 1794564498.2140725,
-    "ast_hash": "83d63bfb305f66d3ccec5d1eaa26f425",
+    "mtime": 1794576553.096565,
+    "seen": 1794576735.6937518,
+    "ast_hash": "bb529ad5fa83fcc769483eab90497b4e",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/riskPolicyContext.js": {
@@ -8694,9 +8694,9 @@
     "semantic_hash": ""
   },
   "test/mmtBatchEntrySearch.test.js": {
-    "mtime": 1794559143.25724,
-    "seen": 1794564498.2150729,
-    "ast_hash": "70273340d88086d9ce4bdf52c4018c01",
+    "mtime": 1794576390.9446235,
+    "seen": 1794576735.9008896,
+    "ast_hash": "f2a610669007d2591324105d873357e1",
     "semantic_hash": ""
   },
   "test/riskPolicyContext.test.js": {
@@ -8718,15 +8718,15 @@
     "semantic_hash": ""
   },
   "src/mmtAccountDailyStatus.js": {
-    "mtime": 1794561895.851797,
-    "seen": 1794564498.2140725,
-    "ast_hash": "cafe0c6180c839c29fd33c2b0ce6fd6c",
+    "mtime": 1794576092.795981,
+    "seen": 1794576341.3722503,
+    "ast_hash": "46fa909eda5a810b3fc97a7f55157992",
     "semantic_hash": ""
   },
   "test/mmtAccountDailyStatus.test.js": {
-    "mtime": 1794561895.8567972,
-    "seen": 1794564498.2150729,
-    "ast_hash": "58bfd33f44a5f1cf351f694636c8f478",
+    "mtime": 1794576165.4088187,
+    "seen": 1794576341.581738,
+    "ast_hash": "f61e772d42ba75e99cb3bf5016717cc4",
     "semantic_hash": ""
   },
   "test/mt5AsyncAdmission.test.js": {
@@ -8748,9 +8748,9 @@
     "semantic_hash": ""
   },
   "src/mmtBrokerPositions.js": {
-    "mtime": 1794563905.999353,
-    "seen": 1794564498.2140725,
-    "ast_hash": "9d0b00f8493bf399638c57660da2e100",
+    "mtime": 1794576220.9843206,
+    "seen": 1794576341.3722503,
+    "ast_hash": "014880e6b144d558cfbcb2aed1951b0c",
     "semantic_hash": ""
   },
   "src/mmtHistoryJournal.js": {
@@ -9027,6 +9027,42 @@
     "mtime": 1794575574.9266152,
     "seen": 1794575720.0673842,
     "ast_hash": "abe703850db2999288c98cdd936106b8",
+    "semantic_hash": ""
+  },
+  "src/components/MmtOpenBrokerPositions.vue": {
+    "mtime": 1794576093.2024946,
+    "seen": 1794576341.3007667,
+    "ast_hash": "5aad993dca177ab4d496043197102783",
+    "semantic_hash": ""
+  },
+  "src/composables/useMmtBatchEntrySearch.js": {
+    "mtime": 1794576553.0975678,
+    "seen": 1794576735.6422346,
+    "ast_hash": "fed54159f3699ca686b1bf58f128572b",
+    "semantic_hash": ""
+  },
+  "test/mmtEquityChart.component.test.js": {
+    "mtime": 1794575708.0950625,
+    "seen": 1794576341.58274,
+    "ast_hash": "bc1fda1747b862abf8de177e0512615a",
+    "semantic_hash": ""
+  },
+  "test/mmtOpenBrokerPositions.test.js": {
+    "mtime": 1794576165.608533,
+    "seen": 1794576341.5857368,
+    "ast_hash": "d1479f890a784520b3cce3efdd9e94d6",
+    "semantic_hash": ""
+  },
+  "test/mmtDashboardOrders.test.js": {
+    "mtime": 1794576459.5423205,
+    "seen": 1794576735.9018896,
+    "ast_hash": "392dc3c59579602e33449cb7a1b330f8",
+    "semantic_hash": ""
+  },
+  "test/mmtDashboardSidebar.test.js": {
+    "mtime": 1794576620.6857214,
+    "seen": 1794576735.9018896,
+    "ast_hash": "2ee0f78dd5cfd9a1bcfa5c734c8dfc76",
     "semantic_hash": ""
   }
 }
