@@ -587,6 +587,7 @@ const doubleOrderBlocks=useDoubleOrderBlockChart(()=>({series:candleSeries,candl
   replayUntil:props.replayUntil,
   evaluatedAt:closedReplayEvaluationTime(props.replayUntil,Math.floor(Date.now()/1000),allCandles,props.currentBar)}));
 const dobStatus=doubleOrderBlocks.status;
+const dobDetails=doubleOrderBlocks.details;
 let candlesReady = false;
 let loadedCandleKey = null;
 const m5ClockEnabled = () => props.currentBar === "5m" && props.replayUntil == null;
@@ -2242,6 +2243,7 @@ onMounted(() => {
     const rect = chartContainerRef.value.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+    doubleOrderBlocks.hover({x,y});
     const targetCursor=targetDrawing.cursorAt(x,y);
     if(targetCursor){chartContainerRef.value.style.cursor=targetCursor;return;}
     ideaDrawing.move({x,y});
@@ -2746,7 +2748,7 @@ defineExpose({
       :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="closeTradeSetup2Selection" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
-    <DoubleOrderBlockStatus v-if="showDoubleOrderBlocks && dobStatus" :status="dobStatus" />
+    <DoubleOrderBlockStatus v-if="showDoubleOrderBlocks && dobStatus" :status="dobStatus" :details="dobDetails" />
     <div v-if="ideaEditingStatus && !ideaDrawing.active.value" class="idea-drawing-controls" role="status">{{ideaEditingStatus}}</div>
     <div v-if="ideaDrawing.active.value" class="idea-drawing-controls" role="status">
       {{ideaDrawing.error.value || 'Idee: Anker → SL → optionales Ziel'}}

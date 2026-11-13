@@ -1,13 +1,15 @@
-import {ref} from 'vue';
+import {ref,watch} from 'vue';
 import {fetchInitialCandles} from '../forexCandles.js';
 import {fetchCandlesCached} from '../candleCache.js';
 import {TRADE_SETUP_M5_CANDLE_COUNT} from '../priceChartConstants.js';
 import {nextCandlePollDelay} from '../candlePolling.js';
 import {formatDatedTime} from '../berlinTime.js';
-import {renderDoubleOrderBlocks,hitDoubleOrderBlock} from '../doubleOrderBlockRendering.js';
+import {markIgnored} from '../ignoredCandles.js';
+import {sessions} from '../sessions.js';
+import {renderDoubleOrderBlocks,hitDoubleOrderBlock,doubleOrderBlockDetails} from '../doubleOrderBlockRendering.js';
 
 export function useDoubleOrderBlockChart(context) {
-  const status=ref('');
+  const status=ref(''),details=ref('');
   let key=null,sequence=0,worker=null,disposed=false,items=[],series=null,pairs=[],timer=null;
   function schedule() {
     clearTimeout(timer);
@@ -16,6 +18,7 @@ export function useDoubleOrderBlockChart(context) {
   function clear() {
     if(series)items.forEach(({primitive})=>series.detachPrimitive(primitive));
     items=[];
+    details.value='';
   }
   function draw() {
     const c=context();clear();series=c.series;
@@ -50,7 +53,7 @@ export function useDoubleOrderBlockChart(context) {
         activeWorker.terminate();
         if(!disposed&&request===sequence){worker=null;status.value='DOB-Auswertung fehlgeschlagen. Erneut laden.';key=null;}
       };
-      activeWorker.postMessage({m5Candles:m5,m1Candles:m1,instrument:c.symbol,evaluatedAt:c.evaluatedAt});
+      activeWorker.postMessage({m5Candles:markIgnored(m5,c.symbol),m1Candles:markIgnored(m1,c.symbol),instrument:c.symbol,evaluatedAt:c.evaluatedAt});
     } catch(error) {
       if(!disposed&&request===sequence){status.value=`DOB: ${error.message||'Daten konnten nicht geladen werden.'}`;key=null;}
     }
@@ -66,7 +69,9 @@ export function useDoubleOrderBlockChart(context) {
     else draw();
     schedule();
   }
-  function dispose(){disposed=true;sequence++;clearTimeout(timer);worker?.terminate();worker=null;clear();series=null;}
+  const stopSessions=watch(sessions,()=>{key=null;refresh();},{deep:true});
+  function dispose(){disposed=true;sequence++;stopSessions();clearTimeout(timer);worker?.terminate();worker=null;clear();series=null;}
   function hit(point){return point?hitDoubleOrderBlock(items,point.x,point.y):null;}
-  return {status,refresh,dispose,hit};
+  function hover(point){details.value=doubleOrderBlockDetails(hit(point),context().evaluatedAt);}
+  return {status,details,refresh,dispose,hit,hover};
 }
