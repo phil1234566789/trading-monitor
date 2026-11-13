@@ -1,0 +1,21 @@
+import {it,expect,vi} from 'vitest';
+import * as Vue from 'vue';
+import {renderToString} from '@vue/server-renderer';
+import {parse,compileScript} from '@vue/compiler-sfc';
+import {compile} from '@vue/compiler-dom';
+import {readFileSync} from 'node:fs';
+vi.mock('../src/chartColors.js',()=>({cssColor:key=>key}));
+import Chart from '../src/components/MilkyMetaTraderEquityChart.vue';
+const {descriptor}=parse(readFileSync(new URL('../src/components/MilkyMetaTraderEquityChart.vue',import.meta.url),'utf8'));
+Chart.render=new Function('Vue',compile(descriptor.template.content,{mode:'function',prefixIdentifiers:true,bindingMetadata:compileScript(descriptor,{id:'equity'}).bindings}).code)(Vue);
+it('renders named separate PnL and commission paths and stable colors for ten accounts',async()=>{
+ const accounts=Array.from({length:10},(_,i)=>({id:String(i),name:`Konto ${i}`}));
+ const trades=accounts.map(a=>({id:a.id,account_id:a.id,closed_at:1000,net:Number(a.id)+1,commission:-1}));
+ const html=await renderToString(Vue.createSSRApp(Chart,{accounts,trades,currency:'USD'}));
+ expect(html.match(/class="mmt-equity-line"/g)).toHaveLength(10);
+ expect(html.match(/class="mmt-commission-line"/g)).toHaveLength(10);
+ for(const a of accounts)expect(html).toContain(`${a.name} · Netto-PnL`);
+ const colors=[...html.matchAll(/<g style="color:([^;]+);"/g)].map(m=>m[1]);
+ expect(new Set(colors).size).toBe(10);
+ expect(html).toContain('je Konto in USD');expect(html).not.toContain('<button');
+});

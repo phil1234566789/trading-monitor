@@ -37,6 +37,7 @@ test('persisted statistics match complete broker positions, filters, Berlin week
   const insert=async rows=>{for(const r of rows)await db.query('insert into mt5_broker_deals(account_id,ticket,position_id,time_msc,type,entry,symbol,volume,price,profit,commission,swap,fee,currency) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',[r.account_id,r.ticket,r.position_id,r.time_msc,r.type,r.entry,r.symbol,r.volume,r.price,r.profit,r.commission,r.swap,r.fee,r.currency]);};
   await insert(raw); // Migration muss vorhandene Daten korrekt auffüllen.
   await db.exec(await readFile(new URL('../supabase/migrations/'+migration,import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/20261113210000_mt5_statistics_account_series.sql',import.meta.url),'utf8'));
   const csv={account_id:accounts[1],id:`csv:${accounts[1]}:old-1`,source_trade_id:'old-1',source:'csv',source_file:'archive.csv',symbol:'GBPUSD.gbe',currency:'USD',opened_at:ms('2026-03-29T22:00:00Z'),closed_at:ms('2026-03-30T12:00:00Z'),entry:1.2,exit:1.3,direction:null,volume:.5,net:49,commission:-1};
   await db.query("insert into mt5_imported_trades(account_id,source_trade_id,source_file,source_hash,symbol,currency,opened_at,closed_at,entry,exit,direction,volume,net,commission,source_row) values($1,'old-1','archive.csv','hash','GBPUSD.gbe','USD',$2,$3,1.2,1.3,null,.5,49,-1,'{}')",[accounts[1],csv.opened_at,csv.closed_at]);
   await db.query('insert into mt5_history_sync(account_id,last_full_at,synced_at) values($1,now(),now())',[accounts[0]]);
@@ -91,6 +92,11 @@ test('persisted statistics match complete broker positions, filters, Berlin week
   assert.equal(ids.length,1105);assert.equal(new Set(ids).size,1105);
   const series=(await db.query("select mt5_statistics_series($1,'BULK','USD',null,null,array['win'],0,9999) data",[accounts])).rows[0].data;
   assert.equal(series.rows.length,500);assert.equal(series.next_offset,500);
+  assert.ok(series.rows.every(row=>row.account_id===accounts[1]));
+  const mixedSeries=(await db.query('select mt5_statistics_series($1) data',[accounts])).rows[0].data;
+  assert.deepEqual(new Set(mixedSeries.rows.map(row=>row.account_id)),new Set(accounts));
+  const oneSeries=(await db.query('select mt5_statistics_series($1) data',[[accounts[0]]])).rows[0].data;
+  assert.ok(oneSeries.rows.every(row=>row.account_id===accounts[0]));
   assert.deepEqual((await summary({asset:'nothing'})).groups,{});
   await db.query(`insert into mt5_imported_trades(account_id,source_trade_id,source_file,source_hash,symbol,currency,opened_at,closed_at,entry,exit,direction,volume,net,commission,source_row)
    select $1,'tie-'||n,'bulk.csv','hash',case when n=1 then 'AAA' else 'ZZZ' end,'USD',$2::bigint+n,$2::bigint+n+1000,1,2,'long',1,123,-1,'{}' from generate_series(1,3) n`,[accounts[1],ms('2026-11-09T10:00:00Z')]);

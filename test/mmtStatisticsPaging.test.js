@@ -33,3 +33,18 @@ it('rejects malformed filters and caps pages at the API boundary',()=>{
   expect(()=>statisticsParameters({action:'statistics_page',account_ids:[id],...extra})).toThrow();
  }
 });
+it('loads account identities across lazy curve pages without fetching raw history',async()=>{
+ const api=vi.fn(async(action,params)=>{
+  if(action==='history_refresh')return {requests:[]};
+  if(action==='statistics_summary')return {weeks:[]};
+  if(action==='statistics_series')return params.offset===0?{rows:[{id:'a',account_id:id}],next_offset:1}:{rows:[{id:'b',account_id:id}],next_offset:null};
+  throw new Error('unexpected '+action);
+ });
+ const {state,unmount}=mount(api);await flush();
+ expect(api.mock.calls.some(c=>c[0]==='statistics_series')).toBe(false);
+ state.view.value='chart';await flush();
+ expect(state.series.value).toEqual([{id:'a',account_id:id},{id:'b',account_id:id}]);
+ const requests=api.mock.calls.filter(c=>c[0]==='statistics_series');
+ expect(requests.map(c=>c[1])).toEqual([expect.objectContaining({offset:0,limit:500,account_ids:[id]}),expect.objectContaining({offset:1,limit:500,account_ids:[id]})]);
+ expect(api.mock.calls.some(c=>c[0]==='history_page')).toBe(false);unmount();
+});
