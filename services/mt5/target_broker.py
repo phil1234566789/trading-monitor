@@ -8,6 +8,8 @@ def same(a,b):
 
 
 class TargetBroker:
+    supports_without_sl = True
+
     def __init__(self, broker):
         self.broker,self.api=broker,broker.api
 

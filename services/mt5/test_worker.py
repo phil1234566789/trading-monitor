@@ -19,6 +19,14 @@ def configure_cloud(cloud):
 
 
 class WorkerTests(unittest.TestCase):
+    def test_target_capability_comes_from_loaded_broker_during_staggered_update(self):
+        with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
+            broker,cloud=Mock(),Mock();configure_cloud(cloud)
+            broker.snapshot.return_value=dict(risk_guards_ready=True,risk=dict(latched=False))
+            engine=Engine(broker,cloud,journal)
+            self.assertIs(engine.snapshot()['target_without_sl_ready'],True)
+            engine.targets.broker=object()
+            self.assertIs(engine.snapshot()['target_without_sl_ready'],False)
     def test_precheck_rejection_does_not_starve_next_intent(self):
         with tempfile.TemporaryDirectory() as directory, Journal(Path(directory) / 'j.sqlite3') as journal:
             broker, cloud = Mock(), Mock();configure_cloud(cloud)

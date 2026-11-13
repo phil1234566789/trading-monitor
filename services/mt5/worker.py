@@ -97,7 +97,8 @@ class Engine:
         snapshot=self.broker.snapshot()
         snapshot['quotes']=self.broker.quotes()
         snapshot['target_plans_ready']=self.execute
-        snapshot['target_without_sl_ready']=self.execute
+        # Beim gestaffelten Update zählt das tatsächlich geladene Broker-Modul, nicht nur diese Datei.
+        snapshot['target_without_sl_ready']=self.execute and getattr(self.targets.broker,'supports_without_sl',False) is True
         snapshot['risk_guards_ready']=self.execute and snapshot.get('risk_guards_ready') is True
         snapshot['execution_ready']=self.execute and self.last_fault is None and snapshot['risk_guards_ready'] and not snapshot.get('risk',{}).get('latched',True)
         if self.last_fault:snapshot['worker_error']=self.last_fault
