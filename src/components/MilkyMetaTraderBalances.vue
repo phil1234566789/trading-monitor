@@ -7,10 +7,11 @@ import {closedBrokerTrades} from '../milkyMetaTraderStatistics.js';
 import {accountBalance,accountPerformance,challengeGauge,balanceHealth} from '../milkyMetaTraderBalances.js';
 import {snapshotAgeSeconds} from '../milkyMetaTraderMonitoring.js';
 import {mmtAccountSnapshot,mmtExecutionReady} from '../milkyMetaTraderPolling.js';
+import {accountAvailability} from '../milkyMetaTraderAccountSelection.js';
 const statisticsAccount=defineModel('statisticsAccount',{type:String,default:''});
 const props=defineProps({accounts:Array,activeId:String,status:Object,history:Object,now:Number,staleSeconds:Number});
 const result=computed(()=>closedBrokerTrades(props.history?.rows??[]));
-const rows=computed(()=>(props.accounts??[]).filter(a=>!a.archived).map(account=>{
+const rows=computed(()=>accountAvailability(props.accounts??[]).active.map(account=>{
  const value=accountBalance(account,props.status?.account_balances?.find(s=>s.account_id===account.id),props.status?.bridge);
  const sync=props.history?.sync?.find(s=>s.account_id===account.id);
  const stats=accountPerformance(account.id,value.currency,result.value,sync);

@@ -16,6 +16,7 @@ import MmtRiskPolicyEditor from '../components/MmtRiskPolicyEditor.vue';
 import MilkyMetaTraderEntrySearch from '../components/MilkyMetaTraderEntrySearch.vue';
 import { createMilkyMetaTraderClient } from '../milkyMetaTraderClient.js';
 import { readMilkyMetaTraderKey, saveMilkyMetaTraderKey, forgetMilkyMetaTraderKey } from '../milkyMetaTraderKey.js';
+import {accountAvailability,accountArchiveLabel} from '../milkyMetaTraderAccountSelection.js';
 
 const brokerHistory=ref({rows:[],sync:[]});
 const statisticsAccount=ref('');
@@ -25,6 +26,10 @@ const historyTime=accountId=>brokerHistory.value.sync.find(s=>s.account_id===acc
 const accountForOrder=order=>accounts.value.find(a=>Number(a.login)===order.intent.account_login&&a.server===order.intent.account_server)?.id;
 const orderCommission=order=>commissionFor(accountForOrder(order),executionPositionId(order));
 const token=ref(readMilkyMetaTraderKey()), unlocked=ref(false), accounts=ref([]), activeId=ref(null);
+const accountGroups=computed(()=>{
+ const {active,inactive}=accountAvailability(accounts.value);
+ return [{inactive:false,label:'Aktive Konten',accounts:active},{inactive:true,label:'Inaktive Konten',accounts:inactive}];
+});
 const status=ref(null), busy=ref(false), error=ref(''), message=ref('');
 const form=ref({name:'',login:'',server:'BeyondIQCapital-Server',mode:'live',password:''});
 let timer=null, nextPoll=0, statusRequest=null, viewEpoch=0;
@@ -161,14 +166,24 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
       <div class="mmt-settings"><h2>Konten &amp; Einstellungen</h2>
       <MmtRiskPolicyEditor :api="api" :policy="status?.risk_policy" :account="active" @saved="run(refresh)" />
       <details class="mmt-panel"><summary>Brokerkonten verwalten <span class="mmt-muted">· {{accounts.length}} gespeichert</span></summary>
-        <p>Genau ein ausgewähltes Handelskonto empfängt neue Aufträge. Bis zur Supportklärung gibt es keine Ordervervielfachung auf weitere Konten. Manuell hier wählen oder im Chat einen konkreten Kontowechsel beauftragen. Laufende Suchen bleiben an ihr ursprüngliches Konto gebunden; offene Positionen oder unklare Aufträge sperren den Wechsel.</p>
+        <p>Das ausgewählte Handelskonto gilt für neue Einzelaufträge. Mehrere Konten wählst du in der Entry-Suche im Chart. Laufende Suchen bleiben an ihr Konto gebunden; offene Positionen oder unklare Aufträge sperren den Wechsel.</p>
         <p v-if="!accounts.length">Noch keine Brokerkonten hinterlegt.</p>
-        <ul class="mmt-accounts"><li v-for="account in accounts" :key="account.id">
-          <div><strong>{{account.name}}</strong><br><small>{{account.login}} · {{account.server}} · MT5 {{account.mode==='demo'?'Demo':'Real'}}</small></div>
-          <label>Konto-Tag<select :value="account.trade_role??''" :disabled="busy||account.archived" @change="assignRole(account.id,$event.target.value)"><option value="">Kein Tag</option><option value="risky">Riskante Trades</option><option value="safe">Sichere Trades</option><option value="normal">Normale Trades</option></select></label>
-          <span v-if="account.id===activeId" class="mmt-selected">Aktives Handelskonto</span>
-          <ActionButton v-else :disabled="busy||account.archived" @click="selectTradingAccount(account.id)">Als Handelskonto wählen</ActionButton>
-        </li></ul>
+        <component v-for="group in accountGroups" :key="group.label" :is="group.inactive?'details':'section'">
+          <summary v-if="group.inactive">{{group.label}} ({{group.accounts.length}})</summary>
+          <h3 v-else>{{group.label}} <span class="mmt-muted">· {{group.accounts.length}}</span></h3>
+          <p v-if="!group.accounts.length" class="mmt-muted">Keine {{group.inactive?'inaktiven':'aktiven'}} Konten.</p>
+          <ul class="mmt-accounts"><li v-for="account in group.accounts" :key="account.id">
+            <div><strong>{{account.name}}</strong><br><small>{{account.login}} · {{account.server}}<template v-if="account.server!=='CSV-Archiv'"> · MT5 {{account.mode==='demo'?'Demo':'Real'}}</template></small>
+              <p v-if="group.inactive&&account.archive_details?.reason" class="mmt-muted">{{account.archive_details.reason}}</p>
+            </div>
+            <span v-if="group.inactive" class="mmt-muted">{{accountArchiveLabel(account)}}</span>
+            <template v-else>
+              <label>Konto-Tag<select :value="account.trade_role??''" :disabled="busy" @change="assignRole(account.id,$event.target.value)"><option value="">Kein Tag</option><option value="risky">Riskante Trades</option><option value="safe">Sichere Trades</option><option value="normal">Normale Trades</option></select></label>
+              <span v-if="account.id===activeId" class="mmt-selected">Aktives Handelskonto</span>
+              <ActionButton v-else :disabled="busy" @click="selectTradingAccount(account.id)">Als Handelskonto wählen</ActionButton>
+            </template>
+          </li></ul>
+        </component>
         <ActionButton v-if="activeId" :disabled="busy" @click="selectTradingAccount(null)">Handelskonto abwählen</ActionButton>
       </details>
       <details class="mmt-panel" :open="!accounts.length"><summary>Konto mit Zugangsdaten hinzufügen</summary>
