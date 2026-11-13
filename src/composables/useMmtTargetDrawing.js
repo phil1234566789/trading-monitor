@@ -4,6 +4,7 @@ import {targetDraftLines,moveTargetDraft,selectTargetDraft,splitTargetDraft,chan
 import {barSecondsFor} from '../timeframes.js';
 import {cssColor} from '../chartColors.js';
 import MmtTargetChartControls from '../components/MmtTargetChartControls.vue';
+import {targetSaveState,saveTargetDraft} from '../mmtTargetSave.js';
 export function useMmtTargetDrawing(){
  let chart,series,element,drag=null,scrollOptions,overlay,app,frame;
  const context=shallowRef(null),controls=shallowRef([]),dragging=shallowRef(false),primitives=[];
@@ -35,10 +36,13 @@ export function useMmtTargetDrawing(){
  function tick(){
   if(!chart||!element)return;
   const height=chart.panes?.()[0]?.getHeight?.()??element.clientHeight-30,right=Math.max(0,element.clientWidth-chart.timeScale().width());
-  const rows=primitives.map(({line})=>{const y=series.priceToCoordinate(line.price);return {...line,y,lineY:y,right};}).filter(row=>row.y!=null&&row.y>=0&&row.y<=height).sort((a,b)=>a.y-b.y);
+  const rows=primitives.map(({line})=>{const y=series.priceToCoordinate(line.price);return {...line,y,lineY:y,right,saveState:targetSaveState(line.orderId)};}).filter(row=>row.y!=null&&row.y>=0&&row.y<=height).sort((a,b)=>a.y-b.y);
+  const saveRows=new Map();for(const row of rows)if(!saveRows.has(row.orderId)||row.selected)saveRows.set(row.orderId,row);
+  for(const row of rows)row.showSave=saveRows.get(row.orderId)===row;
   let previous=-14;
-  for(const row of rows){row.y=Math.max(14,row.y,previous+28);previous=row.y;}
-  if(rows.length&&rows.at(-1).y>height-14){const overflow=rows.at(-1).y-height+14;for(const row of rows)row.y-=overflow;}
+  for(const row of rows){row.y=Math.max(14,row.y,previous+28);previous=row.y+(row.showSave?32:0);}
+  const last=rows.at(-1),bottom=last?last.y+14+(last.showSave?32:0):0;
+  if(bottom>height){const overflow=bottom-height;for(const row of rows)row.y-=overflow;}
   if(JSON.stringify(rows)!==JSON.stringify(controls.value))controls.value=rows;
   frame=requestAnimationFrame(tick);
  }
@@ -59,7 +63,7 @@ export function useMmtTargetDrawing(){
   chart=nextChart;series=nextSeries;element=nextElement;
   element.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);
   overlay=document.createElement('div');element.appendChild(overlay);
-  app=createApp({render:()=>h(MmtTargetChartControls,{rows:controls.value,dragging:dragging.value,onMove:start,onSplit:split,onNudge:nudge,onShare:(line,value)=>changeTargetShare(line.orderId,line.index,value)})});app.mount(overlay);
+  app=createApp({render:()=>h(MmtTargetChartControls,{rows:controls.value,dragging:dragging.value,onMove:start,onSplit:split,onNudge:nudge,onShare:(line,value)=>changeTargetShare(line.orderId,line.index,value),onSave:line=>saveTargetDraft(line.orderId)})});app.mount(overlay);
   frame=requestAnimationFrame(tick);
  }
  function refresh(value){context.value=value;}

@@ -1,4 +1,4 @@
-import {computed,shallowReactive} from 'vue';
+import {computed,shallowReactive,toValue} from 'vue';
 import {targetShares,splitTargetShares,redistributeTargetShares} from './mmtTargetShares.js';
 // Nur Entwürfe im Browser; weder Ziehen noch Tippen sendet einen Brokerauftrag.
 const drafts=shallowReactive(new Map());
@@ -15,7 +15,7 @@ export function moveTargetDraft(orderId,index,price){
  const targets=value.targets.map((t,i)=>i===index?{...t,price:rounded}:t);
  drafts.set(orderId,{...value,targets,dirty:true});
 }
-export function useTargetDraft(orderId){return computed(()=>drafts.get(orderId));}
+export function useTargetDraft(orderId){return computed(()=>drafts.get(toValue(orderId)));}
 export function splitTargetDraft(orderId,index){
  const value=drafts.get(orderId),targets=value&&splitTargetShares(value.targets,index,value.positionVolume);
  if(!targets)return null;
