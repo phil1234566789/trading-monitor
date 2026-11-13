@@ -1,0 +1,1691 @@
+{
+  "version": "latest-reaction-first-m1-fvg-v1",
+  "scope": "16 selected positive examples; no general win-rate or trading approval",
+  "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
+  "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
+  "policy": {
+    "reaction": "first positive M1 FVG after first valid mitigation",
+    "pairing": "latest matching first reaction before second retest; simultaneous overlapping partners retained",
+    "stop": "selected second M5 OB outside edge",
+    "target": "2R price risk without commission",
+    "variants": "a and b independently"
+  },
+  "footprint": [
+    {
+      "day": "2026-11-11",
+      "pairCount": 30,
+      "m5Bars": 277,
+      "m1Bars": 1381,
+      "orderBlocks": 49,
+      "mitigations": 49,
+      "pairChecks": 351
+    },
+    {
+      "day": "2026-11-09",
+      "pairCount": 37,
+      "m5Bars": 277,
+      "m1Bars": 1381,
+      "orderBlocks": 69,
+      "mitigations": 69,
+      "pairChecks": 820
+    },
+    {
+      "day": "2026-11-06",
+      "pairCount": 19,
+      "m5Bars": 264,
+      "m1Bars": 1309,
+      "orderBlocks": 49,
+      "mitigations": 49,
+      "pairChecks": 325
+    },
+    {
+      "day": "2026-11-05",
+      "pairCount": 35,
+      "m5Bars": 277,
+      "m1Bars": 1381,
+      "orderBlocks": 60,
+      "mitigations": 60,
+      "pairChecks": 703
+    },
+    {
+      "day": "2026-11-04",
+      "pairCount": 19,
+      "m5Bars": 277,
+      "m1Bars": 1379,
+      "orderBlocks": 51,
+      "mitigations": 51,
+      "pairChecks": 253
+    },
+    {
+      "day": "2026-11-03",
+      "pairCount": 23,
+      "m5Bars": 277,
+      "m1Bars": 1379,
+      "orderBlocks": 59,
+      "mitigations": 59,
+      "pairChecks": 435
+    },
+    {
+      "day": "2026-11-02",
+      "pairCount": 18,
+      "m5Bars": 277,
+      "m1Bars": 1379,
+      "orderBlocks": 57,
+      "mitigations": 57,
+      "pairChecks": 378
+    },
+    {
+      "day": "2026-10-30",
+      "pairCount": 25,
+      "m5Bars": 252,
+      "m1Bars": 1245,
+      "orderBlocks": 56,
+      "mitigations": 56,
+      "pairChecks": 325
+    },
+    {
+      "day": "2026-10-22",
+      "pairCount": 30,
+      "m5Bars": 277,
+      "m1Bars": 1379,
+      "orderBlocks": 64,
+      "mitigations": 64,
+      "pairChecks": 703
+    },
+    {
+      "day": "2026-10-21",
+      "pairCount": 12,
+      "m5Bars": 277,
+      "m1Bars": 1379,
+      "orderBlocks": 57,
+      "mitigations": 57,
+      "pairChecks": 300
+    },
+    {
+      "day": "2026-10-16",
+      "pairCount": 20,
+      "m5Bars": 252,
+      "m1Bars": 1245,
+      "orderBlocks": 60,
+      "mitigations": 60,
+      "pairChecks": 465
+    },
+    {
+      "day": "2026-10-08",
+      "pairCount": 34,
+      "m5Bars": 277,
+      "m1Bars": 1379,
+      "orderBlocks": 71,
+      "mitigations": 71,
+      "pairChecks": 780
+    }
+  ],
+  "references": [
+    {
+      "reference": "P1",
+      "pins": [
+        440,
+        439
+      ],
+      "day": "2026-11-11",
+      "direction": "short",
+      "recognizedAt": 1794387840,
+      "firstRetest": 1794386460,
+      "firstReaction": 1794387000,
+      "secondRetest": 1794387600,
+      "secondReaction": 1794387840,
+      "firstM5ReactionKnownAt": 1794387300,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.09939148073018216,
+        "extremePrice": 4061.66,
+        "candleTime": 1794386520
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.20242914979758725,
+        "extremePrice": 4059.69,
+        "candleTime": 1794387600
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1794387840,
+          "entryPrice": 4056.71,
+          "confirmationCandleTime": 1794387780,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1794387720,
+            "recognizedAt": 1794387840,
+            "gap": 0.2800000000002001,
+            "bottom": 4057.87,
+            "top": 4058.15,
+            "confirmationCandleTime": 1794387780,
+            "confirmationPrice": 4056.71,
+            "orderBlock": {
+              "top": 4059.69,
+              "bottom": 4058.15,
+              "dir": -1,
+              "fvg": 0.2800000000002001,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1794387720,
+              "endTime": 1794387780,
+              "recognizedAt": 1794387840,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4061.66,
+          "targetPrice": 4046.8100000000004,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1794390000,
+            "exitPrice": 4046.8100000000004,
+            "targetPrice": 4046.8100000000004,
+            "checkedThrough": 1794390000,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "unknown",
+          "reason": "M1-Historie zwischen FVG und Reaktion ist lückenhaft.",
+          "variant": "b",
+          "stopPrice": 4061.66
+        }
+      }
+    },
+    {
+      "reference": "P2",
+      "pins": [
+        441,
+        442
+      ],
+      "day": "2026-11-09",
+      "direction": "long",
+      "recognizedAt": 1794217980,
+      "firstRetest": 1794216060,
+      "firstReaction": 1794216660,
+      "secondRetest": 1794217500,
+      "secondReaction": 1794217980,
+      "firstM5ReactionKnownAt": 1794217200,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.3543046357616457,
+        "extremePrice": 4091.43,
+        "candleTime": 1794216420
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.3402061855670554,
+        "extremePrice": 4093.35,
+        "candleTime": 1794217620
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1794217980,
+          "entryPrice": 4097.82,
+          "confirmationCandleTime": 1794217920,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1794217860,
+            "recognizedAt": 1794217980,
+            "gap": 1.9699999999998,
+            "bottom": 4095.06,
+            "top": 4097.03,
+            "confirmationCandleTime": 1794217920,
+            "confirmationPrice": 4097.82,
+            "orderBlock": {
+              "top": 4095.06,
+              "bottom": 4094.4,
+              "dir": 1,
+              "fvg": 1.9699999999998,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1794217860,
+              "endTime": 1794217920,
+              "recognizedAt": 1794217980,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4091.43,
+          "targetPrice": 4110.599999999999,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1794224400,
+            "exitPrice": 4110.599999999999,
+            "targetPrice": 4110.599999999999,
+            "checkedThrough": 1794224400,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1794218520,
+          "entryPrice": 4098.01,
+          "confirmationCandleTime": 1794218460,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1794217860,
+            "recognizedAt": 1794217980,
+            "gap": 1.9699999999998,
+            "bottom": 4095.06,
+            "top": 4097.03,
+            "confirmationCandleTime": 1794217920,
+            "confirmationPrice": 4097.82,
+            "orderBlock": {
+              "top": 4095.06,
+              "bottom": 4094.4,
+              "dir": 1,
+              "fvg": 1.9699999999998,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1794217860,
+              "endTime": 1794217920,
+              "recognizedAt": 1794217980,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1794218400,
+          "stopPrice": 4091.43,
+          "targetPrice": 4111.170000000001,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1794224400,
+            "exitPrice": 4111.170000000001,
+            "targetPrice": 4111.170000000001,
+            "checkedThrough": 1794224400,
+            "reason": null
+          }
+        }
+      }
+    },
+    {
+      "reference": "P3",
+      "pins": [
+        443,
+        444
+      ],
+      "day": "2026-11-06",
+      "direction": "long",
+      "recognizedAt": 1793988960,
+      "firstRetest": 1793986860,
+      "firstReaction": 1793987220,
+      "secondRetest": 1793988600,
+      "secondReaction": 1793988960,
+      "firstM5ReactionKnownAt": 1793988300,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.45553539019961364,
+        "extremePrice": 4053.67,
+        "candleTime": 1793986980
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.14550264550268593,
+        "extremePrice": 4058.29,
+        "candleTime": 1793988600
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1793988960,
+          "entryPrice": 4061.44,
+          "confirmationCandleTime": 1793988900,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1793988840,
+            "recognizedAt": 1793988960,
+            "gap": 0.13000000000010914,
+            "bottom": 4060.63,
+            "top": 4060.76,
+            "confirmationCandleTime": 1793988900,
+            "confirmationPrice": 4061.44,
+            "orderBlock": {
+              "top": 4060.63,
+              "bottom": 4059.44,
+              "dir": 1,
+              "fvg": 0.13000000000010914,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793988840,
+              "endTime": 1793988900,
+              "recognizedAt": 1793988960,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4055.06,
+          "targetPrice": 4074.2000000000003,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793991240,
+            "exitPrice": 4074.2000000000003,
+            "targetPrice": 4074.2000000000003,
+            "checkedThrough": 1793991240,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1793997000,
+          "entryPrice": 4063.99,
+          "confirmationCandleTime": 1793996940,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1793988840,
+            "recognizedAt": 1793988960,
+            "gap": 0.13000000000010914,
+            "bottom": 4060.63,
+            "top": 4060.76,
+            "confirmationCandleTime": 1793988900,
+            "confirmationPrice": 4061.44,
+            "orderBlock": {
+              "top": 4060.63,
+              "bottom": 4059.44,
+              "dir": 1,
+              "fvg": 0.13000000000010914,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793988840,
+              "endTime": 1793988900,
+              "recognizedAt": 1793988960,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1793996820,
+          "stopPrice": 4055.06,
+          "targetPrice": 4081.8499999999995,
+          "outcome": {
+            "status": "unknown",
+            "recognizedAt": null,
+            "exitPrice": null,
+            "targetPrice": 4081.8499999999995,
+            "checkedThrough": 1794001500,
+            "reason": "missingHistory",
+            "unavailableAt": 1794001560
+          }
+        }
+      }
+    },
+    {
+      "reference": "P4",
+      "pins": [
+        445,
+        446
+      ],
+      "day": "2026-11-05",
+      "direction": "short",
+      "recognizedAt": 1793908560,
+      "firstRetest": 1793897280,
+      "firstReaction": 1793898120,
+      "secondRetest": 1793908080,
+      "secondReaction": 1793908560,
+      "firstM5ReactionKnownAt": 1793899800,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.458823529411778,
+        "extremePrice": 4128.06,
+        "candleTime": 1793897820
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.061173533083616526,
+        "extremePrice": 4117.98,
+        "candleTime": 1793908080
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1793908560,
+          "entryPrice": 4112.9,
+          "confirmationCandleTime": 1793908500,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793908440,
+            "recognizedAt": 1793908560,
+            "gap": 0.9800000000004729,
+            "bottom": 4115.07,
+            "top": 4116.05,
+            "confirmationCandleTime": 1793908500,
+            "confirmationPrice": 4112.9,
+            "orderBlock": {
+              "top": 4117.65,
+              "bottom": 4116.05,
+              "dir": -1,
+              "fvg": 0.9800000000004729,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793908440,
+              "endTime": 1793908500,
+              "recognizedAt": 1793908560,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4125.5,
+          "targetPrice": 4087.699999999999,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793912760,
+            "exitPrice": 4087.699999999999,
+            "targetPrice": 4087.699999999999,
+            "checkedThrough": 1793912760,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "unknown",
+          "reason": "M1-Historie zwischen FVG und Reaktion ist lückenhaft.",
+          "variant": "b",
+          "stopPrice": 4125.5
+        }
+      }
+    },
+    {
+      "reference": "P5",
+      "pins": [
+        448,
+        447
+      ],
+      "day": "2026-11-04",
+      "direction": "long",
+      "recognizedAt": 1793769540,
+      "firstRetest": 1793767020,
+      "firstReaction": 1793767320,
+      "secondRetest": 1793768640,
+      "secondReaction": 1793769540,
+      "firstM5ReactionKnownAt": 1793767800,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.10780669144988295,
+        "extremePrice": 3937.72,
+        "candleTime": 1793767080
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.2083748753738887,
+        "extremePrice": 3945.66,
+        "candleTime": 1793768700
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1793769540,
+          "entryPrice": 3953.11,
+          "confirmationCandleTime": 1793769480,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1793769420,
+            "recognizedAt": 1793769540,
+            "gap": 1.5900000000001455,
+            "bottom": 3949.46,
+            "top": 3951.05,
+            "confirmationCandleTime": 1793769480,
+            "confirmationPrice": 3953.11,
+            "orderBlock": {
+              "top": 3949.46,
+              "bottom": 3947.23,
+              "dir": 1,
+              "fvg": 1.5900000000001455,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793769420,
+              "endTime": 1793769480,
+              "recognizedAt": 1793769540,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 3937.72,
+          "targetPrice": 3983.890000000001,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793770680,
+            "exitPrice": 3983.890000000001,
+            "targetPrice": 3983.890000000001,
+            "checkedThrough": 1793770680,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "unknown",
+          "reason": "M1-Historie zwischen FVG und Reaktion ist lückenhaft.",
+          "variant": "b",
+          "stopPrice": 3937.72
+        }
+      }
+    },
+    {
+      "reference": "P6",
+      "pins": [
+        449,
+        450
+      ],
+      "day": "2026-11-03",
+      "direction": "short",
+      "recognizedAt": 1793694300,
+      "firstRetest": 1793691000,
+      "firstReaction": 1793691180,
+      "secondRetest": 1793693520,
+      "secondReaction": 1793694300,
+      "firstM5ReactionKnownAt": 1793693100,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.08860759493670431,
+        "extremePrice": 3914.11,
+        "candleTime": 1793691000
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.27444794952677315,
+        "extremePrice": 3911.02,
+        "candleTime": 1793693520
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1793694300,
+          "entryPrice": 3908.58,
+          "confirmationCandleTime": 1793694240,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793694180,
+            "recognizedAt": 1793694300,
+            "gap": 0.2699999999999818,
+            "bottom": 3909.27,
+            "top": 3909.54,
+            "confirmationCandleTime": 1793694240,
+            "confirmationPrice": 3908.58,
+            "orderBlock": {
+              "top": 3910.56,
+              "bottom": 3909.54,
+              "dir": -1,
+              "fvg": 0.2699999999999818,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793694180,
+              "endTime": 1793694240,
+              "recognizedAt": 1793694300,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 3913.32,
+          "targetPrice": 3899.0999999999995,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793695620,
+            "exitPrice": 3899.0999999999995,
+            "targetPrice": 3899.0999999999995,
+            "checkedThrough": 1793695620,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1793694420,
+          "entryPrice": 3908.5,
+          "confirmationCandleTime": 1793694360,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793694180,
+            "recognizedAt": 1793694300,
+            "gap": 0.2699999999999818,
+            "bottom": 3909.27,
+            "top": 3909.54,
+            "confirmationCandleTime": 1793694240,
+            "confirmationPrice": 3908.58,
+            "orderBlock": {
+              "top": 3910.56,
+              "bottom": 3909.54,
+              "dir": -1,
+              "fvg": 0.2699999999999818,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793694180,
+              "endTime": 1793694240,
+              "recognizedAt": 1793694300,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1793694300,
+          "stopPrice": 3913.32,
+          "targetPrice": 3898.8599999999997,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793695620,
+            "exitPrice": 3898.8599999999997,
+            "targetPrice": 3898.8599999999997,
+            "checkedThrough": 1793695620,
+            "reason": null
+          }
+        }
+      }
+    },
+    {
+      "reference": "P7",
+      "pins": [
+        451,
+        452
+      ],
+      "day": "2026-11-03",
+      "direction": "short",
+      "recognizedAt": 1793672220,
+      "firstRetest": 1793670600,
+      "firstReaction": 1793671080,
+      "secondRetest": 1793671980,
+      "secondReaction": 1793672220,
+      "firstM5ReactionKnownAt": 1793671800,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.11403508771932508,
+        "extremePrice": 3953.26,
+        "candleTime": 1793670600
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.13344316309718676,
+        "extremePrice": 3948,
+        "candleTime": 1793672040
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1793672220,
+          "entryPrice": 3945.18,
+          "confirmationCandleTime": 1793672160,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793672100,
+            "recognizedAt": 1793672220,
+            "gap": 0.5900000000001455,
+            "bottom": 3945.87,
+            "top": 3946.46,
+            "confirmationCandleTime": 1793672160,
+            "confirmationPrice": 3945.18,
+            "orderBlock": {
+              "top": 3948,
+              "bottom": 3946.46,
+              "dir": -1,
+              "fvg": 0.5900000000001455,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793672100,
+              "endTime": 1793672160,
+              "recognizedAt": 1793672220,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 3953.26,
+          "targetPrice": 3929.019999999999,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793676960,
+            "exitPrice": 3929.019999999999,
+            "targetPrice": 3929.019999999999,
+            "checkedThrough": 1793676960,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1793672820,
+          "entryPrice": 3945.98,
+          "confirmationCandleTime": 1793672760,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793672100,
+            "recognizedAt": 1793672220,
+            "gap": 0.5900000000001455,
+            "bottom": 3945.87,
+            "top": 3946.46,
+            "confirmationCandleTime": 1793672160,
+            "confirmationPrice": 3945.18,
+            "orderBlock": {
+              "top": 3948,
+              "bottom": 3946.46,
+              "dir": -1,
+              "fvg": 0.5900000000001455,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793672100,
+              "endTime": 1793672160,
+              "recognizedAt": 1793672220,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1793672700,
+          "stopPrice": 3953.26,
+          "targetPrice": 3931.4199999999996,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793676780,
+            "exitPrice": 3931.4199999999996,
+            "targetPrice": 3931.4199999999996,
+            "checkedThrough": 1793676780,
+            "reason": null
+          }
+        }
+      }
+    },
+    {
+      "reference": "P8",
+      "pins": [
+        453,
+        454
+      ],
+      "day": "2026-11-02",
+      "direction": "short",
+      "recognizedAt": 1793606700,
+      "firstRetest": 1793602800,
+      "firstReaction": 1793603340,
+      "secondRetest": 1793606520,
+      "secondReaction": 1793606700,
+      "firstM5ReactionKnownAt": 1793605200,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.0021551724138402055,
+        "extremePrice": 3910.09,
+        "candleTime": 1793602800
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.08290155440418476,
+        "extremePrice": 3905.28,
+        "candleTime": 1793606520
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1793606700,
+          "entryPrice": 3903.21,
+          "confirmationCandleTime": 1793606640,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793606580,
+            "recognizedAt": 1793606700,
+            "gap": 0.05999999999994543,
+            "bottom": 3903.64,
+            "top": 3903.7,
+            "confirmationCandleTime": 1793606640,
+            "confirmationPrice": 3903.21,
+            "orderBlock": {
+              "top": 3905.28,
+              "bottom": 3903.7,
+              "dir": -1,
+              "fvg": 0.05999999999994543,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793606580,
+              "endTime": 1793606640,
+              "recognizedAt": 1793606700,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 3908.82,
+          "targetPrice": 3891.99,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793607600,
+            "exitPrice": 3891.99,
+            "targetPrice": 3891.99,
+            "checkedThrough": 1793607600,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1793606880,
+          "entryPrice": 3900.06,
+          "confirmationCandleTime": 1793606820,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793606580,
+            "recognizedAt": 1793606700,
+            "gap": 0.05999999999994543,
+            "bottom": 3903.64,
+            "top": 3903.7,
+            "confirmationCandleTime": 1793606640,
+            "confirmationPrice": 3903.21,
+            "orderBlock": {
+              "top": 3905.28,
+              "bottom": 3903.7,
+              "dir": -1,
+              "fvg": 0.05999999999994543,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793606580,
+              "endTime": 1793606640,
+              "recognizedAt": 1793606700,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1793606760,
+          "stopPrice": 3908.82,
+          "targetPrice": 3882.5399999999995,
+          "outcome": {
+            "status": "loss",
+            "recognizedAt": 1793626200,
+            "exitPrice": 3908.82,
+            "targetPrice": 3882.5399999999995,
+            "checkedThrough": 1793626200,
+            "reason": null
+          }
+        }
+      }
+    },
+    {
+      "reference": "P9",
+      "pins": [
+        455,
+        456
+      ],
+      "day": "2026-10-30",
+      "direction": "short",
+      "recognizedAt": 1793363880,
+      "firstRetest": 1793360040,
+      "firstReaction": 1793360460,
+      "secondRetest": 1793363700,
+      "secondReaction": 1793363880,
+      "firstM5ReactionKnownAt": 1793361000,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.3791748526522502,
+        "extremePrice": 3979.21,
+        "candleTime": 1793360100
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.11005291005290832,
+        "extremePrice": 3970.8,
+        "candleTime": 1793363700
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1793363880,
+          "entryPrice": 3964.07,
+          "confirmationCandleTime": 1793363820,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793363760,
+            "recognizedAt": 1793363880,
+            "gap": 0.20999999999958163,
+            "bottom": 3966.53,
+            "top": 3966.74,
+            "confirmationCandleTime": 1793363820,
+            "confirmationPrice": 3964.07,
+            "orderBlock": {
+              "top": 3970.8,
+              "bottom": 3966.74,
+              "dir": -1,
+              "fvg": 0.20999999999958163,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793363760,
+              "endTime": 1793363820,
+              "recognizedAt": 1793363880,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 3979.21,
+          "targetPrice": 3933.7900000000004,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793367240,
+            "exitPrice": 3933.7900000000004,
+            "targetPrice": 3933.7900000000004,
+            "checkedThrough": 1793367240,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "pending",
+          "reason": "Die bestätigte FVG wurde am gewählten Stand noch nicht mindestens 50 % retestet (bei vollständiger Füllung ist derselbe Kerzenkontakt mit dem zugehörigen M1-OB erforderlich).",
+          "variant": "b",
+          "stopPrice": 3979.21
+        }
+      }
+    },
+    {
+      "reference": "P10",
+      "pins": [
+        457,
+        458
+      ],
+      "day": "2026-10-30",
+      "direction": "short",
+      "recognizedAt": 1793352180,
+      "firstRetest": 1793350440,
+      "firstReaction": 1793351280,
+      "secondRetest": 1793351880,
+      "secondReaction": 1793352180,
+      "firstM5ReactionKnownAt": 1793351700,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.06625577812016191,
+        "extremePrice": 3999.23,
+        "candleTime": 1793350440
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.1115879828326176,
+        "extremePrice": 3994.79,
+        "candleTime": 1793351940
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1793352180,
+          "entryPrice": 3991.07,
+          "confirmationCandleTime": 1793352120,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793352060,
+            "recognizedAt": 1793352180,
+            "gap": 1.050000000000182,
+            "bottom": 3991.97,
+            "top": 3993.02,
+            "confirmationCandleTime": 1793352120,
+            "confirmationPrice": 3991.07,
+            "orderBlock": {
+              "top": 3994.79,
+              "bottom": 3993.02,
+              "dir": -1,
+              "fvg": 1.050000000000182,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793352060,
+              "endTime": 1793352120,
+              "recognizedAt": 1793352180,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 3998.93,
+          "targetPrice": 3975.350000000001,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793357400,
+            "exitPrice": 3975.350000000001,
+            "targetPrice": 3975.350000000001,
+            "checkedThrough": 1793357400,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1793352300,
+          "entryPrice": 3990.96,
+          "confirmationCandleTime": 1793352240,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1793352060,
+            "recognizedAt": 1793352180,
+            "gap": 1.050000000000182,
+            "bottom": 3991.97,
+            "top": 3993.02,
+            "confirmationCandleTime": 1793352120,
+            "confirmationPrice": 3991.07,
+            "orderBlock": {
+              "top": 3994.79,
+              "bottom": 3993.02,
+              "dir": -1,
+              "fvg": 1.050000000000182,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1793352060,
+              "endTime": 1793352120,
+              "recognizedAt": 1793352180,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1793352180,
+          "stopPrice": 3998.93,
+          "targetPrice": 3975.0200000000004,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793357460,
+            "exitPrice": 3975.0200000000004,
+            "targetPrice": 3975.0200000000004,
+            "checkedThrough": 1793357460,
+            "reason": null
+          }
+        }
+      }
+    },
+    {
+      "reference": "P11",
+      "pins": [
+        459,
+        460
+      ],
+      "day": "2026-10-22",
+      "direction": "short",
+      "recognizedAt": 1792691460,
+      "firstRetest": 1792686300,
+      "firstReaction": 1792686660,
+      "secondRetest": 1792691100,
+      "secondReaction": 1792691460,
+      "firstM5ReactionKnownAt": 1792687200,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.09955752212385396,
+        "extremePrice": 4050.83,
+        "candleTime": 1792686300
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.28531073446334143,
+        "extremePrice": 4048.3,
+        "candleTime": 1792691100
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1792691460,
+          "entryPrice": 4045.14,
+          "confirmationCandleTime": 1792691400,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1792691340,
+            "recognizedAt": 1792691460,
+            "gap": 0.5300000000002001,
+            "bottom": 4045.66,
+            "top": 4046.19,
+            "confirmationCandleTime": 1792691400,
+            "confirmationPrice": 4045.14,
+            "orderBlock": {
+              "top": 4047.59,
+              "bottom": 4046.19,
+              "dir": -1,
+              "fvg": 0.5300000000002001,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1792691340,
+              "endTime": 1792691400,
+              "recognizedAt": 1792691460,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4050.83,
+          "targetPrice": 4033.7599999999998,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1792694520,
+            "exitPrice": 4033.7599999999998,
+            "targetPrice": 4033.7599999999998,
+            "checkedThrough": 1792694520,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "invalid",
+          "reason": "Der zugehörige M1-OB wurde vor dem Entry durch einen Docht gebrochen.",
+          "variant": "b",
+          "stopPrice": 4050.83
+        }
+      }
+    },
+    {
+      "reference": "P12",
+      "pins": [
+        461,
+        462
+      ],
+      "day": "2026-10-22",
+      "direction": "short",
+      "recognizedAt": 1792638060,
+      "firstRetest": 1792636260,
+      "firstReaction": 1792636620,
+      "secondRetest": 1792637820,
+      "secondReaction": 1792638060,
+      "firstM5ReactionKnownAt": 1792637400,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.3989637305699726,
+        "extremePrice": 4123.87,
+        "candleTime": 1792636260
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.0653266331658812,
+        "extremePrice": 4118.29,
+        "candleTime": 1792637820
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1792638060,
+          "entryPrice": 4113.81,
+          "confirmationCandleTime": 1792638000,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1792637940,
+            "recognizedAt": 1792638060,
+            "gap": 0.23999999999978172,
+            "bottom": 4116.2,
+            "top": 4116.44,
+            "confirmationCandleTime": 1792638000,
+            "confirmationPrice": 4113.81,
+            "orderBlock": {
+              "top": 4118.29,
+              "bottom": 4116.44,
+              "dir": -1,
+              "fvg": 0.23999999999978172,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1792637940,
+              "endTime": 1792638000,
+              "recognizedAt": 1792638060,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4123.87,
+          "targetPrice": 4093.6900000000014,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1792640280,
+            "exitPrice": 4093.6900000000014,
+            "targetPrice": 4093.6900000000014,
+            "checkedThrough": 1792640280,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "unknown",
+          "reason": "M1-Historie zwischen FVG und Reaktion ist lückenhaft.",
+          "variant": "b",
+          "stopPrice": 4123.87
+        }
+      }
+    },
+    {
+      "reference": "P13",
+      "pins": [
+        463,
+        464
+      ],
+      "day": "2026-10-21",
+      "direction": "long",
+      "recognizedAt": 1792578000,
+      "firstRetest": 1792565460,
+      "firstReaction": 1792566660,
+      "secondRetest": 1792577760,
+      "secondReaction": 1792578000,
+      "firstM5ReactionKnownAt": 1792566600,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.23780487804879175,
+        "extremePrice": 4110.62,
+        "candleTime": 1792565640
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.40935672514608373,
+        "extremePrice": 4111.63,
+        "candleTime": 1792577760
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1792578000,
+          "entryPrice": 4114.94,
+          "confirmationCandleTime": 1792577940,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1792577880,
+            "recognizedAt": 1792578000,
+            "gap": 0.11999999999989086,
+            "bottom": 4114.46,
+            "top": 4114.58,
+            "confirmationCandleTime": 1792577940,
+            "confirmationPrice": 4114.94,
+            "orderBlock": {
+              "top": 4114.46,
+              "bottom": 4111.63,
+              "dir": 1,
+              "fvg": 0.11999999999989086,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1792577880,
+              "endTime": 1792577940,
+              "recognizedAt": 1792578000,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4110.62,
+          "targetPrice": 4123.579999999999,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1792579020,
+            "exitPrice": 4123.579999999999,
+            "targetPrice": 4123.579999999999,
+            "checkedThrough": 1792579020,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "invalid",
+          "reason": "Der zugehörige M1-OB wurde vor dem Entry durch einen Docht gebrochen.",
+          "variant": "b",
+          "stopPrice": 4110.62
+        }
+      }
+    },
+    {
+      "reference": "P14",
+      "pins": [
+        465,
+        466
+      ],
+      "day": "2026-10-16",
+      "direction": "short",
+      "recognizedAt": 1792154280,
+      "firstRetest": 1792149900,
+      "firstReaction": 1792150260,
+      "secondRetest": 1792153320,
+      "secondReaction": 1792154280,
+      "firstM5ReactionKnownAt": 1792150800,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.3310104529616217,
+        "extremePrice": 4181.98,
+        "candleTime": 1792150080
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.8279220779221566,
+        "extremePrice": 4181.45,
+        "candleTime": 1792154100
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1792154280,
+          "entryPrice": 4177.28,
+          "confirmationCandleTime": 1792154220,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1792154160,
+            "recognizedAt": 1792154280,
+            "gap": 0.23999999999978172,
+            "bottom": 4178.92,
+            "top": 4179.16,
+            "confirmationCandleTime": 1792154220,
+            "confirmationPrice": 4177.28,
+            "orderBlock": {
+              "top": 4181.45,
+              "bottom": 4179.16,
+              "dir": -1,
+              "fvg": 0.23999999999978172,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1792154160,
+              "endTime": 1792154220,
+              "recognizedAt": 1792154280,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4181.98,
+          "targetPrice": 4167.88,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1792155360,
+            "exitPrice": 4167.88,
+            "targetPrice": 4167.88,
+            "checkedThrough": 1792155360,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1792158360,
+          "entryPrice": 4175.33,
+          "confirmationCandleTime": 1792158300,
+          "fvg": {
+            "direction": "short",
+            "candleTime": 1792154160,
+            "recognizedAt": 1792154280,
+            "gap": 0.23999999999978172,
+            "bottom": 4178.92,
+            "top": 4179.16,
+            "confirmationCandleTime": 1792154220,
+            "confirmationPrice": 4177.28,
+            "orderBlock": {
+              "top": 4181.45,
+              "bottom": 4179.16,
+              "dir": -1,
+              "fvg": 0.23999999999978172,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1792154160,
+              "endTime": 1792154220,
+              "recognizedAt": 1792154280,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1792158240,
+          "stopPrice": 4181.98,
+          "targetPrice": 4162.030000000001,
+          "outcome": {
+            "status": "loss",
+            "recognizedAt": 1792158720,
+            "exitPrice": 4181.98,
+            "targetPrice": 4162.030000000001,
+            "checkedThrough": 1792158720,
+            "reason": null
+          }
+        }
+      }
+    },
+    {
+      "reference": "P15",
+      "pins": [
+        467,
+        468
+      ],
+      "day": "2026-10-08",
+      "direction": "long",
+      "recognizedAt": 1791466380,
+      "firstRetest": 1791463920,
+      "firstReaction": 1791464100,
+      "secondRetest": 1791466020,
+      "secondReaction": 1791466380,
+      "firstM5ReactionKnownAt": 1791465300,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.08638743455496135,
+        "extremePrice": 4113.29,
+        "candleTime": 1791463980
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.14897260273972682,
+        "extremePrice": 4120.36,
+        "candleTime": 1791466020
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1791466380,
+          "entryPrice": 4127.93,
+          "confirmationCandleTime": 1791466320,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1791466260,
+            "recognizedAt": 1791466380,
+            "gap": 2.7399999999997817,
+            "bottom": 4125,
+            "top": 4127.74,
+            "confirmationCandleTime": 1791466320,
+            "confirmationPrice": 4127.93,
+            "orderBlock": {
+              "top": 4125,
+              "bottom": 4121.41,
+              "dir": 1,
+              "fvg": 2.7399999999997817,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1791466260,
+              "endTime": 1791466320,
+              "recognizedAt": 1791466380,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4115.39,
+          "targetPrice": 4153.01,
+          "outcome": {
+            "status": "loss",
+            "recognizedAt": 1791472500,
+            "exitPrice": 4115.39,
+            "targetPrice": 4153.01,
+            "checkedThrough": 1791472500,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1791466620,
+          "entryPrice": 4125.29,
+          "confirmationCandleTime": 1791466560,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1791466260,
+            "recognizedAt": 1791466380,
+            "gap": 2.7399999999997817,
+            "bottom": 4125,
+            "top": 4127.74,
+            "confirmationCandleTime": 1791466320,
+            "confirmationPrice": 4127.93,
+            "orderBlock": {
+              "top": 4125,
+              "bottom": 4121.41,
+              "dir": 1,
+              "fvg": 2.7399999999997817,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1791466260,
+              "endTime": 1791466320,
+              "recognizedAt": 1791466380,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1791466380,
+          "stopPrice": 4115.39,
+          "targetPrice": 4145.089999999999,
+          "outcome": {
+            "status": "loss",
+            "recognizedAt": 1791472500,
+            "exitPrice": 4115.39,
+            "targetPrice": 4145.089999999999,
+            "checkedThrough": 1791472500,
+            "reason": null
+          }
+        }
+      }
+    },
+    {
+      "reference": "P16",
+      "pins": [
+        469,
+        470
+      ],
+      "day": "2026-10-21",
+      "direction": "long",
+      "recognizedAt": 1792557120,
+      "firstRetest": 1792552380,
+      "firstReaction": 1792552560,
+      "secondRetest": 1792556940,
+      "secondReaction": 1792557120,
+      "firstM5ReactionKnownAt": 1792553100,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.01362862010220251,
+        "extremePrice": 4112.95,
+        "candleTime": 1792552380
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.5116279069766458,
+        "extremePrice": 4114.84,
+        "candleTime": 1792556940
+      },
+      "entries": {
+        "a": {
+          "status": "ready",
+          "entryTime": 1792557120,
+          "entryPrice": 4120.27,
+          "confirmationCandleTime": 1792557060,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1792557000,
+            "recognizedAt": 1792557120,
+            "gap": 1.6500000000005457,
+            "bottom": 4116.98,
+            "top": 4118.63,
+            "confirmationCandleTime": 1792557060,
+            "confirmationPrice": 4120.27,
+            "orderBlock": {
+              "top": 4116.98,
+              "bottom": 4114.84,
+              "dir": 1,
+              "fvg": 1.6500000000005457,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1792557000,
+              "endTime": 1792557060,
+              "recognizedAt": 1792557120,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "a",
+          "stopPrice": 4112.95,
+          "targetPrice": 4134.910000000002,
+          "outcome": {
+            "status": "loss",
+            "recognizedAt": 1792564020,
+            "exitPrice": 4112.95,
+            "targetPrice": 4134.910000000002,
+            "checkedThrough": 1792564020,
+            "reason": null
+          }
+        },
+        "b": {
+          "status": "ready",
+          "entryTime": 1792557540,
+          "entryPrice": 4117.62,
+          "confirmationCandleTime": 1792557480,
+          "fvg": {
+            "direction": "long",
+            "candleTime": 1792557000,
+            "recognizedAt": 1792557120,
+            "gap": 1.6500000000005457,
+            "bottom": 4116.98,
+            "top": 4118.63,
+            "confirmationCandleTime": 1792557060,
+            "confirmationPrice": 4120.27,
+            "orderBlock": {
+              "top": 4116.98,
+              "bottom": 4114.84,
+              "dir": 1,
+              "fvg": 1.6500000000005457,
+              "active": true,
+              "touched": false,
+              "invalidated": false,
+              "retested": false,
+              "retestedAt": null,
+              "startTime": 1792557000,
+              "endTime": 1792557060,
+              "recognizedAt": 1792557120,
+              "timeframe": "1M"
+            }
+          },
+          "variant": "b",
+          "retestCandleTime": 1792557420,
+          "stopPrice": 4112.95,
+          "targetPrice": 4126.96,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1792560420,
+            "exitPrice": 4126.96,
+            "targetPrice": 4126.96,
+            "checkedThrough": 1792560420,
+            "reason": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import {candleTouchesOrderBlock} from './orderBlockDetection.js';
+import {orderBlockPenetration} from './orderBlockPenetration.js';
 
 export const ENTRY_PATTERN_2_OB_RULE_VERSION='ob-beyond-ls-max-depth-until-entry-v1';
 export const ENTRY_PATTERN_2_MAX_OB_RETEST_FRACTION=.5;
@@ -36,7 +37,7 @@ export function evaluateEntryPattern2OrderBlockDepth({orderBlock,direction,retes
       ||candle.low>Math.min(candle.open,candle.close)||candle.high<Math.max(candle.open,candle.close)){
       complete=false;continue;
     }
-    const depth=direction==='long'?orderBlock.top-candle.low:candle.high-orderBlock.bottom;
+    const depth=orderBlockPenetration(orderBlock,direction,candle);
     maxDepth=Math.max(maxDepth,depth);
     if(depth-height*ENTRY_PATTERN_2_MAX_OB_RETEST_FRACTION>tolerance&&firstBreachTime===null)firstBreachTime=candle.time;
   }
