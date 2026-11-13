@@ -2,19 +2,22 @@
 // Rahmen-Button für eine echte Aktion (Speichern/Anlegen/Löschen) — im Gegensatz zu ToggleButton
 // hat er keinen An/Aus-Zustand.
 defineProps({
+  as: { type: [String, Object, Function], default: "button" },
   // primary = blau (Speichern/Anlegen), danger = rot (Löschen)
   tone: { type: String, default: "primary" },
 });
 </script>
 
 <template>
-  <button type="button" class="ui-action-btn" :data-tone="tone">
+  <component :is="as" :type="as === 'button' ? 'button' : undefined" class="ui-action-btn" :data-tone="tone">
     <slot />
-  </button>
+  </component>
 </template>
 
 <style scoped>
 .ui-action-btn {
+  display: inline-block;
+  text-decoration: none;
   background: transparent;
   border: 1px solid #2962ff;
   color: #7ea6ff;

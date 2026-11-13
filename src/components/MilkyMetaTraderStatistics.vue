@@ -4,7 +4,7 @@ import ActionButton from './ui/ActionButton.vue';
 import MmtTradeExtremes from './MmtTradeExtremes.vue';
 import EquityChart from './MilkyMetaTraderEquityChart.vue';
 import Breakdown from './MilkyMetaTraderStatisticsBreakdown.vue';
-import MilkyMetaTraderJournal from './MilkyMetaTraderJournal.vue';
+import {RouterLink} from 'vue-router';
 import {historyJournalKey,historyJournalRoute} from '../mmtHistoryJournal.js';
 import {refreshMmtHistory} from '../milkyMetaTraderHistory.js';
 import {closedBrokerTrades,filterBrokerTrades,statisticsGroups} from '../milkyMetaTraderStatistics.js';
@@ -26,7 +26,6 @@ const outcomes=ref(['win','loss','breakeven']);
 const outcomeOptions=[{key:'win',label:'Gewinner'},{key:'loss',label:'Verlierer'},{key:'breakeven',label:'Break-even'}];
 const currency='USD';
 const views=[{key:'list',label:'PnL-Liste'},{key:'chart',label:'X–Y-Diagramm'},{key:'asset',label:'Assets'},{key:'hour',label:'Entry-Stunden · Berlin'},{key:'weekday',label:'Entry-Wochentage · Berlin'}];
-const journalTrade=ref(null);
 let inFlight=false,alive=true;
 async function refresh(background=false){
  if(inFlight)return;inFlight=true;if(!background)loading.value=true;
@@ -87,10 +86,9 @@ const latest=computed(()=>[...sync.value.filter(s=>selectedIds.value.has(s.accou
   <span>{{weekIndex+1}} / {{weeks.length}}</span>
   <ActionButton :disabled="weekIndex>=weeks.length-1" @click="selectedWeek=weeks[weekIndex+1].key">Ältere Woche</ActionButton>
  </nav>
- <div class="mmt-stat-table-wrap"><table><thead><tr><th>Entry-Zeit · Berlin</th><th>Konto</th><th>Asset</th><th>Richtung</th><th>Lot</th><th>Commission</th><th>Netto-PnL</th><th>Journal</th></tr></thead><tbody><tr v-for="t in listed" :key="t.id"><td>{{time(t.opened_at)}}</td><td>{{name(t.account_id)}}</td><td><strong>{{t.symbol}}</strong></td><td><span class="trade-direction" :class="t.direction">{{t.direction==='long'?'Long':t.direction==='short'?'Short':'unbekannt'}}</span></td><td>{{fmtPrice(t.volume,4)}}</td><td :class="tradeOutcomeClass(t)?pnlClass(t.commission):''">{{fmtPrice(t.commission,2)}} {{t.currency}}</td><td :class="tradeOutcomeClass(t)" :title="tradeOutcomeClass(t)?undefined:'Break-even vor Kommission'">{{fmtPrice(t.net,2)}} {{t.currency}}</td><td><RouterLink v-if="historyJournalRoute(journalLink(t))" :to="historyJournalRoute(journalLink(t))" style="cursor:pointer">DR #{{journalLink(t).trade_positions.dealing_range_id}}</RouterLink> <span v-if="t.source==='csv'" :title="t.source_file">CSV-Import #{{t.source_trade_id}}</span><ActionButton v-else @click="journalTrade=t">Journal / Kommentare</ActionButton></td></tr><tr v-if="!listed.length"><td colspan="8">{{loading?'Brokerhistorie wird geladen …':loaded&&coverage.length?(week?'Keine abgeschlossenen Trades in dieser Kalenderwoche.':'Keine abgeschlossenen Trades für diese Auswahl.'):'Noch keine Brokerhistorie für diese Kontenauswahl eingelesen.'}}</td></tr></tbody></table></div>
+ <div class="mmt-stat-table-wrap"><table><thead><tr><th>Entry-Zeit · Berlin</th><th>Konto</th><th>Asset</th><th>Richtung</th><th>Lot</th><th>Commission</th><th>Netto-PnL</th><th>Journal</th></tr></thead><tbody><tr v-for="t in listed" :key="t.id"><td>{{time(t.opened_at)}}</td><td>{{name(t.account_id)}}</td><td><strong>{{t.symbol}}</strong></td><td><span class="trade-direction" :class="t.direction">{{t.direction==='long'?'Long':t.direction==='short'?'Short':'unbekannt'}}</span></td><td>{{fmtPrice(t.volume,4)}}</td><td :class="tradeOutcomeClass(t)?pnlClass(t.commission):''">{{fmtPrice(t.commission,2)}} {{t.currency}}</td><td :class="tradeOutcomeClass(t)" :title="tradeOutcomeClass(t)?undefined:'Break-even vor Kommission'">{{fmtPrice(t.net,2)}} {{t.currency}}</td><td><ActionButton v-if="historyJournalRoute(journalLink(t))" :as="RouterLink" :to="historyJournalRoute(journalLink(t))" target="_blank" rel="noopener noreferrer" :aria-label="`DR #${journalLink(t).trade_positions.dealing_range_id} in neuem Tab öffnen`">DR #{{journalLink(t).trade_positions.dealing_range_id}}</ActionButton><span v-else title="Keine Dealing Range zugeordnet">—</span> <span v-if="t.source==='csv'" :title="t.source_file">CSV-Import #{{t.source_trade_id}}</span></td></tr><tr v-if="!listed.length"><td colspan="8">{{loading?'Brokerhistorie wird geladen …':loaded&&coverage.length?(week?'Keine abgeschlossenen Trades in dieser Kalenderwoche.':'Keine abgeschlossenen Trades für diese Auswahl.'):'Noch keine Brokerhistorie für diese Kontenauswahl eingelesen.'}}</td></tr></tbody></table></div>
  </template>
  <template v-else><Breakdown v-if="coverage.length" :title="breakdown.label" :rows="grouped[view]" :currency="currency"/><p v-else class="mmt-muted">Noch keine Brokerhistorie für diese Kontenauswahl eingelesen.</p></template>
- <MilkyMetaTraderJournal v-if="journalTrade" :trade="journalTrade" :api="api" @close="journalTrade=null" />
 
  <p class="mmt-muted">Beträge in {{currency||'Kontowährung'}} aus zugeordneten Brokerbuchungen inklusive Commission, Gebühren und Swap bzw. unverändert aus dem CSV-Nettofeld. Die separat gezeigte Commission wird nicht nochmals abgezogen. Assets nach Ø/Trade, Entry-Stunden und Entry-Wochentage chronologisch sortiert; N = Stichprobe. Die Wochenblätterung folgt der Entry-Zeit und begrenzt nur die PnL-Liste. Break-even: −10 bis +10 USD vor Kommission, farblich neutral. Winrate = Gewinne / (Gewinne + Verluste), ohne Break-even. Unterschiedliche Lotgrößen beeinflussen PnL; keine automatische Aussage über die Qualität einer Handelszeit. R-Werte benötigen belegtes initiales Risiko.</p>
  <p v-if="fees" class="mmt-error">Nicht einzelnen Trades zugeordnete Kosten/Buchungen (Konten/Währung, vor Zeit-/Assetfilter): {{fmtPrice(fees,2)}} {{currency}} – separat, nicht im Trade-PnL.</p>
