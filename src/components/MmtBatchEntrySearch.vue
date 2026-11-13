@@ -15,17 +15,28 @@ try{rows.value=JSON.parse(sessionStorage.getItem(storageKey)??'[]').filter(r=>r.
 watch(role,value=>{try{sessionStorage.setItem('mmt-entry-role',value);}catch{}});
 const unresolved=computed(()=>rows.value.some(r=>r.state==='unknown'));
 const selectedAccounts=computed(()=>accountsForRole(props.accounts??[],role.value));
+const brokerSymbols=ref({});
+const symbolKey=a=>JSON.stringify([a.id,a.login,a.server,props.symbol]);
+watch(()=>[props.statuses,props.symbol,props.accounts],()=>{
+ for(const a of props.accounts??[]){
+  const snapshot=props.statuses?.[a.id]?.bridge?.snapshot;
+  if(snapshot?.account_login!==Number(a.login)||snapshot.account_server!==a.server)continue;
+  const matches=(snapshot.quotes??[]).filter(q=>chartInstrument(q.symbol)===props.symbol);
+  if(matches.length)brokerSymbols.value[symbolKey(a)]=matches.map(q=>q.symbol);
+ }
+},{immediate:true,deep:true});
 function details(a){
  const s=props.statuses?.[a.id],snapshot=s?.bridge?.snapshot;
  const quotes=(snapshot?.quotes??[]).filter(q=>chartInstrument(q.symbol)===props.symbol);
  if(!s?.online||!snapshot)return {reason:'Brokerverbindung offline'};
  if(snapshot.account_login!==Number(a.login)||snapshot.account_server!==a.server)return {reason:'Brokerkonto stimmt nicht überein'};
- if(quotes.length!==1)return {reason:quotes.length?'Broker-Symbol mehrdeutig':'Brokerkurs für '+props.symbol+' fehlt'};
+ const symbols=quotes.length?quotes.map(q=>q.symbol):brokerSymbols.value[symbolKey(a)]??[];
+ if(symbols.length!==1)return {reason:symbols.length?'Broker-Symbol mehrdeutig':'Broker-Symbol für '+props.symbol+' noch nicht zugeordnet'};
  if(!snapshot.execution_ready||!snapshot.trade_allowed)return {reason:'Handel nicht bereit · Details unter Konten'};
+ const order={symbol:symbols[0],direction:props.idea?.direction,stop_loss:props.idea?.sl,take_profit:props.idea?.tp??null,risk_mode:riskMode.value};
  try{
-  const order={symbol:quotes[0].symbol,direction:props.idea?.direction,stop_loss:props.idea?.sl,take_profit:props.idea?.tp??null,risk_mode:riskMode.value};
   return {order,metrics:riskPreviewMetrics(order,snapshot,s.risk_policy,props.now/1000)};
- }catch(e){return {reason:mmtRiskReason(e.message)};}
+ }catch(e){return {order,reason:e.message==='quote_stale'?'Lot/RR beim Entry · Suchauftrag möglich':`Prüfung beim Start: ${mmtRiskReason(e.message)}`};}
 }
 const accountDetails=computed(()=>selectedAccounts.value.map(account=>({account,...details(account)})));
 const blockedReason=computed(()=>{
@@ -34,7 +45,7 @@ const blockedReason=computed(()=>{
  if(props.disabled)return props.disabledReason||'Entry-Suche im aktuellen Chartzustand gesperrt.';
  if(!props.idea)return 'Eine eindeutige Long-/Short-Idee mit SL im Chart fehlt.';
  if(!selectedAccounts.value.length)return 'Kontozuordnung fehlt oder ist mehrdeutig. Konto-Tags unter MMT prüfen.';
- return accountDetails.value.filter(row=>!row.metrics).map(row=>`${row.account.name}: ${row.reason}`).join('\n');
+ return accountDetails.value.filter(row=>!row.order).map(row=>`${row.account.name}: ${row.reason}`).join('\n');
 });
 const canPrepare=computed(()=>!blockedReason.value);
 const feedbackRows=computed(()=>rows.value.filter(r=>['prepared','unknown','rejected'].includes(r.state)));
@@ -49,12 +60,14 @@ async function prepare(){
  try{
   const results=await Promise.allSettled(selectedAccounts.value.map(async a=>{
    const order={...details(a).order,duration_sec:Number(duration.value)*60};
-   const data=await props.api('search_preview',{account_id:a.id,order});
+   let data;
+   try{data=await props.api('search_preview',{account_id:a.id,order});}
+   catch(e){throw new Error(`${a.name}: ${mmtRiskReason(e.message)}`);}
    return {accountId:a.id,name:a.name,...data,state:'prepared',message:''};
   }));
   if(key!==draftKey.value)return;
   rows.value=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
-  if(results.some(r=>r.status==='rejected')){rows.value=[];throw new Error('Mindestens ein Konto konnte nicht vorbereitet werden. Bitte Kontostatus prüfen.');}
+  if(results.some(r=>r.status==='rejected')){rows.value=[];throw new Error(results.filter(r=>r.status==='rejected').map(r=>r.reason.message).join(' · '));}
   persist(rows.value);
  }catch(e){error.value=e.message;}finally{busy.value=false;}
 }
@@ -96,7 +109,7 @@ async function reconcile(){
   </form>
   <p v-if="error" role="alert">{{error}}</p>
   <div v-if="feedbackRows.length" class="mmt-preview" aria-label="Kontogebundene Bestätigung">
-   <p v-for="row in feedbackRows" :key="row.accountId"><strong>{{row.name}}</strong> · {{row.preview.volume}} Lot · SL {{row.preview.intent.stop_loss}} · TP {{row.preview.intent.take_profit??'offen'}}<br>{{row.state==='prepared'?'Bereit zur Bestätigung':row.state}} {{row.message}}</p>
+   <p v-for="row in feedbackRows" :key="row.accountId"><strong>{{row.name}}</strong> · {{row.preview.volume==null?'Lotgröße beim Entry':`${row.preview.volume} Lot (Vorschau)`}} · SL {{row.preview.intent.stop_loss}} · TP {{row.preview.intent.take_profit??'offen'}}<br>{{row.state==='prepared'?'Bereit zur Bestätigung':row.state}} {{row.message}}</p>
 
    <p v-if="expired">Vorschau abgelaufen. Bitte neu vorbereiten.</p>
    <ActionButton v-if="rows.every(r=>r.state==='prepared')" class="mmt-primary" :disabled="busy||expired||disabled" @click="confirm">{{rows.length}} Entry-Suchen verbindlich starten</ActionButton>

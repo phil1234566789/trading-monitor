@@ -54,14 +54,15 @@ const liveMetrics=computed(()=>{
  }catch(e){return {value:null,reason:e.message};}
 });
 const metrics=computed(()=>liveMetrics.value.value);
-const ready=computed(()=>props.status?.online&&quotes.value.length>0);
+const searchReady=computed(()=>!!riskMode.value||!!metrics.value);
+const ready=computed(()=>props.status?.online&&(!!riskMode.value||quotes.value.length>0));
 const executionReady=computed(()=>props.status?.bridge?.snapshot?.execution_ready&&props.status?.bridge?.snapshot?.trade_allowed);
 const expired=computed(()=>!preview.value||now.value>=preview.value.confirmation_expires_sec*1000);
 const liveEnabled=computed(()=>props.account?.mode==='demo'||props.status?.server_live_allowed);
 watch([symbol,direction,sl,tp,durationMinutes,riskMode,()=>props.status?.risk_policy?.revision,()=>props.account?.id,()=>props.disabled],()=>{preview.value=null;confirmation.value='';receipt.value='';});
 watch(quotes,list=>{if(!symbol.value&&list.length===1) symbol.value=list[0].symbol;});
 async function showPreview() {
-  if(busy.value||pendingId.value||props.disabled||!metrics.value)return;
+  if(busy.value||pendingId.value||props.disabled||!searchReady.value)return;
   busy.value=true;error.value='';preview.value=null;confirmation.value='';receipt.value='';
   const requested=inputKey.value;
   try {
@@ -72,7 +73,7 @@ async function showPreview() {
   } catch(e) {error.value=e.message;} finally {busy.value=false;}
 }
 async function confirm() {
-  if(props.disabled||!metrics.value||busy.value||expired.value||!ready.value||!liveEnabled.value||!executionReady.value)return;
+  if(props.disabled||!searchReady.value||busy.value||expired.value||!ready.value||!liveEnabled.value||!executionReady.value)return;
   busy.value=true;error.value='';
   const token=confirmation.value;
   try {
@@ -107,7 +108,7 @@ async function confirm() {
       <p>RR {{metrics?.rr?.toFixed(2)??'—'}} · {{metrics?.volume??'—'}} Lot {{riskMode?'dynamisch':'(Pilot)'}}<br>Risiko bis SL {{metrics?.risk?.toFixed(2)??'—'}} {{status?.bridge?.snapshot?.currency}}</p>
       <small>Brokerkurs {{metrics?.price??'—'}} · native Brokerberechnung. {{riskMode?'Lotgröße wird vor dem Fill erneut geprüft.':'Pilot: Mindestlot, maximal 0,01.'}}</small>
     </div>
-    <p v-if="liveMetrics.reason" role="status">{{mmtRiskReason(liveMetrics.reason)}}</p>
+    <p v-if="liveMetrics.reason" role="status">{{riskMode&&liveMetrics.reason==='quote_stale'?'Lot/RR beim Entry · Suchauftrag möglich':mmtRiskReason(liveMetrics.reason)}}</p>
     <p v-if="metrics?.budget">Markt frei {{metrics.budget.market_left.toFixed(2)}} · Tagesrest {{metrics.budget.daily_left.toFixed(2)}} · Drawdownrest {{metrics.budget.drawdown_left.toFixed(2)}} {{metrics.currency}}. Puffer {{metrics.budget.cost_buffer.toFixed(2)}}.</p>
     <form class="mmt-form" @submit.prevent="showPreview">
       <label v-if="!compact" class="mmt-wide">Broker-Symbol<select v-model="symbol" required :disabled="busy"><option value="" disabled>Symbol wählen</option><option v-for="q in quotes" :key="q.symbol" :value="q.symbol">{{q.symbol}}</option></select></label>
@@ -116,18 +117,18 @@ async function confirm() {
       <label v-if="!compact">Take-Profit (optional)<input v-model="tp" type="number" min="0" step="any" placeholder="Kein TP" :disabled="busy"></label>
       <label class="mmt-wide">Risiko<select v-model="riskMode" :disabled="busy"><option value="">Pilot · Mindestlot ≤ 0,01</option><option value="risky">Risky · 0,5 %</option><option value="full">Full · 0,9 %</option></select></label>
       <label class="mmt-wide">Suche gültig für (Minuten)<input v-model="durationMinutes" type="number" min="1" max="60" step="1" required :disabled="busy"></label>
-      <ActionButton class="mmt-primary mmt-wide" type="submit" :disabled="disabled||busy||pendingId||!ready||!account||!symbol||(compact&&!idea)||!metrics">{{busy?'Wird vorbereitet …':compact?'Entry suchen':'Suchauftrag vorbereiten'}}</ActionButton>
+      <ActionButton class="mmt-primary mmt-wide" type="submit" :disabled="disabled||busy||pendingId||!ready||!account||!symbol||(compact&&!idea)||!searchReady">{{busy?'Wird vorbereitet …':compact?'Entry suchen':'Suchauftrag vorbereiten'}}</ActionButton>
     </form>
     <div v-if="preview" class="mmt-preview" role="region" aria-label="Suchauftrag zur Bestätigung">
       <p><strong>{{preview.account_name}} · {{preview.intent.symbol}} · {{preview.intent.direction==='short'?'Short':'Long'}}</strong><br>
-        {{preview.volume}} Lot · Kurs bei Vorbereitung circa {{preview.reference_price}}<br>
+        {{preview.volume==null?'Lotgröße beim Entry':`${preview.volume} Lot (Vorschau)`}} · Kurs bei Vorbereitung {{preview.reference_price??'nicht verfügbar'}}<br>
         SL {{preview.intent.stop_loss}} · TP {{preview.intent.take_profit??'Kein TP'}}<br>
-        Verlust bis SL beim aktuellen Kurs circa {{preview.risk.toFixed(2)}} {{preview.currency}} vor Gebühren und Slippage.</p>
+        {{preview.risk==null?'Risiko wird beim Entry nativ berechnet.':`Verlust bis SL beim aktuellen Kurs circa ${preview.risk.toFixed(2)} ${preview.currency} vor Gebühren und Slippage.`}}</p>
       <p>Nach deiner einmaligen Bestätigung wartet der Worker selbstständig auf die passende M1-Kerze und sendet dann zum aktuellen Brokerkurs. Kein weiterer Klick und keine Bindung an den Vorbereitungskurs. Konto, SL/TP, Broker-Lotschritt und verfügbares Risikobudget werden beim Entry erneut geprüft.</p>
       <p v-if="preview.budget">Freigegeben bis {{preview.budget.allocation.toFixed(2)}} {{preview.currency}} einschließlich {{preview.budget.cost_buffer.toFixed(2)}} Kosten-/Slippagepuffer. Alle offenen Risiken zählen mit; die endgültige Lotgröße bleibt bis zum Fill dynamisch.</p>
       <p>Suchende bis {{new Date(preview.intent.expires_sec*1000).toLocaleString('de-DE',{timeZone:'Europe/Berlin'})}} (Berlin). Nach einem ausgeführten Trade ist dieser Auftrag beendet.</p>
       <p v-if="expired">Bestätigungsansicht abgelaufen. Bitte den Suchauftrag erneut vorbereiten.</p>
-      <ActionButton class="mmt-primary" :disabled="disabled||!metrics||busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Entry-Suche verbindlich starten</ActionButton>
+      <ActionButton class="mmt-primary" :disabled="disabled||!searchReady||busy||expired||!confirmation||!ready||!liveEnabled||!executionReady" @click="confirm">Entry-Suche verbindlich starten</ActionButton>
     </div>
   </section>
 </template>

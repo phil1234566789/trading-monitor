@@ -25,6 +25,12 @@ class DynamicBrokerRiskTests(unittest.TestCase):
   broker,m=self.configured();m.positions_get.return_value=[NS(ticket=1,symbol='GBPUSD.gbe',type=0,volume=.25,sl=1.29,tp=0,profit=0,swap=0,magic=1,price_open=1.3,price_current=1.3,time=int(time.time()))]
   self.assertEqual(broker.prepare(self.order())['volume'],.18)
   m.order_send.assert_not_called()
+ def test_async_placeholder_never_bypasses_native_sizing_or_fresh_tick(self):
+  broker,m=self.configured();value=self.order();value['volume']=.01
+  self.assertEqual(broker.prepare(value)['volume'],.24)
+  m.symbol_info_tick.return_value.time=int(time.time())-30
+  with self.assertRaisesRegex(ValueError,'quote_stale'):broker.prepare(value)
+  m.order_send.assert_not_called()
  def test_all_modes_require_daily_guard_and_no_unbounded_time_context(self):
   for mutation in ['history','latch','stale']:
    broker,m=self.configured();value=self.order();del value['risk_mode'];del value['risk_policy_revision']

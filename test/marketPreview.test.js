@@ -74,6 +74,22 @@ for (const direction of ['short','long']) {
 }
 
 describe('explicit protected dynamic entry sizing',()=>{
+ it('registers a dynamic search without a current quote but never treats stale figures as a live estimate',async()=>{
+  for(const quotes of [[],snapshot.quotes.map(q=>({...q,time:now-30}))]){
+   const p=buildEntrySearchPreview({...input,duration_sec:1800,risk_mode:'risky'},{...snapshot,quotes},config,now,id);
+   expect(p.volume).toBeNull();expect(p.risk).toBeNull();expect(p.reference_price).toBeNull();
+   expect(p.intent).toMatchObject({risk_mode:'risky',risk_amount:240,volume:.01,stop_loss:input.stop_loss});
+   const signed=await signMarketPreview(p,'x'.repeat(40));
+   expect((await verifyMarketPreview(signed,'x'.repeat(40),now)).intent).toEqual(p.intent);
+  }
+  expect(()=>buildMarketPreview(input,{...snapshot,quotes:[]},config,now,id)).toThrow('quote_stale');
+ });
+ it('still blocks missing limits, latched daily risk and exhausted budgets even without quotes',()=>{
+  const order={...input,duration_sec:1800,risk_mode:'risky'},noQuotes={...snapshot,quotes:[]};
+  expect(()=>buildEntrySearchPreview(order,noQuotes,{...config,riskPolicy:null},now,id)).toThrow('risk_limits_unconfirmed');
+  expect(()=>buildEntrySearchPreview(order,{...noQuotes,risk:{...snapshot.risk,latched:true}},config,now,id)).toThrow('risk_guard_unavailable');
+  expect(()=>buildEntrySearchPreview(order,{...noQuotes,risk:{...snapshot.risk,realized_net_day:-999}},config,now,id)).toThrow('risk_budget_exhausted');
+ });
  it('signs risk mode and policy revision and keeps price unbound',()=>{
   const policy={revision:id,day:'2027-01-15',confirmed_balance:50000,confirmed_equity:50000,risk_base:50000,cost_buffer:10,currency:'USD',drawdown_floor:47000,valid_until_sec:now+1000};
   const dynamic={...snapshot,balance:50000,equity:50000,hedging:true,risk_guards_ready:true,risk:{day:policy.day,time:now,realized_net_day:0,open_loss:0,latched:false},

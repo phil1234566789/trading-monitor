@@ -1,4 +1,4 @@
-import {riskPreviewMetrics} from './mt5RiskContract.js';
+import {riskPreviewMetrics,entrySearchMetrics} from './mt5RiskContract.js';
 import { validateExecutionIntent } from './executionContract.js';
 
 export function buildMarketPreview(input, snapshot, config, now, id) {
@@ -47,6 +47,18 @@ export async function verifyMarketPreview(token,secret,now,{allowExpired=false}=
 export function buildEntrySearchPreview(input,snapshot,config,now,id) {
   const {duration_sec,...fields}=input??{};
   if(!Number.isInteger(duration_sec)||duration_sec<60||duration_sec>3600) throw new Error('invalid_search_duration');
+  if(fields.risk_mode!=null){
+    if(Object.keys(fields).some(k=>!['symbol','direction','stop_loss','take_profit','risk_mode'].includes(k)))throw new Error('invalid_fields');
+    const {budget,metrics}=entrySearchMetrics(fields,snapshot,config.riskPolicy,now);
+    const intent=validateExecutionIntent({id,account_login:config.login,account_server:config.server,mode:config.mode,
+      symbol:fields.symbol,direction:fields.direction,stop_loss:Number(fields.stop_loss),take_profit:fields.take_profit==null?null:Number(fields.take_profit),
+      risk_mode:fields.risk_mode,risk_policy_revision:config.riskPolicy.revision,risk_amount:budget.available,
+      // Alte Worker verlangen dieses Feld; risk_mode ersetzt es vor jedem Fill durch natives Sizing.
+      volume:metrics?.volume??.01,trigger:'m1_directional_close',trigger_price:null,created_sec:now,expires_sec:now+duration_sec},
+      {...config,allowLive:true},now);
+    return {intent,budget,risk:metrics?.risk??null,volume:metrics?.volume??null,reference_price:metrics?.reference_price??null,
+      currency:snapshot.currency,quote_time:metrics?.quote_time??null,kind:'entry_search',confirmation_expires_sec:now+30};
+  }
   const market=buildMarketPreview(fields,snapshot,config,now,id);
   const {reference_price,...intent}=market.intent;
   const volume=intent.volume;

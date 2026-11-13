@@ -71,9 +71,9 @@ describe('compact chart entry search',()=>{
  });
 });
 
-it('keeps dynamic entry search blocked without confirmed account limits',async()=>{
+it('leaves authoritative dynamic admission checks to the API instead of flickering the form',async()=>{
  const {state,api}=mount({}, {compact:true,chartSymbol:'XAUUSD.gbe',idea:{direction:'long',sl:3900},status:{online:true}});
- await state.showPreview();expect(api).not.toHaveBeenCalled();expect(state.preview).toBeNull();
+ await state.showPreview();expect(api).toHaveBeenCalledOnce();
 });
 
 it('updates dynamic lots with broker prices and sends only the chosen risk mode',async()=>{

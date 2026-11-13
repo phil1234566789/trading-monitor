@@ -50,3 +50,11 @@ export function riskPreviewMetrics(input,snapshot,policy,now){
  const reward=tp==null?null:long?tp-price:price-tp;
  return {budget,volume,risk,reference_price:price,rr:reward>0?reward/Math.abs(price-sl):null,currency:snapshot.currency,quote_time:q.time};
 }
+
+export function entrySearchMetrics(input,snapshot,policy,now){
+ if(!['long','short'].includes(input.direction)||!positive(Number(input.stop_loss))
+  ||(input.take_profit!=null&&!positive(Number(input.take_profit))))throw new Error('invalid_stop_or_target');
+ const budget=riskBudget(input.risk_mode,input.symbol,snapshot,policy,now);
+ try{return {budget,metrics:riskPreviewMetrics(input,snapshot,policy,now)};}
+ catch(e){if(e.message!=='quote_stale')throw e;return {budget,metrics:null};}
+}
