@@ -22,7 +22,7 @@ export async function fetchTradeSetups(instrument, replayUntilSec = null) {
   let query = supabase
     .from("trade_setups")
     .select(
-      "id, instrument, direction, fractal_price, fractal_pivot_time, ls_price, ls_pivot_time, ls_touched_time, ls_timeframe, " +
+      "id, instrument, direction, source, detector_version, config_hash, input_set_id, fractal_price, fractal_pivot_time, ls_price, ls_pivot_time, ls_touched_time, ls_timeframe, " +
         // Kindtabelle mit gespeicherten Sweep-Leveln (Migration 20260921210000) — eingebettet statt
         // zweiter Abfrage. 200 Setups x im Schnitt <2 Sweeps bleibt weit unter der ~1000er-Deckelung.
         // ob_fvg seit 2026-09-23 mit: der Bewertungs-Bereich ordnet die Dealing Range über ihre

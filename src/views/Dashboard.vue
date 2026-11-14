@@ -1965,10 +1965,10 @@ watch(selectedTradingAccountId, () => {
           <div class="toggle-dropdown-divider"></div>
 
           <ToggleButton variant="menu" :class="{ active: showTradeSetupsLong }" @click="showTradeSetupsLong = !showTradeSetupsLong">
-            Long Setups
+            TS1.1 · Long
           </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
-            Short Setups
+            TS1.1 · Short
           </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showRScale }" :title="rScaleHint" @click="showRScale = !showRScale">
             R-Skala

@@ -36,11 +36,12 @@ import { fetchInitialCandles as fetchInitialForexCandles, fetchOlderCandles as f
 import { fetchCandlesCached } from "../candleCache.js";
 import { REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
 
-export function usePriceChartTradeSetups() {
+export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated } = {}) {
   let m5Candles = [];
   let trendAnalysisM5Candles = [];
   let fetchSeq = 0;
   let computedInputKey = null;
+  let computationRevision = 0;
 
   const tradeSetupsMetadata = ref([]);
 
@@ -56,8 +57,9 @@ export function usePriceChartTradeSetups() {
   // Refreshs hinweg stehen, nur die Zeichnung (renderTradeSetupsInternal) läuft bei jedem Chart-
   // Refresh neu. Zeigt die letzten `tradeSetupHistoryCount` Setups JE Richtung, nicht nur das
   // aktive. candles = bereits clipReplay-gefiltertes m5Candles (siehe getM5Candles).
-  function computeTradeSetups({ candles, marketStructureState, symbol, tradeSetupHistoryCount, dbTradeSetups = [] }) {
+  function computeTradeSetups({ candles, marketStructureState, symbol, tradeSetupHistoryCount, dbTradeSetups = [], policyContext = null }) {
     if (candles.length === 0) {
+      computationRevision++;
       computedInputKey = null;
       tradeSetupsMetadata.value = [];
       return;
@@ -70,8 +72,9 @@ export function usePriceChartTradeSetups() {
     const minGap = obMinimum(symbol, '5m');
     // H1-/M5-Lader und DB-Poll können denselben Stand liefern. Innenkorrekturen bleiben relevant.
     const inputKey = JSON.stringify([symbol, kerzen, marketStructureState, dbTradeSetups,
-      tradeSetupHistoryCount, params, minGap, symbolSessions]);
+      tradeSetupHistoryCount, params, minGap, symbolSessions, policyContext]);
     if (inputKey === computedInputKey) return;
+    const request=++computationRevision;
     const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(kerzen, TRADE_SETUP_M5_FRACTAL_PERIOD);
     // H1-Level kommen seit Chat 2026-07-28 aus marketStructureState.structurePivots statt einer
     // eigenen H1-Fraktal-Erkennung — kann leer sein, solange marketStructureState noch nicht
@@ -111,13 +114,29 @@ export function usePriceChartTradeSetups() {
     // wirkungslos. Symbol-Filter, weil der Poll nach einem Symbolwechsel kurz noch die Setups des
     // vorherigen Instruments hält (gleicher Grund wie filterDbObZones).
     const dbFor = (dir) => dbTradeSetups.filter((s) => s.instrument === symbol && s.dir === dir);
-    const shorts = takeLast(mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, kerzenOhneIgnorierte), dbFor(1)).filter(notForbidden));
-    const longs = takeLast(mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, kerzenOhneIgnorierte), dbFor(-1)).filter(notForbidden));
-    tradeSetupsMetadata.value = [
+    const merged = [
+      ...mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, kerzenOhneIgnorierte), dbFor(1)),
+      ...mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, kerzenOhneIgnorierte), dbFor(-1)),
+    ].filter(notForbidden).map(s => s.fromDb ? s : { ...s, instrument:symbol, detectorVersion: TRADE_SETUP_DETECTOR_VERSION, detectionConfiguration });
+    // Neue Policies prüfen auch DB-Treffer vor der Historie; verworfene Treffer dürfen keinen Platz belegen.
+    const candidates = evaluateCandidates ? evaluateCandidates(merged, policyContext) : merged;
+    const apply = rows => {
+      const shorts = takeLast(rows.filter(s => s.dir === 1));
+      const longs = takeLast(rows.filter(s => s.dir === -1));
+      tradeSetupsMetadata.value = [
       ...shorts.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Highs, symbol), label: "Short", setupNumber: n > 1 ? i + 1 : null })),
       ...longs.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Lows, symbol), label: "Long", setupNumber: n > 1 ? i + 1 : null })),
-    ].map(s => s.fromDb ? s : { ...s, detectorVersion: TRADE_SETUP_DETECTOR_VERSION, detectionConfiguration });
+      ];
+    };
     computedInputKey = inputKey;
+    if(candidates?.then){
+      tradeSetupsMetadata.value=[];
+      return candidates.then(rows=>{
+        if(computationRevision!==request)return;
+        apply(rows);onEvaluated?.();
+      });
+    }
+    apply(candidates);
   }
 
   // TREND_ANALYSIS_CANDLE_COUNT (2000) liegt über dem Edge-Function-Limit pro Request (1000, siehe
@@ -176,5 +195,6 @@ export function usePriceChartTradeSetups() {
     }
   }
 
-  return { tradeSetupsMetadata, getM5Candles, getTrendAnalysisM5Candles, computeTradeSetups, fetchM5Candles };
+  function invalidate(){computationRevision++;computedInputKey=null;tradeSetupsMetadata.value=[];}
+  return { tradeSetupsMetadata, getM5Candles, getTrendAnalysisM5Candles, computeTradeSetups, fetchM5Candles, invalidate };
 }

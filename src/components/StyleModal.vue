@@ -114,7 +114,7 @@ const GROUPS = [
     ],
   },
   {
-    title: "Trade-Setups",
+    title: "Trade-Setups · TS1.1",
     fields: [
       { key: "tradeSetupShort", label: "Short" },
       { key: "tradeSetupLong", label: "Long" },

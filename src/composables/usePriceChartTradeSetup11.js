@@ -1,0 +1,58 @@
+import {ref} from 'vue';
+import {usePriceChartTradeSetups} from './usePriceChartTradeSetups.js';
+import {loadTradeSetup11Context} from '../tradeSetup11ContextLoader.js';
+import {sessions} from '../sessions.js';
+import {createTradeSetup11Worker} from '../tradeSetup11WorkerClient.js';
+
+export {TRADE_SETUP_11_CONTEXT_COUNTS} from '../tradeSetup11ContextLoader.js';
+
+export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onUpdate}={}) {
+  const status=ref('TS1.1: Trendkontext noch nicht geladen.'),assessments=ref([]);
+  let context={symbol:null,h1:[],d1:[]},revision=0,evaluation=0,disposed=false;
+  const base=usePriceChartTradeSetups({onEvaluated:onUpdate,async evaluateCandidates(setups,input){
+    const request=++evaluation;
+    status.value='TS1.1: Trend-Policy wird im Hintergrund geprüft …';
+    try {
+    const result=await worker.run({setups,...input,sessionConfigs:sessions.filter(s=>s.instrument===input.instrument)});
+    if(disposed||request!==evaluation)return [];
+    assessments.value=result.assessments;
+    const {passed,unmet,unknown}=result.counts;
+    status.value=`TS1.1: ${passed} passend · ${unmet} verworfen`+(unknown?` · ${unknown} Trenddaten unbekannt`:'');
+    if(result.status==='unknown'&&!unknown)status.value+=' · Trendkontext unvollständig';
+    // JSON-Workertransport verliert Infinity und gemeinsame Objektreferenzen; die Chartquelle bleibt original.
+    const original=new Map(setups.map(s=>[`${input.instrument}:${s.dir}:${s.obStartTime}`,s]));
+    return result.assessments.filter(a=>a.status==='passed').map(a=>({...original.get(a.setupKey),
+      trendEvaluationVersion:result.version,trendEvidence:a.trendEvidence}));
+    } catch(error) {
+      if(!disposed&&request===evaluation){assessments.value=[];status.value=error.name==='AbortError'?'TS1.1: Trenddaten werden neu geprüft.':'TS1.1: Trendprüfung nicht verfügbar.';}
+      return [];
+    }
+  }});
+  function computeTradeSetups(input) {
+    const matching=context.symbol===input.symbol;
+    if(!input.candles.length){evaluation++;worker.cancel();assessments.value=[];status.value='TS1.1: M5-Daten fehlen.';}
+    return base.computeTradeSetups({...input,policyContext:{
+      instrument:input.symbol,m5Candles:input.candles,evaluatedAt:input.evaluatedAt,settings:input.settings??{},
+      h1Candles:matching?context.h1:[],d1Candles:matching?context.d1:[],
+    }});
+  }
+  async function fetchM5Candles(input) {
+    const request=++revision;
+    evaluation++;worker.cancel();base.invalidate();assessments.value=[];
+    status.value='TS1.1: Native M5-/H1-/D1-Daten laden …';
+    onUpdate?.();
+    const loadContext=async()=>{
+      try {
+        const loaded=await loadTradeSetup11Context(input);
+        if(request===revision)context=loaded;
+      } catch {
+        if(request===revision){context={symbol:input.symbol,h1:[],d1:[]};status.value='TS1.1: Trenddaten nicht verfügbar.';}
+      }
+    };
+    const [result]=await Promise.all([base.fetchM5Candles(input),loadContext()]);
+    if(request===revision&&!result.ok)status.value='TS1.1: M5-Daten nicht verfügbar.';
+    return request===revision?result:{ok:true,applied:false};
+  }
+  function dispose(){disposed=true;revision++;evaluation++;base.invalidate();worker.dispose();}
+  return {...base,computeTradeSetups,fetchM5Candles,status,assessments,dispose};
+}

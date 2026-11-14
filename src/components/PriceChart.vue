@@ -16,6 +16,8 @@ import { goldWeekendClosed } from '../fxcmGoldCalendar.js';
 import { useGoldChartHistory } from '../composables/useGoldChartHistory.js';
 import {useDoubleOrderBlockChart} from '../composables/useDoubleOrderBlockChart.js';
 import DoubleOrderBlockStatus from './DoubleOrderBlockStatus.vue';
+import TradeSetup11Status from './TradeSetup11Status.vue';
+import ChartIndicatorStatusStack from './ChartIndicatorStatusStack.vue';
 import { goldNativeZones } from '../priceChartObZones.js';
 import M5CandleClock from "./M5CandleClock.vue";
 import { createChart, CandlestickSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
@@ -86,7 +88,7 @@ import {useBrokerPositionDrawing} from '../composables/useBrokerPositionDrawing.
 import {useTradeIdeaDrawing} from '../composables/useTradeIdeaDrawing.js';
 import {useDrawings} from '../composables/useDrawings.js';
 import { measureDrawing } from "../chartMeasure.js";
-import { usePriceChartTradeSetups } from "../composables/usePriceChartTradeSetups.js";
+import {usePriceChartTradeSetup11} from '../composables/usePriceChartTradeSetup11.js';
 import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
 import { usePriceChartChecklist } from "../composables/usePriceChartChecklist.js";
 import { createChecklistStatisticsStore } from "../tradeSetupChecklistStatistics.js";
@@ -451,7 +453,12 @@ const {
   getTrendAnalysisM5Candles,
   computeTradeSetups: computeTradeSetupsPure,
   fetchM5Candles: fetchTradeSetupM5Candles,
-} = usePriceChartTradeSetups();
+  status:tradeSetup11Status,
+  dispose:disposeTradeSetup11,
+} = usePriceChartTradeSetup11({onUpdate:()=>{
+  if(!chart)return;
+  renderTradeSetupsInternal();refreshCockpitInternal();applyCandleData();
+}});
 // Ranges/1h-Struktur-Trend + Market-Structure-Zeichnung (siehe usePriceChartMarketStructure.js,
 // Phase 6g) — marketStructureState/rangesMetadata/rangesMetadata2 direkt im Template/in anderen
 // Composables' ctx gebunden, daher destructured.
@@ -1649,7 +1656,14 @@ function computeTradeSetupsInternal() {
     symbol: props.symbol,
     tradeSetupHistoryCount: props.tradeSetupHistoryCount,
     dbTradeSetups: props.dbTradeSetups,
+    evaluatedAt:tradeSetup11EvaluationTime(),
+    settings:{m5StructurePeriod:props.m5StructurePeriod,m5Structure2Period:props.m5Structure2Period},
   });
+}
+
+function tradeSetup11EvaluationTime() {
+  const now=Math.floor(Date.now()/1000);
+  return closedReplayEvaluationTime(props.replayUntil,now,allCandles,props.currentBar)??props.replayUntil??now;
 }
 
 // Dünne Koordinaten-Wrapper um die reinen Match-Funktionen in priceChartHitTest.js (siehe dort für
@@ -1793,7 +1807,8 @@ function refreshRsiDivergenceInternal() {
 async function loadTradeSetupM5({ refresh = true } = {}) {
   if (snapshotView.value) return true;
   const checklistTicket = checklist.begin('m5');
-  const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma });
+  const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma,
+    evaluatedAt:tradeSetup11EvaluationTime() });
   checklist.finish(checklistTicket, { ok, applied }, getTradeSetupM5Candles());
   if (!chart) return ok;
   if (ok && applied && refresh) {
@@ -2332,6 +2347,7 @@ onUnmounted(() => {
   disposeDrawings();
   disposeMarketStructure();
   disposeTradeSetupDrawing();
+  disposeTradeSetup11();
   disposeLiquidity();
   disposeDailyPivots();
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
@@ -2511,7 +2527,9 @@ watch([() => props.showM5Structure, () => props.showM5TrendPhases], () => {
   refreshM5StructureInternal();
 });
 watch(() => props.showM1Structure, refreshRangesPollingState);
-watch([() => props.m5StructurePeriod, () => props.m5Structure2Period], refreshM5StructureInternal);
+watch([() => props.m5StructurePeriod, () => props.m5Structure2Period], () => {
+  refreshM5StructureInternal();computeTradeSetupsInternal();renderTradeSetupsInternal();refreshCockpitInternal();
+});
 watch([() => props.rangesPeriod, () => props.ranges2Period], () => {
   if (getRangesH1Candles().length > 0) refreshRangesInternal();
 });
@@ -2751,8 +2769,11 @@ defineExpose({
     <TradeSetup2Controls v-if="showTradeSetup2" :positions="setup2Positions" :selected="setup2Selected" :loading="setup2Loading"
       :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="closeTradeSetup2Selection" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
-    <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
-    <DoubleOrderBlockStatus v-if="(showDoubleOrderBlocks || pinnedDoubleOrderBlocks.length) && dobStatus" :status="dobStatus" :details="dobDetails" />
+    <ChartIndicatorStatusStack>
+      <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
+      <DoubleOrderBlockStatus v-if="(showDoubleOrderBlocks || pinnedDoubleOrderBlocks.length) && dobStatus" :status="dobStatus" :details="dobDetails" />
+      <TradeSetup11Status v-if="showTradeSetups && (showTradeSetupsLong || showTradeSetupsShort) && !snapshotView" :status="tradeSetup11Status" />
+    </ChartIndicatorStatusStack>
     <div v-if="ideaEditingStatus && !ideaDrawing.active.value" class="idea-drawing-controls" role="status">{{ideaEditingStatus}}</div>
     <div v-if="ideaDrawing.active.value" class="idea-drawing-controls" role="status">
       {{ideaDrawing.error.value || 'Idee: Anker → SL → optionales Ziel'}}
