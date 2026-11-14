@@ -18,7 +18,7 @@ it.each([1,-1])('allows exactly 50 percent and rejects a deeper first retest in 
  const {first,input,match}=sample(direction),original=penetration.measureOrderBlockPenetration;
  let depth=.5;
  vi.spyOn(penetration,'measureOrderBlockPenetration').mockImplementation((ob,...args)=>ob.startTime===first.startTime
-  ?{status:'ready',maxPenetrationFraction:depth,extremePrice:null,candleTime:ob.startTime}:original(ob,...args));
+  ?{...original(ob,...args),maxPenetrationFraction:depth}:original(ob,...args));
  expect(detectDoubleOrderBlocks(input).pairs.some(match)).toBe(true);
  depth=.500001;
  expect(detectDoubleOrderBlocks(input).pairs.some(match)).toBe(false);
@@ -28,7 +28,7 @@ it.each([1,-1])('allows exactly 50 percent and rejects a deeper first retest in 
 it('does not apply the first-retest limit to OB2',()=>{
  const {second,input,match}=sample(1),original=penetration.measureOrderBlockPenetration;
  vi.spyOn(penetration,'measureOrderBlockPenetration').mockImplementation((ob,...args)=>ob.startTime===second.startTime
-  ?{status:'ready',maxPenetrationFraction:.8,extremePrice:null,candleTime:ob.startTime}:original(ob,...args));
+  ?{...original(ob,...args),maxPenetrationFraction:.8}:original(ob,...args));
  expect(detectDoubleOrderBlocks(input).pairs.some(match)).toBe(true);
 });
 

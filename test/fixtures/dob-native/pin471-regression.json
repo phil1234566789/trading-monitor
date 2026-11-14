@@ -1,0 +1,14 @@
+{
+  "sourceFixture": "2026-11-09.json",
+  "sourceFileSha256": "fa469ddf3d096ec1ffa439b9a19745edf511a4941bce73a8f8b125a4e7d3294c",
+  "instrument": "XAUUSD",
+  "firstStartTime": 1794217800,
+  "secondStartTime": 1794248700,
+  "firstReactionKnownAt": 1794220440,
+  "reactionWindowExtreme": 4094.97,
+  "firstSweepTime": 1794221520,
+  "firstSweepLow": 4094.89,
+  "confirmationKnownAt": 1794250260,
+  "expected": "not-confirmed",
+  "provenance": "Native archived FXCM Bid M1/M5 candles reused unchanged from the existing day fixture; pin ID is descriptive test provenance only."
+}

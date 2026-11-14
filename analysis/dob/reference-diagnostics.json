@@ -1,8 +1,61 @@
 {
-  "version": "latest-reaction-first-m1-fvg-ob1-depth50-v2",
+  "version": "latest-reaction-first-m1-fvg-ob1-depth50-hold-v3",
   "scope": "16 selected positive examples; no general win-rate or trading approval",
   "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
   "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
+  "previousPolicy": {
+    "version": "latest-reaction-first-m1-fvg-ob1-depth50-v2",
+    "footprint": [
+      {
+        "day": "2026-11-11",
+        "pairCount": 23
+      },
+      {
+        "day": "2026-11-09",
+        "pairCount": 36
+      },
+      {
+        "day": "2026-11-06",
+        "pairCount": 17
+      },
+      {
+        "day": "2026-11-05",
+        "pairCount": 23
+      },
+      {
+        "day": "2026-11-04",
+        "pairCount": 13
+      },
+      {
+        "day": "2026-11-03",
+        "pairCount": 19
+      },
+      {
+        "day": "2026-11-02",
+        "pairCount": 14
+      },
+      {
+        "day": "2026-10-30",
+        "pairCount": 20
+      },
+      {
+        "day": "2026-10-22",
+        "pairCount": 25
+      },
+      {
+        "day": "2026-10-21",
+        "pairCount": 12
+      },
+      {
+        "day": "2026-10-16",
+        "pairCount": 11
+      },
+      {
+        "day": "2026-10-08",
+        "pairCount": 30
+      }
+    ]
+  },
   "policy": {
     "reaction": "first positive M1 FVG after first valid mitigation",
     "pairing": "latest matching first reaction before second retest; simultaneous overlapping partners retained",
@@ -10,7 +63,14 @@
       "maximumFraction": 0.5,
       "window": "first M1 retest through first reaction FVG close inclusive",
       "unknown": "not confirmed",
-      "selection": "latest depth-qualified matching first reaction; older qualifying partners may replace a deeper latest partner"
+      "selection": "latest depth-and-hold-qualified matching first reaction; older qualifying partners may replace a rejected latest partner"
+    },
+    "firstRetestHold": {
+      "anchor": "fixed first-retest through first-reaction M1 extreme",
+      "from": "first reaction knownAt",
+      "through": "second reaction knownAt inclusive",
+      "sweep": "strict low below anchor long / strict high above anchor short; equality passes",
+      "coverage": "missing or ignored M1 before a decisive sweep: unknown, never confirmed"
     },
     "stop": "selected second M5 OB outside edge",
     "target": "2R price risk without commission",
@@ -19,8 +79,8 @@
   "footprint": [
     {
       "day": "2026-11-11",
-      "pairCount": 23,
-      "withoutDepthLimitPairCount": 30,
+      "pairCount": 20,
+      "withoutDepthLimitPairCount": 24,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1381,
@@ -28,12 +88,14 @@
       "mitigations": 49,
       "pairChecks": 351,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 7
+      "firstDepthRejected": 7,
+      "firstHoldRejected": 47,
+      "firstHoldUnknown": 0
     },
     {
       "day": "2026-11-09",
-      "pairCount": 36,
-      "withoutDepthLimitPairCount": 37,
+      "pairCount": 29,
+      "withoutDepthLimitPairCount": 35,
       "olderQualifyingReplacementPairs": 6,
       "m5Bars": 277,
       "m1Bars": 1381,
@@ -41,12 +103,14 @@
       "mitigations": 69,
       "pairChecks": 820,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 14
+      "firstDepthRejected": 14,
+      "firstHoldRejected": 47,
+      "firstHoldUnknown": 3
     },
     {
       "day": "2026-11-06",
-      "pairCount": 17,
-      "withoutDepthLimitPairCount": 19,
+      "pairCount": 15,
+      "withoutDepthLimitPairCount": 17,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 264,
       "m1Bars": 1309,
@@ -54,7 +118,9 @@
       "mitigations": 49,
       "pairChecks": 325,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 9
+      "firstDepthRejected": 9,
+      "firstHoldRejected": 12,
+      "firstHoldUnknown": 0
     },
     {
       "day": "2026-11-05",
@@ -67,11 +133,13 @@
       "mitigations": 60,
       "pairChecks": 703,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 17
+      "firstDepthRejected": 17,
+      "firstHoldRejected": 11,
+      "firstHoldUnknown": 0
     },
     {
       "day": "2026-11-04",
-      "pairCount": 13,
+      "pairCount": 12,
       "withoutDepthLimitPairCount": 19,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
@@ -80,25 +148,29 @@
       "mitigations": 51,
       "pairChecks": 253,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 9
+      "firstDepthRejected": 9,
+      "firstHoldRejected": 16,
+      "firstHoldUnknown": 6
     },
     {
       "day": "2026-11-03",
       "pairCount": 19,
       "withoutDepthLimitPairCount": 23,
-      "olderQualifyingReplacementPairs": 3,
+      "olderQualifyingReplacementPairs": 2,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 59,
       "mitigations": 59,
       "pairChecks": 435,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 8
+      "firstDepthRejected": 8,
+      "firstHoldRejected": 23,
+      "firstHoldUnknown": 0
     },
     {
       "day": "2026-11-02",
       "pairCount": 14,
-      "withoutDepthLimitPairCount": 18,
+      "withoutDepthLimitPairCount": 16,
       "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1379,
@@ -106,12 +178,14 @@
       "mitigations": 57,
       "pairChecks": 378,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 12
+      "firstDepthRejected": 12,
+      "firstHoldRejected": 5,
+      "firstHoldUnknown": 0
     },
     {
       "day": "2026-10-30",
-      "pairCount": 20,
-      "withoutDepthLimitPairCount": 25,
+      "pairCount": 17,
+      "withoutDepthLimitPairCount": 21,
       "olderQualifyingReplacementPairs": 3,
       "m5Bars": 252,
       "m1Bars": 1245,
@@ -119,38 +193,44 @@
       "mitigations": 56,
       "pairChecks": 325,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 10
+      "firstDepthRejected": 10,
+      "firstHoldRejected": 22,
+      "firstHoldUnknown": 0
     },
     {
       "day": "2026-10-22",
-      "pairCount": 25,
-      "withoutDepthLimitPairCount": 30,
-      "olderQualifyingReplacementPairs": 7,
+      "pairCount": 23,
+      "withoutDepthLimitPairCount": 27,
+      "olderQualifyingReplacementPairs": 8,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 64,
       "mitigations": 64,
       "pairChecks": 703,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 15
+      "firstDepthRejected": 15,
+      "firstHoldRejected": 13,
+      "firstHoldUnknown": 14
     },
     {
       "day": "2026-10-21",
       "pairCount": 12,
       "withoutDepthLimitPairCount": 12,
-      "olderQualifyingReplacementPairs": 1,
+      "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 57,
       "mitigations": 57,
       "pairChecks": 300,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 11
+      "firstDepthRejected": 11,
+      "firstHoldRejected": 7,
+      "firstHoldUnknown": 0
     },
     {
       "day": "2026-10-16",
-      "pairCount": 11,
-      "withoutDepthLimitPairCount": 20,
+      "pairCount": 9,
+      "withoutDepthLimitPairCount": 22,
       "olderQualifyingReplacementPairs": 1,
       "m5Bars": 252,
       "m1Bars": 1245,
@@ -158,20 +238,24 @@
       "mitigations": 60,
       "pairChecks": 465,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 13
+      "firstDepthRejected": 13,
+      "firstHoldRejected": 5,
+      "firstHoldUnknown": 0
     },
     {
       "day": "2026-10-08",
-      "pairCount": 30,
-      "withoutDepthLimitPairCount": 34,
-      "olderQualifyingReplacementPairs": 7,
+      "pairCount": 13,
+      "withoutDepthLimitPairCount": 31,
+      "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 71,
       "mitigations": 71,
       "pairChecks": 780,
       "firstDepthUnknown": 0,
-      "firstDepthRejected": 18
+      "firstDepthRejected": 18,
+      "firstHoldRejected": 49,
+      "firstHoldUnknown": 1
     }
   ],
   "references": [
@@ -200,6 +284,13 @@
         "maxPenetrationFraction": 0.20242914979758725,
         "extremePrice": 4059.69,
         "candleTime": 1794387600
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1794387000,
+        "checkedThrough": 1794387840,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {
@@ -277,6 +368,13 @@
         "maxPenetrationFraction": 0.3402061855670554,
         "extremePrice": 4093.35,
         "candleTime": 1794217620
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1794216660,
+        "checkedThrough": 1794217980,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {
@@ -391,6 +489,13 @@
         "maxPenetrationFraction": 0.14550264550268593,
         "extremePrice": 4058.29,
         "candleTime": 1793988600
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1793987220,
+        "checkedThrough": 1793988960,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {
@@ -507,6 +612,13 @@
         "extremePrice": 4117.98,
         "candleTime": 1793908080
       },
+      "firstRetestHold": {
+        "checkedFrom": 1793898120,
+        "checkedThrough": 1793908560,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -584,6 +696,13 @@
         "extremePrice": 3945.66,
         "candleTime": 1793768700
       },
+      "firstRetestHold": {
+        "checkedFrom": 1793767320,
+        "checkedThrough": 1793769540,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -660,6 +779,13 @@
         "maxPenetrationFraction": 0.27444794952677315,
         "extremePrice": 3911.02,
         "candleTime": 1793693520
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1793691180,
+        "checkedThrough": 1793694300,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {
@@ -775,6 +901,13 @@
         "extremePrice": 3948,
         "candleTime": 1793672040
       },
+      "firstRetestHold": {
+        "checkedFrom": 1793671080,
+        "checkedThrough": 1793672220,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -888,6 +1021,13 @@
         "maxPenetrationFraction": 0.08290155440418476,
         "extremePrice": 3905.28,
         "candleTime": 1793606520
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1793603340,
+        "checkedThrough": 1793606700,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {
@@ -1003,6 +1143,13 @@
         "extremePrice": 3970.8,
         "candleTime": 1793363700
       },
+      "firstRetestHold": {
+        "checkedFrom": 1793360460,
+        "checkedThrough": 1793363880,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1079,6 +1226,13 @@
         "maxPenetrationFraction": 0.1115879828326176,
         "extremePrice": 3994.79,
         "candleTime": 1793351940
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1793351280,
+        "checkedThrough": 1793352180,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {
@@ -1194,6 +1348,13 @@
         "extremePrice": 4048.3,
         "candleTime": 1792691100
       },
+      "firstRetestHold": {
+        "checkedFrom": 1792686660,
+        "checkedThrough": 1792691460,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1270,6 +1431,13 @@
         "maxPenetrationFraction": 0.0653266331658812,
         "extremePrice": 4118.29,
         "candleTime": 1792637820
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1792636620,
+        "checkedThrough": 1792638060,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {
@@ -1348,6 +1516,13 @@
         "extremePrice": 4111.63,
         "candleTime": 1792577760
       },
+      "firstRetestHold": {
+        "checkedFrom": 1792566660,
+        "checkedThrough": 1792578000,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1424,6 +1599,13 @@
         "maxPenetrationFraction": 0.8279220779221566,
         "extremePrice": 4181.45,
         "candleTime": 1792154100
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1792150260,
+        "checkedThrough": 1792154280,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {
@@ -1539,6 +1721,13 @@
         "extremePrice": 4120.36,
         "candleTime": 1791466020
       },
+      "firstRetestHold": {
+        "checkedFrom": 1791464100,
+        "checkedThrough": 1791466380,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1652,6 +1841,13 @@
         "maxPenetrationFraction": 0.5116279069766458,
         "extremePrice": 4114.84,
         "candleTime": 1792556940
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1792552560,
+        "checkedThrough": 1792557120,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
       },
       "entries": {
         "a": {

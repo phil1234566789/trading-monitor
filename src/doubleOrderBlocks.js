@@ -7,8 +7,9 @@ import {m1FvgEntryCandidates} from './m1FvgEntrySelection.js';
 import {m1FvgEntrySequence,advanceM1FvgEntrySequence,m1FvgSequenceResult} from './m1FvgEntrySequence.js';
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 import {measureOrderBlockPenetration} from './orderBlockPenetration.js';
+import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from './orderBlockRetestHold.js';
 
-export const DOUBLE_ORDER_BLOCK_VERSION='latest-reaction-first-m1-fvg-ob1-depth50-v2';
+export const DOUBLE_ORDER_BLOCK_VERSION='latest-reaction-first-m1-fvg-ob1-depth50-hold-v3';
 export const DEFAULT_MAX_FIRST_RETEST_DEPTH_FRACTION=.5;
 
 function entriesFor(reaction,orderBlock,m1,candidates,evaluatedAt,instrument){
@@ -36,7 +37,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   throw new RangeError('Die maximale OB1-Retesttiefe muss zwischen 0 und 1 liegen.');
  const m5=closedChecklistCandles(m5Candles,'5m',evaluatedAt),m1=closedChecklistCandles(m1Candles,'1m',evaluatedAt);
  const result={version:DOUBLE_ORDER_BLOCK_VERSION,status:m1.length?'ready':'unknown',pairs:[],
-  policy:{maxFirstRetestDepthFraction},stats:{m5Bars:m5.length,m1Bars:m1.length,orderBlocks:0,mitigations:0,pairChecks:0,firstDepthUnknown:0,firstDepthRejected:0}};
+  policy:{maxFirstRetestDepthFraction,firstRetestHoldThrough:'secondReactionKnownAt'},stats:{m5Bars:m5.length,m1Bars:m1.length,orderBlocks:0,mitigations:0,pairChecks:0,firstDepthUnknown:0,firstDepthRejected:0,firstHoldRejected:0,firstHoldUnknown:0}};
  if(!Number.isFinite(evaluatedAt)||!m5.length||!m1.length)return result;
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(instrument,'5m'));
  const candidates=m1FvgEntryCandidates(m1,evaluatedAt),qualified=[];
@@ -57,7 +58,9 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   // Ein späterer Bruch löscht den vorher bestätigten Vergleichsbeleg nicht aus dem Verlauf.
   const m5Confirmation=zone.touchedTime==null?null:zones.find(other=>other.dir===zone.dir&&other.startTime>zone.touchedTime
    &&recognition.get(other.startTime)<=(m5Invalidation?.time??Infinity));
-  qualified.push({orderBlock:reaction.retest.orderBlock,reaction,entries,penetration,invalidatedAt:invalidation?.time??Infinity,
+  const holdHistory=orderBlockRetestHoldHistory({candles:m1,direction:orderBlock.dir===1?'long':'short',
+   anchorPrice:penetration.extremePrice,fromTime:reaction.fvg.recognizedAt,evaluatedAt});
+  qualified.push({orderBlock:reaction.retest.orderBlock,reaction,entries,penetration,holdHistory,invalidatedAt:invalidation?.time??Infinity,
    m5ReactionKnownAt:m5Confirmation?recognition.get(m5Confirmation.startTime):null});
  }
  for(let second=1;second<qualified.length;second++){
@@ -71,6 +74,11 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   if(a.orderBlock.dir!==sign||a.orderBlock.startTime>=b.orderBlock.startTime
    ||(b.orderBlock.top-a.orderBlock.top)*sign<=0||(b.orderBlock.bottom-a.orderBlock.bottom)*sign<=0
    ||a.reaction.fvg.recognizedAt>b.reaction.retest.candleTime||a.invalidatedAt<b.reaction.retest.candleTime)continue;
+  const firstRetestHold=orderBlockRetestHoldAt(a.holdHistory,b.reaction.fvg.recognizedAt);
+  if(firstRetestHold.status!=='passed'){
+   result.stats[firstRetestHold.status==='failed'?'firstHoldRejected':'firstHoldUnknown']++;
+   continue;
+  }
   const firstReactionAt=a.reaction.fvg.recognizedAt;
   if(firstReactionAt<latestReaction)continue;
   if(firstReactionAt>latestReaction){partners.length=0;latestReaction=firstReactionAt;}
@@ -79,7 +87,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   partners.push({id:`dob:${instrument}:${sign}:${a.orderBlock.startTime}:${b.orderBlock.startTime}`,
    instrument,direction:sign===1?'long':'short',firstOrderBlock:a.orderBlock,secondOrderBlock:b.orderBlock,
    firstRetest:a.reaction.retest,secondRetest:b.reaction.retest,firstReaction:a.reaction.fvg,secondReaction:b.reaction.fvg,
-   firstPenetration:a.penetration,secondPenetration:b.penetration,
+   firstPenetration:a.penetration,secondPenetration:b.penetration,firstRetestHold,
    firstM5ReactionKnownAt:a.m5ReactionKnownAt,firstReactionSource:'m1',recognizedAt,entries:b.entries});
   }
   // Gleichzeitige Reaktionen überlappender Zonen sind getrennte belegte Partner, kein Zeit-Tiebreaker.
