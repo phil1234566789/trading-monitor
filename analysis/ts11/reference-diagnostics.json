@@ -1,0 +1,1664 @@
+{
+  "version": "ts11-causal-inner-trend-source-range-v1",
+  "scope": "12 user-selected native TS1 references; no general profitability claim or year scan",
+  "counts": {
+    "total": 12,
+    "passed": 9,
+    "unmet": 3,
+    "unknown": 0
+  },
+  "fixtureHashes": {
+    "d1": "5c263a415d437370949b04a9d850967f3bac852943364104b64f127456a956a8",
+    "h1": "55d74beca95236ea367791d69202c6ad832f32b5ace8f119b65fac73481969c7",
+    "m5": "d50530385db02676083a6c39b37dfaabb1d3359289327d37f20d28e2d7384a50"
+  },
+  "settings": {
+    "m5StructurePeriod": 5,
+    "m5Structure2Period": 2
+  },
+  "settingsProvenance": "Existing archived XAU run configuration and current app defaults both5/2; not claimed as original per-pin UI snapshot.",
+  "rules": {
+    "root": "D1-root trend is an anchor, never a directional gate",
+    "current": "Innermost confirmed nested range; existing causal close-CHoCH can establish first child if no confirmed inner chain exists",
+    "source": "Exact native pivot identity, causal deepest range at level birth or explicit boundary/protected membership before its sweep",
+    "unknown": "Missing anchor/history, source first-seen in future or unconfirmed/malformed source remains unknown",
+    "excludedHypotheses": [
+      "No R0b/R2 directional alignment gate",
+      "No fixed depth, age or preliminary-phase gate"
+    ],
+    "timestampIntegrity": "Native geometry time and original DB first-seen remain distinct; pin481 original note preserved plus explicit user override",
+    "sourceIntegrity": "Pin485 old DB14:00 timestamp preserved; native TS1 detector yields canonical14:10 through existing natural-key live precedence, no price-only alias"
+  },
+  "references": [
+    {
+      "pin": 478,
+      "originalNote": "TS1.0 Long gegen den M5 Trend",
+      "originalExpectation": "reject",
+      "currentExpectation": "reject",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 17191,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4174.43,
+          "pivotTime": "2026-10-12T08:15:00+00:00",
+          "touchedTime": "2026-10-12T08:45:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4174.43,
+          "dir": -1,
+          "pivotTime": 1791792900,
+          "touched": true,
+          "touchedTime": 1791794700,
+          "endTime": 1791794700
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791796200,
+          "storedFirstSeenAt": 1791796263.482,
+          "sourceKnownAt": 1791796263.482
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1791795600",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4174.43,
+            "dir": -1,
+            "pivotTime": 1791792900,
+            "touched": true,
+            "touchedTime": 1791794700,
+            "endTime": 1791794700
+          },
+          "ls": {
+            "price": 4174.43,
+            "dir": -1,
+            "pivotTime": 1791792900,
+            "touched": true,
+            "touchedTime": 1791794700,
+            "endTime": 1791794700
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4174.43,
+                "dir": -1,
+                "pivotTime": 1791792900,
+                "touched": true,
+                "touchedTime": 1791794700,
+                "endTime": 1791794700
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4174.85,
+          "obBottom": 4172.78,
+          "obStartTime": 1791795600,
+          "obFvg": 1.2899999999999636,
+          "pathType": "A",
+          "instrument": "XAUUSD"
+        },
+        "status": "unmet",
+        "reason": "sourceRangeNotAssociated",
+        "knownAt": 1791796200,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791796200,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791796200,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791796200
+          },
+          "sourceLevel": {
+            "price": 4174.43,
+            "pivotTime": 1791792900,
+            "touchedTime": 1791794700
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791796200,
+          "currentRange": {
+            "trend": "downtrend",
+            "low": {
+              "type": "low",
+              "price": 4172.78,
+              "pivotTime": 1791795000,
+              "pivotAt": "1791795000",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4217.31,
+              "pivotTime": 1791767100,
+              "pivotAt": "1791767100",
+              "touched": false
+            },
+            "depth": 2,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1791796200
+          },
+          "sourceOwner": {
+            "status": "unmet",
+            "reason": "sourceRangeNotAssociated"
+          }
+        }
+      }
+    },
+    {
+      "pin": 479,
+      "originalNote": "TS1.0 Long im Trend",
+      "originalExpectation": "keep",
+      "currentExpectation": "keep",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 16489,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4186.2,
+          "pivotTime": "2026-10-09T15:45:00+00:00",
+          "touchedTime": "2026-10-09T16:30:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4186.2,
+          "dir": -1,
+          "pivotTime": 1791560700,
+          "touched": true,
+          "touchedTime": 1791563400,
+          "endTime": 1791563400
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791564600,
+          "storedFirstSeenAt": 1791564663.336,
+          "sourceKnownAt": 1791564663.336
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1791564000",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4186.2,
+            "dir": -1,
+            "pivotTime": 1791560700,
+            "touched": true,
+            "touchedTime": 1791563400,
+            "endTime": 1791563400
+          },
+          "ls": {
+            "price": 4186.2,
+            "dir": -1,
+            "pivotTime": 1791560700,
+            "touched": true,
+            "touchedTime": 1791563400,
+            "endTime": 1791563400
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4186.2,
+                "dir": -1,
+                "pivotTime": 1791560700,
+                "touched": true,
+                "touchedTime": 1791563400,
+                "endTime": 1791563400
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4187.68,
+          "obBottom": 4185.08,
+          "obStartTime": 1791564000,
+          "obFvg": 2.8299999999999272,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "currentTrendDirection",
+        "knownAt": 1791564600,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791564600,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791564600,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791564600
+          },
+          "sourceLevel": {
+            "price": 4186.2,
+            "pivotTime": 1791560700,
+            "touchedTime": 1791563400
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791564600,
+          "currentRange": {
+            "trend": "uptrend",
+            "low": {
+              "type": "low",
+              "price": 4168.46,
+              "pivotTime": 1791550500,
+              "pivotAt": "1791550500",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4193.58,
+              "pivotTime": 1791561900,
+              "pivotAt": "1791561900",
+              "touched": false
+            },
+            "depth": 3,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1791564600
+          }
+        }
+      }
+    },
+    {
+      "pin": 480,
+      "originalNote": "TS 1.0 Long gegen Trend, aber hier ist es ok, weil der LS von dem uptrend range kommt",
+      "originalExpectation": "keep",
+      "currentExpectation": "keep",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 16287,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4176.94,
+          "pivotTime": "2026-10-09T04:50:00+00:00",
+          "touchedTime": "2026-10-09T11:05:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4176.94,
+          "dir": -1,
+          "pivotTime": 1791521400,
+          "touched": true,
+          "touchedTime": 1791543900,
+          "endTime": 1791543900
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791545100,
+          "storedFirstSeenAt": 1791545164.821,
+          "sourceKnownAt": 1791545164.821
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1791544500",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4176.94,
+            "dir": -1,
+            "pivotTime": 1791521400,
+            "touched": true,
+            "touchedTime": 1791543900,
+            "endTime": 1791543900
+          },
+          "ls": {
+            "price": 4176.94,
+            "dir": -1,
+            "pivotTime": 1791521400,
+            "touched": true,
+            "touchedTime": 1791543900,
+            "endTime": 1791543900
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791521400,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4182.72,
+                "dir": -1,
+                "pivotTime": 1791538500,
+                "touched": true,
+                "touchedTime": 1791541800,
+                "endTime": 1791541800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4179.92,
+          "obBottom": 4175.1,
+          "obStartTime": 1791544500,
+          "obFvg": 1.7799999999997453,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "sourceRangeDirection",
+        "knownAt": 1791545100,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791545100,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791545100,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791545100
+          },
+          "sourceLevel": {
+            "price": 4176.94,
+            "pivotTime": 1791521400,
+            "touchedTime": 1791543900
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791545100,
+          "currentRange": {
+            "trend": "downtrend",
+            "low": {
+              "type": "low",
+              "price": 4175.1,
+              "pivotTime": 1791544200,
+              "pivotAt": "1791544200",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4207.58,
+              "pivotTime": 1791524100,
+              "pivotAt": "1791524100",
+              "touched": false
+            },
+            "depth": 2,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1791545100
+          },
+          "sourceOwner": {
+            "status": "ready",
+            "range": {
+              "trend": "uptrend",
+              "low": {
+                "type": "low",
+                "price": 4066.33,
+                "pivotTime": 1791377400,
+                "pivotAt": "1791377400",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4188.24,
+                "pivotTime": 1791522000,
+                "pivotAt": "1791522000",
+                "touched": {
+                  "price": 4188.24,
+                  "touchedAt": "1791522900",
+                  "touchedTime": 1791522900
+                }
+              }
+            },
+            "depth": 1,
+            "knownAt": 1791523200,
+            "basis": "deepestRangeAtLevelBirth",
+            "pivot": {
+              "price": 4176.94,
+              "pivotTime": 1791521400
+            }
+          }
+        }
+      }
+    },
+    {
+      "pin": 481,
+      "originalNote": "long gegen trend",
+      "originalExpectation": "reject",
+      "currentExpectation": "keep",
+      "expectationOverride": {
+        "pin": 481,
+        "expectedByUser": "keep",
+        "originalExpectedByUser": "reject",
+        "source": "Explicit user correction in this refinement chat",
+        "userStatement": "Long entfällt nicht. war einfach ein Fehler von mir. sieht korrekt aus"
+      },
+      "source": {
+        "setupId": 46118,
+        "detectorVersion": "setup1-fxcm-uninterrupted-sweep-v3",
+        "configHash": "e74865af5ec5d7ef57a78bd0743aa8fe9b44b3c28c7de4bf94ad9cfe492e06fd",
+        "originalLiquidity": {
+          "price": 4121.07,
+          "pivotTime": "2026-10-08T08:40:00+00:00",
+          "touchedTime": "2026-10-08T09:30:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4121.07,
+          "dir": -1,
+          "pivotTime": 1791448800,
+          "touched": true,
+          "touchedTime": 1791451800,
+          "endTime": 1791451800
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791453600,
+          "storedFirstSeenAt": 1794655710.67,
+          "sourceKnownAt": 1794655710.67
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1791453000",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4121.07,
+            "dir": -1,
+            "pivotTime": 1791448800,
+            "touched": true,
+            "touchedTime": 1791451800,
+            "endTime": 1791451800
+          },
+          "ls": {
+            "price": 4121.07,
+            "dir": -1,
+            "pivotTime": 1791448800,
+            "touched": true,
+            "touchedTime": 1791451800,
+            "endTime": 1791451800
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4121.07,
+                "dir": -1,
+                "pivotTime": 1791448800,
+                "touched": true,
+                "touchedTime": 1791451800,
+                "endTime": 1791451800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4121.58,
+          "obBottom": 4119.3,
+          "obStartTime": 1791453000,
+          "obFvg": 0.36999999999989086,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "currentTrendDirection",
+        "knownAt": 1791453600,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791453600,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791453600,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791453600
+          },
+          "sourceLevel": {
+            "price": 4121.07,
+            "pivotTime": 1791448800,
+            "touchedTime": 1791451800
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791453600,
+          "currentRange": {
+            "trend": "uptrend",
+            "low": {
+              "type": "low",
+              "price": 4114.3,
+              "pivotTime": 1791441300,
+              "pivotAt": "1791441300",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4130.76,
+              "pivotTime": 1791450300,
+              "pivotAt": "1791450300",
+              "touched": false
+            },
+            "depth": 3,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1791453600
+          }
+        }
+      }
+    },
+    {
+      "pin": 482,
+      "originalNote": "TS1.0 long ok, weil LS vom uptrend-range kommt",
+      "originalExpectation": "keep",
+      "currentExpectation": "keep",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 15610,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4105.38,
+          "pivotTime": "2026-10-08T00:40:00+00:00",
+          "touchedTime": "2026-10-08T16:05:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4105.38,
+          "dir": -1,
+          "pivotTime": 1791420000,
+          "touched": true,
+          "touchedTime": 1791475500,
+          "endTime": 1791475500
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791476700,
+          "storedFirstSeenAt": 1791476766.139,
+          "sourceKnownAt": 1791476766.139
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1791476100",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4105.38,
+            "dir": -1,
+            "pivotTime": 1791420000,
+            "touched": true,
+            "touchedTime": 1791475500,
+            "endTime": 1791475500
+          },
+          "ls": {
+            "price": 4105.38,
+            "dir": -1,
+            "pivotTime": 1791420000,
+            "touched": true,
+            "touchedTime": 1791475500,
+            "endTime": 1791475500
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420000,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4109.8,
+                "dir": -1,
+                "pivotTime": 1791455700,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4112.93,
+          "obBottom": 4105.36,
+          "obStartTime": 1791476100,
+          "obFvg": 3.759999999999309,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "sourceRangeDirection",
+        "knownAt": 1791476700,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791476700,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791476700,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791476700
+          },
+          "sourceLevel": {
+            "price": 4105.38,
+            "pivotTime": 1791420000,
+            "touchedTime": 1791475500
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791476700,
+          "currentRange": {
+            "trend": "downtrend",
+            "low": {
+              "type": "low",
+              "price": 4105.36,
+              "pivotTime": 1791475500,
+              "pivotAt": "1791475500",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4143.26,
+              "pivotTime": 1791427200,
+              "pivotAt": "1791427200",
+              "touched": false
+            },
+            "depth": 2,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1791476700
+          },
+          "sourceOwner": {
+            "status": "ready",
+            "range": {
+              "trend": "uptrend",
+              "low": {
+                "type": "low",
+                "price": 4066.33,
+                "pivotTime": 1791377400,
+                "pivotAt": "1791377400",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4135.09,
+                "pivotTime": 1791421500,
+                "pivotAt": "1791421500",
+                "touched": false
+              }
+            },
+            "depth": 1,
+            "knownAt": 1791422400,
+            "basis": "protectedPivotBeforeSweep",
+            "pivot": {
+              "price": 4105.38,
+              "pivotTime": 1791420000
+            }
+          }
+        }
+      }
+    },
+    {
+      "pin": 483,
+      "originalNote": "short im trend",
+      "originalExpectation": "keep",
+      "currentExpectation": "keep",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 12453,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4147.1,
+          "pivotTime": "2026-10-05T14:05:00+00:00",
+          "touchedTime": "2026-10-05T14:50:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4147.1,
+          "dir": 1,
+          "pivotTime": 1791209100,
+          "touched": true,
+          "touchedTime": 1791211800,
+          "endTime": 1791211800
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791213300,
+          "storedFirstSeenAt": 1791213363.474,
+          "sourceKnownAt": 1791213363.474
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:1:1791212700",
+        "setup": {
+          "dir": 1,
+          "fractal": {
+            "price": 4147.1,
+            "dir": 1,
+            "pivotTime": 1791209100,
+            "touched": true,
+            "touchedTime": 1791211800,
+            "endTime": 1791211800
+          },
+          "ls": {
+            "price": 4147.1,
+            "dir": 1,
+            "pivotTime": 1791209100,
+            "touched": true,
+            "touchedTime": 1791211800,
+            "endTime": 1791211800
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4147.1,
+                "dir": 1,
+                "pivotTime": 1791209100,
+                "touched": true,
+                "touchedTime": 1791211800,
+                "endTime": 1791211800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4148.26,
+          "obBottom": 4142.72,
+          "obStartTime": 1791212700,
+          "obFvg": 1.1000000000003638,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "currentTrendDirection",
+        "knownAt": 1791213300,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791213300,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791213300,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791213300
+          },
+          "sourceLevel": {
+            "price": 4147.1,
+            "pivotTime": 1791209100,
+            "touchedTime": 1791211800
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791213300,
+          "currentRange": {
+            "trend": "downtrend",
+            "low": {
+              "type": "sweeped-low",
+              "price": 4125.16,
+              "pivotTime": 1790956500,
+              "pivotAt": "1790956500",
+              "touched": {
+                "price": 4125.16,
+                "touchedAt": "1791174300",
+                "touchedTime": 1791174300
+              }
+            },
+            "high": {
+              "type": "high",
+              "price": 4225.52,
+              "pivotTime": 1790944200,
+              "pivotAt": "1790944200",
+              "touched": false
+            },
+            "depth": 1,
+            "basis": "existingCloseReactionChoch",
+            "knownAt": 1790946900,
+            "confirmation": {
+              "type": "CHoCH",
+              "direction": "short",
+              "depth": 0,
+              "originTime": 1790944200,
+              "price": 4203.78,
+              "pivotTime": 1790945400,
+              "candleTime": 1790946600,
+              "recognizedAt": 1790946900
+            }
+          }
+        }
+      }
+    },
+    {
+      "pin": 484,
+      "originalNote": "long gegen trend - sollte entfallen",
+      "originalExpectation": "reject",
+      "currentExpectation": "reject",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 12261,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4155.85,
+          "pivotTime": "2026-10-05T09:45:00+00:00",
+          "touchedTime": "2026-10-05T10:15:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4155.85,
+          "dir": -1,
+          "pivotTime": 1791193500,
+          "touched": true,
+          "touchedTime": 1791195300,
+          "endTime": 1791195300
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791198000,
+          "storedFirstSeenAt": 1791198064.382,
+          "sourceKnownAt": 1791198064.382
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1791197400",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4155.54,
+            "dir": -1,
+            "pivotTime": 1791195300,
+            "touched": false,
+            "touchedTime": null,
+            "endTime": 1791197700
+          },
+          "ls": {
+            "price": 4155.85,
+            "dir": -1,
+            "pivotTime": 1791193500,
+            "touched": true,
+            "touchedTime": 1791195300,
+            "endTime": 1791195300
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4155.85,
+                "dir": -1,
+                "pivotTime": 1791193500,
+                "touched": true,
+                "touchedTime": 1791195300,
+                "endTime": 1791195300
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4158.7,
+          "obBottom": 4155.54,
+          "obStartTime": 1791197400,
+          "obFvg": 1.75,
+          "pathType": "A",
+          "instrument": "XAUUSD"
+        },
+        "status": "unmet",
+        "reason": "sourceRangeNotAssociated",
+        "knownAt": 1791198000,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791198000,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791198000,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791198000
+          },
+          "sourceLevel": {
+            "price": 4155.85,
+            "pivotTime": 1791193500,
+            "touchedTime": 1791195300
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791198000,
+          "currentRange": {
+            "trend": "downtrend",
+            "low": {
+              "type": "sweeped-low",
+              "price": 4125.16,
+              "pivotTime": 1790956500,
+              "pivotAt": "1790956500",
+              "touched": {
+                "price": 4125.16,
+                "touchedAt": "1791174300",
+                "touchedTime": 1791174300
+              }
+            },
+            "high": {
+              "type": "high",
+              "price": 4225.52,
+              "pivotTime": 1790944200,
+              "pivotAt": "1790944200",
+              "touched": false
+            },
+            "depth": 1,
+            "basis": "existingCloseReactionChoch",
+            "knownAt": 1790946900,
+            "confirmation": {
+              "type": "CHoCH",
+              "direction": "short",
+              "depth": 0,
+              "originTime": 1790944200,
+              "price": 4203.78,
+              "pivotTime": 1790945400,
+              "candleTime": 1790946600,
+              "recognizedAt": 1790946900
+            }
+          },
+          "sourceOwner": {
+            "status": "unmet",
+            "reason": "sourceRangeNotAssociated"
+          }
+        }
+      }
+    },
+    {
+      "pin": 485,
+      "originalNote": "randfall - sollte eher nicht entfallen, es ist ein range.high sweep\nfachlich gesehen ok, technisch gesehen wirds komplex - bin gespannt ob wir es hinbekommen",
+      "originalExpectation": "preferKeep_edgeCase",
+      "currentExpectation": "preferKeep_edgeCase",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 13761,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4179.51,
+          "pivotTime": "2026-10-06T12:00:00+00:00",
+          "touchedTime": "2026-10-06T19:00:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4179.51,
+          "dir": 1,
+          "pivotTime": 1791288600,
+          "touched": true,
+          "touchedTime": 1791313200,
+          "endTime": 1791313200
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791315300,
+          "storedFirstSeenAt": 1791315364.983,
+          "sourceKnownAt": 1791315364.983
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:1:1791314700",
+        "setup": {
+          "dir": 1,
+          "fractal": {
+            "price": 4182.62,
+            "dir": 1,
+            "pivotTime": 1791313200,
+            "touched": false,
+            "touchedTime": null,
+            "endTime": 1791315000
+          },
+          "ls": {
+            "price": 4179.51,
+            "dir": 1,
+            "pivotTime": 1791288600,
+            "touched": true,
+            "touchedTime": 1791313200,
+            "endTime": 1791313200
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4179.51,
+                "dir": 1,
+                "pivotTime": 1791288600,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4174.39,
+                "dir": 1,
+                "pivotTime": 1791292200,
+                "touched": true,
+                "touchedTime": 1791312900,
+                "endTime": 1791312900
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4182.62,
+          "obBottom": 4173.38,
+          "obStartTime": 1791314700,
+          "obFvg": 1.4099999999998545,
+          "pathType": "A",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "sourceRangeDirection",
+        "knownAt": 1791315300,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791315300,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791315300,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791315300
+          },
+          "sourceLevel": {
+            "price": 4179.51,
+            "pivotTime": 1791288600,
+            "touchedTime": 1791313200
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791315300,
+          "currentRange": {
+            "trend": "uptrend",
+            "low": {
+              "type": "low",
+              "price": 4143.49,
+              "pivotTime": 1791297000,
+              "pivotAt": "1791297000",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4182.62,
+              "pivotTime": 1791313200,
+              "pivotAt": "1791313200",
+              "touched": false
+            },
+            "depth": 4,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1791315300
+          },
+          "sourceOwner": {
+            "status": "ready",
+            "range": {
+              "trend": "downtrend",
+              "low": {
+                "type": "low",
+                "price": 4151.69,
+                "pivotTime": 1791295200,
+                "pivotAt": "1791295200",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4179.51,
+                "pivotTime": 1791288600,
+                "pivotAt": "1791288600",
+                "touched": false
+              }
+            },
+            "depth": 3,
+            "knownAt": 1791296100,
+            "basis": "rangeBoundaryBeforeSweep",
+            "pivot": {
+              "price": 4179.51,
+              "pivotTime": 1791288600
+            }
+          }
+        }
+      }
+    },
+    {
+      "pin": 486,
+      "originalNote": "long im trend, passt",
+      "originalExpectation": "keep",
+      "currentExpectation": "keep",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 13429,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4149.86,
+          "pivotTime": "2026-10-06T09:15:00+00:00",
+          "touchedTime": "2026-10-06T10:15:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4149.86,
+          "dir": -1,
+          "pivotTime": 1791278100,
+          "touched": true,
+          "touchedTime": 1791281700,
+          "endTime": 1791281700
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791283200,
+          "storedFirstSeenAt": 1791283264.164,
+          "sourceKnownAt": 1791283264.164
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1791282600",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4149.86,
+            "dir": -1,
+            "pivotTime": 1791278100,
+            "touched": true,
+            "touchedTime": 1791281700,
+            "endTime": 1791281700
+          },
+          "ls": {
+            "price": 4149.86,
+            "dir": -1,
+            "pivotTime": 1791278100,
+            "touched": true,
+            "touchedTime": 1791281700,
+            "endTime": 1791281700
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4149.86,
+                "dir": -1,
+                "pivotTime": 1791278100,
+                "touched": true,
+                "touchedTime": 1791281700,
+                "endTime": 1791281700
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4154.77,
+          "obBottom": 4148.71,
+          "obStartTime": 1791282600,
+          "obFvg": 1.7999999999992724,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "currentTrendDirection",
+        "knownAt": 1791283200,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791283200,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791283200,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791283200
+          },
+          "sourceLevel": {
+            "price": 4149.86,
+            "pivotTime": 1791278100,
+            "touchedTime": 1791281700
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791283200,
+          "currentRange": {
+            "trend": "uptrend",
+            "low": {
+              "type": "low",
+              "price": 4103.22,
+              "pivotTime": 1791254100,
+              "pivotAt": "1791254100",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4158.23,
+              "pivotTime": 1791279000,
+              "pivotAt": "1791279000",
+              "touched": {
+                "price": 4158.23,
+                "touchedAt": "1791282900",
+                "touchedTime": 1791282900
+              }
+            },
+            "depth": 2,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1791283200
+          }
+        }
+      }
+    },
+    {
+      "pin": 487,
+      "originalNote": "gegen trend. passt nicht",
+      "originalExpectation": "reject",
+      "currentExpectation": "reject",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 13254,
+        "detectorVersion": "setup1-fxcm-spread-ignore-v1",
+        "configHash": "b55c58ee36b312c9b423fdc61bede39a3a84dd0c2a1da1dd4ca6b52d5bdd9ba6",
+        "originalLiquidity": {
+          "price": 4119.88,
+          "pivotTime": "2026-10-06T04:50:00+00:00",
+          "touchedTime": "2026-10-06T05:50:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4119.88,
+          "dir": -1,
+          "pivotTime": 1791262200,
+          "touched": true,
+          "touchedTime": 1791265800,
+          "endTime": 1791265800
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1791267600,
+          "storedFirstSeenAt": 1791267667.489,
+          "sourceKnownAt": 1791267667.489
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1791267000",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4119.88,
+            "dir": -1,
+            "pivotTime": 1791262200,
+            "touched": true,
+            "touchedTime": 1791265800,
+            "endTime": 1791265800
+          },
+          "ls": {
+            "price": 4119.88,
+            "dir": -1,
+            "pivotTime": 1791262200,
+            "touched": true,
+            "touchedTime": 1791265800,
+            "endTime": 1791265800
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4119.88,
+                "dir": -1,
+                "pivotTime": 1791262200,
+                "touched": true,
+                "touchedTime": 1791265800,
+                "endTime": 1791265800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4120.82,
+          "obBottom": 4113.23,
+          "obStartTime": 1791267000,
+          "obFvg": 1.8400000000001455,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "unmet",
+        "reason": "sourceRangeNotAssociated",
+        "knownAt": 1791267600,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1791267600,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1791267600,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1791267600
+          },
+          "sourceLevel": {
+            "price": 4119.88,
+            "pivotTime": 1791262200,
+            "touchedTime": 1791265800
+          },
+          "anchor": {
+            "direction": "low",
+            "price": 4110.69,
+            "pivotTime": 1790542800,
+            "knownAt": 1790974800,
+            "structureStartTime": 1790604000
+          },
+          "stateKnownAt": 1791267600,
+          "currentRange": {
+            "trend": "downtrend",
+            "low": {
+              "type": "low",
+              "price": 4103.22,
+              "pivotTime": 1791254100,
+              "pivotAt": "1791254100",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4225.52,
+              "pivotTime": 1790944200,
+              "pivotAt": "1790944200",
+              "touched": false
+            },
+            "depth": 1,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1791267600
+          },
+          "sourceOwner": {
+            "status": "unmet",
+            "reason": "sourceRangeNotAssociated"
+          }
+        }
+      }
+    },
+    {
+      "pin": 488,
+      "originalNote": "auch gutes long gegen den trend beispiel, was erhalten bleibt, denn der LS kommt von der uptrend range struktur",
+      "originalExpectation": "keep",
+      "currentExpectation": "keep",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 9246,
+        "detectorVersion": null,
+        "configHash": null,
+        "originalLiquidity": {
+          "price": 4178.78,
+          "pivotTime": "2026-09-30T06:40:00+00:00",
+          "touchedTime": "2026-09-30T11:15:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4178.78,
+          "dir": -1,
+          "pivotTime": 1790750400,
+          "touched": true,
+          "touchedTime": 1790766900,
+          "endTime": 1790766900
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1790767800,
+          "storedFirstSeenAt": 1790767863.762,
+          "sourceKnownAt": 1790767863.762
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1790767200",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4178.78,
+            "dir": -1,
+            "pivotTime": 1790750400,
+            "touched": true,
+            "touchedTime": 1790766900,
+            "endTime": 1790766900
+          },
+          "ls": {
+            "price": 4178.78,
+            "dir": -1,
+            "pivotTime": 1790750400,
+            "touched": true,
+            "touchedTime": 1790766900,
+            "endTime": 1790766900
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4178.78,
+                "dir": -1,
+                "pivotTime": 1790750400,
+                "touched": true,
+                "touchedTime": 1790766900,
+                "endTime": 1790766900
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4180.35,
+          "obBottom": 4176.38,
+          "obStartTime": 1790767200,
+          "obFvg": 1.2199999999993452,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "currentTrendDirection",
+        "knownAt": 1790767800,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1790767800,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1790767800,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1790767800
+          },
+          "sourceLevel": {
+            "price": 4178.78,
+            "pivotTime": 1790750400,
+            "touchedTime": 1790766900
+          },
+          "anchor": {
+            "direction": "high",
+            "price": 4399.5,
+            "pivotTime": 1789678800,
+            "knownAt": 1790283600,
+            "structureStartTime": 1789714800
+          },
+          "stateKnownAt": 1790767800,
+          "currentRange": {
+            "trend": "uptrend",
+            "low": {
+              "type": "low",
+              "price": 4110.69,
+              "pivotTime": 1790607300,
+              "pivotAt": "1790607300",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4202.24,
+              "pivotTime": 1790757300,
+              "pivotAt": "1790757300",
+              "touched": false
+            },
+            "depth": 1,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1790767800
+          }
+        }
+      }
+    },
+    {
+      "pin": 489,
+      "originalNote": "long im trend",
+      "originalExpectation": "keep",
+      "currentExpectation": "keep",
+      "expectationOverride": null,
+      "source": {
+        "setupId": 8887,
+        "detectorVersion": null,
+        "configHash": null,
+        "originalLiquidity": {
+          "price": 4167.22,
+          "pivotTime": "2026-09-30T01:30:00+00:00",
+          "touchedTime": "2026-09-30T05:15:00+00:00"
+        },
+        "canonicalNativeLiquidity": {
+          "price": 4167.22,
+          "dir": -1,
+          "pivotTime": 1790731800,
+          "touched": true,
+          "touchedTime": 1790745300,
+          "endTime": 1790745300
+        },
+        "originalDatabaseTimes": {
+          "status": "ready",
+          "reason": null,
+          "nativeGeometryKnownAt": 1790746500,
+          "storedFirstSeenAt": 1790746564.357,
+          "sourceKnownAt": 1790746564.357
+        }
+      },
+      "assessment": {
+        "setupKey": "XAUUSD:-1:1790745900",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4167.22,
+            "dir": -1,
+            "pivotTime": 1790731800,
+            "touched": true,
+            "touchedTime": 1790745300,
+            "endTime": 1790745300
+          },
+          "ls": {
+            "price": 4167.22,
+            "dir": -1,
+            "pivotTime": 1790731800,
+            "touched": true,
+            "touchedTime": 1790745300,
+            "endTime": 1790745300
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4167.22,
+                "dir": -1,
+                "pivotTime": 1790731800,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4171.18,
+                "dir": -1,
+                "pivotTime": 1790735400,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4171.27,
+                "dir": -1,
+                "pivotTime": 1790740200,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "obTop": 4171.32,
+          "obBottom": 4165.42,
+          "obStartTime": 1790745900,
+          "obFvg": 1.3900000000003274,
+          "pathType": "B",
+          "instrument": "XAUUSD"
+        },
+        "status": "passed",
+        "reason": "currentTrendDirection",
+        "knownAt": 1790746500,
+        "trendEvidence": {
+          "version": "ts11-causal-inner-trend-source-range-v1",
+          "evaluatedAt": 1790746500,
+          "sourceTimes": {
+            "status": "ready",
+            "reason": null,
+            "nativeGeometryKnownAt": 1790746500,
+            "storedFirstSeenAt": null,
+            "sourceKnownAt": 1790746500
+          },
+          "sourceLevel": {
+            "price": 4167.22,
+            "pivotTime": 1790731800,
+            "touchedTime": 1790745300
+          },
+          "anchor": {
+            "direction": "high",
+            "price": 4399.5,
+            "pivotTime": 1789678800,
+            "knownAt": 1790283600,
+            "structureStartTime": 1789714800
+          },
+          "stateKnownAt": 1790746500,
+          "currentRange": {
+            "trend": "uptrend",
+            "low": {
+              "type": "low",
+              "price": 4110.69,
+              "pivotTime": 1790607300,
+              "pivotAt": "1790607300",
+              "touched": false
+            },
+            "high": {
+              "type": "high",
+              "price": 4187.51,
+              "pivotTime": 1790726100,
+              "pivotAt": "1790726100",
+              "touched": false
+            },
+            "depth": 1,
+            "basis": "confirmedNestedRange",
+            "knownAt": 1790746500
+          }
+        }
+      }
+    }
+  ]
+}
