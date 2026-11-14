@@ -105,6 +105,15 @@ const GROUPS = [
     ],
   },
   {
+    title: "Doppelter Orderblock",
+    fields: [
+      { key: "dobConfirmed", label: "Bestätigt" },
+      { key: "dobLoss", label: "Verlust" },
+      { key: "dobHover", label: "Hover-Hervorhebung" },
+      { key: "dobPin", label: "Pin-Hervorhebung" },
+    ],
+  },
+  {
     title: "Trade-Setups",
     fields: [
       { key: "tradeSetupShort", label: "Short" },
@@ -248,10 +257,10 @@ function toggleGroup(title) {
   <MetadataPanel title="🎨 Chart-Style" @close="emit('close')">
     <button class="style-reset" @click="resetAll">Alle zurücksetzen</button>
     <section v-for="group in GROUPS" :key="group.title" class="style-group">
-      <h3 class="style-group-title" @click="toggleGroup(group.title)">
+      <h3 class="style-group-heading"><button type="button" class="style-group-title" :aria-expanded="!collapsed[group.title]" @click="toggleGroup(group.title)">
         <span class="style-group-chevron" :class="{ collapsed: collapsed[group.title] }">▾</span>
         {{ group.title }}
-      </h3>
+      </button></h3>
       <div v-show="!collapsed[group.title]">
         <div v-for="field in group.fields" :key="field.key" class="style-field">
           <div class="style-field-top">
@@ -302,7 +311,15 @@ function toggleGroup(title) {
   margin-bottom: 10px;
 }
 
+.style-group-heading { margin: 0; }
+
 .style-group-title {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
   margin: 0 0 8px;
   font-size: 11px;
   font-weight: 700;
@@ -315,6 +332,8 @@ function toggleGroup(title) {
   align-items: center;
   gap: 6px;
 }
+
+.style-group-title:focus-visible { outline: 2px solid #2962ff; outline-offset: 3px; }
 
 .style-group-title:hover {
   color: #9aa0ac;

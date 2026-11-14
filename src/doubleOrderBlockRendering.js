@@ -22,12 +22,12 @@ export function renderDoubleOrderBlocks(series,pairs,candles,evaluatedAt,{select
   for(const {ob,endTime,roles,pair,pairs:associated} of zones.values()) {
     const selected=associated.find(p=>p.id===selectedPairId);
     const role=selected?(selected.firstOrderBlock.startTime===ob.startTime?'1':'2'):[...roles].sort().join('/');
-    const color=doubleOrderBlockDisplay(pair,pairEvaluatedAt.get(pair.id)??evaluatedAt).tone==='red'?'tradeLoss':'tradeHover';
+    const color=doubleOrderBlockDisplay(pair,pairEvaluatedAt.get(pair.id)??evaluatedAt).tone==='red'?'dobLoss':'dobConfirmed';
     const primitive=new OrderBlockPrimitive({...ob,touched:true,endTime},
       {fillColor:cssColorScaled(color,.12),borderColor:cssColor(color),textColor:cssColor(color),borderWidth:1,
         label:`DOB${role} ${pair.direction==='long'?'L':'S'}`,
-        inPinContext:associated.some(p=>pinnedPairIds.has(p.id)),pinColor:cssColor('pin'),
-        isSelectedPin:associated.some(p=>p.id===selectedPairId),hoverColor:cssColor('tradeHover')},candles);
+        inPinContext:associated.some(p=>pinnedPairIds.has(p.id)),pinColor:cssColor('dobPin'),
+        isSelectedPin:associated.some(p=>p.id===selectedPairId),hoverColor:cssColor('dobHover')},candles);
     series.attachPrimitive(primitive);items.push({pair,pairs:associated,primitive});
   }
   return items;

@@ -12,7 +12,7 @@ it('uses the detector display contract without leaking future loss or hiding sep
   expect(atEntry).toHaveLength(2);expect(atEntry.map(i=>i.primitive.options.label)).toEqual(['DOB1 L','DOB2 L']);
   expect(doubleOrderBlockDetails(pair,1000)).toContain('a: offen · b: wartet');
   const after=renderDoubleOrderBlocks(series,[pair],[],1700);
-  expect(after[0].primitive.options.borderColor).toBe('tradeHover');
+  expect(after[0].primitive.options.borderColor).toBe('dobConfirmed');
   expect(doubleOrderBlockDetails(pair,1700)).toContain('a: Loss · b: 2R');
 });
 it('draws shared OB zones once without repeating a/b text on the candles',()=>{
@@ -24,7 +24,7 @@ it('draws shared OB zones once without repeating a/b text on the candles',()=>{
 it('renders red only according to the shared detector and hits either of the two actual boxes',()=>{
   const lost={...pair,entries:{a:pair.entries.a,b:{status:'pending'}}};
   const items=renderDoubleOrderBlocks(series,[lost],[],1500);
-  expect(items[0].primitive.options.borderColor).toBe('tradeLoss');
+  expect(items[0].primitive.options.borderColor).toBe('dobLoss');
   expect(hitDoubleOrderBlock(items,1,1)).toBe(null);
   items[0].primitive.distance=0;expect(hitDoubleOrderBlock(items,1,1)).toBe(lost);
   items[0].primitive.distance=Infinity;items[1].primitive.distance=0;expect(hitDoubleOrderBlock(items,1,1)).toBe(lost);
@@ -36,4 +36,9 @@ it('shows both shared-zone roles by default and the exact selected pair role on 
  expect(labels({})).toEqual(['DOB1 L','DOB1/2 L','DOB2 L']);
  expect(labels({selectedPairId:pair.id})).toEqual(['DOB1 L','DOB2 L','DOB2 L']);
  expect(labels({selectedPairId:next.id})).toEqual(['DOB1 L','DOB1 L','DOB2 L']);
+});
+
+it('uses independent DOB tokens for fill, outline, labels, pair hover and pins',()=>{
+ const items=renderDoubleOrderBlocks(series,[pair],[],1700,{selectedPairId:pair.id,pinnedPairIds:new Set([pair.id])});
+ for(const {primitive} of items)expect(primitive.options).toMatchObject({fillColor:'dobConfirmed:0.12',borderColor:'dobConfirmed',textColor:'dobConfirmed',hoverColor:'dobHover',pinColor:'dobPin',isSelectedPin:true,inPinContext:true});
 });

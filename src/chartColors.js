@@ -81,6 +81,11 @@ export const DEFAULT_CHART_COLORS = {
   obBull4hBorder: { hex: "#26a69a", alpha: 0.75 },
   obBear4hBorder: { hex: "#ef5350", alpha: 0.75 },
   obInactive4hBorder: { hex: "#787b86", alpha: 0.37 },
+  // DOB bleibt unabhängig von TS 1.0 und dessen Hover-/Verlustfarben einstellbar.
+  dobConfirmed: { hex: "#e6b84a", alpha: 0.9 },
+  dobLoss: { hex: "#e57373", alpha: 1 },
+  dobHover: { hex: "#ffe082", alpha: 0.95 },
+  dobPin: { hex: "#ec407a", alpha: 0.9 },
   tradeSetupShort: { hex: "#ffd700", alpha: 0.9 },
   tradeSetupLong: { hex: "#2196f3", alpha: 0.9 },
   tradeSetupProtected: { hex: "#ffffff", alpha: 0.95 },
