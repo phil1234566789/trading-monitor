@@ -1,11 +1,17 @@
 {
-  "version": "latest-reaction-first-m1-fvg-v1",
+  "version": "latest-reaction-first-m1-fvg-ob1-depth50-v2",
   "scope": "16 selected positive examples; no general win-rate or trading approval",
   "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
   "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
   "policy": {
     "reaction": "first positive M1 FVG after first valid mitigation",
     "pairing": "latest matching first reaction before second retest; simultaneous overlapping partners retained",
+    "firstRetestDepth": {
+      "maximumFraction": 0.5,
+      "window": "first M1 retest through first reaction FVG close inclusive",
+      "unknown": "not confirmed",
+      "selection": "latest depth-qualified matching first reaction; older qualifying partners may replace a deeper latest partner"
+    },
     "stop": "selected second M5 OB outside edge",
     "target": "2R price risk without commission",
     "variants": "a and b independently"
@@ -13,111 +19,159 @@
   "footprint": [
     {
       "day": "2026-11-11",
-      "pairCount": 30,
+      "pairCount": 23,
+      "withoutDepthLimitPairCount": 30,
+      "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 49,
       "mitigations": 49,
-      "pairChecks": 351
+      "pairChecks": 351,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 7
     },
     {
       "day": "2026-11-09",
-      "pairCount": 37,
+      "pairCount": 36,
+      "withoutDepthLimitPairCount": 37,
+      "olderQualifyingReplacementPairs": 6,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 69,
       "mitigations": 69,
-      "pairChecks": 820
+      "pairChecks": 820,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 14
     },
     {
       "day": "2026-11-06",
-      "pairCount": 19,
+      "pairCount": 17,
+      "withoutDepthLimitPairCount": 19,
+      "olderQualifyingReplacementPairs": 0,
       "m5Bars": 264,
       "m1Bars": 1309,
       "orderBlocks": 49,
       "mitigations": 49,
-      "pairChecks": 325
+      "pairChecks": 325,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 9
     },
     {
       "day": "2026-11-05",
-      "pairCount": 35,
+      "pairCount": 23,
+      "withoutDepthLimitPairCount": 35,
+      "olderQualifyingReplacementPairs": 5,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 60,
       "mitigations": 60,
-      "pairChecks": 703
+      "pairChecks": 703,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 17
     },
     {
       "day": "2026-11-04",
-      "pairCount": 19,
+      "pairCount": 13,
+      "withoutDepthLimitPairCount": 19,
+      "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 51,
       "mitigations": 51,
-      "pairChecks": 253
+      "pairChecks": 253,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 9
     },
     {
       "day": "2026-11-03",
-      "pairCount": 23,
+      "pairCount": 19,
+      "withoutDepthLimitPairCount": 23,
+      "olderQualifyingReplacementPairs": 3,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 59,
       "mitigations": 59,
-      "pairChecks": 435
+      "pairChecks": 435,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 8
     },
     {
       "day": "2026-11-02",
-      "pairCount": 18,
+      "pairCount": 14,
+      "withoutDepthLimitPairCount": 18,
+      "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 57,
       "mitigations": 57,
-      "pairChecks": 378
+      "pairChecks": 378,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 12
     },
     {
       "day": "2026-10-30",
-      "pairCount": 25,
+      "pairCount": 20,
+      "withoutDepthLimitPairCount": 25,
+      "olderQualifyingReplacementPairs": 3,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 56,
       "mitigations": 56,
-      "pairChecks": 325
+      "pairChecks": 325,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 10
     },
     {
       "day": "2026-10-22",
-      "pairCount": 30,
+      "pairCount": 25,
+      "withoutDepthLimitPairCount": 30,
+      "olderQualifyingReplacementPairs": 7,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 64,
       "mitigations": 64,
-      "pairChecks": 703
+      "pairChecks": 703,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 15
     },
     {
       "day": "2026-10-21",
       "pairCount": 12,
+      "withoutDepthLimitPairCount": 12,
+      "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 57,
       "mitigations": 57,
-      "pairChecks": 300
+      "pairChecks": 300,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 11
     },
     {
       "day": "2026-10-16",
-      "pairCount": 20,
+      "pairCount": 11,
+      "withoutDepthLimitPairCount": 20,
+      "olderQualifyingReplacementPairs": 1,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 60,
       "mitigations": 60,
-      "pairChecks": 465
+      "pairChecks": 465,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 13
     },
     {
       "day": "2026-10-08",
-      "pairCount": 34,
+      "pairCount": 30,
+      "withoutDepthLimitPairCount": 34,
+      "olderQualifyingReplacementPairs": 7,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 71,
       "mitigations": 71,
-      "pairChecks": 780
+      "pairChecks": 780,
+      "firstDepthUnknown": 0,
+      "firstDepthRejected": 18
     }
   ],
   "references": [

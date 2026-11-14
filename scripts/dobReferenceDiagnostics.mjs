@@ -13,7 +13,11 @@ try{
   const fixture=JSON.parse(await readFile(new URL(`../test/fixtures/dob-native/${day}.json`,import.meta.url),'utf8'));
   const result=detectDoubleOrderBlocks({instrument:manifest.instrument,m5Candles:fixture.candles.m5,
    m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to});
-  days.set(day,result);footprint.push({day,pairCount:result.pairs.length,...result.stats});
+  const unrestricted=detectDoubleOrderBlocks({instrument:manifest.instrument,m5Candles:fixture.candles.m5,
+   m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to,maxFirstRetestDepthFraction:1});
+  const priorIds=new Set(unrestricted.pairs.map(pair=>pair.id));
+  days.set(day,result);footprint.push({day,pairCount:result.pairs.length,withoutDepthLimitPairCount:unrestricted.pairs.length,
+   olderQualifyingReplacementPairs:result.pairs.filter(pair=>!priorIds.has(pair.id)).length,...result.stats});
  }
  const references=manifest.pairs.map(pair=>{
   const [a,b]=pair.pins.map(pin=>manifest.references.find(ref=>ref.pin===pin));
@@ -29,6 +33,8 @@ try{
   nativeManifestSha256:createHash('sha256').update(text).digest('hex'),sourceBaseline:manifest.codeBaseline,
   policy:{reaction:'first positive M1 FVG after first valid mitigation',
    pairing:'latest matching first reaction before second retest; simultaneous overlapping partners retained',
+   firstRetestDepth:{maximumFraction:.5,window:'first M1 retest through first reaction FVG close inclusive',
+    unknown:'not confirmed',selection:'latest depth-qualified matching first reaction; older qualifying partners may replace a deeper latest partner'},
    stop:'selected second M5 OB outside edge',target:'2R price risk without commission',variants:'a and b independently'},
   footprint,references};
  const directory=new URL('../analysis/dob/',import.meta.url);

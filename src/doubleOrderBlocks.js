@@ -8,7 +8,8 @@ import {m1FvgEntrySequence,advanceM1FvgEntrySequence,m1FvgSequenceResult} from '
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 import {measureOrderBlockPenetration} from './orderBlockPenetration.js';
 
-export const DOUBLE_ORDER_BLOCK_VERSION='latest-reaction-first-m1-fvg-v1';
+export const DOUBLE_ORDER_BLOCK_VERSION='latest-reaction-first-m1-fvg-ob1-depth50-v2';
+export const DEFAULT_MAX_FIRST_RETEST_DEPTH_FRACTION=.5;
 
 function entriesFor(reaction,orderBlock,m1,candidates,evaluatedAt,instrument){
  const fvg=candidates.find(f=>f.candleTime===reaction.fvg.candleTime&&f.recognizedAt===reaction.fvg.recognizedAt);
@@ -29,9 +30,13 @@ function entriesFor(reaction,orderBlock,m1,candidates,evaluatedAt,instrument){
 }
 
 // Sämtliche Partner werden geprüft: benachbarte/überlappende OBs dürfen sich nicht gegenseitig verdrängen.
-export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='XAUUSD',evaluatedAt}){
+export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='XAUUSD',evaluatedAt,
+ maxFirstRetestDepthFraction=DEFAULT_MAX_FIRST_RETEST_DEPTH_FRACTION}){
+ if(!Number.isFinite(maxFirstRetestDepthFraction)||maxFirstRetestDepthFraction<0||maxFirstRetestDepthFraction>1)
+  throw new RangeError('Die maximale OB1-Retesttiefe muss zwischen 0 und 1 liegen.');
  const m5=closedChecklistCandles(m5Candles,'5m',evaluatedAt),m1=closedChecklistCandles(m1Candles,'1m',evaluatedAt);
- const result={version:DOUBLE_ORDER_BLOCK_VERSION,status:m1.length?'ready':'unknown',pairs:[],stats:{m5Bars:m5.length,m1Bars:m1.length,orderBlocks:0,mitigations:0,pairChecks:0}};
+ const result={version:DOUBLE_ORDER_BLOCK_VERSION,status:m1.length?'ready':'unknown',pairs:[],
+  policy:{maxFirstRetestDepthFraction},stats:{m5Bars:m5.length,m1Bars:m1.length,orderBlocks:0,mitigations:0,pairChecks:0,firstDepthUnknown:0,firstDepthRejected:0}};
  if(!Number.isFinite(evaluatedAt)||!m5.length||!m1.length)return result;
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(instrument,'5m'));
  const candidates=m1FvgEntryCandidates(m1,evaluatedAt),qualified=[];
@@ -46,6 +51,8 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   if(entries.a.status!=='ready')continue;
   const penetration=measureOrderBlockPenetration(orderBlock,orderBlock.dir===1?'long':'short',
    m1.filter(c=>c.time>=reaction.retest.candleTime&&c.time+60<=reaction.fvg.recognizedAt));
+  if(penetration.status!=='ready'||!Number.isFinite(penetration.maxPenetrationFraction))result.stats.firstDepthUnknown++;
+  else if(penetration.maxPenetrationFraction>maxFirstRetestDepthFraction)result.stats.firstDepthRejected++;
   const m5Invalidation=m5.find(c=>!c.ignored&&c.time>=orderBlock.recognizedAt&&candleInvalidatesOrderBlock(c,orderBlock));
   // Ein späterer Bruch löscht den vorher bestätigten Vergleichsbeleg nicht aus dem Verlauf.
   const m5Confirmation=zone.touchedTime==null?null:zones.find(other=>other.dir===zone.dir&&other.startTime>zone.touchedTime
@@ -58,6 +65,9 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   for(let first=0;first<second;first++){
   result.stats.pairChecks++;
   const a=qualified[first],b=qualified[second],sign=b.orderBlock.dir;
+  // Nur OB1 wird begrenzt; das Reaktionsfenster endet vor dem späteren OB2-Retest.
+  if(a.penetration.status!=='ready'||!Number.isFinite(a.penetration.maxPenetrationFraction)
+   ||a.penetration.maxPenetrationFraction>maxFirstRetestDepthFraction)continue;
   if(a.orderBlock.dir!==sign||a.orderBlock.startTime>=b.orderBlock.startTime
    ||(b.orderBlock.top-a.orderBlock.top)*sign<=0||(b.orderBlock.bottom-a.orderBlock.bottom)*sign<=0
    ||a.reaction.fvg.recognizedAt>b.reaction.retest.candleTime||a.invalidatedAt<b.reaction.retest.candleTime)continue;
