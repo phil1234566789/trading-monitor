@@ -4,11 +4,11 @@ vi.mock('../src/sessions.js',()=>({sessions:[{instrument:'XAUUSD',id:'gold'},{in
 vi.mock('../src/candleCache.js',()=>({fetchCandlesCached:mocks.fetch}));
 vi.mock('../src/composables/usePriceChartTradeSetups.js',()=>({usePriceChartTradeSetups(options){
   mocks.evaluate=options.evaluateCandidates;
-  return {tradeSetupsMetadata:{value:[]},invalidate:vi.fn(),computeTradeSetups:mocks.compute,fetchM5Candles:mocks.baseFetch};
+  return {tradeSetupsMetadata:{value:[]},getM5Candles:()=>[{time:300}],invalidate:vi.fn(),computeTradeSetups:mocks.compute,fetchM5Candles:mocks.baseFetch};
 }}));
 import {usePriceChartTradeSetup11,TRADE_SETUP_11_CONTEXT_COUNTS} from '../src/composables/usePriceChartTradeSetup11.js';
 beforeEach(()=>{
-  vi.clearAllMocks();mocks.baseFetch.mockResolvedValue({ok:true,applied:true});
+  vi.clearAllMocks();mocks.compute.mockReset();mocks.baseFetch.mockResolvedValue({ok:true,applied:true});
   mocks.fetch.mockResolvedValue([{time:0},{time:86400},{time:172800}]);
   mocks.filter.mockReturnValue({version:'ts11',status:'unknown',setups:[],assessments:[],counts:{passed:0,unmet:0,unknown:2}});
 });
@@ -33,7 +33,7 @@ it('never reuses another symbol context and handles failed context as unknown ra
   const api=usePriceChartTradeSetup11({worker:{run:mocks.filter,cancel:vi.fn(),dispose:vi.fn()}});
   await expect(api.fetchM5Candles({symbol:'XAUUSD',evaluatedAt:172800})).resolves.toEqual({ok:true,applied:true});
   api.computeTradeSetups({symbol:'EURUSD',candles:[{time:300}],evaluatedAt:172800});
-  expect(mocks.compute.mock.calls[0][0].policyContext).toMatchObject({h1Candles:[],d1Candles:[]});
+  expect(mocks.compute).not.toHaveBeenCalled();expect(api.status.value).toContain('Trenddaten nicht verfügbar');
 });
 it('does not let an older symbol request overwrite the currently applied native context',async()=>{
   const pending=[];mocks.fetch.mockImplementation(()=>new Promise(resolve=>pending.push(resolve)));
@@ -67,4 +67,16 @@ it('restores original chart references and Infinity after worker serialization, 
   expect(restored.fractal).toBe(level);expect(restored.ls).toBe(level);expect(restored.fractal.endTime).toBe(Infinity);
   expect(restored).toMatchObject({detectorVersion:'legacy',tradeSetupId:17,trendEvaluationVersion:'ts11'});
   api.dispose();expect(worker.dispose).toHaveBeenCalledOnce();
+});
+it('keeps loading distinct from unknown while native context is still being fetched',async()=>{
+  const pending=[];mocks.fetch.mockImplementation(()=>new Promise(resolve=>pending.push(resolve)));
+  mocks.compute.mockImplementation(input=>mocks.evaluate([{dir:-1,obStartTime:600}],input.policyContext));
+  const api=usePriceChartTradeSetup11({worker:{run:mocks.filter,cancel:vi.fn(),dispose:vi.fn()}});
+  const loaded=api.fetchM5Candles({symbol:'XAUUSD',evaluatedAt:172800});
+  await api.computeTradeSetups({symbol:'XAUUSD',candles:[{time:300}],evaluatedAt:172800});
+  expect(mocks.filter).not.toHaveBeenCalled();
+  expect(api.status.value).toContain('Daten laden');
+  pending.forEach(resolve=>resolve([{time:0}]));await loaded;
+  expect(mocks.filter).toHaveBeenCalledOnce();
+  expect(mocks.filter.mock.calls[0][0]).toMatchObject({h1Candles:[{time:0}],d1Candles:[{time:0}],m5Candles:[{time:300}]});
 });

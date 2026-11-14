@@ -3,12 +3,13 @@ import {usePriceChartTradeSetups} from './usePriceChartTradeSetups.js';
 import {loadTradeSetup11Context} from '../tradeSetup11ContextLoader.js';
 import {sessions} from '../sessions.js';
 import {createTradeSetup11Worker} from '../tradeSetup11WorkerClient.js';
+import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
 
 export {TRADE_SETUP_11_CONTEXT_COUNTS} from '../tradeSetup11ContextLoader.js';
 
 export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onUpdate}={}) {
   const status=ref('TS1.1: Trendkontext noch nicht geladen.'),assessments=ref([]);
-  let context={symbol:null,h1:[],d1:[]},revision=0,evaluation=0,disposed=false;
+  let context={symbol:null,h1:[],d1:[]},revision=0,evaluation=0,disposed=false,loadState='idle',loadError=null,pendingInput=null;
   const base=usePriceChartTradeSetups({onEvaluated:onUpdate,async evaluateCandidates(setups,input){
     const request=++evaluation;
     status.value='TS1.1: Trend-Policy wird im Hintergrund geprüft …';
@@ -29,6 +30,12 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
     }
   }});
   function computeTradeSetups(input) {
+    if(disposed)return;
+    if(loadState==='loading'){
+      pendingInput=input;base.invalidate();
+      status.value='TS1.1: Native M5-/H1-/D1-Daten laden …';return;
+    }
+    if(loadState==='error'){base.invalidate();status.value=loadError;return;}
     const matching=context.symbol===input.symbol;
     if(!input.candles.length){evaluation++;worker.cancel();assessments.value=[];status.value='TS1.1: M5-Daten fehlen.';}
     return base.computeTradeSetups({...input,policyContext:{
@@ -38,6 +45,7 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
   }
   async function fetchM5Candles(input) {
     const request=++revision;
+    loadState='loading';loadError=null;pendingInput=null;
     evaluation++;worker.cancel();base.invalidate();assessments.value=[];
     status.value='TS1.1: Native M5-/H1-/D1-Daten laden …';
     onUpdate?.();
@@ -46,11 +54,19 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
         const loaded=await loadTradeSetup11Context(input);
         if(request===revision)context=loaded;
       } catch {
-        if(request===revision){context={symbol:input.symbol,h1:[],d1:[]};status.value='TS1.1: Trenddaten nicht verfügbar.';}
+        if(request===revision){context={symbol:input.symbol,h1:[],d1:[]};loadError='TS1.1: Trenddaten nicht verfügbar.';}
       }
     };
     const [result]=await Promise.all([base.fetchM5Candles(input),loadContext()]);
-    if(request===revision&&!result.ok)status.value='TS1.1: M5-Daten nicht verfügbar.';
+    if(request===revision){
+      if(!result.ok)loadError='TS1.1: M5-Daten nicht verfügbar.';
+      loadState=loadError?'error':'ready';
+      if(loadError)status.value=loadError;
+      const queued=pendingInput;pendingInput=null;
+      // H1 kann vor dem Kontext fertig sein; dieser eine wartende Stand braucht keinen UI-Klick zum Neustart.
+      if(!loadError&&result.applied&&queued?.symbol===input.symbol)computeTradeSetups({...queued,
+        candles:closedChecklistCandles(base.getM5Candles(),'5m',queued.evaluatedAt)});
+    }
     return request===revision?result:{ok:true,applied:false};
   }
   function dispose(){disposed=true;revision++;evaluation++;base.invalidate();worker.dispose();}
