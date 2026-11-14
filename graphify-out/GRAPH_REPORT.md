@@ -1,24 +1,24 @@
 # Graph Report - dob-reference-fixtures  (2026-11-14)
 
 ## Corpus Check
-- 1590 files · ~1,352,491 words
+- 1601 files · ~1,355,204 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 7289 nodes · 18136 edges · 320 communities (262 shown, 28 thin omitted)
+- 7321 nodes · 18213 edges · 323 communities (266 shown, 27 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 367 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `35d453e1`
+- Built from commit: `4e2d91e3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Dashboard.vue
 - gbp_h1_uptrend_uptrend_break_of_structure_und_trendumkehr.ts
-- usePriceChartMarketStructure
-- src/rsi.js
+- usePriceChartMarketStructure.js
+- usePriceChartRsi.js
 - PriceChart.vue
 - gbp_h1_uptrend_mit_LQ_sweep_LONG_SETUP.ts
 - gbp_h1_uptrend_mit_inner_structure.ts
@@ -32,8 +32,8 @@
 - findAntiConfluences.js
 - TradeEditModal.vue
 - package.json
+- useTradePositionForm.js
 - berlinTime.js
-- SimulationFeatureChips.vue
 - sessions.js
 - dailyPivotMarkers.js
 - positive
@@ -42,43 +42,43 @@
 - ctrader/client.ts
 - trading-monitor-mcp/index.ts
 - tradeIntake.js
-- entryPattern1Conditions.js
+- tradeSetup2Review.js
 - lauf
 - plan
 - MilkyMetaTraderBalances.vue
 - MilkyMetaTrader.vue
 - formatDatedTime
 - marketStructureAnalysisBeforePerformanceRound2.ts
-- findTargetCandidates.js
+- chartTimeUtils.js
 - tradeSetup2Archive.mjs
 - useHttpActivity.js
-- useMmtExitEditor.js
+- mmtTargetDrafts.js
 - DailyStopEngine
 - liveWatcherPins.test.js
-- closedChecklistCandles
+- countertrendChecklist.js
 - dataExport.ts
 - sweepRetestSources.js
 - messeFxcmKontext.ts
 - tradeSetupSimulationStatistics.js
-- tradeSetup.ts
+- poi-watcher/index.ts
 - marketStructureAnalysis Rules Overview
 - Laniakea Persona Command (/l)
-- DealingRangeSetupSelect.vue
+- SimulationComparisonFilters.vue
 - fachdoku-router/SKILL.md
 - findAntiConfluenceCandidates.js
 - drMerkmale.py
 - MilkyMetaTraderEntrySearch.vue
-- tradeSetup2Review.js
-- SessionBandPrimitive
+- berlinOffsetMinutes
+- SessionBandPaneView
 - PLAN: DR-Statistik in der UI anzeigen
 - trades.js
 - useMmtBatchEntrySearch.js
 - TargetEngine
 - mmtUiLifetimes.test.js
 - tradeSetupChecklistSweeps.js
-- useTradeSetup2History.js
-- SimulationEntryTable.vue
-- m1FvgEntryProjection.js
+- cssColor
+- m1EntryRendering.js
+- m1FvgEntrySelection.js
 - patternLocalSweepAgeFrozen.integration.mjs
 - compilerOptions
 - src/sessionOccurrences.js
@@ -98,16 +98,16 @@
 - lade_setups
 - Dealing-Range-Loop Diagram
 - FXCM-Kerzenfeed
-- chartTimeUtils.js
+- usePriceChartTradeSetups.js
 - AI Capabilities and Limitations Notes
 - trading-monitor-mcp/orderBlockDetection.js
 - useDrawings.js
 - mt5Health.ts
 - Trade Setups 2.0: historische Positionen und Statistik
 - twelvedata/client.ts
-- tradeSetup2Scan.js
+- closedChecklistCandles
 - DashboardMmt.vue
-- orderBlocks.js
+- OrderBlockPrimitive
 - Trade Setup 2.0 — Trade Setup Checklist
 - MCP-Server: Tiefere Referenz
 - Technische Machbarkeit — geprüft am 27.09.2026
@@ -115,7 +115,7 @@
 - messeFindTargets.py
 - Checkliste des ersten Setups
 - filterGegenkraft.py
-- m1FvgEntrySelection.js
+- reviewGroups
 - useM5CandleClock
 - src/doubleOrderBlockPin.js
 - hole_alle
@@ -123,15 +123,15 @@
 - annotations.js
 - Lana-Fehlerdiagnose
 - Agent Skills Pro Notes
-- MmtDailyStopStatus.vue
+- useTradeSetup2History
 - fetch-trend-fixture.mjs
 - ContextMenu.vue
 - ctraderCandles.js
-- poi-watcher/index.ts
+- berlinTime.ts
 - useStatusBar
 - AI Failure as Property Collision
 - MCP Advanced Topics Notes
-- applyMarketStructurePivot
+- src/marketStructureAnalysis.ts
 - vite.config.js
 - lana-git-pull.cjs
 - drQuoten.js
@@ -146,17 +146,17 @@
 - mcp-server/src/scripts/backfillObZones.ts
 - merkmale
 - JsonTree.vue
-- mt5Database
+- TradeSetupCockpit.vue
 - XAUUSD: begrenzter FXCM-H1-Kontotest, 24.09.2026
 - Dealing Range anlegen
 - .codex/hooks/lana-git-pull.cjs
 - source-command-l
 - biasCheck.ts
-- useDoubleOrderBlockChart.js
-- setupEntryConditions
+- priceChartObZones.js
+- Pivot
 - prepareSimulationStatistics.mjs
-- afterBrowserPaint
-- checked
+- setup2PerformanceEquivalence.test.js
+- evidenceCheckpoint.js
 - B / #2 — Liquidity Sweep
 - supabaseRowCapGuard.test.js
 - mt5RiskContract.js
@@ -166,13 +166,13 @@
 - tradeSetup2SnapshotIndicators.js
 - Entschiedene Design-Fragen
 - validate.js
-- setup2Repository.test.js
+- M1EntryPrimitive
 - mt5Statistics.ts
-- recoverySourceIdeas.test.js
+- src/candleCloseWindow.ts
 - Phase 2: gespeicherte DR-Begriffe (zur Freigabe)
 - Fachdoku-Router Skill
 - vueComponentImportGuard.test.js
-- TradeSetupCockpit.vue
+- tradeSetupCockpit.ts
 - tradeSetupChecklist.js
 - supabaseClient.js
 - chartColors.js
@@ -188,7 +188,7 @@
 - tradeIdeas.js
 - TradeExecutionCard.vue
 - analyze.py
-- setup2PerformanceReplay.mjs
+- tradeSetup2YearRun.mjs
 - fachdoku-router-reminder.cjs
 - fmtPrice
 - Plan: Forex-Chart-Objekte Datengrundlage
@@ -203,32 +203,32 @@
 - countertrendScan.js
 - checkMt5JournalMigration.ts
 - gbp_h1_uptrend.ts
-- suspendChartScrolling
+- dealingRangePriceObservation.test.js
 - Entry Pattern 1
 - DynamicBrokerRiskTests
 - MmtArchivedAccounts.vue
 - C / #3 — Reaktion aus Liquidity Sweep
 - Parallelisierungsplan
-- forbiddenSession.test.js
+- TradesTable.vue
 - liveWatcherMonth.js
 - Plan: POI-Strategie-Findung, Backtesting & Trade-Notifications
 - intent
 - setup2StageVersionCompare.mjs
 - writeJson
-- setup2PerformanceEquivalence.test.js
-- mmtTargetDrafts.js
+- usePriceChartM1Structure.js
+- MmtTradeExtremes.vue
 - prepareLivePinDb
 - MilkyMetaTraderEquityChart.vue
-- src/marketStructureAnalysis.ts
+- format.js
 - livePinMigrationContract.test.js
 - ToggleButton.vue
-- tradeSetupFromRow
+- setup1BuildSets.mjs
 - GoldPreview.vue
 - mmtBalanceCache.test.js
-- usePreservedScroll
+- TradeSetupChecklist.vue
 - MmtRiskPolicyEditor.vue
 - imports
-- tradeSetup2YearRun.mjs
+- m5EntryHistory.js
 - setup2PerformancePrimitives.mjs
 - PositionCosts
 - runner.mjs
@@ -237,70 +237,73 @@
 - Versionierte Setup 1 Eingabesätze
 - useMmtTargetDrawing
 - prefill.mjs
+- tradeSetupFromRow
 - tradingSchedules.js
 - setup2-terminology-inventory.md
 - setup2-notification-watch/index.ts
-- prefill-obs.mjs
+- orderBlocks.ts
 - worker.py
-- useMmtUiData
+- Alarme.vue
 - mt5Credentials.ts
-- SimulationRunQuality.vue
-- useTradeIdeaEditing
-- forexCandles.ts
+- SimulationDrList.vue
+- useMmtStatistics
+- reads.ts
 - poi-watcher Alert-Cron Notes
 - mt5-control/index.ts
 - trade_evidence Table (Dual-Level, Confirmation/Confluence)
+- debugMetadata.js
 - entryPattern2FrozenObRegression.integration.mjs
-- backfillObFvg.ts
+- backfillLiquidityLevels.ts
 - findTargets.js
-- targetPlanContract.js
+- calcPositionLineForecast
 - db.ts
 - tradeSetup2Configuration.js
-- obMinimum
+- mt5HistoryContract.js
+- liquidityDetectionBeforePerformanceRound2.js
 - range.type.ts
 - importMmtCsv.py
-- SimulationRunDerivation.vue
-- mmtTargetEditor.test.js
+- marketStructureAnalysis.test.js
+- setup2OperationalHealth.js
 - simulationReferenceIndex.integration.mjs
-- countertrendScanResume.test.js
-- orderBlockMitigation.js
+- openBatchCheckpoint
+- doubleOrderBlocks.test.js
+- tradeSetupSweepLimit.test.js
+- runtimeCopySyncGuard.test.js
 - MetadataPanel.vue
 - ImportTest
 - Invoke-MmtReleaseDeployment
+- tradeSetup.test.js
 - ../.debug/mmt-health-sql/node_modules/@electric-sql/pglite/dist/index.js
 - forexCandles.js
 - Die Filter
 - relativeM5SweepRanges.test.js
 - detectLiquidityLevels
 - tradeSetup2Derive.mjs
+- cTrader Open API as Forex Candle Source
 - Gold: normaler Chart, Livefeed und Historie 2026
 - Gold M5: Abruf erfolgreich, Feed-Gleichheit nicht bestätigt
 - Dealing-Range-Anlegen Skill
 - chartMeasure.js
 - fvgCandleTint.js
+- p2PreliminaryM5Bos.test.js
 - Statistik.vue
-- mmtBrokerPositions.test.js
 - NewsModal.vue
-- stopPlanContract.js
+- mt5TargetPlans.ts
 - MmtTargetChartControls.vue
 - alarmLog.js
-- useMmtStatistics
+- useMmtStatistics.js
 - position_lifecycle
 - Trading-Monitor Project Overview (CLAUDE.md)
 - Plan: Sehr Große Dateien Refactoren (PriceChart.vue)
 - fault_details
-- tradeSetupSimulation.js
-- Pip-/Pixel-Schwellwerte Übersicht
-- algoWatcherArchive.js
+- orderBlocks.js
 - build_release_manifest.py
 - tradeSetup2DealingRange.js
-- mt5History.ts
+- checked
 - useReplayStructureDefaults.js
 - ignoredCandles.test.js
 - dobReferenceDiagnostics.mjs
-- m1PivotStructure.test.js
 - /task do Mode
-- toggleIndicatorGroup
 - doubleOrderBlocks.js
 - entryPattern1FirstRetest.test.js
 - setup2OperationalDelivery.test.js
@@ -308,21 +311,21 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `fmtPrice()` - 75 edges
-2. `closedChecklistCandles()` - 73 edges
+2. `closedChecklistCandles()` - 75 edges
 3. `formatDatedTime()` - 71 edges
 4. `pricePrecisionForInstrument()` - 70 edges
 5. `cssColor()` - 64 edges
 6. `checked()` - 47 edges
 7. `entryPatternVersion()` - 44 edges
-8. `detectOrderBlocks()` - 43 edges
+8. `detectOrderBlocks()` - 44 edges
 9. `barSecondsFor()` - 42 edges
 10. `scanCountertrendWindow()` - 40 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Persisted Forex Candle Archive (forex_candles Pilot)` --semantically_similar_to--> `Archive-First Auto-Reload Pattern (Tried, Then Reverted)`  [INFERRED] [semantically similar]
-  PLAN-notifications.md → PLAN-chart-objekte-forex.md
 - `Trading-Monitor Project Overview (CLAUDE.md)` --conceptually_related_to--> `BTC Scope Removal from Chart-Objects Plan`  [INFERRED]
   CLAUDE.md → PLAN-chart-objekte-forex.md
+- `Persisted Forex Candle Archive (forex_candles Pilot)` --semantically_similar_to--> `Archive-First Auto-Reload Pattern (Tried, Then Reverted)`  [INFERRED] [semantically similar]
+  PLAN-notifications.md → PLAN-chart-objekte-forex.md
 - `Confirmation/Confluence/Anti-Confluence Categories` --semantically_similar_to--> `Bestätigungen (Sweeps & OBs) Feature`  [INFERRED] [semantically similar]
   .claude/skills/dealing-range-anlegen/SKILL.md → PLAN-trade-confluences.md
 - `/task do Mode` --semantically_similar_to--> `milk-city Task Status Convention`  [INFERRED] [semantically similar]
@@ -331,30 +334,30 @@
   CLAUDE.md → .claude/commands/l.md
 
 ## Import Cycles
-- 5-file cycle: `src/countertrendSnapshotCompletion.js -> src/dealingRangePriceObservation.js -> src/tradeSetup2Review.js -> src/setup1ChecklistDetails.js -> src/setupSources.js -> src/countertrendSnapshotCompletion.js`
 - 5-file cycle: `src/countertrendSnapshotCompletion.js -> src/tradeSetup2ChecklistHistory.js -> src/tradeSetup2Review.js -> src/setup1ChecklistDetails.js -> src/setupSources.js -> src/countertrendSnapshotCompletion.js`
+- 5-file cycle: `src/countertrendSnapshotCompletion.js -> src/dealingRangePriceObservation.js -> src/tradeSetup2Review.js -> src/setup1ChecklistDetails.js -> src/setupSources.js -> src/countertrendSnapshotCompletion.js`
 
-## Communities (320 total, 28 thin omitted)
+## Communities (323 total, 27 thin omitted)
 
 ### Community 0 - "Dashboard.vue"
 Cohesion: 0.01
-Nodes (194): useSessionStorageRef(), useTabScopedRef(), m1FvgCardPrefill(), mmtChartVisibility(), rsiDivergenceEntryNaturalKey(), TIMEFRAMES, fetchTradeSetupForCockpit(), antiConfluenceAddTrade (+186 more)
+Nodes (196): useSessionStorageRef(), useTabScopedRef(), toggleIndicatorGroup(), m1FvgCardPrefill(), mmtChartVisibility(), rsiDivergenceEntryNaturalKey(), fetchTradeSetupForCockpit(), antiConfluenceAddTrade (+188 more)
 
 ### Community 1 - "gbp_h1_uptrend_uptrend_break_of_structure_und_trendumkehr.ts"
 Cohesion: 0.02
 Nodes (101): candlesAroundBOS, candlesAroundBreak, p2Pivot1, p2Pivot10, p2Pivot11, p2Pivot12, p2Pivot13, p2Pivot14 (+93 more)
 
-### Community 2 - "usePriceChartMarketStructure"
-Cohesion: 0.20
-Nodes (14): findClickedFibLevel(), usePriceChartMarketStructure(), cancelCalculation(), clearCalculationState(), computeRangesPivotsAndMetadata(), computeRangesPivotsFor(), dispose(), getCurrentFibLevels() (+6 more)
+### Community 2 - "usePriceChartMarketStructure.js"
+Cohesion: 0.11
+Nodes (21): createChartStructureWorker(), cancel(), run(), usePriceChartMarketStructure(), cancelCalculation(), clearCalculationState(), computeRangesPivotsAndMetadata(), computeRangesPivotsFor() (+13 more)
 
-### Community 3 - "src/rsi.js"
-Cohesion: 0.14
-Nodes (20): refreshRsi(), buildDivergenceEntry(), collectDivergenceHistory(), computeRsi(), DEFAULT_DIVERGENCE_FRACTAL_PERIOD, DEFAULT_DIVERGENCE_HISTORY_COUNT, DEFAULT_DIVERGENCE_LOOKBACK_BARS, DEFAULT_RSI_PERIOD (+12 more)
+### Community 3 - "usePriceChartRsi.js"
+Cohesion: 0.07
+Nodes (32): nativeLineWidth(), usePriceChartRsi(), applyColorOptions(), applyLineWidthOptions(), create(), refreshDivergence(), refreshEma(), refreshRsi() (+24 more)
 
 ### Community 4 - "PriceChart.vue"
 Cohesion: 0.02
-Nodes (152): tradesVisibleForCandles(), countdown, latest, props, activeMetadataSnapshot, allCandles, antiConfluencePickerCurrentPrice, antiConfluencePickerDivergenceCandidates (+144 more)
+Nodes (143): nextCandlePollDelay(), tradesVisibleForCandles(), countdown, latest, props, activeMetadataSnapshot, allCandles, antiConfluencePickerCurrentPrice (+135 more)
 
 ### Community 5 - "gbp_h1_uptrend_mit_LQ_sweep_LONG_SETUP.ts"
 Cohesion: 0.03
@@ -366,11 +369,11 @@ Nodes (55): p2Pivot1, p2Pivot10, p2Pivot11, p2Pivot12, p2Pivot13, p2Pivot14, p2P
 
 ### Community 7 - "ChecklistReplayHistory.vue"
 Cohesion: 0.09
-Nodes (27): checklistHistoryChanges(), snapshotChecklistAt(), CHECKPOINT_H_KEYS, checkpointHExplanation(), active, checkpoint, entries, hSnapshot (+19 more)
+Nodes (26): checklistHistoryChanges(), snapshotChecklistAt(), CHECKPOINT_H_KEYS, checkpointHExplanation(), active, checkpoint, entries, hSnapshot (+18 more)
 
 ### Community 8 - "liveEvidenceRepository.js"
-Cohesion: 0.09
-Nodes (27): checkpointEvidence(), EVIDENCE_REQUEST_BYTES, canonical(), evidenceHash(), priceInputHash(), evidenceReferences(), hydrateEvidence(), packEvidence() (+19 more)
+Cohesion: 0.15
+Nodes (18): evidenceReferences(), hydrateEvidence(), packEvidence(), createWatcherArchive(), labels, watcherArchivedBlock(), watcherArchivedEnd(), watcherEndLabels (+10 more)
 
 ### Community 9 - "PLAN: M5-Trend algorithmisieren"
 Cohesion: 0.06
@@ -378,44 +381,44 @@ Nodes (30): 1. `period * 3600` ist die einzige harte H1-Annahme, 2. Perioden-Wah
 
 ### Community 10 - "rsiDivergenceStats.ts"
 Cohesion: 0.09
-Nodes (39): buildDivergenceEntry(), collectDivergenceHistory(), computeRsi(), DEFAULT_DIVERGENCE_FRACTAL_PERIOD, DEFAULT_DIVERGENCE_HISTORY_COUNT, DEFAULT_DIVERGENCE_LOOKBACK_BARS, DEFAULT_RSI_PERIOD, detectRsiDivergence() (+31 more)
+Nodes (38): buildDivergenceEntry(), collectDivergenceHistory(), computeRsi(), DEFAULT_DIVERGENCE_FRACTAL_PERIOD, DEFAULT_DIVERGENCE_HISTORY_COUNT, DEFAULT_DIVERGENCE_LOOKBACK_BARS, DEFAULT_RSI_PERIOD, detectRsiDivergence() (+30 more)
 
 ### Community 11 - "liquidity.js"
-Cohesion: 0.07
-Nodes (34): Two Runtimes, One Algorithm Set (Deliberate Duplication), ageReferenceTime(), businessSecondsBetween(), candidateLabel(), usePriceChartLiquidity(), attachBonus(), refresh(), ageSuffix() (+26 more)
+Cohesion: 0.08
+Nodes (31): ageReferenceTime(), businessSecondsBetween(), usePriceChartLiquidity(), attachBonus(), refresh(), ageSuffix(), bullBearLabelSide(), formatLiquidityLevelLabel() (+23 more)
 
 ### Community 12 - "src/orderBlockDetection.js"
-Cohesion: 0.13
-Nodes (21): isCandleAppend(), createIncrementalOrderBlockDetector(), advanceOrderBlocks(), detectOrderBlocks(), HTF_FOREX_LABELS, HTF_FOREX_MIN_GAP_PIPS, LOWER_TF_LABELS, LOWER_TF_MIN_GAP_PIPS (+13 more)
+Cohesion: 0.14
+Nodes (18): isCandleAppend(), createIncrementalOrderBlockDetector(), advanceOrderBlocks(), detectOrderBlocks(), HTF_FOREX_LABELS, HTF_FOREX_MIN_GAP_PIPS, LOWER_TF_LABELS, LOWER_TF_MIN_GAP_PIPS (+10 more)
 
 ### Community 13 - "DR-Reichweite — was taugen die erkannten Setups?"
 Cohesion: 0.12
 Nodes (16): Aktueller FXCM-Stand: 2025 und 2026, Definitionen, DR-Reichweite — was taugen die erkannten Setups?, Enge der DR — warum beide Einheiten nötig sind, find_targets, FVG-Größe — der stärkste Einzelfilter, den wir bisher gemessen haben, Grenzen, Historische Befunde vor dem FXCM-Wechsel (+8 more)
 
 ### Community 14 - "findAntiConfluences.js"
-Cohesion: 0.38
-Nodes (11): byDistance(), findAntiConfluenceCandidates(), findAntiConfluenceDivergenceCandidates(), findAntiConfluenceObCandidates(), findAntiConfluenceSweepCandidates(), findInvalidationObCandidates(), inBand(), INDUCEMENT_TIMEFRAMES (+3 more)
+Cohesion: 0.29
+Nodes (13): byDistance(), findAntiConfluenceCandidates(), findAntiConfluenceDivergenceCandidates(), findAntiConfluenceObCandidates(), findAntiConfluenceSweepCandidates(), findInvalidationObCandidates(), inBand(), INDUCEMENT_TIMEFRAMES (+5 more)
 
 ### Community 15 - "TradeEditModal.vue"
 Cohesion: 0.05
-Nodes (42): emit, addEntryEvidence(), {draftKey,draftBase,container:executionSectionRef,visiblePositions:visibleExecutions,start:startPositionDraft,cancel:cancelDraft,
-  reload:refreshExecutions,onCreated:onExecutionCreated}, emit, entryFinder, instrumentMismatch, invalidationItems, isFavorite (+34 more)
+Nodes (44): emit, addEntryEvidence(), confirmationLabel(), {draftKey,draftBase,container:executionSectionRef,visiblePositions:visibleExecutions,start:startPositionDraft,cancel:cancelDraft,
+  reload:refreshExecutions,onCreated:onExecutionCreated}, emit, entryFinder, instrumentMismatch, invalidationItems (+36 more)
 
 ### Community 16 - "package.json"
 Cohesion: 0.07
 Nodes (29): lightweight-charts, dependencies, lightweight-charts, @supabase/supabase-js, vue, vue-router, devDependencies, typescript (+21 more)
 
-### Community 17 - "berlinTime.js"
-Cohesion: 0.14
-Nodes (17): berlinDatetimeInput(), DATE_FORMATTER, OFFSET_FORMATTER, parseBerlinDatetimeInput(), TIME_FORMATTER, usePositionExitDate(), empty(), fromTrade() (+9 more)
+### Community 17 - "useTradePositionForm.js"
+Cohesion: 0.15
+Nodes (16): berlinDatetimeInput(), parseBerlinDatetimeInput(), usePositionExitDate(), empty(), fromTrade(), names, numeric, useTradePositionForm() (+8 more)
 
-### Community 18 - "SimulationFeatureChips.vue"
-Cohesion: 0.10
-Nodes (16): date(), emit, props, reviews, emit, active, emit, props (+8 more)
+### Community 18 - "berlinTime.js"
+Cohesion: 0.08
+Nodes (21): DATE_FORMATTER, OFFSET_FORMATTER, TIME_FORMATTER, date(), emit, props, reviews, emit (+13 more)
 
 ### Community 19 - "sessions.js"
-Cohesion: 0.13
-Nodes (18): emit, instrumentSessions, props, WEEKDAY_DISPLAY_ORDER, ALL_DAYS, addSession(), currentSessionDanger(), DANGER_LEVELS (+10 more)
+Cohesion: 0.11
+Nodes (18): emit, instrumentSessions, props, WEEKDAY_DISPLAY_ORDER, addSession(), currentSessionDanger(), DANGER_LEVELS, DANGER_SEVERITY (+10 more)
 
 ### Community 20 - "dailyPivotMarkers.js"
 Cohesion: 0.14
@@ -426,28 +429,28 @@ Cohesion: 0.08
 Nodes (27): Broker, market_close_request(), Ein gemeinsamer Close-Request für Teilziele und Tagesstopp, immer per…, Offizielle MT5-Schnittstelle; keine Zugangsdaten in Aufträgen oder Logs., positive(), Brokerunabhängige Prüfung und dauerhaftes Versandjournal., volume_for_risk(), Notfallaufträge betreffen auch manuelle Positionen; kein Magic-Filter darf… (+19 more)
 
 ### Community 22 - "milkyMetaTraderStatistics.js"
-Cohesion: 0.09
-Nodes (32): result, count, groups, props, ranked, tradeExtremes(), tradeOutcome(), tradeOutcomeClass() (+24 more)
+Cohesion: 0.12
+Nodes (23): result, amount(), berlin, berlinTradeParts(), closedBrokerTrades(), commissionTypes, costTypes, dealCommission() (+15 more)
 
 ### Community 23 - "m1Checklist.js"
-Cohesion: 0.07
-Nodes (64): usePriceChartM1Structure(), load(), markUpdating(), render(), renderNow(), updateContext(), countertrendRangeCourse(), dealingRangeConfirmedAt() (+56 more)
+Cohesion: 0.05
+Nodes (61): renderNow(), countertrendRangeCourse(), dealingRangeConfirmedAt(), evaluateM1Checklist(), inactiveM1Checklist(), waiting, buildM1PivotStructure(), m1ScanPrefix() (+53 more)
 
 ### Community 24 - "ctrader/client.ts"
 Cohesion: 0.11
 Nodes (26): CORS_HEADERS, authAccount(), authenticate(), cachedSymbolIds, Candle, concat(), connectWithTimeout(), CTraderConnection (+18 more)
 
 ### Community 25 - "trading-monitor-mcp/index.ts"
-Cohesion: 0.06
-Nodes (57): berlinDateTimeStrFor(), DATE_FORMATTER, OFFSET_FORMATTER, TIME_FORMATTER, toPips(), addPinDoubleOrderBlock(), addPinEntry(), addPinM5LiquidityEntry() (+49 more)
+Cohesion: 0.08
+Nodes (39): toPips(), createDealingRange(), deleteDealingRange(), fetchActiveTscRangeId(), fetchDealingRangeCockpit(), getOpenOppositeDealingRanges(), postChartAnnotations(), toLiquidityLevel() (+31 more)
 
 ### Community 26 - "tradeIntake.js"
 Cohesion: 0.08
-Nodes (35): evidenceKey(), useDoubleOrderBlockConfirmations(), save(), useSetupConfirmations(), save(), save(), addConfirmationToTrade(), addPositionToDealingRange() (+27 more)
+Nodes (36): evidenceKey(), useDoubleOrderBlockConfirmations(), save(), useSetupConfirmations(), save(), save(), privateJournalApi(), setupInvalidationTarget() (+28 more)
 
-### Community 27 - "entryPattern1Conditions.js"
-Cohesion: 0.10
-Nodes (43): checkpoints, labels, watcherRangeEvidence(), checkpointHCandidateEvidence(), countertrendComplete(), fields(), known(), states (+35 more)
+### Community 27 - "tradeSetup2Review.js"
+Cohesion: 0.06
+Nodes (83): deliveryReason(), minuteAlarmEvents(), structureReady(), checkpoints, labels, watcherRangeEvidence(), checkpointHCandidateEvidence(), countertrendComplete() (+75 more)
 
 ### Community 28 - "lauf"
 Cohesion: 0.16
@@ -458,36 +461,36 @@ Cohesion: 0.22
 Nodes (4): plan(), position(), TargetBrokerTests, TargetEngineTests
 
 ### Community 30 - "MilkyMetaTraderBalances.vue"
-Cohesion: 0.09
-Nodes (36): activeAccount, activeSnapshot, brokerAge, executionLabel, executionReady, limitsTitle(), money(), props (+28 more)
+Cohesion: 0.07
+Nodes (46): activeAccount, activeSnapshot, brokerAge, executionLabel, executionReady, limitsTitle(), money(), props (+38 more)
 
 ### Community 31 - "MilkyMetaTrader.vue"
-Cohesion: 0.07
-Nodes (41): apiForNativePosition(), forgetMilkyMetaTraderKey(), saveMilkyMetaTraderKey(), executionPositionId(), accountForOrder(), active, allPositions, api() (+33 more)
+Cohesion: 0.05
+Nodes (60): apiForNativePosition(), useDashboardMmt(), entryTimeFor(), selectAccount(), pending(), useMmtUiData(), changed(), clear() (+52 more)
 
 ### Community 32 - "formatDatedTime"
-Cohesion: 0.07
-Nodes (35): formatBerlinTime(), formatDatedTime(), hint, title, checks, countertrendAbcdDefinitions, countertrendDefinitions, dataStates (+27 more)
+Cohesion: 0.19
+Nodes (16): formatDatedTime(), supportsNewsInstrument(), evaluateChecklistNews(), berlinWallTime(), evaluateChecklistTime(), evaluateTradingHours(), validSession(), validTradingWindows() (+8 more)
 
 ### Community 33 - "marketStructureAnalysisBeforePerformanceRound2.ts"
-Cohesion: 0.11
-Nodes (38): CloseCandle, closesPastLevel(), orderedCalls, withCandleCloseWindow(), buildLevel(), detectLiquidityLevels(), isDownFractal(), isUpFractal() (+30 more)
+Cohesion: 0.14
+Nodes (34): CloseCandle, closesPastLevel(), orderedCalls, withCandleCloseWindow(), advanceNestedTrend(), applyInnerMarketStructurePivot(), applyInnerMarketStructurePivotCore(), applyMarketStructurePivot() (+26 more)
 
-### Community 34 - "findTargetCandidates.js"
-Cohesion: 0.09
-Nodes (29): CORS_HEADERS, ExistingPivotRow, INSTRUMENTS, buildLevel(), detectLiquidityLevels(), isDownFractal(), isUpFractal(), LIQUIDITY_FRACTAL_PERIOD (+21 more)
+### Community 34 - "chartTimeUtils.js"
+Cohesion: 0.07
+Nodes (38): AgeTier, classifyAge(), MAJOR_MIN_SECONDS, MINOR_MAX_SECONDS, mergeCandles(), computeNextReplayTime(), formatAge(), isTimeCovered() (+30 more)
 
 ### Community 35 - "tradeSetup2Archive.mjs"
 Cohesion: 0.18
 Nodes (12): diagnostics, requestDiagnostic(), requestJson(), transportCategories, archiveClient(), candles(), coverage(), get() (+4 more)
 
 ### Community 36 - "useHttpActivity.js"
-Cohesion: 0.13
-Nodes (15): createChartStructureWorker(), cancel(), run(), copiedId, { errors }, backgroundCounts, beginActivity(), dismissHttpError() (+7 more)
+Cohesion: 0.12
+Nodes (18): afterBrowserPaint(), copiedId, { errors }, backgroundCounts, beginActivity(), dismissHttpError(), errors, extractErrorMessage() (+10 more)
 
-### Community 37 - "useMmtExitEditor.js"
-Cohesion: 0.16
-Nodes (19): draftKey(), messages, stateNames, useMmtExitEditor(), add(), changeRiskMode(), initTargets(), refresh() (+11 more)
+### Community 37 - "mmtTargetDrafts.js"
+Cohesion: 0.09
+Nodes (47): draftKey(), messages, stateNames, useMmtExitEditor(), add(), changeRiskMode(), initTargets(), refresh() (+39 more)
 
 ### Community 38 - "DailyStopEngine"
 Cohesion: 0.14
@@ -495,75 +498,71 @@ Nodes (7): DailyStopEngine, Cloud-Claim plus dauerhaftes lokales Journal: ein un
 
 ### Community 39 - "liveWatcherPins.test.js"
 Cohesion: 0.08
-Nodes (41): confirmation, dialog, emit, props, removable, removeConfirmed(), sections, useSimulationPins() (+33 more)
+Nodes (42): confirmation, dialog, emit, props, removable, removeConfirmed(), sections, useSimulationPins() (+34 more)
 
-### Community 40 - "closedChecklistCandles"
+### Community 40 - "countertrendChecklist.js"
 Cohesion: 0.08
-Nodes (48): currentAntiConfluenceCheck(), divergenceObservationRule(), M5_SWEEP_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION, usePriceChartChecklist(), evaluateAt(), evaluationTime(), m1PrerequisitesAt() (+40 more)
+Nodes (48): formatBerlinTime(), antiConfluenceStatus(), checklistObservationRules(), currentAntiConfluenceCheck(), divergenceObservationRule(), H1_COUNTER_DIVERGENCE_RULE, M5_SWEEP_DIVERGENCE_RULE, OBSERVATION_RULE_VERSION (+40 more)
 
 ### Community 41 - "dataExport.ts"
 Cohesion: 0.06
-Nodes (83): berlinOffsetMinutes(), berlinOffsetFromSec(), IgnoreLiquiditySession, markIgnored(), withoutIgnored(), filterRelevantLevels(), isBoxInvalidated(), ALL_DAYS (+75 more)
+Nodes (70): CORS_HEADERS, ExistingPivotRow, INSTRUMENTS, markIgnored(), withoutIgnored(), buildLevel(), detectLiquidityLevels(), filterRelevantLevels() (+62 more)
 
 ### Community 42 - "sweepRetestSources.js"
-Cohesion: 0.08
-Nodes (29): evaluateEntryPattern2(), entryPattern2ConditionsReady(), ENTRY_PATTERN_2_MAX_OB_RETEST_FRACTION, ENTRY_PATTERN_2_OB_RULE_VERSION, entryPattern2OrderBlockPlacement(), evaluateEntryPattern2OrderBlockDepth(), validZone(), evaluateM1FvgRetestSequence() (+21 more)
+Cohesion: 0.05
+Nodes (45): advanceEntryPattern1Follow(), evaluateEntryPattern2(), ENTRY_PATTERN_2_MAX_OB_RETEST_FRACTION, ENTRY_PATTERN_2_OB_RULE_VERSION, entryPattern2OrderBlockPlacement(), evaluateEntryPattern2OrderBlockDepth(), validZone(), entryPatternText() (+37 more)
 
 ### Community 43 - "messeFxcmKontext.ts"
 Cohesion: 0.32
 Nodes (4): createAnalysisSnapshotFetch(), compressed, root, rows
 
 ### Community 44 - "tradeSetupSimulationStatistics.js"
-Cohesion: 0.13
-Nodes (15): [baseline,replay], result, props, summaries, simulationChartReplayTime(), SIMULATION_COST_VERSION, filteredDealingRangeStatistics(), MIN_SIMULATION_WINRATE_CASES (+7 more)
+Cohesion: 0.15
+Nodes (13): [baseline,replay], result, props, summaries, result, rows, simulationChartReplayTime(), filteredDealingRangeStatistics() (+5 more)
 
-### Community 45 - "tradeSetup.ts"
-Cohesion: 0.06
-Nodes (54): readForexCandlesArchiveFrom(), buildLevel(), detectLiquidityLevels(), isDownFractal(), isUpFractal(), LiquidityLevel, liquidityTouch(), LiquidityLevel (+46 more)
+### Community 45 - "poi-watcher/index.ts"
+Cohesion: 0.04
+Nodes (82): TRADE_SETUP_DETECTOR_VERSION, unprocessedTimeframes(), fmt(), InstrumentConfig, INSTRUMENTS, isInWindows(), LiquidityLevelRow, localMinutesAndWeekday() (+74 more)
 
 ### Community 46 - "marketStructureAnalysis Rules Overview"
 Cohesion: 0.22
 Nodes (15): Arbitrary Nesting Depth (2026-08-09), Rendering Rules (renderMarketStructureAnalysis), marketStructureAnalysis Rules Overview, Docht-vs-Bruch (Wick vs Close-Break) Unification, Standalone Downtrend Detection/Invalidation, Fibonacci Level (computeFibLevels/collectFibLevels), Inner-Pivots (Period 2) Fast Pre-Detection, LQ-Sweep Classification (markLqSweeps) (+7 more)
 
 ### Community 47 - "Laniakea Persona Command (/l)"
-Cohesion: 0.11
-Nodes (21): 00-trading-steps.md Entry Point, Laniakea Persona Command (/l), trading/claude-project-instructions.md, trading-runs Relative Link Path Convention, 00-trading-steps.md#visuelle-antworten-chart-annotationen, 06-anti-confluence.md, glossar.md Consistency Check, kontext-ausführung.md (+13 more)
+Cohesion: 0.13
+Nodes (18): 00-trading-steps.md Entry Point, Laniakea Persona Command (/l), trading/claude-project-instructions.md, trading-runs Relative Link Path Convention, 00-trading-steps.md#visuelle-antworten-chart-annotationen, 06-anti-confluence.md, glossar.md Consistency Check, kontext-ausführung.md (+10 more)
 
-### Community 48 - "DealingRangeSetupSelect.vue"
-Cohesion: 0.25
-Nodes (8): emit, error, props, save(), saved, saving, selected, STRATEGY_SETUP_LABELS
+### Community 48 - "SimulationComparisonFilters.vue"
+Cohesion: 0.11
+Nodes (24): emit, error, props, save(), saved, saving, selected, archivedGbpRuns (+16 more)
 
 ### Community 49 - "fachdoku-router/SKILL.md"
 Cohesion: 0.12
 Nodes (16): Fachdoku-Router, Autosave vs Manual Copy Separation, .debug/metadata.json Snapshot, Debug-Metadata-Panel Notes, News Events Seed Workflow (ForexFactory Screenshot), News Events Seeding Notes, news_events Consumption (No-Go + Chart Markers), Settings-Sync Notes (+8 more)
 
 ### Community 50 - "findAntiConfluenceCandidates.js"
-Cohesion: 0.16
-Nodes (22): businessSecondsBetween(), classifyAge(), computeSweepAgeHours(), MAJOR_MIN_HOURS, MAJOR_MIN_SECONDS, MINOR_MAX_HOURS, MINOR_MAX_SECONDS, berlinDateStrFor() (+14 more)
+Cohesion: 0.10
+Nodes (33): AgeTier, businessSecondsBetween(), classifyAge(), computeSweepAgeHours(), MAJOR_MIN_HOURS, MAJOR_MIN_SECONDS, MINOR_MAX_HOURS, MINOR_MAX_SECONDS (+25 more)
 
 ### Community 51 - "drMerkmale.py"
 Cohesion: 0.27
 Nodes (4): gruppiere_drs(), messe_drs(), Eine DR = ein M5-OB, Zeilen desselben OB werden zusammengefasst.…, Reichweite/Risiko/Invalidierungszeit je DR, gemessen ab FVG-Bestaetigung…
 
 ### Community 52 - "MilkyMetaTraderEntrySearch.vue"
-Cohesion: 0.07
-Nodes (30): busy, clearPending(), confirm(), confirmation, direction, durationMinutes, emit, error (+22 more)
+Cohesion: 0.06
+Nodes (31): busy, clearPending(), confirm(), confirmation, direction, durationMinutes, emit, error (+23 more)
 
-### Community 53 - "tradeSetup2Review.js"
-Cohesion: 0.11
-Nodes (25): mergeCapturedRangeState(), observeCapturedRanges(), candleTimeIndex(), outcome, props, completeDealingRangePriceObservations(), dealingRangeValidationPrice(), DR_PRICE_OBSERVATION_VERSION (+17 more)
-
-### Community 54 - "SessionBandPrimitive"
-Cohesion: 0.13
-Nodes (4): SessionBandPaneView, SessionBandPrimitive, SessionBandRenderer, renderTrendPhaseBands()
+### Community 53 - "berlinOffsetMinutes"
+Cohesion: 0.12
+Nodes (24): canonical(), evidenceHash(), priceInputHash(), mergeCapturedRangeState(), observeCapturedRanges(), berlinOffsetMinutes(), candleTimeIndex(), markCountertrendCandles() (+16 more)
 
 ### Community 55 - "PLAN: DR-Statistik in der UI anzeigen"
 Cohesion: 0.13
 Nodes (15): Beide Leitern nach festem Risiko-Band, Definitionen (nicht neu herleiten), Die Falle: Path B hat kein echtes Invalidierungslevel — ERLEDIGT 20.09.2026, Die Zahlen (Stand 23.09.2026, n=3179), Grenzen, die in die Anzeige gehören, Idee: wie wir den Trend doch noch dazubekommen, PLAN: DR-Statistik in der UI anzeigen, Reihenfolge (+7 more)
 
 ### Community 56 - "trades.js"
-Cohesion: 0.06
-Nodes (46): afterSubmit(), body, busy, editing, error, kind, labels, props (+38 more)
+Cohesion: 0.05
+Nodes (46): body, busy, editing, error, kind, labels, props, refresh() (+38 more)
 
 ### Community 57 - "useMmtBatchEntrySearch.js"
 Cohesion: 0.12
@@ -574,24 +573,24 @@ Cohesion: 0.18
 Nodes (4): TargetEngine, exit_plan(), SplitStopBrokerTests, SplitStopEngineTests
 
 ### Community 59 - "mmtUiLifetimes.test.js"
-Cohesion: 0.14
-Nodes (14): changeSections, groups, invalidateMmtPlans(), invalidateMmtUi(), listeners, planListeners, subscribeMmtPlans(), subscribeMmtUiInvalidation() (+6 more)
+Cohesion: 0.11
+Nodes (21): HTTP_BACKGROUND, changeSections, groups, createMilkyMetaTraderClient(), messages, targetSaveRejected(), invalidateMmtPlans(), invalidateMmtUi() (+13 more)
 
 ### Community 60 - "tradeSetupChecklistSweeps.js"
-Cohesion: 0.18
-Nodes (19): orderBlockFollowsSweep(), orderBlockRecognitionTimes(), deriveSetupEntryInvalidation(), collectChecklistH1Sweeps(), detectChecklistReactions(), sameChecklistSweep(), check(), evaluateChecklistCandidateValidity() (+11 more)
+Cohesion: 0.17
+Nodes (20): orderBlockFollowsSweep(), TRADE_SETUP_M5_FRACTAL_PERIOD, compareSweepAge(), sweepAgeSec(), collectChecklistH1Sweeps(), detectChecklistReactions(), sameChecklistSweep(), check() (+12 more)
 
-### Community 61 - "useTradeSetup2History.js"
-Cohesion: 0.05
-Nodes (51): snapshotView, chartEventBarTime(), chartEventCoordinate(), chartObjectCoordinate(), snapToBarTime(), snapshotView, deduplicate(), useTradeSetup2History() (+43 more)
+### Community 61 - "cssColor"
+Cohesion: 0.06
+Nodes (51): renderAnnotations(), cssColor(), cssColorScaled(), hexToRgba(), chartEventBarTime(), chartEventCoordinate(), chartObjectCoordinate(), lineWidth() (+43 more)
 
-### Community 62 - "SimulationEntryTable.vue"
-Cohesion: 0.10
-Nodes (36): props, result, commission(), emit, props, rows, page, pages (+28 more)
+### Community 62 - "m1EntryRendering.js"
+Cohesion: 0.08
+Nodes (39): drawIconLabel(), props, commission(), emit, props, page, pages, props (+31 more)
 
-### Community 63 - "m1FvgEntryProjection.js"
-Cohesion: 0.20
-Nodes (13): doubleOrderBlocks, createM1FvgChartSelection(), context(), createM1FvgEntryProjection(), FIELDS, project(), sameRows(), advanceM1FvgEntrySequence() (+5 more)
+### Community 63 - "m1FvgEntrySelection.js"
+Cohesion: 0.13
+Nodes (24): entriesFor(), confirmedM1Fvg(), m1FvgBounds(), createM1FvgChartSelection(), createM1FvgEntryProjection(), FIELDS, project(), sameRows() (+16 more)
 
 ### Community 64 - "patternLocalSweepAgeFrozen.integration.mjs"
 Cohesion: 0.10
@@ -602,16 +601,16 @@ Cohesion: 0.12
 Nodes (16): src/marketStructureAnalysis.ts, src/marketStructureRendering.ts, src/pivotMarkers.ts, test/tdd_mit_claude/ranges/tdd_mit_claude.ts, compilerOptions, allowJs, checkJs, esModuleInterop (+8 more)
 
 ### Community 66 - "src/sessionOccurrences.js"
-Cohesion: 0.14
-Nodes (17): closedAt(), goldWeekendGapCovered(), newYorkClock, m5EntryHistoryKnown(), attachRangeExtremes(), bonusLabelForPivot(), buildSessionContextLookup(), contextForPivot() (+9 more)
+Cohesion: 0.24
+Nodes (12): createSessionBonusResolver(), ALL_DAYS, attachRangeExtremes(), bonusLabelForPivot(), buildSessionContextLookup(), contextForPivot(), daysOrAll(), localMidnightUtc() (+4 more)
 
 ### Community 67 - "src/pipConfig.js"
-Cohesion: 0.13
-Nodes (28): pips(), riskPips, labelMitQuote(), pipQuote(), quoteAusBaendern(), rQuote(), instrumentConfig(), strategyDistance() (+20 more)
+Cohesion: 0.15
+Nodes (25): pips(), riskPips, labelMitQuote(), instrumentConfig(), strategyDistance(), fromPips(), toPips(), KEINE_SKALA (+17 more)
 
 ### Community 68 - "simulationRunComparison.js"
-Cohesion: 0.06
-Nodes (47): emit, props, summary(), runs, useSimulationComparison(), enrichLiveRuns(), scoped(), COUNTERTREND_STAGE_VERSION (+39 more)
+Cohesion: 0.08
+Nodes (30): outcome, props, crossTables, crossTone(), entryBranches, funnelTone(), outcomeCounts(), outcomeHint() (+22 more)
 
 ### Community 69 - "AGENTS.md"
 Cohesion: 0.13
@@ -626,8 +625,8 @@ Cohesion: 0.12
 Nodes (24): records(), openPublicationPostgres(), PUBLICATION_READ_BATCH_SIZE, readPublicationCatalog(), readRows(), recordGroups(), savePublicationRecords(), flush() (+16 more)
 
 ### Community 72 - "tradingAccounts.js"
-Cohesion: 0.09
-Nodes (23): currentLabel, open, selectedAccount, wrapperRef, useDealingRangeExecutions(), refresh(), cache, useLocalStorageRef() (+15 more)
+Cohesion: 0.13
+Nodes (17): currentLabel, open, selectedAccount, wrapperRef, accounts, accountsLoaded, createAccount(), deleteAccount() (+9 more)
 
 ### Community 73 - "closed_rows"
 Cohesion: 0.14
@@ -638,8 +637,8 @@ Cohesion: 0.10
 Nodes (19): 03.06.2026 · Short · DR#40, 03.08.2026 · Short · DR#27, 07.08.2026 · Long · DR#29, 07.08.2026 · Short · DR#28, 07.08.2026 · Short · DR#30, 10.08.2026 · Short · DR#41, 14.07.2026 · Short · DR#44, 25.08.2026 · Long · DR#46 (+11 more)
 
 ### Community 75 - "trading-monitor-mcp/mt5Execution.ts"
-Cohesion: 0.26
-Nodes (18): account(), fields(), finite(), isSameExecutionResult(), positive(), validateDispatchAccount(), validateExecutionIntent(), validateExecutionResult() (+10 more)
+Cohesion: 0.22
+Nodes (25): account(), fields(), finite(), isSameExecutionResult(), positive(), validateDispatchAccount(), validateExecutionIntent(), validateExecutionResult() (+17 more)
 
 ### Community 76 - "windows_account_launcher.py"
 Cohesion: 0.11
@@ -655,7 +654,7 @@ Nodes (18): liquidityLevelEntryNaturalKey(), m5LiquidityEntryNaturalKey(), obZon
 
 ### Community 79 - "priceChartConstants.js"
 Cohesion: 0.08
-Nodes (30): usePriceChartTradeSetupDrawing(), CALLOUT_STACK_GAP_PX, CATEGORY_COLOR_KEY, CATEGORY_ICON, COPIED_FEEDBACK_MS, DEBUG_AUTOSAVE_INTERVAL_MS, FOREX_HISTORY_PAGE_SIZE, INITIAL_CANDLE_COUNT (+22 more)
+Nodes (30): CALLOUT_STACK_GAP_PX, CATEGORY_COLOR_KEY, CATEGORY_ICON, COPIED_FEEDBACK_MS, DEBUG_AUTOSAVE_INTERVAL_MS, FOREX_HISTORY_PAGE_SIZE, INITIAL_CANDLE_COUNT, JUMP_TARGET_BUFFER_BARS (+22 more)
 
 ### Community 80 - "lade_setups"
 Cohesion: 0.20
@@ -669,9 +668,9 @@ Nodes (9): Dealing-Range-Loop Diagram, News-Blackout Mid-Loop Pause, Pin-Aufräu
 Cohesion: 0.20
 Nodes (10): Betrieb, Datenfluss, Demokonto abgelaufen oder gesperrt, FXCM-Kerzenfeed, Gold-Betrieb, Historie nachholen und Sicherungen, Neuaufbau und Wartung, Umstellung und Sicherung (+2 more)
 
-### Community 83 - "chartTimeUtils.js"
-Cohesion: 0.06
-Nodes (28): cachedCandlesUpTo(), cacheKey(), fetchCandlesCached(), getCachedCandles(), hasLargeCandleGap(), mergeCandles(), openDb(), safeCompleteUpTo() (+20 more)
+### Community 83 - "usePriceChartTradeSetups.js"
+Cohesion: 0.05
+Nodes (43): cachedCandlesUpTo(), cacheKey(), fetchCandlesCached(), getCachedCandles(), hasLargeCandleGap(), openDb(), safeCompleteUpTo(), setCachedCandles() (+35 more)
 
 ### Community 84 - "AI Capabilities and Limitations Notes"
 Cohesion: 0.18
@@ -682,12 +681,12 @@ Cohesion: 0.14
 Nodes (19): advanceOrderBlocks(), candleInvalidatesOrderBlock(), candleTouchesOrderBlock(), detectOrderBlocks(), HTF_FOREX_LABELS, HTF_FOREX_MIN_GAP_PIPS, LOWER_TF_LABELS, LOWER_TF_MIN_GAP_PIPS (+11 more)
 
 ### Community 86 - "useDrawings.js"
-Cohesion: 0.09
-Nodes (31): applyText(), emit, error, { instrument, dateStr, drawings, loading, add, remove, setDrawingVisible }, removeDrawing(), removingId, saving, text (+23 more)
+Cohesion: 0.12
+Nodes (23): removeDrawing(), toggleDrawingVisible(), add(), currentSymbol, dateStr, drawings, flatAnnotations, instrument (+15 more)
 
 ### Community 87 - "mt5Health.ts"
-Cohesion: 0.23
-Nodes (11): env(), sendTelegramText(), checkMt5Health(), deliverMt5Health(), scheduleMt5Health(), sendMt5HealthTest(), assessMt5Health(), healthMessage() (+3 more)
+Cohesion: 0.26
+Nodes (8): checkMt5Health(), deliverMt5Health(), scheduleMt5Health(), assessMt5Health(), healthMessage(), readExecutionOrders(), bridge, selected
 
 ### Community 88 - "Trade Setups 2.0: historische Positionen und Statistik"
 Cohesion: 0.18
@@ -697,17 +696,17 @@ Nodes (9): Abnahme, Berechnung, Gemeinsamer Datenvertrag, Historischer Runner, K
 Cohesion: 0.21
 Nodes (11): Candle, fetchCandles(), FetchCandlesOptions, INTERVAL_MAP, requestTimeSeries(), resample(), RESAMPLE_BUCKET_SEC, SUPPORTED_PERIODS (+3 more)
 
-### Community 90 - "tradeSetup2Scan.js"
-Cohesion: 0.07
-Nodes (29): berlinOffsetMinutes(), closedCandleEnd(), createClosedCandlePrefix(), countertrendLifecycleEnd(), evaluateCountertrendLifecycle(), evaluateCountertrendLifecycleBeforeRetest(), evaluateCountertrendPriceLifecycle(), isCountertrendRangeCourseVersion() (+21 more)
+### Community 90 - "closedChecklistCandles"
+Cohesion: 0.06
+Nodes (39): closedCandleEnd(), countertrendLifecycleEnd(), evaluateCountertrendLifecycle(), evaluateCountertrendLifecycleBeforeRetest(), evaluateCountertrendPriceLifecycle(), evaluateDoubleOrderBlockOutcome(), findNearestLiquidityTargets(), deriveM1PivotBreak() (+31 more)
 
 ### Community 91 - "DashboardMmt.vue"
-Cohesion: 0.13
-Nodes (16): accountFor(), ambiguity, apiFor(), emit, entryDisabledReason, lastResult, managedPositions, mmt (+8 more)
+Cohesion: 0.07
+Nodes (40): accountFor(), afterSubmit(), ambiguity, apiFor(), brokerPositions, emit, entryDisabledReason, lastResult (+32 more)
 
-### Community 92 - "orderBlocks.js"
-Cohesion: 0.05
-Nodes (46): renderAnnotations(), findClickedDivergence(), findClickedSetup(), usePriceChartDrawings(), refresh(), OB_ZONE_KEYS, orderBlockEndTime(), OrderBlockPrimitive (+38 more)
+### Community 92 - "OrderBlockPrimitive"
+Cohesion: 0.09
+Nodes (22): findClickedDivergence(), findClickedFibLevel(), findClickedLiquidityLevel(), findClickedOBZone(), findClickedSetup(), findClickedTarget(), getCurrentFibLevels(), orderBlockEndTime() (+14 more)
 
 ### Community 93 - "Trade Setup 2.0 — Trade Setup Checklist"
 Cohesion: 0.18
@@ -737,9 +736,9 @@ Nodes (14): A / #1 — 1-Stunden-Trend, Checkliste des ersten Setups, D / #4 —
 Cohesion: 0.31
 Nodes (8): Ehrliche Dreiteilung statt einer unvollstaendigen Zuordnung: HTF sicher : in…, sweep_herkunft(), analyse(), build(), konstellation(), -> (reach, t_inval_min|None, t_target_min|None), Welche Gegenkraft-Lage liegt zum Start dieser DR vor? Gefaehrlich ist eine…, walk()
 
-### Community 100 - "m1FvgEntrySelection.js"
-Cohesion: 0.21
-Nodes (13): confirmedM1Fvg(), m1FvgBounds(), m1FvgEntryCandidates(), m1FvgEntryPrefill(), matchM1FvgEntryCandidate(), M1_FVG_MIN_RETEST_FRACTION, at(), selected() (+5 more)
+### Community 100 - "reviewGroups"
+Cohesion: 0.10
+Nodes (24): useSimulationComparison(), enrichLiveRuns(), scoped(), COUNTERTREND_RANGE_COURSE_VERSION, filterReviewGroups(), groupResults(), independentRangeOutcome(), reviewGroups() (+16 more)
 
 ### Community 101 - "useM5CandleClock"
 Cohesion: 0.46
@@ -751,11 +750,11 @@ Nodes (13): collectDoubleOrderBlockPins(), doubleOrderBlockPinLabel(), doubleOrd
 
 ### Community 104 - "AlgoWatcher.vue"
 Cohesion: 0.08
-Nodes (33): watcherMarketPause(), fetchAlgoWatcher(), fetchWatcherProblemHistory(), testPushover(), WATCHER_LABELS, watcherHealth(), watcherTime(), watcherTooltip() (+25 more)
+Nodes (32): fetchAlgoWatcher(), fetchWatcherProblemHistory(), testPushover(), WATCHER_LABELS, watcherHealth(), watcherTime(), watcherTooltip(), berlinHour (+24 more)
 
 ### Community 105 - "annotations.js"
-Cohesion: 0.11
-Nodes (13): ANNOTATION_COLOR, annotationAnchorPoint(), AnnotationsPaneView, AnnotationsPrimitive, AnnotationsRenderer, parseAnnotations(), resolveLabelPlacements(), resolveTime() (+5 more)
+Cohesion: 0.08
+Nodes (20): ANNOTATION_COLOR, annotationAnchorPoint(), AnnotationsPaneView, AnnotationsPrimitive, AnnotationsRenderer, parseAnnotations(), resolveLabelPlacements(), resolveTime() (+12 more)
 
 ### Community 106 - "Lana-Fehlerdiagnose"
 Cohesion: 0.33
@@ -765,9 +764,9 @@ Nodes (5): Ablauf, Ergebnis, Lana-Fehlerdiagnose, Routing: Diagnose → typische
 Cohesion: 0.29
 Nodes (7): allowed-tools Skill Config, Context-free Scripts in Skills, Agent Skills Pro Notes, Progressive Disclosure in Skills, Skill Sharing & Troubleshooting, Skills Embedded in Subagents, Skills vs CLAUDE.md vs Hooks vs Subagents
 
-### Community 108 - "MmtDailyStopStatus.vue"
-Cohesion: 0.14
-Nodes (13): activeCommands, age, hp, labels, money(), props, ready, stop (+5 more)
+### Community 108 - "useTradeSetup2History"
+Cohesion: 0.11
+Nodes (19): snapshotView, deduplicate(), useTradeSetup2History(), click(), refresh(), select(), selectRoute(), completeSimulationRunExecution() (+11 more)
 
 ### Community 109 - "fetch-trend-fixture.mjs"
 Cohesion: 0.38
@@ -781,9 +780,9 @@ Nodes (6): clampedX, clampedY, emit, onKeydown(), onWindowMousedown(), props
 Cohesion: 0.48
 Nodes (6): ctraderPeriodFor(), fetchCandles(), fetchInitialCandles(), fetchOlderCandles(), fetchRecentCandles(), PERIOD_MAP
 
-### Community 112 - "poi-watcher/index.ts"
-Cohesion: 0.06
-Nodes (40): unprocessedTimeframes(), fmt(), InstrumentConfig, INSTRUMENTS, isInWindows(), LiquidityLevelRow, localMinutesAndWeekday(), ObZoneRow (+32 more)
+### Community 112 - "berlinTime.ts"
+Cohesion: 0.09
+Nodes (30): berlinOffsetMinutes(), DATE_FORMATTER, OFFSET_FORMATTER, TIME_FORMATTER, berlinOffsetFromSec(), forbiddenSessionAt(), SessionDangerConfig, berlinOffsetFromSec() (+22 more)
 
 ### Community 113 - "useStatusBar"
 Cohesion: 0.17
@@ -797,9 +796,9 @@ Nodes (6): AI Failure as Property Collision, Knowledge, Next Token Prediction, S
 Cohesion: 0.33
 Nodes (6): MCP Advanced Topics Notes, MCP Advanced: Why Not Relevant Yet, MCP Log & Progress Notifications, MCP Roots, MCP Sampling, MCP Transports (STDIO/StreamableHTTP)
 
-### Community 116 - "applyMarketStructurePivot"
-Cohesion: 0.04
-Nodes (59): advanceNestedTrend(), applyInnerMarketStructurePivot(), applyMarketStructurePivot(), initMarketStructureState(), pivot1, pivot2, pivot3, pivot4 (+51 more)
+### Community 116 - "src/marketStructureAnalysis.ts"
+Cohesion: 0.05
+Nodes (66): closesPastLevel(), advanceNestedTrend(), applyInnerMarketStructurePivot(), applyInnerMarketStructurePivotCore(), applyMarketStructurePivot(), applyMarketStructurePivotCore(), closesAboveLevel(), closesAboveOldHigh() (+58 more)
 
 ### Community 117 - "vite.config.js"
 Cohesion: 0.40
@@ -810,8 +809,8 @@ Cohesion: 0.50
 Nodes (3): { execFileSync }, path, TRADING_REPO
 
 ### Community 119 - "drQuoten.js"
-Cohesion: 0.16
-Nodes (13): kopfzeile, props, tabelle, FVG_BAENDER, FVG_BAND_LABELS, FVG_BAND_N, FVG_REFERENZ, FVG_ZIELE (+5 more)
+Cohesion: 0.15
+Nodes (16): kopfzeile, props, tabelle, FVG_BAENDER, FVG_BAND_LABELS, FVG_BAND_N, FVG_REFERENZ, FVG_ZIELE (+8 more)
 
 ### Community 122 - "tdd_mit_claude.ts"
 Cohesion: 0.08
@@ -833,9 +832,9 @@ Nodes (7): handelsstunden(), merkmale(), Alle Nicht-Preis-Merkmale einer DR aus 
 Cohesion: 0.25
 Nodes (5): entries, expanded, isArray, isObject, props
 
-### Community 133 - "mt5Database"
-Cohesion: 0.29
-Nodes (11): isExecutionId(), historyRefreshState(), listMt5TradingAccounts(), manageMt5Accounts(), readActiveMt5AccountId(), readMt5TradingAccounts(), selectMt5TradingAccount(), mt5Database() (+3 more)
+### Community 133 - "TradeSetupCockpit.vue"
+Cohesion: 0.09
+Nodes (24): accentStyle, antiConfluences, canTransfer, confirmationLabel(), confirmations, confluences, dateLabel, direction (+16 more)
 
 ### Community 134 - "XAUUSD: begrenzter FXCM-H1-Kontotest, 24.09.2026"
 Cohesion: 0.18
@@ -850,28 +849,28 @@ Cohesion: 0.50
 Nodes (3): { execFileSync }, path, TRADING_REPO
 
 ### Community 138 - "biasCheck.ts"
-Cohesion: 0.08
-Nodes (39): AgeTier, berlinDayRangeUtcMs(), BERLIN_HM_FORMATTER, BERLIN_WEEKDAY_FORMATTER, berlinWeekdayAndMinutes(), TradingWindows, WeekdayGroup, buildPendingDecisions() (+31 more)
+Cohesion: 0.11
+Nodes (32): berlinDateStrFor(), berlinDateTimeStrFor(), berlinWeekdayAndMinutes(), TradingWindows, WeekdayGroup, buildPendingDecisions(), findIntermediateLevel(), FindIntermediateLevelArgs (+24 more)
 
-### Community 139 - "useDoubleOrderBlockChart.js"
-Cohesion: 0.10
-Nodes (25): nextCandlePollDelay(), entryFvgPicker, goldNativeObZones, useDoubleOrderBlockChart(), clear(), dispose(), draw(), hit() (+17 more)
+### Community 139 - "priceChartObZones.js"
+Cohesion: 0.11
+Nodes (27): goldNativeObZones, obZoneCtx(), openAntiConfluencePicker(), openTargetPicker(), refreshTradeTargetLinksInternal(), getCurrentLiquidityLevels(), obMinimum(), collectObsZones() (+19 more)
 
-### Community 141 - "setupEntryConditions"
-Cohesion: 0.10
-Nodes (30): antiConfluenceStatus(), checklistObservationRules(), H1_COUNTER_DIVERGENCE_RULE, OBSERVATION_STATUS_LABELS, observationRuleDetails(), observationRuleDisqualifies(), summarizeAntiConfluenceRules(), observations (+22 more)
+### Community 141 - "Pivot"
+Cohesion: 0.13
+Nodes (8): FibLevel, Candle, PivotMarkerGroup, PivotMarkerPaneView, PivotMarkerPrimitive, PivotMarkerRenderer, RenderOptions, Pivot
 
 ### Community 143 - "prepareSimulationStatistics.mjs"
-Cohesion: 0.21
-Nodes (10): db, repository, root, selected, buildSimulationStatistics(), projectionCompiler(), decodeStatisticsIndex(), encodeStatisticsIndex() (+2 more)
+Cohesion: 0.25
+Nodes (9): db, repository, root, selected, buildSimulationStatistics(), projectionCompiler(), decodeStatisticsIndex(), encodeStatisticsIndex() (+1 more)
 
-### Community 144 - "afterBrowserPaint"
-Cohesion: 0.24
-Nodes (7): afterBrowserPaint(), useHttpActivity(), useReplayInput(), cancel(), reset(), format(), setup()
+### Community 144 - "setup2PerformanceEquivalence.test.js"
+Cohesion: 0.20
+Nodes (9): candleTouchesOrderBlock(), detectOrderBlocks(), HTF_FOREX_LABELS, HTF_FOREX_MIN_GAP_PIPS, LOWER_TF_LABELS, LOWER_TF_MIN_GAP_PIPS, legacyOrderBlockSnapshot(), rows() (+1 more)
 
-### Community 145 - "checked"
-Cohesion: 0.19
-Nodes (22): guardCommandsForExposure(), marketPreviewAction(), accountBridge(), activeMt5Account(), checked(), dailyStopAction(), readAccountDailyStopStatus(), readDailyStopStatus() (+14 more)
+### Community 145 - "evidenceCheckpoint.js"
+Cohesion: 0.20
+Nodes (10): checkpointEvidence(), EVIDENCE_REQUEST_BYTES, flushPendingCheckpoint(), queueEvidenceCheckpoint(), checkStagedEvidenceDb(), config, params, batches (+2 more)
 
 ### Community 146 - "B / #2 — Liquidity Sweep"
 Cohesion: 0.40
@@ -882,8 +881,8 @@ Cohesion: 0.33
 Nodes (8): ALLOWLIST, blankComments(), findUnbounded(), overCap(), readChain(), ROOT, SCAN_DIRS, walk()
 
 ### Community 148 - "mt5RiskContract.js"
-Cohesion: 0.13
-Nodes (25): liveMetrics, buildEntrySearchPreview(), buildMarketPreview(), decode(), encode(), key(), signMarketPreview(), verifyMarketPreview() (+17 more)
+Cohesion: 0.14
+Nodes (24): buildEntrySearchPreview(), buildMarketPreview(), decode(), encode(), key(), signMarketPreview(), verifyMarketPreview(), entrySearchMetrics() (+16 more)
 
 ### Community 149 - "F / #6 — Uhrzeit"
 Cohesion: 0.40
@@ -894,12 +893,12 @@ Cohesion: 0.13
 Nodes (29): emit, dialog, emit, note, pinType, props, addPinDoubleOrderBlock(), addPinEntry() (+21 more)
 
 ### Community 153 - "marketStructureRendering.ts"
-Cohesion: 0.04
-Nodes (34): bullBearLabelSide(), Candle, ArrowPaneView, ArrowPrimitive, ArrowRenderer, collectFibLevels(), computeFibLevels(), fibBetween() (+26 more)
+Cohesion: 0.05
+Nodes (27): Candle, ArrowPaneView, ArrowPrimitive, ArrowRenderer, collectFibLevels(), computeFibLevels(), fibBetween(), FibTickPaneView (+19 more)
 
 ### Community 154 - "tradeSetup2SnapshotIndicators.js"
-Cohesion: 0.12
-Nodes (18): useSnapshotIndicators(), useSnapshotM1(), SNAPSHOT_REPLAY_DEBOUNCE_MS, watchSnapshotOverlay(), calculateSnapshotIndicators(), calculateSnapshotM1InWorker(), runSnapshotWorker(), supportsSnapshotIndicators() (+10 more)
+Cohesion: 0.13
+Nodes (11): useSnapshotM1(), SNAPSHOT_REPLAY_DEBOUNCE_MS, watchSnapshotOverlay(), calculateSnapshotM1InWorker(), runSnapshotWorker(), createSnapshotM1Reader(), SNAPSHOT_INDICATOR_PROPS, snapshotEvidenceVisible() (+3 more)
 
 ### Community 155 - "Entschiedene Design-Fragen"
 Cohesion: 0.20
@@ -909,17 +908,17 @@ Nodes (10): Das Kriterium ist das Sweep-ALTER, nicht die Herkunft — korrigiert
 Cohesion: 0.38
 Nodes (4): SECONDS, validateCandles(), candle, closedAt
 
-### Community 157 - "setup2Repository.test.js"
-Cohesion: 0.24
-Nodes (6): simulationChartVariants(), createLinkedSnapshotReader(), tradeSetup2Positions(), events, row, view()
+### Community 157 - "M1EntryPrimitive"
+Cohesion: 0.12
+Nodes (7): EntryPaneView, M1EntryPrimitive, simulationChartVariants(), tradeSetup2Positions(), events, row, view()
 
 ### Community 158 - "mt5Statistics.ts"
 Cohesion: 0.67
 Nodes (4): statisticsAction(), date(), invalid(), statisticsParameters()
 
-### Community 159 - "recoverySourceIdeas.test.js"
-Cohesion: 0.20
-Nodes (7): familyKey, fixture(), iso(), range, {scan}, source, windows
+### Community 159 - "src/candleCloseWindow.ts"
+Cohesion: 0.16
+Nodes (5): CloseCandle, CloseQuery, orderedCalls, withCandleCloseWindow(), buildM1PivotState()
 
 ### Community 160 - "Phase 2: gespeicherte DR-Begriffe (zur Freigabe)"
 Cohesion: 0.40
@@ -929,21 +928,21 @@ Nodes (4): Absicherung, Phase 2: gespeicherte DR-Begriffe (zur Freigabe), Reihen
 Cohesion: 0.15
 Nodes (13): poi-watcher UTC Refresh-Tick Exception, Trading-Hours/Timezone Handling (Europe/Berlin), sessions Table, trading_schedules Table, docs/debug-metadata-panel.md, Fachdoku-Router Skill, src/marketStructureAnalysis.notes.md, docs/mcp-server.md (+5 more)
 
-### Community 163 - "TradeSetupCockpit.vue"
-Cohesion: 0.03
-Nodes (79): AgeTier, classifyAge(), MAJOR_MIN_SECONDS, MINOR_MAX_SECONDS, formatAge(), trendChain, confirmationLabel(), targetLabel() (+71 more)
+### Community 163 - "tradeSetupCockpit.ts"
+Cohesion: 0.10
+Nodes (26): trendChain, m5TrendInfo, trendChainDisplay, TrendReaction, RangeTrend, ANTI_CONFLUENCE_COLOR, ANTI_CONFLUENCE_THRESHOLD, AntiConfluence (+18 more)
 
 ### Community 164 - "tradeSetupChecklist.js"
-Cohesion: 0.09
-Nodes (27): m1AnchorFromM5(), buildChecklistMarketContext(), evaluateTradeSetupChecklist(), openChecks(), evaluateChecklistCandidates(), finalizeChecklistCandidates(), hasConfirmedChecklistAbc(), evaluateChecklistLifecycle() (+19 more)
+Cohesion: 0.15
+Nodes (15): deriveTrendReaction(), buildChecklistMarketContext(), evaluateTradeSetupChecklist(), openChecks(), evaluateChecklistCandidates(), createChecklistDataAdapter(), hasConfirmedChecklistAbc(), checklistEvaluationTime() (+7 more)
 
 ### Community 165 - "supabaseClient.js"
 Cohesion: 0.19
-Nodes (13): fetchDailyStructurePivots(), fetchAllRows(), fetchLiquidityLevelsHtf(), fetchObZones(), fetchReplayZones(), fetchUntouchedZones(), reconstructZones(), supabase (+5 more)
+Nodes (14): fetchDailyStructurePivots(), DB_READ_PAGE_SIZE, fetchAllRows(), fetchLiquidityLevelsHtf(), fetchObZones(), fetchReplayZones(), fetchUntouchedZones(), reconstructZones() (+6 more)
 
 ### Community 166 - "chartColors.js"
 Cohesion: 0.06
-Nodes (22): chartColors, DEFAULT_CHART_COLORS, resetChartColors(), chartLineWidths, DEFAULT_CHART_LINE_WIDTHS, resetChartLineWidths(), collapsed, emit (+14 more)
+Nodes (21): chartColors, DEFAULT_CHART_COLORS, resetChartColors(), chartLineWidths, DEFAULT_CHART_LINE_WIDTHS, resetChartLineWidths(), collapsed, emit (+13 more)
 
 ### Community 168 - "App.vue"
 Cohesion: 0.12
@@ -966,8 +965,8 @@ Cohesion: 0.21
 Nodes (12): clampedX, clampedY, confirm(), emit, note, onKeydown(), onWindowMousedown(), pinType (+4 more)
 
 ### Community 173 - "newsEvents.js"
-Cohesion: 0.20
-Nodes (13): usePriceChartCockpit(), refreshCockpit(), usePriceChartSessionsAndNews(), refreshNewsMarkers(), refreshSessions(), currentNewsNoGo(), INSTRUMENT_CURRENCIES, NEWS_NOGO_WINDOW_MINUTES (+5 more)
+Cohesion: 0.16
+Nodes (15): usePriceChartCockpit(), refreshCockpit(), currentNewsNoGo(), INSTRUMENT_CURRENCIES, NEWS_NOGO_WINDOW_MINUTES, newsEventsForInstrument(), newsEventsInWindow(), newsCalendar (+7 more)
 
 ### Community 174 - "E / #5 — Anti Confluences"
 Cohesion: 0.40
@@ -978,28 +977,28 @@ Cohesion: 0.15
 Nodes (32): CloseCandle, CloseQuery, closesPastLevel(), orderedCalls, withCandleCloseWindow(), advanceNestedTrend(), applyInnerMarketStructurePivot(), applyInnerMarketStructurePivotCore() (+24 more)
 
 ### Community 176 - "tradeIdeas.js"
-Cohesion: 0.23
-Nodes (13): chartHint, chartMode, useTradeIdeaDrawing(), click(), finish(), move(), reset(), editTradeIdea() (+5 more)
+Cohesion: 0.12
+Nodes (27): CHART_MODES, chartHint, chartMode, suspendChartScrolling(), suspensions, useTradeIdeaDrawing(), click(), finish() (+19 more)
 
 ### Community 177 - "TradeExecutionCard.vue"
-Cohesion: 0.09
-Nodes (28): applyPrefill(), cancel(), cardKey, categories, closeFinder(), emit, entryTarget(), evidenceLabel() (+20 more)
+Cohesion: 0.08
+Nodes (28): applyPrefill(), cancel(), cardKey, categories, closeFinder(), emit, entryTarget(), finderOpen (+20 more)
 
-### Community 179 - "setup2PerformanceReplay.mjs"
-Cohesion: 0.11
-Nodes (18): cache, coreFile, directory, fixture, fromTime, input, options, results (+10 more)
+### Community 179 - "tradeSetup2YearRun.mjs"
+Cohesion: 0.06
+Nodes (34): cache, coreFile, directory, fixture, fromTime, input, options, results (+26 more)
 
 ### Community 180 - "fachdoku-router-reminder.cjs"
 Cohesion: 0.40
 Nodes (3): { join }, { readFileSync }, SKILL
 
 ### Community 181 - "fmtPrice"
-Cohesion: 0.04
-Nodes (80): cssColor(), cssColorScaled(), hexToRgba(), lineWidth(), candidateLabel(), candidatePrice(), emit, mergedCandidates (+72 more)
+Cohesion: 0.06
+Nodes (38): candidateLabel(), candidatePrice(), emit, mergedCandidates, precision, props, bearish, colors (+30 more)
 
 ### Community 182 - "Plan: Forex-Chart-Objekte Datengrundlage"
-Cohesion: 0.25
-Nodes (9): ob_zones Table, BTC Scope Removal from Chart-Objects Plan, Four Independent OB Render Passes Problem, "Historische OBs"-Toggle Semantics, LQ-Sweep Relevance Criterion (Recent OR Pip-Range), Plan: Forex-Chart-Objekte Datengrundlage, Persistierungs-Umfang: Nur Referenzierte Teilmenge, pin_context.kind='m5_ob' -> ob_zone_id Migration (20260823120000) (+1 more)
+Cohesion: 0.24
+Nodes (10): ob_zones Table, BTC Scope Removal from Chart-Objects Plan, OB-Zones Canonical FK Consolidation Approach, Four Independent OB Render Passes Problem, "Historische OBs"-Toggle Semantics, LQ-Sweep Relevance Criterion (Recent OR Pip-Range), Plan: Forex-Chart-Objekte Datengrundlage, Persistierungs-Umfang: Nur Referenzierte Teilmenge (+2 more)
 
 ### Community 183 - "mmtBatchEntrySearch.test.js"
 Cohesion: 0.32
@@ -1019,31 +1018,35 @@ Nodes (15): Abhängigkeitsprüfung 29.10.2026, Aktives Handelskonto wechseln, As
 
 ### Community 191 - "tradeSetupSimulationRepository.js"
 Cohesion: 0.13
-Nodes (26): restoreChecklistObservationChecks(), paths, SIMULATION_REVIEW_METADATA_FIELDS, simulationReviewMetadata(), simulationReviewMetadataProjection(), createSimulationRepository(), pages(), simulationAsOf() (+18 more)
+Nodes (27): restoreChecklistObservationChecks(), project(), paths, SIMULATION_REVIEW_METADATA_FIELDS, simulationReviewMetadata(), simulationReviewMetadataProjection(), createSimulationRepository(), pages() (+19 more)
 
 ### Community 192 - "Engine"
 Cohesion: 0.15
 Nodes (4): Journal, configure_cloud(), WorkerTests, Engine
 
 ### Community 193 - "newsMarkers.js"
-Cohesion: 0.05
-Nodes (20): drawIconLabel(), canShowLabels(), MIN_PIXELS_PER_HOUR_FOR_LABELS, MIN_PIXELS_PER_HOUR_FOR_LABELS_INTRADAY, LiquidityLineRenderer, DAY_KEY_FORMATTER, extrapolatedX(), formatEventLabel() (+12 more)
+Cohesion: 0.11
+Nodes (13): usePriceChartSessionsAndNews(), refreshNewsMarkers(), refreshSessions(), DAY_KEY_FORMATTER, extrapolatedX(), formatEventLabel(), isSameBerlinDay(), NewsMarkerPaneView (+5 more)
 
 ### Community 194 - "countertrendScan.js"
 Cohesion: 0.07
-Nodes (40): scanCountertrendWindow(), COUNTERTREND_SCAN_STATE_VERSION, countertrendScanState(), validateCountertrendResume(), m1LoadStart(), naturalSourceFamilyKey(), SOURCE_FAMILY_VERSION, bindKnownSourceIdeas() (+32 more)
+Nodes (43): createClosedCandlePrefix(), scanCountertrendWindow(), COUNTERTREND_SCAN_STATE_VERSION, countertrendScanState(), validateCountertrendResume(), completeCountertrendSnapshots(), createSetup2Memo(), bindKnownSourceIdeas() (+35 more)
 
 ### Community 196 - "gbp_h1_uptrend.ts"
 Cohesion: 0.10
 Nodes (20): pivot1, pivot10, pivot11, pivot12, pivot13, pivot2, pivot3, pivot4 (+12 more)
+
+### Community 197 - "dealingRangePriceObservation.test.js"
+Cohesion: 0.25
+Nodes (9): isCountertrendRangeCourseVersion(), completeSavedRangeCourses(), RANGE_COURSE_VERSION, groupSetupSnapshots(), savedRangeOutcome(), input, first(), group() (+1 more)
 
 ### Community 198 - "Entry Pattern 1"
 Cohesion: 0.40
 Nodes (4): Aktuelle Regel, Entry Pattern 1, Gemeinsame Ausführung und Alarme, Historische Belege
 
 ### Community 200 - "MmtArchivedAccounts.vue"
-Cohesion: 0.15
-Nodes (16): account, archived, gain(), money(), open, props, accountArchiveLabel(), accountAvailability() (+8 more)
+Cohesion: 0.16
+Nodes (14): account, archived, gain(), money(), open, props, accountArchiveLabel(), accountAvailability() (+6 more)
 
 ### Community 201 - "C / #3 — Reaktion aus Liquidity Sweep"
 Cohesion: 0.50
@@ -1053,9 +1056,13 @@ Nodes (4): Anzeige am Prüfbeispiel, C / #3 — Reaktion aus Liquidity Sweep, Fa
 Cohesion: 0.50
 Nodes (4): Parallelisierungsplan, Runde 1 — drei getrennte Chats, Runde 2 — nach der gemeinsamen Zeitbasis, Runde 3 — nach Sweep-Zuordnung und Targets
 
+### Community 203 - "TradesTable.vue"
+Cohesion: 0.18
+Nodes (9): emit, lessonBadges(), OUTCOME_LABEL, props, rangeLabel(), showCommission, cache, useLocalStorageRef() (+1 more)
+
 ### Community 204 - "liveWatcherMonth.js"
-Cohesion: 0.12
-Nodes (32): berlinDateStrFor(), refresh(), liveEvidenceOriginalOrder(), selectLiveEvidenceIndex(), identity(), liveEvidenceResults(), liveEvidenceView(), sameOriginalEntry() (+24 more)
+Cohesion: 0.16
+Nodes (28): berlinDateStrFor(), berlinDayRangeUtcMs(), refresh(), identity(), liveEvidenceResults(), liveEvidenceView(), sameOriginalEntry(), seconds() (+20 more)
 
 ### Community 206 - "Plan: POI-Strategie-Findung, Backtesting & Trade-Notifications"
 Cohesion: 0.16
@@ -1069,37 +1076,41 @@ Nodes (7): trigger_matches(), validate_intent(), api(), Broker(), BrokerTests, C
 Cohesion: 0.21
 Nodes (16): atomicWriteFile(), readJsonArray(), writeJson(), writeJsonArray(), fileHash(), frozenBatchInputs(), verify(), publishBatchRecords() (+8 more)
 
-### Community 211 - "setup2PerformanceEquivalence.test.js"
-Cohesion: 0.09
-Nodes (18): evaluateDoubleOrderBlockOutcome(), ENTRY_RISK_REASON_LABELS, entryRiskScale(), MAX_FOREX_WIDE_STOP_PIPS, deriveM1PivotBreak(), buildM1PivotStructure(), m1ScanPrefix(), m1ScanPrefixStart() (+10 more)
+### Community 211 - "usePriceChartM1Structure.js"
+Cohesion: 0.11
+Nodes (27): usePriceChartChecklist(), evaluateAt(), evaluationTime(), m1PrerequisitesAt(), publish(), refresh(), scheduleTimeBoundary(), usePriceChartM1Structure() (+19 more)
 
-### Community 212 - "mmtTargetDrafts.js"
-Cohesion: 0.28
-Nodes (16): addStopDraft(), changeTargetShare(), dirtyLeg(), draftRiskBasis(), drafts, listKey(), moveTargetDraft(), selectTargetDraft() (+8 more)
+### Community 212 - "MmtTradeExtremes.vue"
+Cohesion: 0.32
+Nodes (8): count, groups, props, ranked, tradeExtremes(), tradeOutcome(), tradeOutcomeClass(), tradePerformance()
 
 ### Community 214 - "MilkyMetaTraderEquityChart.vue"
 Cohesion: 0.18
 Nodes (9): color(), colors, host, plot, props, width, mmtEquityPlot(), {descriptor} (+1 more)
 
-### Community 215 - "src/marketStructureAnalysis.ts"
-Cohesion: 0.06
-Nodes (57): CloseCandle, CloseQuery, closesPastLevel(), orderedCalls, withCandleCloseWindow(), createChartStructureCalculator(), calculate, fmtDateTime() (+49 more)
+### Community 215 - "format.js"
+Cohesion: 0.10
+Nodes (37): createChartStructureCalculator(), calculate, fmtDateTime(), WEEKDAY_SHORT_FORMATTER, m1AnchorFromM5(), candidateKey(), closesPast(), deriveM5CloseReaction() (+29 more)
 
 ### Community 217 - "ToggleButton.vue"
 Cohesion: 0.12
 Nodes (12): busy, message, props, open, root, trigger, useSnapshotVisitToggle(), useTradeSetup2Route() (+4 more)
 
-### Community 219 - "tradeSetupFromRow"
-Cohesion: 0.07
-Nodes (34): berlin, inWindows(), results, same(), substantive(), controller, directory, options (+26 more)
+### Community 219 - "setup1BuildSets.mjs"
+Cohesion: 0.09
+Nodes (25): berlin, inWindows(), results, same(), substantive(), controller, directory, options (+17 more)
 
 ### Community 220 - "GoldPreview.vue"
 Cohesion: 0.14
-Nodes (18): bar, berlin, config, container, count, error, load(), loading (+10 more)
+Nodes (19): bar, berlin, config, container, count, error, load(), loading (+11 more)
 
 ### Community 221 - "mmtBalanceCache.test.js"
 Cohesion: 0.40
 Nodes (3): account, now, status
+
+### Community 222 - "TradeSetupChecklist.vue"
+Cohesion: 0.08
+Nodes (19): checks, countertrendAbcdDefinitions, countertrendDefinitions, dataStates, dataStatus, definitions, { element: scrollElement, rememberScroll }, evaluatedAt (+11 more)
 
 ### Community 223 - "MmtRiskPolicyEditor.vue"
 Cohesion: 0.20
@@ -1109,9 +1120,9 @@ Nodes (10): buffer, busy, confirmed, emit, error, floor, props, save() (+2 more)
 Cohesion: 0.40
 Nodes (4): imports, npm:@modelcontextprotocol/sdk@^1.12.0/, npm:zod@3.24.1, nodeModulesDir
 
-### Community 226 - "tradeSetup2YearRun.mjs"
-Cohesion: 0.08
-Nodes (21): client, controller, directory, executionStartedAt, instruments, modelVersions, options, requestedFrom (+13 more)
+### Community 226 - "m5EntryHistory.js"
+Cohesion: 0.29
+Nodes (7): closedAt(), goldWeekendGapCovered(), newYorkClock, m5EntryHistoryKnown(), weekend, bar(), sec()
 
 ### Community 228 - "setup2PerformancePrimitives.mjs"
 Cohesion: 0.18
@@ -1122,12 +1133,12 @@ Cohesion: 0.17
 Nodes (5): normalise_deal(), Gemeinsame native Deal-Normalisierung für Vollabgleich und gezielte…, PositionCosts, Einmaliger begrenzter Kostenabgleich neuer offener Positionen; kein…, PositionCostsTests
 
 ### Community 230 - "runner.mjs"
-Cohesion: 0.07
-Nodes (46): deliveryReason(), minuteAlarmEvents(), rememberStructure(), structureReady(), structureTrackingKey(), continuousHistory(), familyBindings(), fingerprint() (+38 more)
+Cohesion: 0.06
+Nodes (45): rememberStructure(), structureTrackingKey(), createLiveEvidence(), record(), iso(), continuousHistory(), familyBindings(), fingerprint() (+37 more)
 
 ### Community 232 - "tradeSetup.js"
-Cohesion: 0.08
-Nodes (33): usePriceChartTradeSetups(), computeTradeSetups(), fetchM5Candles(), fetchTrendAnalysisM5History(), getTrendAnalysisM5Candles(), TRADE_SETUP_M5_FRACTAL_PERIOD, setupInvalidationTarget(), collectStructureLqLevels() (+25 more)
+Cohesion: 0.20
+Nodes (17): Two Runtimes, One Algorithm Set (Deliberate Duplication), computeTradeSetups(), closesBeyondLevel(), collectObSweeps(), detectSetupObs(), detectTradeSetups(), findAllProtectedFractals(), findBestLsMatch() (+9 more)
 
 ### Community 233 - "Versionierte Setup 1 Eingabesätze"
 Cohesion: 0.33
@@ -1141,41 +1152,45 @@ Nodes (20): useMmtTargetDrawing(), addStop(), blur(), cancel(), clear(), create(
 Cohesion: 0.21
 Nodes (8): base, candles, data, iso(), obs, summary, zones, GOLD_H4_MIN_FVG_USD
 
+### Community 236 - "tradeSetupFromRow"
+Cohesion: 0.30
+Nodes (9): strongestSetupSweeps(), sweepLevel(), toSec(), tradeSetupFromRow(), fetchTradeSetups(), mergeDbTradeSetups(), { data: dbTradeSetups, refresh: refreshDbTradeSetups }, iso() (+1 more)
+
 ### Community 238 - "tradingSchedules.js"
 Cohesion: 0.19
 Nodes (12): minutesToTimeInput(), timeInputToMinutes(), addWindow(), cloneWindows(), DEFAULT_SCHEDULES, EMPTY_WINDOWS, loadInitial(), removeWindow() (+4 more)
 
 ### Community 241 - "setup2-notification-watch/index.ts"
 Cohesion: 0.09
-Nodes (42): missed(), readHealth(), tick(), WATCHER_GRACE_MS, watcherFreshness(), checked(), db(), headers (+34 more)
+Nodes (40): missed(), readHealth(), tick(), WATCHER_GRACE_MS, watcherFreshness(), checked(), db(), env() (+32 more)
 
-### Community 242 - "prefill-obs.mjs"
-Cohesion: 0.24
-Nodes (7): base, candles, data, iso(), rows, zones, GOLD_H1_MIN_FVG_USD
+### Community 242 - "orderBlocks.ts"
+Cohesion: 0.11
+Nodes (16): base, candles, data, iso(), rows, zones, GOLD_H1_MIN_FVG_USD, candleTouchesOrderBlock() (+8 more)
 
 ### Community 243 - "worker.py"
 Cohesion: 0.07
 Nodes (25): HTTPRedirectHandler, HistoryMailbox, Lokaler Weckauftrag aus dem bestehenden Poll; im Leerlauf kein…, read_text(), main(), Lesender Historienprozess: keine Logins, Orders oder Kontowechsel., sync_history(), connect() (+17 more)
 
-### Community 245 - "useMmtUiData"
-Cohesion: 0.16
-Nodes (20): useDashboardMmt(), entryTimeFor(), selectAccount(), pending(), useMmtUiData(), changed(), clear(), desired() (+12 more)
+### Community 245 - "Alarme.vue"
+Cohesion: 0.31
+Nodes (7): ALARM_TYPES, fetchAlarmSettings(), setAlarmEnabled(), alarms, errorText, loading, toggle()
 
 ### Community 246 - "mt5Credentials.ts"
-Cohesion: 0.21
+Cohesion: 0.20
 Nodes (13): credentialKey(), decode(), decryptCredential(), encode(), encryptCredential(), workerConfiguration(), historyWorkerAction(), readerAction() (+5 more)
 
-### Community 248 - "SimulationRunQuality.vue"
-Cohesion: 0.13
-Nodes (16): cards, definitions, format(), metricValue(), props, resultTone(), crossTables, crossTone() (+8 more)
+### Community 248 - "SimulationDrList.vue"
+Cohesion: 0.10
+Nodes (20): cards, definitions, format(), metricValue(), props, resultTone(), emit, props (+12 more)
 
-### Community 249 - "useTradeIdeaEditing"
-Cohesion: 0.42
-Nodes (11): useTradeIdeaEditing(), annotations(), cancel(), create(), dispose(), down(), key(), move() (+3 more)
+### Community 249 - "useMmtStatistics"
+Cohesion: 0.33
+Nodes (7): useMmtStatistics(), load(), loadPage(), loadSeries(), refresh(), mount(), renderer
 
-### Community 251 - "forexCandles.ts"
-Cohesion: 0.18
-Nodes (14): getForexCandlesArchiveUpTo(), fetchLiveForexCandles(), fetchLiveForexCandlesOnce(), isRetryable(), ALL_BARS, backfillOne(), Bar, BARS (+6 more)
+### Community 251 - "reads.ts"
+Cohesion: 0.12
+Nodes (28): berlinDayRangeUtcMs(), getForexCandlesArchive(), getJournal(), getTradeSetups(), getTradingAccounts(), getTradingSchedule(), computeEma(), DayWindow (+20 more)
 
 ### Community 252 - "poi-watcher Alert-Cron Notes"
 Cohesion: 0.22
@@ -1183,63 +1198,79 @@ Nodes (9): Pin Tools (tools/pins.ts), poi-watcher Alert-Cron Notes, poi-watcher 
 
 ### Community 253 - "mt5-control/index.ts"
 Cohesion: 0.16
-Nodes (16): readAccountBalances(), assertDailyStopSnapshot(), evaluateDailyStop(), finite(), tradingDay(), validateGuardExposure(), ACCOUNT_SELECTION_ERRORS, readRiskPolicy() (+8 more)
+Nodes (19): assertDailyStopSnapshot(), evaluateDailyStop(), finite(), guardCommandsForExposure(), tradingDay(), validateGuardExposure(), dailyStopAction(), readAccountDailyStopStatus() (+11 more)
 
 ### Community 254 - "trade_evidence Table (Dual-Level, Confirmation/Confluence)"
-Cohesion: 0.16
-Nodes (14): dealing_ranges Table, trade_evidence Table (Dual-Level, Confirmation/Confluence), trade_partial_exits Table, trade_positions Table, trade_targets Table, Confirmation/Confluence/Anti-Confluence Categories, trading repo trade-from-poi.md (Confirmation/Confluence/Anti-Confluence Definition), OB-Zones Canonical FK Consolidation Approach (+6 more)
+Cohesion: 0.18
+Nodes (13): dealing_ranges Table, trade_evidence Table (Dual-Level, Confirmation/Confluence), trade_partial_exits Table, trade_positions Table, trade_targets Table, Confirmation/Confluence/Anti-Confluence Categories, trading repo trade-from-poi.md (Confirmation/Confluence/Anti-Confluence Definition), Anti-Confluences Snapshot Feature (Planned) (+5 more)
+
+### Community 255 - "debugMetadata.js"
+Cohesion: 0.39
+Nodes (7): buildActiveMetadataSnapshot(), earliestRelevantTime(), hasActiveMetadata(), selectActiveMetadataSections(), ALL_OFF, BASE_CTX, SECTIONS
 
 ### Community 256 - "entryPattern2FrozenObRegression.integration.mjs"
 Cohesion: 0.17
 Nodes (9): cluster, entryHash, entryModule, m1, out, proof, records, results (+1 more)
 
-### Community 258 - "backfillObFvg.ts"
-Cohesion: 0.09
-Nodes (17): headers, fetchForexBatch(), DB_READ_PAGE_SIZE, fetchAllRows(), ArchivableCandle, FxcmCandle, PERIODS, readFxcmCandles() (+9 more)
+### Community 258 - "backfillLiquidityLevels.ts"
+Cohesion: 0.06
+Nodes (31): headers, fetchForexBatch(), DB_READ_PAGE_SIZE, fetchAllRows(), ArchivableCandle, readForexCandlesArchiveFrom(), FxcmCandle, PERIODS (+23 more)
 
 ### Community 259 - "findTargets.js"
-Cohesion: 0.17
-Nodes (15): MAX_TARGET_DISTANCE_PIPS Constant, find_targets Target-Candidate Algorithm Design, Plan: find_targets Algorithmus, TSC-Neuaufbau Precondition, distanceLabel, emit, mergedCandidates, precision (+7 more)
+Cohesion: 0.16
+Nodes (16): MAX_TARGET_DISTANCE_PIPS Constant, find_targets Target-Candidate Algorithm Design, Plan: find_targets Algorithmus, TSC-Neuaufbau Precondition, candidateLabel(), distanceLabel, emit, mergedCandidates (+8 more)
 
-### Community 260 - "targetPlanContract.js"
-Cohesion: 0.24
-Nodes (12): amount(), calcPositionLineForecast(), finite(), positive(), positionRiskBasis(), positionRiskMultiple(), positive(), targetDraftAllocation() (+4 more)
+### Community 260 - "calcPositionLineForecast"
+Cohesion: 0.62
+Nodes (5): amount(), calcPositionLineForecast(), finite(), positive(), forecast()
 
 ### Community 261 - "db.ts"
-Cohesion: 0.04
-Nodes (77): Candle, Row, addTradeConfirmation(), AddTradeConfirmationArgs, addTradePosition(), addTradeTarget(), AddTradeTargetArgs, asOfProbeCandles() (+69 more)
+Cohesion: 0.05
+Nodes (78): Candle, Row, addPinDoubleOrderBlock(), addPinEntry(), addPinM5LiquidityEntry(), addPinM5ObEntry(), addPinRsiDivergenceEntry(), addTradeConfirmation() (+70 more)
 
 ### Community 262 - "tradeSetup2Configuration.js"
 Cohesion: 0.06
-Nodes (36): createLiveEvidence(), record(), iso(), JOINT_LOSS_RISK_VERSION, ENTRY_PATTERN_1_VERSION, entryPattern1M5Confirmation(), entryPattern1M5ConfirmationLabel(), m5BosRuleVersionFor() (+28 more)
+Nodes (34): evaluateJointLossRisk(), JOINT_LOSS_INVALIDATION_DETAIL, JOINT_LOSS_RISK_VERSION, ENTRY_PATTERN_1_SWEEP_AGE_POLICY, ENTRY_PATTERN_2_OB_RULE, RELATIVE_M5_SWEEP_RANGE_VERSION, SOURCE_FAMILY_VERSION, SOURCE_IDEA_BINDING_VERSION (+26 more)
 
-### Community 264 - "obMinimum"
-Cohesion: 0.47
-Nodes (5): obMinimum(), days, detected(), load(), manifest
+### Community 263 - "mt5HistoryContract.js"
+Cohesion: 0.31
+Nodes (7): finite(), integer(), keys, validateHistoryBatch(), account, body, deal
+
+### Community 264 - "liquidityDetectionBeforePerformanceRound2.js"
+Cohesion: 0.31
+Nodes (6): buildLevel(), detectLiquidityLevels(), isDownFractal(), isUpFractal(), LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT
 
 ### Community 266 - "range.type.ts"
 Cohesion: 0.08
-Nodes (24): ClosedRange, PivotBase, PivotHigh, PivotLow, PivotTouched, PivotTypeAll, PivotUntouched, currRangeHigh (+16 more)
+Nodes (27): ClosedRange, MarketStructureState, PivotBase, PivotHigh, PivotLow, PivotTouched, PivotTypeAll, PivotUntouched (+19 more)
 
 ### Community 267 - "importMmtCsv.py"
 Cohesion: 0.52
 Nodes (6): literal(), number(), parse_export(), prepare_sql(), IQCapital CSV als eigene private Statistikquelle vorbereiten; führt kein SQL…, timestamp()
 
-### Community 268 - "SimulationRunDerivation.vue"
-Cohesion: 0.25
-Nodes (10): assertT82ParentReference(), T82_DERIVATION_REFERENCE, derivation, props, createRunDerivation(), rangeDerivationLabel(), RUN_DERIVATION_VERSION, runDerivation() (+2 more)
+### Community 268 - "marketStructureAnalysis.test.js"
+Cohesion: 0.22
+Nodes (8): pivot1, pivot2, pivot3, pivot4, pivot5, pivot6, pivot7, pivot8
 
-### Community 270 - "mmtTargetEditor.test.js"
-Cohesion: 0.16
-Nodes (16): HTTP_BACKGROUND, createMilkyMetaTraderClient(), messages, cancelTargetDraft(), editors, registerTargetSave(), saveTargetDraft(), targetSaveRejected() (+8 more)
+### Community 270 - "setup2OperationalHealth.js"
+Cohesion: 0.39
+Nodes (7): age(), credentialsBlocked(), date(), M1_CRITICAL_LAG_MS, M5_CRITICAL_LAG_MS, OPERATIONAL_GRACE_MS, operationalAssessment()
 
-### Community 273 - "countertrendScanResume.test.js"
-Cohesion: 0.16
-Nodes (14): digest(), json(), lock(), claim(), openBatchCheckpoint(), verifyJournal(), scanBatchInstrument(), finalizeBatchResults() (+6 more)
+### Community 273 - "openBatchCheckpoint"
+Cohesion: 0.20
+Nodes (12): digest(), json(), lock(), claim(), openBatchCheckpoint(), verifyJournal(), scanBatchInstrument(), finalizeBatchResults() (+4 more)
 
-### Community 276 - "orderBlockMitigation.js"
-Cohesion: 0.27
-Nodes (7): advanceEntryPattern1Follow(), evaluateOrderBlockMitigation(), orderBlockMitigationFvg(), rows, evaluate(), ob, rows
+### Community 274 - "doubleOrderBlocks.test.js"
+Cohesion: 0.33
+Nodes (6): days, load(), manifest, policy, results, run()
+
+### Community 275 - "tradeSetupSweepLimit.test.js"
+Cohesion: 0.33
+Nodes (6): expected, levels, ob, params, pivots, sec()
+
+### Community 276 - "runtimeCopySyncGuard.test.js"
+Cohesion: 0.33
+Nodes (3): ROOT, TEILPORTS, VOLL_KOPIEN
 
 ### Community 277 - "MetadataPanel.vue"
 Cohesion: 0.17
@@ -1250,8 +1281,8 @@ Cohesion: 0.17
 Nodes (22): Assert-MmtContainedPath(), Assert-MmtExistingState(), Assert-MmtHash(), Get-MmtEnvironmentFile(), Get-MmtRelease(), Invoke-MmtReleaseDeployment(), New-MmtAction(), New-MmtPrivateLauncher() (+14 more)
 
 ### Community 285 - "forexCandles.js"
-Cohesion: 0.11
-Nodes (28): pollRecent(), { state: m5Clock, retry: retryM5Clock }, useGoldChartHistory(), load(), DB_READ_PAGE_SIZE, DB_ARCHIVED_BARS, fetchArchivedPage(), fetchArchivedUpTo() (+20 more)
+Cohesion: 0.13
+Nodes (26): pollRecent(), { state: m5Clock, retry: retryM5Clock }, useChecklistDailyAnchors(), useGoldChartHistory(), load(), DB_ARCHIVED_BARS, fetchArchivedPage(), fetchArchivedUpTo() (+18 more)
 
 ### Community 286 - "Die Filter"
 Cohesion: 0.40
@@ -1262,12 +1293,16 @@ Cohesion: 0.20
 Nodes (8): choch, incoming, input, level, origin, owner, root, source
 
 ### Community 289 - "detectLiquidityLevels"
-Cohesion: 0.20
-Nodes (13): createIncrementalLiquidityDetector(), advanceLiquidityTouches(), buildLevel(), confirmedLiquidityLevels(), detectLiquidityLevels(), isDownFractal(), isUpFractal(), LIQUIDITY_MAX_RELEVANT (+5 more)
+Cohesion: 0.35
+Nodes (10): createIncrementalLiquidityDetector(), advanceLiquidityTouches(), buildLevel(), confirmedLiquidityLevels(), detectLiquidityLevels(), isDownFractal(), isUpFractal(), LIQUIDITY_MAX_RELEVANT (+2 more)
 
 ### Community 290 - "tradeSetup2Derive.mjs"
-Cohesion: 0.07
-Nodes (26): algorithmFiles, allKeys, cache, configuration, controller, coreFile, cpu, derivation (+18 more)
+Cohesion: 0.06
+Nodes (36): assertT82ParentReference(), T82_DERIVATION_REFERENCE, algorithmFiles, allKeys, cache, configuration, controller, coreFile (+28 more)
+
+### Community 291 - "cTrader Open API as Forex Candle Source"
+Cohesion: 0.40
+Nodes (5): cTrader Open API as Forex Candle Source, cTrader Wire Protocol Implementation (Manual Protobuf), supabase/functions/_shared/ctrader/client.ts, supabase/functions/_shared/twelvedata/client.ts (Unwired), supabase/functions/forex-candles
 
 ### Community 292 - "Gold: normaler Chart, Livefeed und Historie 2026"
 Cohesion: 0.50
@@ -1278,52 +1313,52 @@ Cohesion: 0.50
 Nodes (4): Gold M5: Abruf erfolgreich, Feed-Gleichheit nicht bestätigt, Konsequenz und Betrieb, Native Demo-Bid-Daten, TradingView-Gegenprobe
 
 ### Community 294 - "Dealing-Range-Anlegen Skill"
-Cohesion: 0.18
-Nodes (12): kind=pivot = Liquidity-Sweep-Only Semantics, Dealing-Range-Anlegen Skill, milk-city Task: Confluence-Tracking bei Dealing Ranges, trading/liquidität.md (Liquiditäts-Sweep-Mechanismus), Diagnose-to-Fix Routing Table, Lana-Fehlerdiagnose Skill, docs/steerabilty-vs-wrong-ai-outputs.md, add_trade_confirmation MCP Tool (+4 more)
+Cohesion: 0.14
+Nodes (15): kind=pivot = Liquidity-Sweep-Only Semantics, Dealing-Range-Anlegen Skill, milk-city Task: Confluence-Tracking bei Dealing Ranges, trading/liquidität.md (Liquiditäts-Sweep-Mechanismus), AI Capabilities Framework (Next Token Prediction/Knowledge/Working Memory/Steerability), Diagnose-to-Fix Routing Table, Lana-Fehlerdiagnose Skill, docs/steerabilty-vs-wrong-ai-outputs.md (+7 more)
 
 ### Community 295 - "chartMeasure.js"
 Cohesion: 0.60
 Nodes (4): formatPips(), MEASURE_COLOR, measureDrawing(), onMeasureDone()
 
 ### Community 296 - "fvgCandleTint.js"
-Cohesion: 0.18
-Nodes (12): fvgCandleTimes(), tintCandleTimes(), tintFvgCandles(), tintM1FvgCandidates(), tintM1FvgCandle(), tintManualFvgConfirmation(), tintManualFvgConfirmations(), kerzen (+4 more)
+Cohesion: 0.38
+Nodes (8): fvgCandleTimes(), tintCandleTimes(), tintFvgCandles(), tintM1FvgCandidates(), tintM1FvgCandle(), tintManualFvgConfirmation(), tintManualFvgConfirmations(), kerzen
+
+### Community 297 - "p2PreliminaryM5Bos.test.js"
+Cohesion: 0.40
+Nodes (3): high, level, low
 
 ### Community 298 - "Statistik.vue"
-Cohesion: 0.08
-Nodes (19): createCheckpointSnapshotLoader(), useSimulationRangeDetails(), useSimulationRangePage(), currentDataset, features, filters, legacySourceHint, liveSelected (+11 more)
-
-### Community 299 - "mmtBrokerPositions.test.js"
-Cohesion: 0.20
-Nodes (15): brokerPositions, useBrokerPositionDrawing(), clear(), create(), dispose(), refresh(), brokerPositionLines(), positive() (+7 more)
+Cohesion: 0.07
+Nodes (21): createCheckpointSnapshotLoader(), useSimulationRangeDetails(), useSimulationRangePage(), router, installRouteRecovery(), currentDataset, features, filters (+13 more)
 
 ### Community 300 - "NewsModal.vue"
 Cohesion: 0.16
 Nodes (12): CURRENCIES, emit, LIST_FORMATTER, newCurrency, newDateTime, newTitle, saving, submit() (+4 more)
 
-### Community 301 - "stopPlanContract.js"
-Cohesion: 0.27
-Nodes (11): positive(), rescaleExitLeg(), validateStopAllocation(), finite(), positive(), stopRiskBudget(), stopRiskPreview(), validateStopRisk() (+3 more)
+### Community 301 - "mt5TargetPlans.ts"
+Cohesion: 0.12
+Nodes (24): identity, levels, number, oneIdentity(), positive, request, resultSchema, targetPlanAction() (+16 more)
 
 ### Community 303 - "MmtTargetChartControls.vue"
 Cohesion: 0.09
 Nodes (22): cancel(), edit(), editing, editingOrder(), emit, idle(), key(), keyboard() (+14 more)
 
 ### Community 304 - "alarmLog.js"
-Cohesion: 0.11
-Nodes (19): fetchAlarmLog(), fetchSetup2Alarms(), fetchTouchedLiquidityLevels(), fetchTradeSetups(), ALARM_TYPES, fetchAlarmSettings(), setAlarmEnabled(), setup2AlarmRow() (+11 more)
+Cohesion: 0.27
+Nodes (10): fetchAlarmLog(), fetchSetup2Alarms(), fetchTouchedLiquidityLevels(), fetchTradeSetups(), setup2AlarmRow(), fetchTouchedZones(), MAX_PROTOKOLL_ZEILEN, currentSymbol (+2 more)
 
-### Community 307 - "useMmtStatistics"
-Cohesion: 0.19
-Nodes (11): useMmtStatistics(), load(), loadPage(), loadSeries(), refresh(), loadMmtHistory(), refreshMmtHistory(), requestMmtHistoryRefresh() (+3 more)
+### Community 307 - "useMmtStatistics.js"
+Cohesion: 0.38
+Nodes (4): loadMmtHistory(), refreshMmtHistory(), requestMmtHistoryRefresh(), importedClosedTrades()
 
 ### Community 312 - "position_lifecycle"
 Cohesion: 0.52
 Nodes (3): position_lifecycle(), deal(), PositionLifecycleTests
 
 ### Community 313 - "Trading-Monitor Project Overview (CLAUDE.md)"
-Cohesion: 0.11
-Nodes (17): cTrader ACCESS_DENIED Lockout (No Auto-Recovery), cTrader Open API as Forex Candle Source, DRY Within a Single Runtime Convention, CLAUDE.md Pointer to /l Persona, npm run build Command, Trading-Monitor Project Overview (CLAUDE.md), Rename Consistency Convention, REPLAY_LOOKAHEAD_SEC M1 Scaling Gotcha (+9 more)
+Cohesion: 0.15
+Nodes (12): cTrader ACCESS_DENIED Lockout (No Auto-Recovery), DRY Within a Single Runtime Convention, CLAUDE.md Pointer to /l Persona, npm run build Command, Trading-Monitor Project Overview (CLAUDE.md), Rename Consistency Convention, REPLAY_LOOKAHEAD_SEC M1 Scaling Gotcha, ctrader_oauth_tokens Table (+4 more)
 
 ### Community 314 - "Plan: Sehr Große Dateien Refactoren (PriceChart.vue)"
 Cohesion: 0.18
@@ -1333,17 +1368,9 @@ Nodes (11): Keep Codebase Clean / ~1000 Line Backstop Convention, liquidity_leve
 Cohesion: 0.47
 Nodes (3): fault_details(), Fehlerposition melden, niemals rohe Exception-Texte mit Zugangsdaten., HealthTests
 
-### Community 317 - "tradeSetupSimulation.js"
-Cohesion: 0.09
-Nodes (21): ENTRY_PATTERN_1_SIZING_VERSION, ENTRY_RISK_BUDGET, ENTRY_SIZING_VERSION, LEGACY_ENTRY_PATTERN_1_SIZING_VERSION, evaluateGrossSimulation(), evaluateSimulation(), money(), SIMULATION_VERSION (+13 more)
-
-### Community 318 - "Pip-/Pixel-Schwellwerte Übersicht"
-Cohesion: 0.28
-Nodes (9): HTF_FOREX_MIN_GAP_PIPS Constant, LOWER_TF_MIN_GAP_PIPS Constant, Pip-/Pixel-Schwellwerte Übersicht, MIN_PIXELS_PER_HOUR_FOR_LABELS Constants, PIP_SIZE Constant, RANGE_FIB_MIN_PP_DISTANCE_PIPS Constant, TRADE_SETUP_LS_MAX_DISTANCE_M5 Constant, poi-watcher 4H+1H OB-Zonen-Wächter Edge Function (+1 more)
-
-### Community 319 - "algoWatcherArchive.js"
-Cohesion: 0.39
-Nodes (5): createWatcherArchive(), labels, watcherArchivedBlock(), watcherArchivedEnd(), watcherEndLabels
+### Community 318 - "orderBlocks.js"
+Cohesion: 0.10
+Nodes (16): HTF_FOREX_MIN_GAP_PIPS Constant, LOWER_TF_MIN_GAP_PIPS Constant, Pip-/Pixel-Schwellwerte Übersicht, MIN_PIXELS_PER_HOUR_FOR_LABELS Constants, PIP_SIZE Constant, RANGE_FIB_MIN_PP_DISTANCE_PIPS Constant, TRADE_SETUP_LS_MAX_DISTANCE_M5 Constant, poi-watcher 4H+1H OB-Zonen-Wächter Edge Function (+8 more)
 
 ### Community 320 - "build_release_manifest.py"
 Cohesion: 0.39
@@ -1351,35 +1378,27 @@ Nodes (6): git_bytes(), manifest(), Hashmanifest für ein vollständiges, unver�
 
 ### Community 321 - "tradeSetup2DealingRange.js"
 Cohesion: 0.10
-Nodes (26): emit, noteSaveTimers, onEntryClick(), onNoteInput(), OUTCOME_LABEL, props, rows, archivedGbpRuns (+18 more)
+Nodes (25): emit, noteSaveTimers, onEntryClick(), onNoteInput(), OUTCOME_LABEL, props, rows, COUNTERTREND_STAGE_VERSION (+17 more)
 
-### Community 325 - "mt5History.ts"
-Cohesion: 0.12
-Nodes (18): readHistoryPage(), readHistorySync(), finite(), integer(), keys, validateHistoryBatch(), readHistoryJournalLinks(), readImportedTrades() (+10 more)
+### Community 325 - "checked"
+Cohesion: 0.13
+Nodes (26): readAccountBalances(), isExecutionId(), historyRefreshState(), ACCOUNT_SELECTION_ERRORS, listMt5TradingAccounts(), manageMt5Accounts(), readActiveMt5AccountId(), readMt5TradingAccounts() (+18 more)
 
 ### Community 327 - "ignoredCandles.test.js"
 Cohesion: 0.33
 Nodes (6): ASIA, kerze(), mark(), serie(), SPREAD_HOUR, START
 
 ### Community 328 - "dobReferenceDiagnostics.mjs"
-Cohesion: 0.33
-Nodes (5): days, footprint, manifest, root, source
-
-### Community 329 - "m1PivotStructure.test.js"
-Cohesion: 0.33
-Nodes (5): anchor, build(), knots, primary, rows
+Cohesion: 0.25
+Nodes (7): days, footprint, manifest, previous, root, source, unrestrictedDays
 
 ### Community 330 - "/task do Mode"
 Cohesion: 0.38
 Nodes (7): Laniakea milk-city Task-Status Rule, /task Default Data-Maintenance Mode, /task do Mode, /task new Mode, /task refine Mode, /task Command Router, milk-city Task Status Convention
 
-### Community 333 - "toggleIndicatorGroup"
-Cohesion: 0.50
-Nodes (3): toggleIndicatorGroup(), toggleIndikatoren(), toggleObs()
-
 ### Community 334 - "doubleOrderBlocks.js"
-Cohesion: 0.14
-Nodes (16): DEFAULT_MAX_FIRST_RETEST_DEPTH_FRACTION, detectDoubleOrderBlocks(), entriesFor(), candleInvalidatesOrderBlock(), measureOrderBlockPenetration(), orderBlockPenetration(), pair, load() (+8 more)
+Cohesion: 0.09
+Nodes (26): DEFAULT_MAX_RETEST_DEPTH_FRACTION, evaluateDoubleOrderBlockDepth(), validateDoubleOrderBlockDepthLimit(), evaluateDoubleOrderBlockRetestDay(), detectDoubleOrderBlocks(), candleInvalidatesOrderBlock(), measureOrderBlockPenetration(), orderBlockPenetration() (+18 more)
 
 ### Community 335 - "entryPattern1FirstRetest.test.js"
 Cohesion: 0.40
@@ -1390,9 +1409,9 @@ Nodes (3): candles, first, older
   docs/steerabilty-vs-wrong-ai-outputs.md · relation: references
 
 ## Knowledge Gaps
-- **2071 isolated node(s):** `{ readFileSync }`, `{ join }`, `SKILL`, `{ execFileSync }`, `path` (+2066 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2743 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **2081 isolated node(s):** `{ readFileSync }`, `{ join }`, `SKILL`, `{ execFileSync }`, `path` (+2076 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2758 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -1400,14 +1419,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `marketStructureAnalysis Developer Notes` connect `Vegapunk Slimming Results (-86%)` to `fachdoku-router/SKILL.md`, `marketStructureAnalysis Rules Overview`?**
-  _High betweenness centrality (0.036) - this node is a cross-community bridge._
-- **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `usePriceChartMarketStructure`, `liquidity.js`, `m1Checklist.js`, `fmtPrice`, `src/marketStructureAnalysis.ts`, `Vegapunk Slimming Results (-86%)`, `useTradeSetup2History.js`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+  _High betweenness centrality (0.043) - this node is a cross-community bridge._
+- **Why does `renderMarketStructureAnalysis()` connect `marketStructureRendering.ts` to `usePriceChartMarketStructure.js`, `liquidity.js`, `format.js`, `Vegapunk Slimming Results (-86%)`, `cssColor`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
 - **Why does `File Separation: Algorithm vs Rendering` connect `Vegapunk Slimming Results (-86%)` to `marketStructureRendering.ts`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+  _High betweenness centrality (0.039) - this node is a cross-community bridge._
 - **What connects `{ readFileSync }`, `{ join }`, `SKILL` to the rest of the system?**
-  _2071 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2081 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Dashboard.vue` be split into smaller, more focused modules?**
-  _Cohesion score 0.011584822475493644 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.011509817197020988 - nodes in this community are weakly interconnected._
 - **Should `gbp_h1_uptrend_uptrend_break_of_structure_und_trendumkehr.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.0196078431372549 - nodes in this community are weakly interconnected._
