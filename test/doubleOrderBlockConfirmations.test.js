@@ -3,10 +3,15 @@ import {ref} from 'vue';
 import {useDoubleOrderBlockConfirmations} from '../src/composables/useDoubleOrderBlockConfirmations.js';
 import * as intake from '../src/tradeIntake.js';
 vi.mock('../src/tradeIntake.js',()=>({createDealingRange:vi.fn(),addRangeConfirmation:vi.fn(),addConfirmationToTrade:vi.fn()}));
-const pair={instrument:'XAUUSD',direction:'long',firstOrderBlock:{startTime:100,top:12,bottom:10},secondOrderBlock:{startTime:400,top:14,bottom:12}};
+const pair={instrument:'XAUUSD',direction:'long',firstOrderBlock:{dir:1,timeframe:'5M',startTime:100,top:12,bottom:10},secondOrderBlock:{dir:1,timeframe:'5M',startTime:400,top:14,bottom:12}};
 const context=()=>({currentSymbol:ref('XAUUSD'),confirmationAddTrade:ref(null),rangeConfirmationAddTrade:ref(null),
   tscBootstrapArmed:ref(true),tscRangeId:ref(null),refreshTscRange:vi.fn().mockResolvedValue(true),refreshTrades:vi.fn().mockResolvedValue(true),getEvidence:()=>[]});
 beforeEach(()=>{vi.resetAllMocks();intake.createDealingRange.mockResolvedValue({id:42});intake.addRangeConfirmation.mockResolvedValue(true);intake.addConfirmationToTrade.mockResolvedValue(true);});
+it.each([-1,0])('rejects a mixed-direction pair before any journal write (OB2 dir %s)',async dir=>{
+  const c=context(),action=useDoubleOrderBlockConfirmations(c);
+  await action.save({...pair,secondOrderBlock:{...pair.secondOrderBlock,dir}});
+  expect(action.error.value).toContain('Ungültiges DOB-Paar');expect(intake.createDealingRange).not.toHaveBeenCalled();expect(intake.addRangeConfirmation).not.toHaveBeenCalled();
+});
 it('bootstraps two existing OB confirmations, OB2 first for the existing default invalidation',async()=>{
   const c=context(),a=useDoubleOrderBlockConfirmations(c);await a.save(pair);
   expect(intake.createDealingRange).toHaveBeenCalledWith({instrument:'XAUUSD',direction:'long'});

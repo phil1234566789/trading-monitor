@@ -185,8 +185,9 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
     tradeConfirmationLinkPrimitives,
     divergencePrimitives,
     tscSetupPrimitives,
+    doubleOrderBlockCandidates=[],
   } = primitives;
-  const candidates = [];
+  const candidates = [...doubleOrderBlockCandidates];
   for (const p of tradePrimitives) {
     const distance = p.distanceTo(x, y);
     if (distance <= radius) candidates.push({ kind: "trade_position", trade: p.trade, distance });
@@ -310,6 +311,7 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
   // Dealing Range teilen sich dasselbe verlinkte Setup, tauchten deshalb als exakt gleicher
   // Kandidat mehrfach in der Liste auf ("Short-Setup #105" zweimal).
   const candidateKey = (c) => {
+    if(c.kind==='double_order_block')return `double_order_block:${c.dobContext.pair.id}`;
     if (c.kind === "trade_position") return `trade_position:${c.trade.id}`;
     if (c.kind === "ob_zone") return `ob_zone:${c.zone.timeframe}|${c.zone.dir}|${c.zone.startTime}`;
     if (c.kind === "m5_ob") return `m5_ob:${c.zone.dirNum}|${c.zone.top}|${c.zone.bottom}|${c.zone.startTime}`;
@@ -328,7 +330,8 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
     seen.add(key);
     deduped.push(c);
   }
-  return deduped.slice(0, maxCandidates);
+  // Geteilte DOB-Zonen brauchen alle echten Paaroptionen; keine stille Wahl des jüngsten Partners.
+  return [...deduped.filter(c=>c.kind==='double_order_block'),...deduped.filter(c=>c.kind!=='double_order_block').slice(0,maxCandidates)];
 }
 
 // Leichtgewichtiger Boolean-Check fürs Cursor-Feedback (jede Mausbewegung) — baut anders als
@@ -342,8 +345,10 @@ export function hasNearbyPinCandidate(x, y, primitives, radius = PIN_SEARCH_RADI
     tradeConfirmationLinkPrimitives,
     divergencePrimitives,
     tscSetupPrimitives,
+    doubleOrderBlockCandidates=[],
   } = primitives;
   return (
+    doubleOrderBlockCandidates.some(c=>c.distance<=radius)||
     tradePrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
     orderBlockPrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
     tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= radius) ||

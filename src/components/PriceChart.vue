@@ -219,6 +219,8 @@ const props = defineProps({
   showObsM1: { type: Boolean, default: false },
   showObsM5: { type: Boolean, default: false },
   showDoubleOrderBlocks: {type:Boolean,default:false},
+  pinnedDoubleOrderBlocks:{type:Array,default:()=>[]},
+  hoveredDoubleOrderBlockPin:{type:Object,default:null},
   showObs1h: { type: Boolean, default: true },
   showObs4h: { type: Boolean, default: true },
   showHistoricalObs: { type: Boolean, default: false },
@@ -584,6 +586,8 @@ let invalidationLinePrimitives = [];
 let allCandles = [];
 const doubleOrderBlocks=useDoubleOrderBlockChart(()=>({series:candleSeries,candles:clipReplay(allCandles),
   enabled:props.showDoubleOrderBlocks,snapshot:snapshotView.value,symbol:props.symbol,
+  currentBar:props.currentBar,pinnedSnapshots:props.pinnedDoubleOrderBlocks,hoveredPin:props.hoveredDoubleOrderBlockPin,
+  visibleRange:chart?.timeScale().getVisibleRange(),
   replayUntil:props.replayUntil,
   evaluatedAt:closedReplayEvaluationTime(props.replayUntil,Math.floor(Date.now()/1000),allCandles,props.currentBar)}));
 const dobStatus=doubleOrderBlocks.status;
@@ -2213,10 +2217,10 @@ onMounted(() => {
     };
   }
   function findNearbyPinCandidates(x, y) {
-    return findNearbyPinCandidatesPure(x, y, pinPrimitivesBag(), { symbol: props.symbol, currentBar: props.currentBar });
+    return findNearbyPinCandidatesPure(x,y,{...pinPrimitivesBag(),doubleOrderBlockCandidates:doubleOrderBlocks.pinCandidates(x,y)}, {symbol:props.symbol,currentBar:props.currentBar});
   }
   function hasNearbyPinCandidate(x, y) {
-    return hasNearbyPinCandidatePure(x, y, pinPrimitivesBag());
+    return doubleOrderBlocks.hasPinCandidate(x,y)||hasNearbyPinCandidatePure(x,y,pinPrimitivesBag());
   }
 
   // Rechtsklick -> Pin-Kontextmenü. lightweight-charts hat kein natives Rechtsklick-Event, daher ein
@@ -2748,7 +2752,7 @@ defineExpose({
       :status="setup2Status" :error="setup2Error" :snapshot-view="snapshotView" :m1-status="setup2.snapshotM1.value.message" :indicator-status="setup2.snapshotIndicators.value.message" @select="setup2.select" @close="closeTradeSetup2Selection" @refresh="setup2.refresh" />
     <M5CandleClock v-if="m5ClockEnabled()" :state="m5Clock" @retry="retryM5Clock" />
     <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
-    <DoubleOrderBlockStatus v-if="showDoubleOrderBlocks && dobStatus" :status="dobStatus" :details="dobDetails" />
+    <DoubleOrderBlockStatus v-if="(showDoubleOrderBlocks || pinnedDoubleOrderBlocks.length) && dobStatus" :status="dobStatus" :details="dobDetails" />
     <div v-if="ideaEditingStatus && !ideaDrawing.active.value" class="idea-drawing-controls" role="status">{{ideaEditingStatus}}</div>
     <div v-if="ideaDrawing.active.value" class="idea-drawing-controls" role="status">
       {{ideaDrawing.error.value || 'Idee: Anker → SL → optionales Ziel'}}

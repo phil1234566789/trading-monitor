@@ -1,5 +1,6 @@
 import { reconstructObLifecycle } from "../_shared/obReplayLifecycle.ts";
 import { pinTypeFields, type PinType } from './pinType.ts';
+import {persistDoubleOrderBlockPin} from '../_shared/doubleOrderBlockPinStore.js';
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { berlinDayRangeUtcMs } from "../_shared/berlinTime.ts";
@@ -273,7 +274,7 @@ export async function getPinContext() {
   return fetchAllRows((from, to) => supabase
     .from("pin_context")
     .select(
-      "id, kind, pin_type, note, created_at, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, " +
+      "id, kind, dob_pin_key, dob_context, pin_type, note, created_at, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, " +
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
         "trade_setups(*), " +
@@ -302,6 +303,10 @@ export async function getPinContext() {
 // rsi_divergence) — trade_position/trade_confirmation bleiben Philip-only (Journal-Einträge, kein
 // Chart-Highlight), siehe Task "Pin-Kontext: MCP-Write, fehlende Chart-Highlights, Touch-Alarm".
 const PIN_CONFIRM_COLUMNS = "id, kind, pin_type, note, created_at";
+export async function addPinDoubleOrderBlock(snapshot: any,note?:string,pinType?:PinType) {
+  return persistDoubleOrderBlockPin({supabase,snapshot,note,pinFields:pinTypeFields(pinType),
+    resolveObId:(ob:any,pair:any)=>findOrCreateObZoneId(pair.instrument,'5M',pair.direction,ob.top,ob.bottom,ob.startTime)});
+}
 const PIN_REF_COLUMN: Record<string, string> = {
   ob_zone: "ob_zone_id",
   trade_setup: "trade_setup_id",

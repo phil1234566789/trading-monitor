@@ -1,5 +1,6 @@
 import {ref} from 'vue';
 import {addRangeConfirmation,addConfirmationToTrade,createDealingRange} from '../tradeIntake.js';
+import {assertDoubleOrderBlockPair} from '../../supabase/functions/_shared/doubleOrderBlockPin.js';
 
 const evidenceKey=e=>JSON.stringify([e.timeframe,e.sourceTime,e.rangeLow,e.rangeHigh]);
 export function useDoubleOrderBlockConfirmations({currentSymbol,confirmationAddTrade,rangeConfirmationAddTrade,
@@ -7,6 +8,7 @@ export function useDoubleOrderBlockConfirmations({currentSymbol,confirmationAddT
   const saving=ref(false),error=ref('');
   const completed=new Map();
   async function save(pair) {
+    try {assertDoubleOrderBlockPair(pair);}catch(cause){error.value=cause.message;return;}
     const trade=confirmationAddTrade.value??rangeConfirmationAddTrade.value;
     if(saving.value||(!trade&&!tscBootstrapArmed.value)||pair.instrument!==currentSymbol.value)return;
     const instrument=currentSymbol.value,bootstrap=!trade&&tscBootstrapArmed.value;

@@ -21,6 +21,7 @@ import { findOrCreateObZoneId, findOrCreateTradeSetupId } from "./tradeIntake.js
 import { fetchAllRows } from './dbReadPaging.js';
 import {scopePinSource} from './simulationPinSource.js';
 import { pinTypeFields } from './pinType.js';
+import {persistDoubleOrderBlockPin} from '../supabase/functions/_shared/doubleOrderBlockPinStore.js';
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
 // addPinM5ObEntry (unten) löst erst per find-or-create einen ob_zone_id auf und ruft dann ganz
@@ -34,7 +35,7 @@ const REF_COLUMN = {
 };
 
 const ROW_COLUMNS =
-  "id, kind, trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
+  "id, kind, dob_pin_key, dob_context, trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
@@ -55,6 +56,8 @@ function toEntry(row) {
   return {
     id: row.id,
     kind: row.kind,
+    dobContext:row.dob_context??null,
+    dobPinKey:row.dob_pin_key??null,
     pinType: row.pin_type ?? null,
     simulationRunId: row.simulation_run_id,
     liveEventId: row.live_event_id,
@@ -242,6 +245,13 @@ export async function addPinM5ObEntry(zone, note, pinType) {
   });
   if (obZoneId == null) return null;
   return addPinEntry("ob_zone", obZoneId, note, pinType);
+}
+
+export async function addPinDoubleOrderBlock(snapshot,note,pinType) {
+  const row=await persistDoubleOrderBlockPin({supabase,snapshot,note,pinFields:pinTypeFields(pinType),
+    resolveObId:(ob,pair)=>findOrCreateObZoneId({instrument:pair.instrument,timeframe:'5M',direction:pair.direction,
+      top:ob.top,bottom:ob.bottom,startTimeSec:ob.startTime})});
+  return toEntry(row);
 }
 
 // Analog zu addPinM5ObEntry, für ein Liquiditäts-Level auf einem Nicht-1h-Chart-Timeframe

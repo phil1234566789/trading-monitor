@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import {formatDatedTime} from '../berlinTime.js';
 import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulationPinPresentation.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import PinTypeChips from './PinTypeChips.vue';
@@ -68,6 +69,16 @@ function onEntryClick(event, entry) {
         </div>
         <div class="pin-panel-entry-prices">Lauf {{ row.entry.simulationRunId }} · {{ simulationPinStageLabel(row.entry.simulationContext) }} · {{ simulationPinOutcomeLabel(row.entry.simulationContext) }}<br />{{ row.entry.simulationContext?.checkpoint?.label }} · {{ row.entry.simulationContext?.snapshotAt?.berlin }}</div>
         <RouterLink v-if="row.entry.simulationContext?.chartLink" :to="row.entry.simulationContext.chartLink" @click.stop>Simulationsstand im Chart</RouterLink>
+      </template>
+      <template v-else-if="row.entry.kind === 'double_order_block'">
+        <div class="pin-panel-entry-header">DOB {{row.entry.dobContext?.pair.direction==='long'?'Long':'Short'}} · {{row.entry.dobContext?.pair.instrument}}
+          <button class="pin-panel-remove" aria-label="DOB-Pin entfernen" @click="emit('remove',row.entry.id)">🗑</button>
+        </div>
+        <div class="pin-panel-entry-prices" v-if="row.entry.dobContext">
+          OB1 {{formatDatedTime(row.entry.dobContext.pair.firstOrderBlock.startTime)}} · {{row.entry.dobContext.pair.firstOrderBlock.bottom}}–{{row.entry.dobContext.pair.firstOrderBlock.top}}<br>
+          OB2 {{formatDatedTime(row.entry.dobContext.pair.secondOrderBlock.startTime)}} · {{row.entry.dobContext.pair.secondOrderBlock.bottom}}–{{row.entry.dobContext.pair.secondOrderBlock.top}}<br>
+          Eingefrorener Stand {{formatDatedTime(row.entry.dobContext.evaluatedAt)}} · {{row.entry.dobContext.engineVersion}}
+        </div>
       </template>
       <template v-else-if="row.entry.kind === 'ob_zone'">
         <div class="pin-panel-entry-header">

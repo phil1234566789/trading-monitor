@@ -66,6 +66,7 @@ import {
   fetchPinContext,
   addPinEntry,
   addPinM5ObEntry,
+  addPinDoubleOrderBlock,
   addPinTscSetupEntry,
   addPinM5LiquidityEntry,
   addPinRsiDivergenceEntry,
@@ -78,6 +79,7 @@ import {
   m5LiquidityEntryNaturalKey,
   rsiDivergenceEntryNaturalKey,
 } from "../pinContext.js";
+import {doubleOrderBlockPinLabel} from '../doubleOrderBlockPin.js';
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
@@ -952,6 +954,7 @@ const pinAddPopupError = ref(null);
 // welcher ist. Trade-position-id (dieselbe "#<id>", die auch TradeEditModal.vue im Titel zeigt)
 // dazu, damit jede Zeile eindeutig ist.
 function pinCandidateLabel(c) {
+  if(c.kind==='double_order_block')return `${doubleOrderBlockPinLabel(c.dobContext)} · OB1 ${formatDatedTime(c.dobContext.pair.firstOrderBlock.startTime)} → OB2 ${formatDatedTime(c.dobContext.pair.secondOrderBlock.startTime)}`;
   if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "m5_ob") return `M5 ${c.zone.dirNum === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
@@ -981,6 +984,11 @@ function onPinCandidateSelect(key) {
   pinAddPopupError.value = null;
 }
 async function onPinAddConfirm(note, pinType) {
+  if(pinAddPopupTarget.value?.kind==='double_order_block') {
+    try {await addPinDoubleOrderBlock(pinAddPopupTarget.value.dobContext,note,pinType);}
+    catch(error){pinAddPopupError.value=error.message||'DOB-Pin konnte nicht gespeichert werden.';return;}
+    pinAddPopupTarget.value=null;pinAddPopupError.value=null;await refreshPinContext();return;
+  }
   const target = pinAddPopupTarget.value;
   if (target.kind === "ob_zone") {
     const { instrument, timeframe, dir, startTime } = target.zone;
@@ -1346,6 +1354,7 @@ const pinnedRsiDivergences = computed(() => {
 // dieselbe "kann gerade nicht springen"-Semantik.
 function pinJumpMismatch(entry) {
   if (!entry || entry.kind === "trade_position") return null;
+  if(entry.kind==='double_order_block')return entry.dobContext?.pair.instrument===currentSymbol.value?null:`Erst zu ${entry.dobContext?.pair.instrument} wechseln.`;
   // Kaskaden-Regel wie pinVisibleOnCurrentTf/pinEntryVisible (Bug 2026-08-21, Nachbesserung
   // 2026-08-26: siehe pinJumpMismatchForField oben) — für ob_zone kollabiert das bei 5M (feinster
   // Timeframe dort) auf "nur auf 5M selbst sichtbar", exakt das alte kind='m5_ob'-Verhalten
@@ -1377,6 +1386,7 @@ const pinJumpHint = computed(() => {
 
 function onSelectPin(entry) {
   if (!entry || pinJumpMismatch(entry)) return;
+  if(entry.kind==='double_order_block'){priceChartRef.value?.jumpToPin(entry.dobContext.pair.firstOrderBlock.startTime,entry.dobContext.pair.secondOrderBlock.startTime);return;}
   if (entry.kind === "trade_position") {
     const t = trades.value.find((x) => x.id === entry.tradePositionId);
     if (t) priceChartRef.value?.jumpToTrade(t.entryTime, t.exitTime);
@@ -1608,6 +1618,8 @@ const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch((
 // zum bereits gefixten Trades-Toggle-Bug 2026-08-25 (siehe tradeLinkedLiquidityLevels oben). Eine
 // gemeinsame Quelle statt den Toggle in jedem der ~10 abgeleiteten Computeds einzeln zu prüfen.
 const visiblePinContextEntries = computed(() => (showPinHighlights.value ? pinContextEntries.value : []));
+const pinnedDoubleOrderBlocks=computed(()=>visiblePinContextEntries.value.filter(e=>e.kind==='double_order_block'&&e.dobContext?.pair.instrument===currentSymbol.value).map(e=>e.dobContext));
+const hoveredDoubleOrderBlockPin=computed(()=>hoveredPinEntry.value?.kind==='double_order_block'&&hoveredPinEntry.value.dobContext?.pair.instrument===currentSymbol.value?hoveredPinEntry.value.dobContext:null);
 // 1H/4H-OB-Zonen (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7) —
 // anders als trades/pinContextEntries oben ändert sich das hier NICHT nur durch explizite
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
@@ -2315,6 +2327,8 @@ watch(selectedTradingAccountId, () => {
     :show-trades="showTrades"
     :show-obs-m5="showObsM5"
     :show-double-order-blocks="showDoubleOrderBlocks"
+    :pinned-double-order-blocks="pinnedDoubleOrderBlocks"
+    :hovered-double-order-block-pin="hoveredDoubleOrderBlockPin"
     :show-obs-m1="showObsM1"
     :show-obs-1h="showObs1h"
     :show-obs-4h="showObs4h"

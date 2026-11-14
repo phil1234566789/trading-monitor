@@ -53,3 +53,10 @@ it.each(['1h','4h','1d'])('bounds native reads independently of years of visible
   expect(a.status.value).toContain('im Ausschnitt');expect(a.status.value).toContain('M5 ab');expect(a.status.value).toContain('M1 ab');
   c.candles=[{time:-3000000000}];a.refresh();expect(fetchCandlesCached).toHaveBeenCalledTimes(2);a.dispose();
 });
+it('renders the frozen pin and its as-of over a recomputed same-ID live loss',async()=>{
+ const frozen={id:'same',entries:{a:{outcome:{status:'open'}}}},live={id:'same',entries:{a:{outcome:{status:'loss'}}}};
+ const c=context();c.pinnedSnapshots=[{pair:frozen,evaluatedAt:900}];c.hoveredPin=c.pinnedSnapshots[0];
+ const original=JSON.stringify(c.hoveredPin),a=useDoubleOrderBlockChart(()=>c);a.refresh();
+ await vi.waitFor(()=>expect(workers).toHaveLength(1));workers[0].onmessage({data:{result:{status:'ready',pairs:[live]}}});
+ const call=renderDoubleOrderBlocks.mock.calls.at(-1);expect(call[1]).toEqual([frozen]);expect(call[4].pairEvaluatedAt.get('same')).toBe(900);expect(JSON.stringify(c.hoveredPin)).toBe(original);a.dispose();
+});

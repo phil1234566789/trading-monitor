@@ -1,6 +1,6 @@
 import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
-import { getPinContext, addPinEntry, addPinM5ObEntry, addPinM5LiquidityEntry, addPinRsiDivergenceEntry, removePinEntry } from "../db.ts";
+import { getPinContext, addPinEntry, addPinM5ObEntry, addPinM5LiquidityEntry, addPinRsiDivergenceEntry, addPinDoubleOrderBlock, removePinEntry } from "../db.ts";
 import { json } from "../jsonResponse.ts";
 
 // War bis Chat 2026-08-17 read-only ("Philip entfernt Einträge selbst im Pin-Modal, kein
@@ -12,63 +12,9 @@ import { json } from "../jsonResponse.ts";
 // einzige.
 const PIN_KIND_WITH_REF_ID = z.enum(["ob_zone", "trade_setup", "liquidity_level"]);
 
-export function registerPinTools(server: McpServer) {
-  server.registerTool(
-    "get_pin_context",
-    {
-      title: "Pin-Kontext",
-      description:
-        "pin_type ist observation (Beobachtung), bug oder null (Typ fehlt). Beobachtung ist KEIN Fix- oder Änderungsauftrag ohne ausdrücklichen Nutzerauftrag, auch bei möglichen Verbesserungen. Bug bedeutet prüfen und priorisieren, keine bewiesene Ursache; verwandte Fälle bündeln, vorhandene Tasks prüfen, keinen Task automatisch pro Pin erstellen. Alt-Pins ohne Typ nicht anhand Kommentar als Bug erraten. " +
-        "Auch Statistik-Pins: kind='simulation_dr', 'simulation_checkpoint', 'simulation_entry'. " +
-        "simulation_context enthält den eingefrorenen Lauf-, Regel- und Entry Pattern-Stand, DR-Verlauf, " +
-        "Checkpoint-Werte und Belege oder beide SL-Ergebnisse, Zeiten in Berlin und UTC sowie Chart-Link. " +
-        "Wenn Philip sagt 'ich habe etwas angepinnt, schau es dir an', hier den Kontext samt Anliegen lesen. " +
-        "Die trade_positions, OB-Zonen, Trade-Setups, Trade-Bestätigungen, Liquiditäts-Level, " +
-        "M5-OB-Boxen und RSI-Divergenz-Konnektoren, die Philip gerade per Rechtsklick " +
-        "(Trades-Tabelle, Chart-Trade-Marker, Chart-OB-Zone, die '#<id>'-Box am ursprünglichen " +
-        "M5-Setup eines geloggten Trades, die '✔ ...'-Bestätigungs-Box, eine LQ-Level-Linie, eine " +
-        "M5-OB-Box oder eine RSI-Divergenz-Linie) 'an dich übergeben' hat, samt optionaler Notiz " +
-        "und voller Daten (bei kind='trade_position': dealing_range/targets/partial exits; bei " +
-        "kind='ob_zone': die volle ob_zones-Zeile; bei kind='trade_setup': die volle trade_setups-" +
-        "Zeile; bei kind='trade_confirmation': die volle trade_evidence-Zeile; bei " +
-        "kind='liquidity_level': die volle liquidity_levels-Zeile (nur 1h-Chart, echte DB-Zeile); " +
-        "bei kind='m5_ob': die volle ob_zones-Zeile wie bei kind='ob_zone' (timeframe='5M') — beim " +
-        "Pinnen per find-or-create angelegt, falls noch nicht vorhanden; touched/invalidated werden " +
-        "für M5-Zeilen aber nie live nachverfolgt, bleiben also auf ihrem Insert-Default; bei " +
-        "kind='m5_liquidity_level': reiner Rohdaten-Snapshot einer Liquiditäts-Level-Linie auf " +
-        "einem Nicht-1h-Chart-Timeframe (m5_liquidity_instrument/_timeframe/_direction/_price/" +
-        "_pivot_time); bei kind='rsi_divergence': reiner Rohdaten-Snapshot eines RSI(14)-Divergenz-" +
-        "Konnektors (rsi_divergence_instrument/_type ['bearish'|'bullish']/_from_time/_to_time/" +
-        "_from_price/_to_price/_from_rsi/_to_rsi) — Divergenzen werden nie persistiert " +
-        "(detectRsiDivergence()/detectRsiDivergenceHistory() in src/rsi.js rechnen live) — bei " +
-        "allen drei Snapshot-Arten können touched/invalidated bzw. die aktuelle RSI-Lage seit dem " +
-        "Snapshot-Zeitpunkt abgewichen sein, da es keine spätere Aktualisierung gibt). Ruf dieses " +
-        "Tool proaktiv auf, wenn Philip sagt 'schau dir das mal an' o.ä., statt auf eine " +
-        "Beschreibung per Text zu warten — das ist genau der Zweck dieses Tools.",
-      inputSchema: {},
-    },
-    async () => json(await getPinContext()),
-  );
-
-  server.registerTool(
-    "add_pin_entry",
-    {
-      title: "Chart-Stelle pinnen",
-      description:
-        "Pinnt eine relevante Chart-Stelle für Philip — dieselbe Aktion wie sein Rechtsklick → " +
-        "'Anpinnen' im Chart, jetzt auch dir selbst verfügbar. NUR für Chart-POIs, NICHT für " +
-        "trade_position/trade_confirmation (Journal-Einträge bleiben Philip-only, dafür bleibt " +
-        "der Rechtsklick-Weg im Browser der einzige Weg). Fünf kind-Werte, jeweils mit eigenen " +
-        "Pflichtfeldern: 'ob_zone'/'trade_setup'/'liquidity_level' brauchen `refId` (die echte " +
-        "DB-id aus get_ob_zones/get_trade_setups/get_near_relevant_liquidity_levels); 'm5_ob' braucht `m5Ob` " +
-        "(M5-Orderblock — Rohdaten statt id, weil poi-watcher M5 nie live erkennt/persistiert; wird " +
-        "beim Pinnen per find-or-create in ob_zones angelegt); 'm5_liquidity_level' " +
-        "braucht `m5Liquidity` (Liquiditäts-Level auf einem Nicht-1h-Timeframe, ebenfalls nie " +
-        "persistiert); 'rsi_divergence' braucht `instrument` + `divergence` (aus " +
-        "get_forex_rsi/detectRsiDivergence). Ein zweiter Aufruf für dieselbe Stelle aktualisiert " +
-        "nur die Notiz (Upsert), legt keinen Zweiteintrag an. Zeitfelder sind Unix-Sekunden.",
-      inputSchema: {
-        kind: z.enum(["ob_zone", "trade_setup", "liquidity_level", "m5_ob", "m5_liquidity_level", "rsi_divergence"]),
+const ADD_PIN_SCHEMA = {
+        kind: z.enum(["ob_zone", "trade_setup", "liquidity_level", "m5_ob", "m5_liquidity_level", "rsi_divergence", "double_order_block"]),
+        dobSnapshot:z.record(z.unknown()).optional().describe("Bei kind='double_order_block': vollständiger double-order-block-pin-v1 Snapshot. Beide M5-OBs müssen gleichgerichtet sein und zum Paar-Orderflow passen; nicht aus Nachbarboxen erraten."),
         note: z.string().optional(),
         pinType: z.enum(["observation","bug"]).nullable().optional().describe("Expliziter Pin-Typ; weggelassen bleibt ein bestehender Typ erhalten, null bedeutet ungeordnet. Beobachtung erteilt keinen Änderungsauftrag."),
         refId: z.number().optional().describe("Pflicht bei kind='ob_zone'|'trade_setup'|'liquidity_level' — die echte DB-id."),
@@ -112,9 +58,71 @@ export function registerPinTools(server: McpServer) {
           })
           .optional()
           .describe("Pflicht (zusammen mit instrument) bei kind='rsi_divergence'."),
-      },
+      };
+
+export function registerPinTools(server: McpServer) {
+  server.registerTool(
+    "get_pin_context",
+    {
+      title: "Pin-Kontext",
+      description:
+        "DOB-Pins kind='double_order_block' enthalten dob_context als eingefrorenen Paar-Snapshot: beide ursprünglichen M5-OBs mit obZoneId, Richtung, Zonen und Startzeiten, Entry/Outcome, Engineversion, sichtbarer As-of/View und geladene Datenabdeckung. Rot bedeutet Outcome Loss, nicht Short. Nicht zwei benachbarte DOB-Labels als Paar interpretieren; ausschließlich snapshot.pair.firstOrderBlock/secondOrderBlock gehören zusammen. Der Snapshot ist kein neuer Live-OHLC-Beleg. " +
+        "pin_type ist observation (Beobachtung), bug oder null (Typ fehlt). Beobachtung ist KEIN Fix- oder Änderungsauftrag ohne ausdrücklichen Nutzerauftrag, auch bei möglichen Verbesserungen. Bug bedeutet prüfen und priorisieren, keine bewiesene Ursache; verwandte Fälle bündeln, vorhandene Tasks prüfen, keinen Task automatisch pro Pin erstellen. Alt-Pins ohne Typ nicht anhand Kommentar als Bug erraten. " +
+        "Auch Statistik-Pins: kind='simulation_dr', 'simulation_checkpoint', 'simulation_entry'. " +
+        "simulation_context enthält den eingefrorenen Lauf-, Regel- und Entry Pattern-Stand, DR-Verlauf, " +
+        "Checkpoint-Werte und Belege oder beide SL-Ergebnisse, Zeiten in Berlin und UTC sowie Chart-Link. " +
+        "Wenn Philip sagt 'ich habe etwas angepinnt, schau es dir an', hier den Kontext samt Anliegen lesen. " +
+        "Die trade_positions, OB-Zonen, Trade-Setups, Trade-Bestätigungen, Liquiditäts-Level, " +
+        "M5-OB-Boxen und RSI-Divergenz-Konnektoren, die Philip gerade per Rechtsklick " +
+        "(Trades-Tabelle, Chart-Trade-Marker, Chart-OB-Zone, die '#<id>'-Box am ursprünglichen " +
+        "M5-Setup eines geloggten Trades, die '✔ ...'-Bestätigungs-Box, eine LQ-Level-Linie, eine " +
+        "M5-OB-Box oder eine RSI-Divergenz-Linie) 'an dich übergeben' hat, samt optionaler Notiz " +
+        "und voller Daten (bei kind='trade_position': dealing_range/targets/partial exits; bei " +
+        "kind='ob_zone': die volle ob_zones-Zeile; bei kind='trade_setup': die volle trade_setups-" +
+        "Zeile; bei kind='trade_confirmation': die volle trade_evidence-Zeile; bei " +
+        "kind='liquidity_level': die volle liquidity_levels-Zeile (nur 1h-Chart, echte DB-Zeile); " +
+        "bei kind='m5_ob': die volle ob_zones-Zeile wie bei kind='ob_zone' (timeframe='5M') — beim " +
+        "Pinnen per find-or-create angelegt, falls noch nicht vorhanden; touched/invalidated werden " +
+        "für M5-Zeilen aber nie live nachverfolgt, bleiben also auf ihrem Insert-Default; bei " +
+        "kind='m5_liquidity_level': reiner Rohdaten-Snapshot einer Liquiditäts-Level-Linie auf " +
+        "einem Nicht-1h-Chart-Timeframe (m5_liquidity_instrument/_timeframe/_direction/_price/" +
+        "_pivot_time); bei kind='rsi_divergence': reiner Rohdaten-Snapshot eines RSI(14)-Divergenz-" +
+        "Konnektors (rsi_divergence_instrument/_type ['bearish'|'bullish']/_from_time/_to_time/" +
+        "_from_price/_to_price/_from_rsi/_to_rsi) — Divergenzen werden nie persistiert " +
+        "(detectRsiDivergence()/detectRsiDivergenceHistory() in src/rsi.js rechnen live) — bei " +
+        "allen drei Snapshot-Arten können touched/invalidated bzw. die aktuelle RSI-Lage seit dem " +
+        "Snapshot-Zeitpunkt abgewichen sein, da es keine spätere Aktualisierung gibt). Ruf dieses " +
+        "Tool proaktiv auf, wenn Philip sagt 'schau dir das mal an' o.ä., statt auf eine " +
+        "Beschreibung per Text zu warten — das ist genau der Zweck dieses Tools.",
+      inputSchema: {},
     },
-    async ({ kind, note, pinType, refId, m5Ob, m5Liquidity, instrument, divergence }) => {
+    async () => json(await getPinContext()),
+  );
+
+  server.registerTool(
+    "add_pin_entry",
+    {
+      title: "Chart-Stelle pinnen",
+      description:
+        "Pinnt eine relevante Chart-Stelle für Philip — dieselbe Aktion wie sein Rechtsklick → " +
+        "'Anpinnen' im Chart, jetzt auch dir selbst verfügbar. NUR für Chart-POIs, NICHT für " +
+        "trade_position/trade_confirmation (Journal-Einträge bleiben Philip-only, dafür bleibt " +
+        "der Rechtsklick-Weg im Browser der einzige Weg). Zusätzlich speichert double_order_block einen vollständigen dobSnapshot atomar pro Paar. Die übrigen kind-Werte bleiben mit eigenen " +
+        "Pflichtfeldern: 'ob_zone'/'trade_setup'/'liquidity_level' brauchen `refId` (die echte " +
+        "DB-id aus get_ob_zones/get_trade_setups/get_near_relevant_liquidity_levels); 'm5_ob' braucht `m5Ob` " +
+        "(M5-Orderblock — Rohdaten statt id, weil poi-watcher M5 nie live erkennt/persistiert; wird " +
+        "beim Pinnen per find-or-create in ob_zones angelegt); 'm5_liquidity_level' " +
+        "braucht `m5Liquidity` (Liquiditäts-Level auf einem Nicht-1h-Timeframe, ebenfalls nie " +
+        "persistiert); 'rsi_divergence' braucht `instrument` + `divergence` (aus " +
+        "get_forex_rsi/detectRsiDivergence). Ein zweiter Aufruf für dieselbe Stelle aktualisiert " +
+        "nur die Notiz (Upsert), legt keinen Zweiteintrag an. Zeitfelder sind Unix-Sekunden.",
+      inputSchema: ADD_PIN_SCHEMA,
+    },
+    async ({ kind, note, pinType, refId, m5Ob, m5Liquidity, instrument, divergence, dobSnapshot }: z.infer<z.ZodObject<typeof ADD_PIN_SCHEMA>>) => {
+      if(kind==='double_order_block') {
+        if(!dobSnapshot)throw new Error('dobSnapshot ist Pflicht für einen DOB-Pin.');
+        return json(await addPinDoubleOrderBlock(dobSnapshot,note,pinType));
+      }
       if (PIN_KIND_WITH_REF_ID.safeParse(kind).success) {
         if (refId == null) throw new Error(`refId ist Pflicht bei kind='${kind}'.`);
         const result = await addPinEntry(kind as "ob_zone" | "trade_setup" | "liquidity_level", refId, note, pinType);
@@ -145,7 +153,7 @@ export function registerPinTools(server: McpServer) {
         id: z.number().int(),
       },
     },
-    async ({ id }) => {
+    async ({ id }: {id:number}) => {
       await removePinEntry(id);
       return json({ removed: id });
     },
