@@ -1,22 +1,75 @@
 {
-  "version": "latest-reaction-first-m1-fvg-ob1-depth50-hold-v3",
+  "version": "latest-reaction-first-m1-fvg-both-depth50-hold-sameday-v5",
   "scope": "16 selected positive examples; no general win-rate or trading approval",
   "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
   "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
   "previousPolicy": {
-    "version": "latest-reaction-first-m1-fvg-ob1-depth50-v2",
+    "version": "latest-reaction-first-m1-fvg-ob1-depth50-hold-v3",
+    "previousPolicy": {
+      "version": "latest-reaction-first-m1-fvg-ob1-depth50-v2",
+      "footprint": [
+        {
+          "day": "2026-11-11",
+          "pairCount": 23
+        },
+        {
+          "day": "2026-11-09",
+          "pairCount": 36
+        },
+        {
+          "day": "2026-11-06",
+          "pairCount": 17
+        },
+        {
+          "day": "2026-11-05",
+          "pairCount": 23
+        },
+        {
+          "day": "2026-11-04",
+          "pairCount": 13
+        },
+        {
+          "day": "2026-11-03",
+          "pairCount": 19
+        },
+        {
+          "day": "2026-11-02",
+          "pairCount": 14
+        },
+        {
+          "day": "2026-10-30",
+          "pairCount": 20
+        },
+        {
+          "day": "2026-10-22",
+          "pairCount": 25
+        },
+        {
+          "day": "2026-10-21",
+          "pairCount": 12
+        },
+        {
+          "day": "2026-10-16",
+          "pairCount": 11
+        },
+        {
+          "day": "2026-10-08",
+          "pairCount": 30
+        }
+      ]
+    },
     "footprint": [
       {
         "day": "2026-11-11",
-        "pairCount": 23
+        "pairCount": 20
       },
       {
         "day": "2026-11-09",
-        "pairCount": 36
+        "pairCount": 29
       },
       {
         "day": "2026-11-06",
-        "pairCount": 17
+        "pairCount": 15
       },
       {
         "day": "2026-11-05",
@@ -24,7 +77,7 @@
       },
       {
         "day": "2026-11-04",
-        "pairCount": 13
+        "pairCount": 12
       },
       {
         "day": "2026-11-03",
@@ -36,11 +89,11 @@
       },
       {
         "day": "2026-10-30",
-        "pairCount": 20
+        "pairCount": 17
       },
       {
         "day": "2026-10-22",
-        "pairCount": 25
+        "pairCount": 23
       },
       {
         "day": "2026-10-21",
@@ -48,20 +101,21 @@
       },
       {
         "day": "2026-10-16",
-        "pairCount": 11
+        "pairCount": 9
       },
       {
         "day": "2026-10-08",
-        "pairCount": 30
+        "pairCount": 13
       }
     ]
   },
   "policy": {
     "reaction": "first positive M1 FVG after first valid mitigation",
     "pairing": "latest matching first reaction before second retest; simultaneous overlapping partners retained",
-    "firstRetestDepth": {
+    "retestDepth": {
+      "appliesTo": "both OBs independently",
       "maximumFraction": 0.5,
-      "window": "first M1 retest through first reaction FVG close inclusive",
+      "window": "each first M1 retest through its own first reaction FVG close inclusive",
       "unknown": "not confirmed",
       "selection": "latest depth-and-hold-qualified matching first reaction; older qualifying partners may replace a rejected latest partner"
     },
@@ -72,6 +126,7 @@
       "sweep": "strict low below anchor long / strict high above anchor short; equality passes",
       "coverage": "missing or ignored M1 before a decisive sweep: unknown, never confirmed"
     },
+    "retestDay": "both first M1 touches must share the same Europe/Berlin calendar date; formation may be earlier",
     "stop": "selected second M5 OB outside edge",
     "target": "2R price risk without commission",
     "variants": "a and b independently"
@@ -79,7 +134,7 @@
   "footprint": [
     {
       "day": "2026-11-11",
-      "pairCount": 20,
+      "pairCount": 16,
       "withoutDepthLimitPairCount": 24,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
@@ -87,29 +142,31 @@
       "orderBlocks": 49,
       "mitigations": 49,
       "pairChecks": 351,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 7,
-      "firstHoldRejected": 47,
-      "firstHoldUnknown": 0
+      "depthUnknown": 0,
+      "depthRejected": 7,
+      "firstHoldRejected": 36,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     },
     {
       "day": "2026-11-09",
-      "pairCount": 29,
+      "pairCount": 16,
       "withoutDepthLimitPairCount": 35,
-      "olderQualifyingReplacementPairs": 6,
+      "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 69,
       "mitigations": 69,
       "pairChecks": 820,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 14,
-      "firstHoldRejected": 47,
-      "firstHoldUnknown": 3
+      "depthUnknown": 0,
+      "depthRejected": 14,
+      "firstHoldRejected": 26,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 8
     },
     {
       "day": "2026-11-06",
-      "pairCount": 15,
+      "pairCount": 9,
       "withoutDepthLimitPairCount": 17,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 264,
@@ -117,29 +174,31 @@
       "orderBlocks": 49,
       "mitigations": 49,
       "pairChecks": 325,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 9,
-      "firstHoldRejected": 12,
-      "firstHoldUnknown": 0
+      "depthUnknown": 0,
+      "depthRejected": 9,
+      "firstHoldRejected": 9,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     },
     {
       "day": "2026-11-05",
-      "pairCount": 23,
+      "pairCount": 13,
       "withoutDepthLimitPairCount": 35,
-      "olderQualifyingReplacementPairs": 5,
+      "olderQualifyingReplacementPairs": 3,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 60,
       "mitigations": 60,
       "pairChecks": 703,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 17,
-      "firstHoldRejected": 11,
-      "firstHoldUnknown": 0
+      "depthUnknown": 0,
+      "depthRejected": 17,
+      "firstHoldRejected": 6,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     },
     {
       "day": "2026-11-04",
-      "pairCount": 12,
+      "pairCount": 9,
       "withoutDepthLimitPairCount": 19,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
@@ -147,14 +206,15 @@
       "orderBlocks": 51,
       "mitigations": 51,
       "pairChecks": 253,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 9,
-      "firstHoldRejected": 16,
-      "firstHoldUnknown": 6
+      "depthUnknown": 0,
+      "depthRejected": 9,
+      "firstHoldRejected": 10,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 9
     },
     {
       "day": "2026-11-03",
-      "pairCount": 19,
+      "pairCount": 14,
       "withoutDepthLimitPairCount": 23,
       "olderQualifyingReplacementPairs": 2,
       "m5Bars": 277,
@@ -162,29 +222,31 @@
       "orderBlocks": 59,
       "mitigations": 59,
       "pairChecks": 435,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 8,
-      "firstHoldRejected": 23,
-      "firstHoldUnknown": 0
+      "depthUnknown": 0,
+      "depthRejected": 8,
+      "firstHoldRejected": 14,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     },
     {
       "day": "2026-11-02",
-      "pairCount": 14,
+      "pairCount": 7,
       "withoutDepthLimitPairCount": 16,
-      "olderQualifyingReplacementPairs": 1,
+      "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 57,
       "mitigations": 57,
       "pairChecks": 378,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 12,
-      "firstHoldRejected": 5,
-      "firstHoldUnknown": 0
+      "depthUnknown": 0,
+      "depthRejected": 12,
+      "firstHoldRejected": 4,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     },
     {
       "day": "2026-10-30",
-      "pairCount": 17,
+      "pairCount": 10,
       "withoutDepthLimitPairCount": 21,
       "olderQualifyingReplacementPairs": 3,
       "m5Bars": 252,
@@ -192,29 +254,31 @@
       "orderBlocks": 56,
       "mitigations": 56,
       "pairChecks": 325,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 10,
-      "firstHoldRejected": 22,
-      "firstHoldUnknown": 0
+      "depthUnknown": 0,
+      "depthRejected": 10,
+      "firstHoldRejected": 11,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     },
     {
       "day": "2026-10-22",
-      "pairCount": 23,
+      "pairCount": 12,
       "withoutDepthLimitPairCount": 27,
-      "olderQualifyingReplacementPairs": 8,
+      "olderQualifyingReplacementPairs": 4,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 64,
       "mitigations": 64,
       "pairChecks": 703,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 15,
-      "firstHoldRejected": 13,
-      "firstHoldUnknown": 14
+      "depthUnknown": 0,
+      "depthRejected": 15,
+      "firstHoldRejected": 5,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 8
     },
     {
       "day": "2026-10-21",
-      "pairCount": 12,
+      "pairCount": 7,
       "withoutDepthLimitPairCount": 12,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
@@ -222,29 +286,31 @@
       "orderBlocks": 57,
       "mitigations": 57,
       "pairChecks": 300,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 11,
-      "firstHoldRejected": 7,
-      "firstHoldUnknown": 0
+      "depthUnknown": 0,
+      "depthRejected": 11,
+      "firstHoldRejected": 4,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     },
     {
       "day": "2026-10-16",
-      "pairCount": 9,
+      "pairCount": 5,
       "withoutDepthLimitPairCount": 22,
-      "olderQualifyingReplacementPairs": 1,
+      "olderQualifyingReplacementPairs": 0,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 60,
       "mitigations": 60,
       "pairChecks": 465,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 13,
+      "depthUnknown": 0,
+      "depthRejected": 13,
       "firstHoldRejected": 5,
-      "firstHoldUnknown": 0
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     },
     {
       "day": "2026-10-08",
-      "pairCount": 13,
+      "pairCount": 5,
       "withoutDepthLimitPairCount": 31,
       "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
@@ -252,10 +318,11 @@
       "orderBlocks": 71,
       "mitigations": 71,
       "pairChecks": 780,
-      "firstDepthUnknown": 0,
-      "firstDepthRejected": 18,
-      "firstHoldRejected": 49,
-      "firstHoldUnknown": 1
+      "depthUnknown": 0,
+      "depthRejected": 18,
+      "firstHoldRejected": 15,
+      "firstHoldUnknown": 0,
+      "differentRetestDays": 0
     }
   ],
   "references": [
@@ -266,8 +333,11 @@
         439
       ],
       "day": "2026-11-11",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1794387840,
+      "historicalConfirmationAt": 1794387840,
       "firstRetest": 1794386460,
       "firstReaction": 1794387000,
       "secondRetest": 1794387600,
@@ -350,8 +420,11 @@
         442
       ],
       "day": "2026-11-09",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "long",
       "recognizedAt": 1794217980,
+      "historicalConfirmationAt": 1794217980,
       "firstRetest": 1794216060,
       "firstReaction": 1794216660,
       "secondRetest": 1794217500,
@@ -471,8 +544,11 @@
         444
       ],
       "day": "2026-11-06",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "long",
       "recognizedAt": 1793988960,
+      "historicalConfirmationAt": 1793988960,
       "firstRetest": 1793986860,
       "firstReaction": 1793987220,
       "secondRetest": 1793988600,
@@ -593,8 +669,11 @@
         446
       ],
       "day": "2026-11-05",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1793908560,
+      "historicalConfirmationAt": 1793908560,
       "firstRetest": 1793897280,
       "firstReaction": 1793898120,
       "secondRetest": 1793908080,
@@ -677,8 +756,11 @@
         447
       ],
       "day": "2026-11-04",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "long",
       "recognizedAt": 1793769540,
+      "historicalConfirmationAt": 1793769540,
       "firstRetest": 1793767020,
       "firstReaction": 1793767320,
       "secondRetest": 1793768640,
@@ -761,8 +843,11 @@
         450
       ],
       "day": "2026-11-03",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1793694300,
+      "historicalConfirmationAt": 1793694300,
       "firstRetest": 1793691000,
       "firstReaction": 1793691180,
       "secondRetest": 1793693520,
@@ -882,8 +967,11 @@
         452
       ],
       "day": "2026-11-03",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1793672220,
+      "historicalConfirmationAt": 1793672220,
       "firstRetest": 1793670600,
       "firstReaction": 1793671080,
       "secondRetest": 1793671980,
@@ -1003,8 +1091,11 @@
         454
       ],
       "day": "2026-11-02",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1793606700,
+      "historicalConfirmationAt": 1793606700,
       "firstRetest": 1793602800,
       "firstReaction": 1793603340,
       "secondRetest": 1793606520,
@@ -1124,8 +1215,11 @@
         456
       ],
       "day": "2026-10-30",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1793363880,
+      "historicalConfirmationAt": 1793363880,
       "firstRetest": 1793360040,
       "firstReaction": 1793360460,
       "secondRetest": 1793363700,
@@ -1208,8 +1302,11 @@
         458
       ],
       "day": "2026-10-30",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1793352180,
+      "historicalConfirmationAt": 1793352180,
       "firstRetest": 1793350440,
       "firstReaction": 1793351280,
       "secondRetest": 1793351880,
@@ -1329,8 +1426,11 @@
         460
       ],
       "day": "2026-10-22",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1792691460,
+      "historicalConfirmationAt": 1792691460,
       "firstRetest": 1792686300,
       "firstReaction": 1792686660,
       "secondRetest": 1792691100,
@@ -1413,8 +1513,11 @@
         462
       ],
       "day": "2026-10-22",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "short",
       "recognizedAt": 1792638060,
+      "historicalConfirmationAt": 1792638060,
       "firstRetest": 1792636260,
       "firstReaction": 1792636620,
       "secondRetest": 1792637820,
@@ -1497,8 +1600,11 @@
         464
       ],
       "day": "2026-10-21",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "long",
       "recognizedAt": 1792578000,
+      "historicalConfirmationAt": 1792578000,
       "firstRetest": 1792565460,
       "firstReaction": 1792566660,
       "secondRetest": 1792577760,
@@ -1581,8 +1687,11 @@
         466
       ],
       "day": "2026-10-16",
+      "recognized": false,
+      "rejectionReason": "secondRetestTooDeep",
       "direction": "short",
-      "recognizedAt": 1792154280,
+      "recognizedAt": null,
+      "historicalConfirmationAt": 1792154280,
       "firstRetest": 1792149900,
       "firstReaction": 1792150260,
       "secondRetest": 1792153320,
@@ -1702,8 +1811,11 @@
         468
       ],
       "day": "2026-10-08",
+      "recognized": true,
+      "rejectionReason": null,
       "direction": "long",
       "recognizedAt": 1791466380,
+      "historicalConfirmationAt": 1791466380,
       "firstRetest": 1791463920,
       "firstReaction": 1791464100,
       "secondRetest": 1791466020,
@@ -1823,8 +1935,11 @@
         470
       ],
       "day": "2026-10-21",
+      "recognized": false,
+      "rejectionReason": "secondRetestTooDeep",
       "direction": "long",
-      "recognizedAt": 1792557120,
+      "recognizedAt": null,
+      "historicalConfirmationAt": 1792557120,
       "firstRetest": 1792552380,
       "firstReaction": 1792552560,
       "secondRetest": 1792556940,

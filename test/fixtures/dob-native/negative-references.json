@@ -1,0 +1,628 @@
+{
+  "schemaVersion": 1,
+  "inventoryPinIds": [
+    471,
+    472,
+    473,
+    474
+  ],
+  "scope": "User-provided negative DOB pins only; original notes and source snapshots preserved. Native candles are reused unchanged. Rejection reasons are checked separately to avoid one rule masking another.",
+  "cases": [
+    {
+      "pin": 471,
+      "note": "DOB 1 nicht gut. retest wird erneut unterschritten/rausgesweeped",
+      "direction": "long",
+      "evaluatedAt": 1794303900,
+      "capturedAt": 1794649388,
+      "key": "dob:XAUUSD:1:1794217800:1794248700",
+      "expectedRejectionReason": "retestExtremeSwept",
+      "first": {
+        "sourceFixture": "2026-11-09.json",
+        "startTime": 1794217800,
+        "top": 4095.41,
+        "bottom": 4093.35,
+        "touch": 1794220200,
+        "knownAt": 1794220440,
+        "sourceFileSha256": "fa469ddf3d096ec1ffa439b9a19745edf511a4941bce73a8f8b125a4e7d3294c",
+        "nativeM1Window": [
+          {
+            "time": 1794220200,
+            "open": 4096.28,
+            "high": 4096.92,
+            "low": 4095.16,
+            "close": 4095.54,
+            "volume": 424
+          },
+          {
+            "time": 1794220260,
+            "open": 4095.54,
+            "high": 4096.39,
+            "low": 4094.97,
+            "close": 4096.39,
+            "volume": 395
+          },
+          {
+            "time": 1794220320,
+            "open": 4096.39,
+            "high": 4097.39,
+            "low": 4096.36,
+            "close": 4097.16,
+            "volume": 426
+          },
+          {
+            "time": 1794220380,
+            "open": 4097.16,
+            "high": 4097.91,
+            "low": 4096.86,
+            "close": 4097.28,
+            "volume": 250
+          }
+        ],
+        "nativeM1WindowSha256": "e6b1a908b6de731d73824f7e438ef26a1bf1fdc520fce4caca5220bbc4313913"
+      },
+      "second": {
+        "sourceFixture": "2026-11-09.json",
+        "startTime": 1794248700,
+        "top": 4103.69,
+        "bottom": 4100.44,
+        "touch": 1794249900,
+        "knownAt": 1794250260,
+        "sourceFileSha256": "fa469ddf3d096ec1ffa439b9a19745edf511a4941bce73a8f8b125a4e7d3294c",
+        "nativeM1Window": [
+          {
+            "time": 1794249900,
+            "open": 4104.34,
+            "high": 4104.61,
+            "low": 4103.08,
+            "close": 4103.26,
+            "volume": 418
+          },
+          {
+            "time": 1794249960,
+            "open": 4103.26,
+            "high": 4104.37,
+            "low": 4102.86,
+            "close": 4104.37,
+            "volume": 305
+          },
+          {
+            "time": 1794250020,
+            "open": 4104.37,
+            "high": 4104.84,
+            "low": 4103.51,
+            "close": 4103.61,
+            "volume": 302
+          },
+          {
+            "time": 1794250080,
+            "open": 4103.61,
+            "high": 4104.59,
+            "low": 4103.52,
+            "close": 4104.36,
+            "volume": 314
+          },
+          {
+            "time": 1794250140,
+            "open": 4104.36,
+            "high": 4105.52,
+            "low": 4104.27,
+            "close": 4105.44,
+            "volume": 276
+          },
+          {
+            "time": 1794250200,
+            "open": 4105.44,
+            "high": 4105.77,
+            "low": 4105.13,
+            "close": 4105.48,
+            "volume": 330
+          }
+        ],
+        "nativeM1WindowSha256": "68fe4f513e8e2e205957a641569d6af2df5b4b34a393d2680867890b1859630d"
+      },
+      "sourceEngineVersion": "latest-reaction-first-m1-fvg-ob1-depth50-v2"
+    },
+    {
+      "pin": 472,
+      "note": "retest Tiefe über 50% - was da los?",
+      "direction": "short",
+      "evaluatedAt": 1794217260,
+      "capturedAt": 1794649494,
+      "key": "dob:XAUUSD:-1:1793855100:1794192300",
+      "expectedRejectionReason": "secondRetestTooDeep",
+      "first": {
+        "sourceFixture": "2026-11-05.json",
+        "startTime": 1793855100,
+        "top": 4142.29,
+        "bottom": 4135.82,
+        "touch": 1793877360,
+        "knownAt": 1793878080,
+        "sourceFileSha256": "a610b4d29fec847c6fe5ba774f70368faf2055f68a000850ae2a3dc1ced83be8",
+        "nativeM1Window": [
+          {
+            "time": 1793877360,
+            "open": 4134.53,
+            "high": 4135.92,
+            "low": 4134.34,
+            "close": 4135.82,
+            "volume": 452
+          },
+          {
+            "time": 1793877420,
+            "open": 4135.82,
+            "high": 4136.73,
+            "low": 4135.28,
+            "close": 4136.44,
+            "volume": 394
+          },
+          {
+            "time": 1793877480,
+            "open": 4136.44,
+            "high": 4136.44,
+            "low": 4135.12,
+            "close": 4135.65,
+            "volume": 278
+          },
+          {
+            "time": 1793877540,
+            "open": 4135.65,
+            "high": 4136.37,
+            "low": 4134.73,
+            "close": 4136.35,
+            "volume": 264
+          },
+          {
+            "time": 1793877600,
+            "open": 4136.35,
+            "high": 4137.77,
+            "low": 4135.98,
+            "close": 4137.54,
+            "volume": 352
+          },
+          {
+            "time": 1793877660,
+            "open": 4137.54,
+            "high": 4137.54,
+            "low": 4136.56,
+            "close": 4136.63,
+            "volume": 237
+          },
+          {
+            "time": 1793877720,
+            "open": 4136.63,
+            "high": 4137.62,
+            "low": 4136.44,
+            "close": 4137.13,
+            "volume": 385
+          },
+          {
+            "time": 1793877780,
+            "open": 4137.13,
+            "high": 4137.54,
+            "low": 4136.6,
+            "close": 4137.25,
+            "volume": 317
+          },
+          {
+            "time": 1793877840,
+            "open": 4137.25,
+            "high": 4137.43,
+            "low": 4136.6,
+            "close": 4136.96,
+            "volume": 294
+          },
+          {
+            "time": 1793877900,
+            "open": 4136.96,
+            "high": 4138.16,
+            "low": 4136.65,
+            "close": 4136.65,
+            "volume": 360
+          },
+          {
+            "time": 1793877960,
+            "open": 4136.65,
+            "high": 4136.68,
+            "low": 4133.57,
+            "close": 4134.11,
+            "volume": 415
+          },
+          {
+            "time": 1793878020,
+            "open": 4134.11,
+            "high": 4134.27,
+            "low": 4133.52,
+            "close": 4133.61,
+            "volume": 446
+          }
+        ],
+        "nativeM1WindowSha256": "b14296e4642b449eb36550bb1e30322f690abf2a994b370a84746391bc62aa06"
+      },
+      "second": {
+        "sourceFixture": "2026-11-09.json",
+        "startTime": 1794192300,
+        "top": 4132.66,
+        "bottom": 4128.31,
+        "touch": 1794198660,
+        "knownAt": 1794199200,
+        "sourceFileSha256": "fa469ddf3d096ec1ffa439b9a19745edf511a4941bce73a8f8b125a4e7d3294c",
+        "nativeM1Window": [
+          {
+            "time": 1794198660,
+            "open": 4126.87,
+            "high": 4128.66,
+            "low": 4126.73,
+            "close": 4128.53,
+            "volume": 497
+          },
+          {
+            "time": 1794198720,
+            "open": 4128.53,
+            "high": 4131.3,
+            "low": 4128.03,
+            "close": 4131.3,
+            "volume": 398
+          },
+          {
+            "time": 1794198780,
+            "open": 4131.3,
+            "high": 4131.32,
+            "low": 4128.55,
+            "close": 4128.75,
+            "volume": 606
+          },
+          {
+            "time": 1794198840,
+            "open": 4128.75,
+            "high": 4130.37,
+            "low": 4128.07,
+            "close": 4129.78,
+            "volume": 524
+          },
+          {
+            "time": 1794198900,
+            "open": 4129.78,
+            "high": 4131.43,
+            "low": 4129.34,
+            "close": 4131.35,
+            "volume": 476
+          },
+          {
+            "time": 1794198960,
+            "open": 4131.35,
+            "high": 4131.5,
+            "low": 4130.59,
+            "close": 4130.93,
+            "volume": 255
+          },
+          {
+            "time": 1794199020,
+            "open": 4130.93,
+            "high": 4132.61,
+            "low": 4130.81,
+            "close": 4131.43,
+            "volume": 281
+          },
+          {
+            "time": 1794199080,
+            "open": 4131.43,
+            "high": 4131.64,
+            "low": 4128.39,
+            "close": 4128.99,
+            "volume": 511
+          },
+          {
+            "time": 1794199140,
+            "open": 4128.99,
+            "high": 4129.69,
+            "low": 4128.25,
+            "close": 4128.84,
+            "volume": 407
+          }
+        ],
+        "nativeM1WindowSha256": "455f5e8be7185595825aec77a14006c1a96ac9df82f178802775523bbb2244e8"
+      },
+      "sourceEngineVersion": "latest-reaction-first-m1-fvg-ob1-depth50-v2"
+    },
+    {
+      "pin": 473,
+      "note": "DOB Paare müssen am selben Tag geretestet werden.",
+      "direction": "long",
+      "evaluatedAt": 1794217500,
+      "capturedAt": 1794649742,
+      "key": "dob:XAUUSD:1:1793779500:1793952900",
+      "expectedRejectionReason": "differentRetestDays",
+      "first": {
+        "sourceFixture": "2026-11-04.json",
+        "startTime": 1793779500,
+        "top": 4027.2,
+        "bottom": 4020.21,
+        "touch": 1793780340,
+        "knownAt": 1793780580,
+        "sourceFileSha256": "2407408fdb5d17d94d80a164d7d9fd4c5740dcd4f2c3b58d07a3e0947f1cff4a",
+        "nativeM1Window": [
+          {
+            "time": 1793780340,
+            "open": 4029.92,
+            "high": 4030.16,
+            "low": 4026.58,
+            "close": 4027.45,
+            "volume": 598
+          },
+          {
+            "time": 1793780400,
+            "open": 4027.45,
+            "high": 4029.02,
+            "low": 4026.68,
+            "close": 4028.64,
+            "volume": 606
+          },
+          {
+            "time": 1793780460,
+            "open": 4028.64,
+            "high": 4031.47,
+            "low": 4027.9,
+            "close": 4031.43,
+            "volume": 672
+          },
+          {
+            "time": 1793780520,
+            "open": 4031.43,
+            "high": 4031.89,
+            "low": 4030.39,
+            "close": 4030.7,
+            "volume": 591
+          }
+        ],
+        "nativeM1WindowSha256": "1a7790770f604872d63bec724bc0c301bfef0f8697f5110c0ebd55df0e681850"
+      },
+      "second": {
+        "sourceFixture": "2026-11-06.json",
+        "startTime": 1793952900,
+        "top": 4056.8,
+        "bottom": 4051.82,
+        "touch": 1793970840,
+        "knownAt": 1793971080,
+        "sourceFileSha256": "051f31d47698fc0a3da68dab29b64b9e8c2c0f4a9b59ff080415a12250b942a7",
+        "nativeM1Window": [
+          {
+            "time": 1793970840,
+            "open": 4058.13,
+            "high": 4058.53,
+            "low": 4056.58,
+            "close": 4057.75,
+            "volume": 981
+          },
+          {
+            "time": 1793970900,
+            "open": 4057.75,
+            "high": 4058.11,
+            "low": 4055.22,
+            "close": 4056.77,
+            "volume": 978
+          },
+          {
+            "time": 1793970960,
+            "open": 4056.77,
+            "high": 4060.17,
+            "low": 4056.42,
+            "close": 4060.15,
+            "volume": 1201
+          },
+          {
+            "time": 1793971020,
+            "open": 4060.15,
+            "high": 4060.73,
+            "low": 4058.16,
+            "close": 4058.41,
+            "volume": 891
+          }
+        ],
+        "nativeM1WindowSha256": "545c5f2dca7909fe9ed5b5760d3bc35a79de262680b12a33a684cb381d6f9e73"
+      },
+      "sourceEngineVersion": "latest-reaction-first-m1-fvg-ob1-depth50-v2"
+    },
+    {
+      "pin": 474,
+      "note": "wieder Beispiel, dass Retest des 1. OBs unterschritten wird (im short case natürlich dann überschritten)",
+      "direction": "long",
+      "evaluatedAt": 1794217500,
+      "capturedAt": 1794649823,
+      "key": "dob:XAUUSD:1:1793710200:1793753400",
+      "expectedRejectionReason": "retestExtremeSwept",
+      "sourceEngineVersion": "latest-reaction-first-m1-fvg-ob1-depth50-v2",
+      "first": {
+        "sourceFixture": "2026-11-03.json",
+        "startTime": 1793710200,
+        "top": 3924.61,
+        "bottom": 3914.31,
+        "touch": 1793719560,
+        "knownAt": 1793720160,
+        "sourceFileSha256": "9ac2fe00955c1b5be5ef304adce0b8090e08606c53d1ca34cc10867ecd424049",
+        "nativeM1Window": [
+          {
+            "time": 1793719560,
+            "open": 3928.27,
+            "high": 3928.54,
+            "low": 3924.18,
+            "close": 3924.64,
+            "volume": 1214
+          },
+          {
+            "time": 1793719620,
+            "open": 3924.64,
+            "high": 3925.28,
+            "low": 3922.94,
+            "close": 3923.26,
+            "volume": 1393
+          },
+          {
+            "time": 1793719680,
+            "open": 3923.26,
+            "high": 3926.2,
+            "low": 3923.03,
+            "close": 3924.87,
+            "volume": 1365
+          },
+          {
+            "time": 1793719740,
+            "open": 3924.87,
+            "high": 3927.08,
+            "low": 3924.84,
+            "close": 3925.45,
+            "volume": 1558
+          },
+          {
+            "time": 1793719800,
+            "open": 3925.45,
+            "high": 3925.83,
+            "low": 3924.34,
+            "close": 3924.55,
+            "volume": 1581
+          },
+          {
+            "time": 1793719860,
+            "open": 3924.55,
+            "high": 3927.89,
+            "low": 3924.35,
+            "close": 3927.56,
+            "volume": 1176
+          },
+          {
+            "time": 1793719920,
+            "open": 3927.56,
+            "high": 3927.72,
+            "low": 3924.62,
+            "close": 3925.18,
+            "volume": 1002
+          },
+          {
+            "time": 1793719980,
+            "open": 3925.18,
+            "high": 3926.95,
+            "low": 3924.79,
+            "close": 3926.82,
+            "volume": 936
+          },
+          {
+            "time": 1793720040,
+            "open": 3926.82,
+            "high": 3928.75,
+            "low": 3926.23,
+            "close": 3927.96,
+            "volume": 1151
+          },
+          {
+            "time": 1793720100,
+            "open": 3927.96,
+            "high": 3930.24,
+            "low": 3927.41,
+            "close": 3930.07,
+            "volume": 1160
+          }
+        ],
+        "nativeM1WindowSha256": "3be0769b07b98354b353cec546646701b12a5b69bce664d1d6d83a60ef937440"
+      },
+      "second": {
+        "sourceFixture": "2026-11-04.json",
+        "startTime": 1793753400,
+        "top": 3927.76,
+        "bottom": 3920.81,
+        "touch": 1793754060,
+        "knownAt": 1793754720,
+        "sourceFileSha256": "2407408fdb5d17d94d80a164d7d9fd4c5740dcd4f2c3b58d07a3e0947f1cff4a",
+        "nativeM1Window": [
+          {
+            "time": 1793754060,
+            "open": 3929.79,
+            "high": 3932.57,
+            "low": 3927.72,
+            "close": 3931.85,
+            "volume": 2275
+          },
+          {
+            "time": 1793754120,
+            "open": 3931.85,
+            "high": 3934.63,
+            "low": 3929.11,
+            "close": 3931.14,
+            "volume": 3020
+          },
+          {
+            "time": 1793754180,
+            "open": 3931.14,
+            "high": 3933.69,
+            "low": 3928.62,
+            "close": 3930.52,
+            "volume": 2803
+          },
+          {
+            "time": 1793754240,
+            "open": 3930.52,
+            "high": 3932.49,
+            "low": 3928.52,
+            "close": 3930.2,
+            "volume": 3330
+          },
+          {
+            "time": 1793754300,
+            "open": 3930.2,
+            "high": 3930.93,
+            "low": 3926.45,
+            "close": 3928.7,
+            "volume": 2729
+          },
+          {
+            "time": 1793754360,
+            "open": 3928.7,
+            "high": 3928.7,
+            "low": 3924.81,
+            "close": 3925.76,
+            "volume": 2695
+          },
+          {
+            "time": 1793754420,
+            "open": 3925.76,
+            "high": 3929.05,
+            "low": 3924.41,
+            "close": 3928.43,
+            "volume": 2073
+          },
+          {
+            "time": 1793754480,
+            "open": 3928.43,
+            "high": 3928.43,
+            "low": 3924.84,
+            "close": 3925.58,
+            "volume": 2308
+          },
+          {
+            "time": 1793754540,
+            "open": 3925.58,
+            "high": 3928.61,
+            "low": 3923.93,
+            "close": 3928.27,
+            "volume": 2238
+          },
+          {
+            "time": 1793754600,
+            "open": 3928.27,
+            "high": 3937.12,
+            "low": 3927.47,
+            "close": 3934.09,
+            "volume": 2982
+          },
+          {
+            "time": 1793754660,
+            "open": 3934.09,
+            "high": 3936.7,
+            "low": 3933.63,
+            "close": 3934.95,
+            "volume": 2386
+          }
+        ],
+        "nativeM1WindowSha256": "9e21d4119551d10ce737e1ca2fc4828eea87bda59e39ba79c6ea1a8107ea6841"
+      }
+    }
+  ]
+}

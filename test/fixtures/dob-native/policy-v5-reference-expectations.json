@@ -1,0 +1,88 @@
+{
+  "version": "both-depth50-hold-sameday-v5",
+  "originalPositiveCount": 16,
+  "expectedConfirmed": 14,
+  "reason": "User later required each OB retest <=50%; two historical positives intentionally conflict with the new rule.",
+  "references": [
+    {
+      "id": "P1",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P2",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P3",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P4",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P5",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P6",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P7",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P8",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P9",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P10",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P11",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P12",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P13",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P14",
+      "expected": "rejected",
+      "reason": "secondRetestTooDeep"
+    },
+    {
+      "id": "P15",
+      "expected": "confirmed",
+      "reason": null
+    },
+    {
+      "id": "P16",
+      "expected": "rejected",
+      "reason": "secondRetestTooDeep"
+    }
+  ]
+}

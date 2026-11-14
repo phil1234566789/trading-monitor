@@ -4,6 +4,7 @@ import {detectDoubleOrderBlocks} from '../src/doubleOrderBlocks.js';
 
 const load=name=>JSON.parse(readFileSync(new URL(`./fixtures/dob-native/${name}.json`,import.meta.url),'utf8'));
 const manifest=load('references'),days=new Map(manifest.days.map(day=>[day,load(day)]));
+const policy=load('policy-v5-reference-expectations');
 const results=new Map();
 const run=day=>{
  if(!results.has(day)){const fixture=days.get(day);results.set(day,detectDoubleOrderBlocks({instrument:'XAUUSD',
@@ -16,6 +17,15 @@ describe('double order blocks from native candles',()=>{
   const [first,second]=pair.pins.map(pin=>manifest.references.find(ref=>ref.pin===pin));
   const dob=run(first.day).pairs.find(item=>item.firstOrderBlock.startTime===first.startTime
    &&item.secondOrderBlock.startTime===second.startTime);
+  // Philips spätere 50%-Grenze für beide OBs ersetzt hier ausdrücklich die alte Positiv-Erwartung.
+  if(policy.references.find(r=>r.id===pair.id).expected==='rejected'){
+   expect(dob).toBeUndefined();
+   const fixture=days.get(first.day),historical=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,
+    m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to,maxRetestDepthFraction:1}).pairs
+    .find(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
+   expect(historical).toBeDefined();expect(historical.secondPenetration.maxPenetrationFraction).toBeGreaterThan(.5);
+   return;
+  }
   expect(dob).toBeDefined();expect(dob.direction).toBe(first.dir===1?'long':'short');
   expect(dob.entries.a.status).toBe('ready');
   expect(dob.entries.a.entryTime).toBeGreaterThan(dob.secondRetest.recognizedAt);
