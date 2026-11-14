@@ -3666,9 +3666,9 @@
     "semantic_hash": ""
   },
   "src/instrumentConfig.js": {
-    "mtime": 1794610538.0546083,
-    "seen": 1794610823.150507,
-    "ast_hash": "b71c1f1e267d0c8fb32c19d51567e16d",
+    "mtime": 1794651050.709227,
+    "seen": 1794651319.250988,
+    "ast_hash": "458c21e230783067374bec99107ed322",
     "semantic_hash": ""
   },
   "src/replayCandleStep.js": {
@@ -9264,15 +9264,15 @@
     "semantic_hash": ""
   },
   "analysis/dob/reference-diagnostics.json": {
-    "mtime": 1794650021.1377048,
-    "seen": 1794650138.3153942,
-    "ast_hash": "ad0da4a4c1a51cb9f9c4f5b533a6401d",
+    "mtime": 1794651105.72881,
+    "seen": 1794651319.1734946,
+    "ast_hash": "8ce99428ef25cfca4827039648b7bfe1",
     "semantic_hash": ""
   },
   "scripts/dobReferenceDiagnostics.mjs": {
-    "mtime": 1794649979.721697,
-    "seen": 1794650138.3454633,
-    "ast_hash": "dae2dfa2d9fea0d68609b5f864eada26",
+    "mtime": 1794651100.2429216,
+    "seen": 1794651319.188498,
+    "ast_hash": "c12966822bedfa7c13c22636e752a6fd",
     "semantic_hash": ""
   },
   "src/components/DoubleOrderBlockStatus.vue": {
@@ -9312,9 +9312,9 @@
     "semantic_hash": ""
   },
   "src/doubleOrderBlocks.js": {
-    "mtime": 1794650088.362508,
-    "seen": 1794650138.4484725,
-    "ast_hash": "846c6e0af2faed4c68d2fd72c9fdc215",
+    "mtime": 1794651132.5725048,
+    "seen": 1794651319.2449834,
+    "ast_hash": "dd1742f69ba9bf00f18d8927d35b6c1b",
     "semantic_hash": ""
   },
   "src/indicatorGroupToggle.js": {
@@ -9444,15 +9444,15 @@
     "semantic_hash": ""
   },
   "test/doubleOrderBlockFirstRetestHold.test.js": {
-    "mtime": 1794649627.9692338,
-    "seen": 1794650138.5903754,
-    "ast_hash": "a0dbab203c21e4ed8f7e63c67e54b521",
+    "mtime": 1794651179.0230124,
+    "seen": 1794651319.336065,
+    "ast_hash": "a62e501ddaab9ba40e97c22e5abf5835",
     "semantic_hash": ""
   },
   "test/doubleOrderBlockNegativeReferences.test.js": {
-    "mtime": 1794650038.3725202,
-    "seen": 1794650138.5903754,
-    "ast_hash": "51d7600f07351b2c9d3665e568ad5a71",
+    "mtime": 1794651100.066586,
+    "seen": 1794651319.337064,
+    "ast_hash": "1267050451b9bcc437cc19967d5af32d",
     "semantic_hash": ""
   },
   "test/doubleOrderBlockRetestDay.test.js": {
@@ -9462,9 +9462,9 @@
     "semantic_hash": ""
   },
   "test/fixtures/dob-native/negative-references.json": {
-    "mtime": 1794649911.1484685,
-    "seen": 1794650138.599371,
-    "ast_hash": "fafc6ec45a4737581b943387239ad3b6",
+    "mtime": 1794650989.6663916,
+    "seen": 1794651319.3450654,
+    "ast_hash": "fd737516d1403e7c5e1520b277eed05c",
     "semantic_hash": ""
   },
   "test/fixtures/dob-native/pin471-regression.json": {
@@ -9483,6 +9483,30 @@
     "mtime": 1794649593.5343237,
     "seen": 1794650138.654442,
     "ast_hash": "906f246b7765d4f68915a42f25603d5c",
+    "semantic_hash": ""
+  },
+  "src/doubleOrderBlockPriceGap.js": {
+    "mtime": 1794651050.538975,
+    "seen": 1794651319.2432387,
+    "ast_hash": "4a04b175534500fce4ba68c9b361d667",
+    "semantic_hash": ""
+  },
+  "src/orderBlockPriceGeometry.js": {
+    "mtime": 1794651050.3652086,
+    "seen": 1794651319.2639878,
+    "ast_hash": "bad83681ec835067a10703fadf416f77",
+    "semantic_hash": ""
+  },
+  "test/doubleOrderBlockPriceGap.test.js": {
+    "mtime": 1794651020.2077658,
+    "seen": 1794651319.337064,
+    "ast_hash": "1e1d179e7e8ef37e891dfba3d824ea29",
+    "semantic_hash": ""
+  },
+  "test/fixtures/dob-native/price-gap-native-prelude.json": {
+    "mtime": 1794650989.6653926,
+    "seen": 1794651319.3450654,
+    "ast_hash": "60ec42e1674e66283f9f495ae95f59a4",
     "semantic_hash": ""
   }
 }
