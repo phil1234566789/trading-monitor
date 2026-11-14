@@ -1,5 +1,5 @@
 import {detectOrderBlocks,candleInvalidatesOrderBlock} from './orderBlockDetection.js';
-import {obMinimum} from './instrumentConfig.js';
+import {obMinimum,instrumentConfig} from './instrumentConfig.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {evaluateOrderBlockMitigation} from './orderBlockMitigation.js';
@@ -10,8 +10,9 @@ import {measureOrderBlockPenetration} from './orderBlockPenetration.js';
 import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from './orderBlockRetestHold.js';
 import {DEFAULT_MAX_RETEST_DEPTH_FRACTION,validateDoubleOrderBlockDepthLimit,evaluateDoubleOrderBlockDepth} from './doubleOrderBlockDepth.js';
 import {evaluateDoubleOrderBlockRetestDay} from './doubleOrderBlockRetestDay.js';
+import {evaluateDoubleOrderBlockPriceGap} from './doubleOrderBlockPriceGap.js';
 
-export const DOUBLE_ORDER_BLOCK_VERSION='latest-reaction-first-m1-fvg-both-depth50-hold-sameday-v5';
+export const DOUBLE_ORDER_BLOCK_VERSION='latest-reaction-first-m1-fvg-both-depth50-hold-sameday-xau-gap2-v6';
 
 function entriesFor(reaction,orderBlock,m1,candidates,evaluatedAt,instrument){
  const fvg=candidates.find(f=>f.candleTime===reaction.fvg.candleTime&&f.recognizedAt===reaction.fvg.recognizedAt);
@@ -37,7 +38,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
  validateDoubleOrderBlockDepthLimit(maxRetestDepthFraction);
  const m5=closedChecklistCandles(m5Candles,'5m',evaluatedAt),m1=closedChecklistCandles(m1Candles,'1m',evaluatedAt);
  const result={version:DOUBLE_ORDER_BLOCK_VERSION,status:m1.length?'ready':'unknown',pairs:[],
-  policy:{maxRetestDepthFraction,depthAppliesTo:'both',firstRetestHoldThrough:'secondReactionKnownAt',retestDay:'Europe/Berlin calendar date'},stats:{m5Bars:m5.length,m1Bars:m1.length,orderBlocks:0,mitigations:0,pairChecks:0,depthUnknown:0,depthRejected:0,firstHoldRejected:0,firstHoldUnknown:0,differentRetestDays:0}};
+  policy:{maxRetestDepthFraction,depthAppliesTo:'both',firstRetestHoldThrough:'secondReactionKnownAt',retestDay:'Europe/Berlin calendar date',maxPositiveZoneGap:instrumentConfig(instrument).dobMaxPositiveZoneGap},stats:{m5Bars:m5.length,m1Bars:m1.length,orderBlocks:0,mitigations:0,pairChecks:0,depthUnknown:0,depthRejected:0,firstHoldRejected:0,firstHoldUnknown:0,differentRetestDays:0,priceGapRejected:0}};
  if(!Number.isFinite(evaluatedAt)||!m5.length||!m1.length)return result;
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(instrument,'5m'));
  const candidates=m1FvgEntryCandidates(m1,evaluatedAt),qualified=[];
@@ -73,6 +74,8 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   if(a.orderBlock.dir!==sign||a.orderBlock.startTime>=b.orderBlock.startTime
    ||(b.orderBlock.top-a.orderBlock.top)*sign<=0||(b.orderBlock.bottom-a.orderBlock.bottom)*sign<=0
    ||a.reaction.fvg.recognizedAt>b.reaction.retest.candleTime||a.invalidatedAt<b.reaction.retest.candleTime)continue;
+  const priceGap=evaluateDoubleOrderBlockPriceGap(a.orderBlock,b.orderBlock,sign,instrument);
+  if(priceGap.status!=='passed'){result.stats.priceGapRejected++;continue;}
   if(evaluateDoubleOrderBlockRetestDay(a.reaction.retest.candleTime,b.reaction.retest.candleTime).status!=='passed'){
    result.stats.differentRetestDays++;continue;
   }
@@ -89,7 +92,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   partners.push({id:`dob:${instrument}:${sign}:${a.orderBlock.startTime}:${b.orderBlock.startTime}`,
    instrument,direction:sign===1?'long':'short',firstOrderBlock:a.orderBlock,secondOrderBlock:b.orderBlock,
    firstRetest:a.reaction.retest,secondRetest:b.reaction.retest,firstReaction:a.reaction.fvg,secondReaction:b.reaction.fvg,
-   firstPenetration:a.penetration,secondPenetration:b.penetration,firstRetestHold,
+   firstPenetration:a.penetration,secondPenetration:b.penetration,firstRetestHold,priceGap,
    firstM5ReactionKnownAt:a.m5ReactionKnownAt,firstReactionSource:'m1',recognizedAt,entries:b.entries});
   }
   // Gleichzeitige Reaktionen überlappender Zonen sind getrennte belegte Partner, kein Zeit-Tiebreaker.

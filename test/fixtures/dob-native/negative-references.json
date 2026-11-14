@@ -4,7 +4,9 @@
     471,
     472,
     473,
-    474
+    474,
+    475,
+    476
   ],
   "scope": "User-provided negative DOB pins only; original notes and source snapshots preserved. Native candles are reused unchanged. Rejection reasons are checked separately to avoid one rule masking another.",
   "cases": [
@@ -623,6 +625,232 @@
         ],
         "nativeM1WindowSha256": "9e21d4119551d10ce737e1ca2fc4828eea87bda59e39ba79c6ea1a8107ea6841"
       }
+    },
+    {
+      "pin": 475,
+      "note": "DOBs sind viel zu weit auseinander, preislich gesehen",
+      "pinType": "bug",
+      "direction": "long",
+      "evaluatedAt": 1794217500,
+      "capturedAt": 1794650523,
+      "key": "dob:XAUUSD:1:1794182700:1794198000",
+      "expectedRejectionReason": "priceGapTooWide",
+      "sourceEngineVersion": "latest-reaction-first-m1-fvg-both-depth50-hold-sameday-v5",
+      "first": {
+        "sourceFixture": "2026-11-09.json",
+        "startTime": 1794182700,
+        "top": 4066,
+        "bottom": 4054.26,
+        "touch": 1794183660,
+        "knownAt": 1794183840,
+        "sourceFileSha256": "fa469ddf3d096ec1ffa439b9a19745edf511a4941bce73a8f8b125a4e7d3294c",
+        "nativeM1Window": [
+          {
+            "time": 1794183660,
+            "open": 4066.9,
+            "high": 4067.23,
+            "low": 4065.15,
+            "close": 4066.22,
+            "volume": 1386
+          },
+          {
+            "time": 1794183720,
+            "open": 4066.22,
+            "high": 4069.61,
+            "low": 4064.31,
+            "close": 4068.99,
+            "volume": 1481
+          },
+          {
+            "time": 1794183780,
+            "open": 4068.99,
+            "high": 4071.21,
+            "low": 4068.33,
+            "close": 4071.04,
+            "volume": 1294
+          }
+        ],
+        "nativeM1WindowSha256": "002bd75b673a86f6ce78635b51d8b2126b571f66cec6be139e9a727cb52d00c8"
+      },
+      "second": {
+        "sourceFixture": "2026-11-09.json",
+        "startTime": 1794198000,
+        "top": 4121.39,
+        "bottom": 4117.43,
+        "touch": 1794199980,
+        "knownAt": 1794200220,
+        "sourceFileSha256": "fa469ddf3d096ec1ffa439b9a19745edf511a4941bce73a8f8b125a4e7d3294c",
+        "nativeM1Window": [
+          {
+            "time": 1794199980,
+            "open": 4122.5,
+            "high": 4123.28,
+            "low": 4121.01,
+            "close": 4121.67,
+            "volume": 519
+          },
+          {
+            "time": 1794200040,
+            "open": 4121.67,
+            "high": 4123.19,
+            "low": 4121.46,
+            "close": 4122.88,
+            "volume": 328
+          },
+          {
+            "time": 1794200100,
+            "open": 4122.88,
+            "high": 4124.58,
+            "low": 4122.88,
+            "close": 4124.52,
+            "volume": 475
+          },
+          {
+            "time": 1794200160,
+            "open": 4124.52,
+            "high": 4124.54,
+            "low": 4123.65,
+            "close": 4123.98,
+            "volume": 455
+          }
+        ],
+        "nativeM1WindowSha256": "561fbad276bf7b2db2023ecef91b66c8eedd419ec7d66ec51f9865e7a0833d5b"
+      },
+      "additionalSources": [
+        {
+          "file": "price-gap-native-prelude.json",
+          "sourceFileSha256": "bd467fc0f888cfa7105361828fe585e8bd82cd9c9d623c4f9de40497093058e2"
+        }
+      ]
+    },
+    {
+      "pin": 476,
+      "note": "DOBs sind viel zu weit auseinander, preislich gesehen",
+      "pinType": null,
+      "direction": "long",
+      "evaluatedAt": 1794217500,
+      "capturedAt": 1794650550,
+      "key": "dob:XAUUSD:1:1794182700:1794198300",
+      "expectedRejectionReason": "priceGapTooWide",
+      "sourceEngineVersion": "latest-reaction-first-m1-fvg-both-depth50-hold-sameday-v5",
+      "first": {
+        "sourceFixture": "2026-11-09.json",
+        "startTime": 1794182700,
+        "top": 4066,
+        "bottom": 4054.26,
+        "touch": 1794183660,
+        "knownAt": 1794183840,
+        "sourceFileSha256": "fa469ddf3d096ec1ffa439b9a19745edf511a4941bce73a8f8b125a4e7d3294c",
+        "nativeM1Window": [
+          {
+            "time": 1794183660,
+            "open": 4066.9,
+            "high": 4067.23,
+            "low": 4065.15,
+            "close": 4066.22,
+            "volume": 1386
+          },
+          {
+            "time": 1794183720,
+            "open": 4066.22,
+            "high": 4069.61,
+            "low": 4064.31,
+            "close": 4068.99,
+            "volume": 1481
+          },
+          {
+            "time": 1794183780,
+            "open": 4068.99,
+            "high": 4071.21,
+            "low": 4068.33,
+            "close": 4071.04,
+            "volume": 1294
+          }
+        ],
+        "nativeM1WindowSha256": "002bd75b673a86f6ce78635b51d8b2126b571f66cec6be139e9a727cb52d00c8"
+      },
+      "second": {
+        "sourceFixture": "2026-11-09.json",
+        "startTime": 1794198300,
+        "top": 4122.92,
+        "bottom": 4117.83,
+        "touch": 1794199740,
+        "knownAt": 1794200220,
+        "sourceFileSha256": "fa469ddf3d096ec1ffa439b9a19745edf511a4941bce73a8f8b125a4e7d3294c",
+        "nativeM1Window": [
+          {
+            "time": 1794199740,
+            "open": 4124.1,
+            "high": 4124.93,
+            "low": 4122.44,
+            "close": 4122.58,
+            "volume": 423
+          },
+          {
+            "time": 1794199800,
+            "open": 4122.58,
+            "high": 4123.79,
+            "low": 4122.47,
+            "close": 4123.3,
+            "volume": 388
+          },
+          {
+            "time": 1794199860,
+            "open": 4123.3,
+            "high": 4124.05,
+            "low": 4123.05,
+            "close": 4123.33,
+            "volume": 403
+          },
+          {
+            "time": 1794199920,
+            "open": 4123.33,
+            "high": 4123.39,
+            "low": 4122.1,
+            "close": 4122.5,
+            "volume": 431
+          },
+          {
+            "time": 1794199980,
+            "open": 4122.5,
+            "high": 4123.28,
+            "low": 4121.01,
+            "close": 4121.67,
+            "volume": 519
+          },
+          {
+            "time": 1794200040,
+            "open": 4121.67,
+            "high": 4123.19,
+            "low": 4121.46,
+            "close": 4122.88,
+            "volume": 328
+          },
+          {
+            "time": 1794200100,
+            "open": 4122.88,
+            "high": 4124.58,
+            "low": 4122.88,
+            "close": 4124.52,
+            "volume": 475
+          },
+          {
+            "time": 1794200160,
+            "open": 4124.52,
+            "high": 4124.54,
+            "low": 4123.65,
+            "close": 4123.98,
+            "volume": 455
+          }
+        ],
+        "nativeM1WindowSha256": "1258fd0c02ea9c9a11fc41712d8b5458326695baae77698fb3ee21cbd3a55ea8"
+      },
+      "additionalSources": [
+        {
+          "file": "price-gap-native-prelude.json",
+          "sourceFileSha256": "bd467fc0f888cfa7105361828fe585e8bd82cd9c9d623c4f9de40497093058e2"
+        }
+      ]
     }
   ]
 }

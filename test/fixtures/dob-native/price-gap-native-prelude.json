@@ -1,0 +1,37 @@
+{
+  "provenance": {
+    "source": "Previously secured native FXCM Bid archive",
+    "sourceArchive": ".debug/dob-period-depth/candles/XAUUSD-5m-1767335400-1794610800.json",
+    "sourceFileSha256": "d4c99099f039c231323a7fdc5ac82fb949b5ed41003f0452fa48c759de0bcb66",
+    "selection": "Last three native M5 observations before the existing 09 November fixture. Preserve actual trading gap; do not invent candles."
+  },
+  "candles": {
+    "m5": [
+      {
+        "time": 1794181500,
+        "open": 4065.89,
+        "high": 4065.89,
+        "low": 4060.81,
+        "close": 4061.04,
+        "volume": 3735
+      },
+      {
+        "time": 1794181800,
+        "open": 4061.04,
+        "high": 4061.88,
+        "low": 4058.36,
+        "close": 4059.17,
+        "volume": 2510
+      },
+      {
+        "time": 1794182100,
+        "open": 4059.17,
+        "high": 4059.17,
+        "low": 4054.26,
+        "close": 4055.62,
+        "volume": 2625
+      }
+    ],
+    "m1": []
+  }
+}

@@ -7,7 +7,7 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const source=new URL('../test/fixtures/dob-native/references.json',import.meta.url);
 const text=await readFile(source,'utf8'),manifest=JSON.parse(text),days=new Map(),unrestrictedDays=new Map(),footprint=[];
 const previous=JSON.parse(await readFile(new URL('../analysis/dob/reference-diagnostics.json',import.meta.url),'utf8'));
-const previousPolicy=previous.version.endsWith('v3')?{version:previous.version,previousPolicy:previous.previousPolicy,
+const previousPolicy=previous.version.endsWith('v5')?{version:previous.version,previousPolicy:previous.previousPolicy,
  footprint:previous.footprint.map(({day,pairCount})=>({day,pairCount}))}:previous.previousPolicy;
 const server=await createServer({root,server:{middlewareMode:true},appType:'custom'});
 try{
@@ -35,7 +35,7 @@ try{
    firstRetest:found.firstRetest.candleTime,firstReaction:found.firstReaction.recognizedAt,
    secondRetest:found.secondRetest.candleTime,secondReaction:found.secondReaction.recognizedAt,
    firstM5ReactionKnownAt:found.firstM5ReactionKnownAt,
-   firstPenetration:found.firstPenetration,secondPenetration:found.secondPenetration,firstRetestHold:found.firstRetestHold,entries:found.entries};
+   firstPenetration:found.firstPenetration,secondPenetration:found.secondPenetration,firstRetestHold:found.firstRetestHold,priceGap:found.priceGap,entries:found.entries};
  });
  const report={version:DOUBLE_ORDER_BLOCK_VERSION,scope:'16 selected positive examples; no general win-rate or trading approval',
   nativeManifestSha256:createHash('sha256').update(text).digest('hex'),sourceBaseline:manifest.codeBaseline,
@@ -47,6 +47,10 @@ try{
     through:'second reaction knownAt inclusive',sweep:'strict low below anchor long / strict high above anchor short; equality passes',
     coverage:'missing or ignored M1 before a decisive sweep: unknown, never confirmed'},
    retestDay:'both first M1 touches must share the same Europe/Berlin calendar date; formation may be earlier',
+   priceGap:{XAUUSD:2,unit:'USD per fine troy ounce',GBPUSD:null,EURUSD:null,
+    formula:'Long max(0,OB2.bottom-OB1.top); Short max(0,OB1.bottom-OB2.top)',
+    selection:'latest matching partner satisfying all policies; older eligible partners may replace a rejected latest partner',
+    overlap:'overlap and touch allowed; directional orderflow remains mandatory'},
    stop:'selected second M5 OB outside edge',target:'2R price risk without commission',variants:'a and b independently'},
   footprint,references};
  const directory=new URL('../analysis/dob/',import.meta.url);

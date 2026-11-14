@@ -1,24 +1,77 @@
 {
-  "version": "latest-reaction-first-m1-fvg-both-depth50-hold-sameday-v5",
+  "version": "latest-reaction-first-m1-fvg-both-depth50-hold-sameday-xau-gap2-v6",
   "scope": "16 selected positive examples; no general win-rate or trading approval",
   "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
   "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
   "previousPolicy": {
-    "version": "latest-reaction-first-m1-fvg-ob1-depth50-hold-v3",
+    "version": "latest-reaction-first-m1-fvg-both-depth50-hold-sameday-v5",
     "previousPolicy": {
-      "version": "latest-reaction-first-m1-fvg-ob1-depth50-v2",
+      "version": "latest-reaction-first-m1-fvg-ob1-depth50-hold-v3",
+      "previousPolicy": {
+        "version": "latest-reaction-first-m1-fvg-ob1-depth50-v2",
+        "footprint": [
+          {
+            "day": "2026-11-11",
+            "pairCount": 23
+          },
+          {
+            "day": "2026-11-09",
+            "pairCount": 36
+          },
+          {
+            "day": "2026-11-06",
+            "pairCount": 17
+          },
+          {
+            "day": "2026-11-05",
+            "pairCount": 23
+          },
+          {
+            "day": "2026-11-04",
+            "pairCount": 13
+          },
+          {
+            "day": "2026-11-03",
+            "pairCount": 19
+          },
+          {
+            "day": "2026-11-02",
+            "pairCount": 14
+          },
+          {
+            "day": "2026-10-30",
+            "pairCount": 20
+          },
+          {
+            "day": "2026-10-22",
+            "pairCount": 25
+          },
+          {
+            "day": "2026-10-21",
+            "pairCount": 12
+          },
+          {
+            "day": "2026-10-16",
+            "pairCount": 11
+          },
+          {
+            "day": "2026-10-08",
+            "pairCount": 30
+          }
+        ]
+      },
       "footprint": [
         {
           "day": "2026-11-11",
-          "pairCount": 23
+          "pairCount": 20
         },
         {
           "day": "2026-11-09",
-          "pairCount": 36
+          "pairCount": 29
         },
         {
           "day": "2026-11-06",
-          "pairCount": 17
+          "pairCount": 15
         },
         {
           "day": "2026-11-05",
@@ -26,7 +79,7 @@
         },
         {
           "day": "2026-11-04",
-          "pairCount": 13
+          "pairCount": 12
         },
         {
           "day": "2026-11-03",
@@ -38,11 +91,11 @@
         },
         {
           "day": "2026-10-30",
-          "pairCount": 20
+          "pairCount": 17
         },
         {
           "day": "2026-10-22",
-          "pairCount": 25
+          "pairCount": 23
         },
         {
           "day": "2026-10-21",
@@ -50,62 +103,62 @@
         },
         {
           "day": "2026-10-16",
-          "pairCount": 11
+          "pairCount": 9
         },
         {
           "day": "2026-10-08",
-          "pairCount": 30
+          "pairCount": 13
         }
       ]
     },
     "footprint": [
       {
         "day": "2026-11-11",
-        "pairCount": 20
+        "pairCount": 16
       },
       {
         "day": "2026-11-09",
-        "pairCount": 29
+        "pairCount": 16
       },
       {
         "day": "2026-11-06",
-        "pairCount": 15
-      },
-      {
-        "day": "2026-11-05",
-        "pairCount": 23
-      },
-      {
-        "day": "2026-11-04",
-        "pairCount": 12
-      },
-      {
-        "day": "2026-11-03",
-        "pairCount": 19
-      },
-      {
-        "day": "2026-11-02",
-        "pairCount": 14
-      },
-      {
-        "day": "2026-10-30",
-        "pairCount": 17
-      },
-      {
-        "day": "2026-10-22",
-        "pairCount": 23
-      },
-      {
-        "day": "2026-10-21",
-        "pairCount": 12
-      },
-      {
-        "day": "2026-10-16",
         "pairCount": 9
       },
       {
-        "day": "2026-10-08",
+        "day": "2026-11-05",
         "pairCount": 13
+      },
+      {
+        "day": "2026-11-04",
+        "pairCount": 9
+      },
+      {
+        "day": "2026-11-03",
+        "pairCount": 14
+      },
+      {
+        "day": "2026-11-02",
+        "pairCount": 7
+      },
+      {
+        "day": "2026-10-30",
+        "pairCount": 10
+      },
+      {
+        "day": "2026-10-22",
+        "pairCount": 12
+      },
+      {
+        "day": "2026-10-21",
+        "pairCount": 7
+      },
+      {
+        "day": "2026-10-16",
+        "pairCount": 5
+      },
+      {
+        "day": "2026-10-08",
+        "pairCount": 5
       }
     ]
   },
@@ -127,6 +180,15 @@
       "coverage": "missing or ignored M1 before a decisive sweep: unknown, never confirmed"
     },
     "retestDay": "both first M1 touches must share the same Europe/Berlin calendar date; formation may be earlier",
+    "priceGap": {
+      "XAUUSD": 2,
+      "unit": "USD per fine troy ounce",
+      "GBPUSD": null,
+      "EURUSD": null,
+      "formula": "Long max(0,OB2.bottom-OB1.top); Short max(0,OB1.bottom-OB2.top)",
+      "selection": "latest matching partner satisfying all policies; older eligible partners may replace a rejected latest partner",
+      "overlap": "overlap and touch allowed; directional orderflow remains mandatory"
+    },
     "stop": "selected second M5 OB outside edge",
     "target": "2R price risk without commission",
     "variants": "a and b independently"
@@ -134,8 +196,8 @@
   "footprint": [
     {
       "day": "2026-11-11",
-      "pairCount": 16,
-      "withoutDepthLimitPairCount": 24,
+      "pairCount": 7,
+      "withoutDepthLimitPairCount": 13,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1381,
@@ -144,14 +206,15 @@
       "pairChecks": 351,
       "depthUnknown": 0,
       "depthRejected": 7,
-      "firstHoldRejected": 36,
+      "firstHoldRejected": 7,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 64
     },
     {
       "day": "2026-11-09",
-      "pairCount": 16,
-      "withoutDepthLimitPairCount": 35,
+      "pairCount": 8,
+      "withoutDepthLimitPairCount": 19,
       "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1381,
@@ -160,14 +223,15 @@
       "pairChecks": 820,
       "depthUnknown": 0,
       "depthRejected": 14,
-      "firstHoldRejected": 26,
+      "firstHoldRejected": 7,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 8
+      "differentRetestDays": 1,
+      "priceGapRejected": 45
     },
     {
       "day": "2026-11-06",
-      "pairCount": 9,
-      "withoutDepthLimitPairCount": 17,
+      "pairCount": 5,
+      "withoutDepthLimitPairCount": 11,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 264,
       "m1Bars": 1309,
@@ -176,15 +240,16 @@
       "pairChecks": 325,
       "depthUnknown": 0,
       "depthRejected": 9,
-      "firstHoldRejected": 9,
+      "firstHoldRejected": 2,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 13
     },
     {
       "day": "2026-11-05",
-      "pairCount": 13,
-      "withoutDepthLimitPairCount": 35,
-      "olderQualifyingReplacementPairs": 3,
+      "pairCount": 9,
+      "withoutDepthLimitPairCount": 21,
+      "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 60,
@@ -192,14 +257,15 @@
       "pairChecks": 703,
       "depthUnknown": 0,
       "depthRejected": 17,
-      "firstHoldRejected": 6,
+      "firstHoldRejected": 5,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 8
     },
     {
       "day": "2026-11-04",
-      "pairCount": 9,
-      "withoutDepthLimitPairCount": 19,
+      "pairCount": 4,
+      "withoutDepthLimitPairCount": 9,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1379,
@@ -208,15 +274,16 @@
       "pairChecks": 253,
       "depthUnknown": 0,
       "depthRejected": 9,
-      "firstHoldRejected": 10,
+      "firstHoldRejected": 3,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 9
+      "differentRetestDays": 3,
+      "priceGapRejected": 43
     },
     {
       "day": "2026-11-03",
-      "pairCount": 14,
-      "withoutDepthLimitPairCount": 23,
-      "olderQualifyingReplacementPairs": 2,
+      "pairCount": 11,
+      "withoutDepthLimitPairCount": 18,
+      "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 59,
@@ -224,14 +291,15 @@
       "pairChecks": 435,
       "depthUnknown": 0,
       "depthRejected": 8,
-      "firstHoldRejected": 14,
+      "firstHoldRejected": 2,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 30
     },
     {
       "day": "2026-11-02",
-      "pairCount": 7,
-      "withoutDepthLimitPairCount": 16,
+      "pairCount": 3,
+      "withoutDepthLimitPairCount": 8,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1379,
@@ -240,15 +308,16 @@
       "pairChecks": 378,
       "depthUnknown": 0,
       "depthRejected": 12,
-      "firstHoldRejected": 4,
+      "firstHoldRejected": 1,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 7
     },
     {
       "day": "2026-10-30",
-      "pairCount": 10,
-      "withoutDepthLimitPairCount": 21,
-      "olderQualifyingReplacementPairs": 3,
+      "pairCount": 4,
+      "withoutDepthLimitPairCount": 10,
+      "olderQualifyingReplacementPairs": 0,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 56,
@@ -256,15 +325,16 @@
       "pairChecks": 325,
       "depthUnknown": 0,
       "depthRejected": 10,
-      "firstHoldRejected": 11,
+      "firstHoldRejected": 1,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 39
     },
     {
       "day": "2026-10-22",
-      "pairCount": 12,
-      "withoutDepthLimitPairCount": 27,
-      "olderQualifyingReplacementPairs": 4,
+      "pairCount": 5,
+      "withoutDepthLimitPairCount": 12,
+      "olderQualifyingReplacementPairs": 1,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 64,
@@ -272,14 +342,15 @@
       "pairChecks": 703,
       "depthUnknown": 0,
       "depthRejected": 15,
-      "firstHoldRejected": 5,
+      "firstHoldRejected": 0,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 8
+      "differentRetestDays": 1,
+      "priceGapRejected": 45
     },
     {
       "day": "2026-10-21",
-      "pairCount": 7,
-      "withoutDepthLimitPairCount": 12,
+      "pairCount": 3,
+      "withoutDepthLimitPairCount": 6,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1379,
@@ -288,14 +359,15 @@
       "pairChecks": 300,
       "depthUnknown": 0,
       "depthRejected": 11,
-      "firstHoldRejected": 4,
+      "firstHoldRejected": 1,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 11
     },
     {
       "day": "2026-10-16",
-      "pairCount": 5,
-      "withoutDepthLimitPairCount": 22,
+      "pairCount": 1,
+      "withoutDepthLimitPairCount": 11,
       "olderQualifyingReplacementPairs": 0,
       "m5Bars": 252,
       "m1Bars": 1245,
@@ -304,15 +376,16 @@
       "pairChecks": 465,
       "depthUnknown": 0,
       "depthRejected": 13,
-      "firstHoldRejected": 5,
+      "firstHoldRejected": 2,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 7
     },
     {
       "day": "2026-10-08",
-      "pairCount": 5,
-      "withoutDepthLimitPairCount": 31,
-      "olderQualifyingReplacementPairs": 1,
+      "pairCount": 3,
+      "withoutDepthLimitPairCount": 20,
+      "olderQualifyingReplacementPairs": 0,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 71,
@@ -320,9 +393,10 @@
       "pairChecks": 780,
       "depthUnknown": 0,
       "depthRejected": 18,
-      "firstHoldRejected": 15,
+      "firstHoldRejected": 9,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 0
+      "differentRetestDays": 0,
+      "priceGapRejected": 9
     }
   ],
   "references": [
@@ -361,6 +435,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
       },
       "entries": {
         "a": {
@@ -448,6 +528,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
       },
       "entries": {
         "a": {
@@ -572,6 +658,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
       },
       "entries": {
         "a": {
@@ -698,6 +790,12 @@
         "status": "passed",
         "reason": null
       },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -785,6 +883,12 @@
         "status": "passed",
         "reason": null
       },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -871,6 +975,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0.2300000000000182
       },
       "entries": {
         "a": {
@@ -996,6 +1106,12 @@
         "status": "passed",
         "reason": null
       },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1119,6 +1235,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 1.2599999999997635
       },
       "entries": {
         "a": {
@@ -1244,6 +1366,12 @@
         "status": "passed",
         "reason": null
       },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1330,6 +1458,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
       },
       "entries": {
         "a": {
@@ -1455,6 +1589,12 @@
         "status": "passed",
         "reason": null
       },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1541,6 +1681,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
       },
       "entries": {
         "a": {
@@ -1629,6 +1775,12 @@
         "status": "passed",
         "reason": null
       },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1715,6 +1867,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
       },
       "entries": {
         "a": {
@@ -1840,6 +1998,12 @@
         "status": "passed",
         "reason": null
       },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 1.7700000000004366
+      },
       "entries": {
         "a": {
           "status": "ready",
@@ -1963,6 +2127,12 @@
         "firstSweepTime": null,
         "status": "passed",
         "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
       },
       "entries": {
         "a": {

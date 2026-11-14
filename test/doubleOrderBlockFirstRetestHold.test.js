@@ -1,7 +1,8 @@
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {expect,it} from 'vitest';
+import {expect,it,vi,afterEach} from 'vitest';
 import {detectDoubleOrderBlocks} from '../src/doubleOrderBlocks.js';
+import * as priceGapPolicy from '../src/doubleOrderBlockPriceGap.js';
 
 const provenance=JSON.parse(readFileSync(new URL('./fixtures/dob-native/pin471-regression.json',import.meta.url),'utf8'));
 const source=readFileSync(new URL(`./fixtures/dob-native/${provenance.sourceFixture}`,import.meta.url),'utf8');
@@ -9,6 +10,7 @@ const fixture=JSON.parse(source);
 const firstStart=provenance.firstStartTime,secondStart=provenance.secondStartTime,confirmation=provenance.confirmationKnownAt;
 const input={instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1};
 const match=pair=>pair.firstOrderBlock.startTime===firstStart&&pair.secondOrderBlock.startTime===secondStart;
+afterEach(()=>vi.restoreAllMocks());
 
 it('rejects the native pinned pair when OB1 reaction extreme was swept before OB2 confirmed',()=>{
  expect(createHash('sha256').update(source).digest('hex')).toBe(provenance.sourceFileSha256);
@@ -17,7 +19,10 @@ it('rejects the native pinned pair when OB1 reaction extreme was swept before OB
  expect(detectDoubleOrderBlocks({...input,evaluatedAt:confirmation}).pairs.some(match)).toBe(false);
 });
 
-it('would retain the same native geometry if the later wick only equalled the fixed reaction extreme',()=>{
+it('isolates the hold gate: equality survives while the actual sweep and missing coverage do not',()=>{
+ // Pin 471 verletzt inzwischen auch die neue Preisnähe; der Hold-Vertrag darf daran nicht maskiert werden.
+ vi.spyOn(priceGapPolicy,'evaluateDoubleOrderBlockPriceGap').mockReturnValue({status:'passed',reason:null,positiveZoneGap:5.03,maximum:null});
+ expect(detectDoubleOrderBlocks({...input,evaluatedAt:confirmation}).pairs.some(match)).toBe(false);
  const m1Candles=input.m1Candles.map(c=>c.time>=1794220440&&c.time+60<=confirmation?{...c,low:Math.max(c.low,4094.97)}:c);
  const pair=detectDoubleOrderBlocks({...input,m1Candles,evaluatedAt:confirmation}).pairs.find(match);
  expect(pair).toBeDefined();expect(pair.firstPenetration.extremePrice).toBe(4094.97);
