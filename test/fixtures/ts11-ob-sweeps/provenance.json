@@ -1,0 +1,10 @@
+{
+ "sourceHead":"7fb23762",
+ "instrument":"XAUUSD",
+ "feed":"FXCM native Bid M5",
+ "nativeArchive":".debug/dob-period-depth/candles/XAUUSD-5m-1767335400-1794610800.json",
+ "nativeArchiveSha256":"d4c99099f039c231323a7fdc5ac82fb949b5ed41003f0452fa48c759de0bcb66",
+ "fixtureSha256":"bb728709c579e29fd21fb7d68521b00b4b30f015d6ef09f8d75838eac1bea556",
+ "pins":[494,495,496],
+ "provenanceNotes":["Pin496 is an OB pin, not a persisted TS row or frozen evaluatedAt.","Pin495 database capture is 14 November, native formation is 5 November; these timestamps are separate.","User mentioned new sweep4129.03; native Williams pivot is4129.63. Preserve both statements without editing OHLC."]
+}

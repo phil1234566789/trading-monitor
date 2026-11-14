@@ -56,7 +56,9 @@ export function usePriceChartTradeSetupDrawing() {
     // sessionBonus.js. level.dir folgt der 1=High/-1=Low-Konvention.
     const bonusFor = createSessionBonusResolver(candles, symbol);
     const lsLabel = (level) =>
-      formatLsLabel(formatPrice(level.price), level.pivotTime, nowSec, level.touchedTime, bonusFor(level.pivotTime, level.dir, level.price));
+      (level.sourceKind === 'orderBlock' ? 'OB-Kante · ' : '') +
+      formatLsLabel(formatPrice(level.price), level.sourceStartTime ?? level.pivotTime, nowSec, level.touchedTime,
+        level.sourceKind === 'orderBlock' ? null : bonusFor(level.pivotTime, level.dir, level.price));
 
     for (const setup of tradeSetups) {
       // obStartTime statt fractal.pivotTime als Replay-Cutoff: der bestätigende OB markiert den
@@ -72,7 +74,7 @@ export function usePriceChartTradeSetupDrawing() {
       const top = setup.obTop;
       const bottom = setup.obBottom;
 
-      const fractalLine = new LiquidityLinePrimitive(
+      const fractalLine = setup.fractal?.sourceKind === 'orderBlock' ? null : new LiquidityLinePrimitive(
         setup.fractal,
         {
           color: cssColor("tradeSetupProtected"),
@@ -179,7 +181,7 @@ export function usePriceChartTradeSetupDrawing() {
         .filter(Boolean)
         .map((spec) => new ScalePrimitive(spec, candles));
 
-      for (const primitive of [fractalLine, lsLine, ...nebenSweepLines, obBox, ...scales]) {
+      for (const primitive of [fractalLine, lsLine, ...nebenSweepLines, obBox, ...scales].filter(Boolean)) {
         candleSeries.attachPrimitive(primitive);
         tradeSetupPrimitives.push(primitive);
       }

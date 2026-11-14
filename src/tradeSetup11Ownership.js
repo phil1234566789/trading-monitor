@@ -1,6 +1,7 @@
 import {prepareTradeSetup11Context} from './tradeSetup11Context.js';
 import {TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
 import {deriveM5CloseReaction} from './m5CloseReaction.js';
+import {detectLiquidityLevels} from './liquidityDetection.js';
 
 const samePivot=(pivot,level)=>pivot?.pivotTime===level.pivotTime&&pivot.price===level.price;
 const snapshotRange=level=>({trend:level.trend,low:level.currRange.low,high:level.currRange.high});
@@ -35,6 +36,18 @@ export function currentTradeSetup11Range(context,closeReactionCache) {
 }
 
 export function findTradeSetup11SourceOwner({setup,context,resolveContext,expectedTrend}) {
+ if(setup.ls.sourceKind==='orderBlock'){
+  const source=setup.ls,raw=context.rawCandles??context.candles,index=raw.findIndex(c=>c.time===source.sourceStartTime);
+  const origins=new Set(index<0?[]:raw.slice(Math.max(0,index-2),index+1).map(c=>c.time));
+  context.sourceLiquidity??=detectLiquidityLevels(context.candles,TRADE_SETUP_M5_FRACTAL_PERIOD);
+  const pivots=(setup.dir===1?context.sourceLiquidity.highs:context.sourceLiquidity.lows)
+   .filter(p=>p.price===source.price&&origins.has(p.pivotTime));
+  // Der OB-Altersanker ist kein Fraktal: nur ein wirklich erkannter Ursprungspivot darf die Range belegen.
+  const proofs=pivots.map(level=>findTradeSetup11SourceOwner({setup:{...setup,ls:level},context,resolveContext,expectedTrend}));
+  const proof=proofs.find(p=>p.status==='ready');
+  if(proof)return {...proof,sourceKind:'orderBlock',sourceStartTime:source.sourceStartTime};
+  return proofs.find(p=>p.status==='unknown')??{status:'unmet',reason:'orderBlockSourceRangeNotAssociated'};
+ }
  const level=setup.ls,rows=context.candles,indices=new Map(rows.map((c,i)=>[c.time,i]));
  const knownAt=(pivot,period)=>{
   const index=indices.get(pivot.pivotTime);

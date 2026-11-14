@@ -22,6 +22,9 @@ it('observes the native pin481 inner UP only once the necessary M5 close is know
  expect(after.anchor.knownAt).toBeLessThanOrEqual(after.evaluatedAt);
  expect(after.stateKnownAt).toBe(1791451200);
  expect(after).not.toHaveProperty('accepted');
+ expect(after.rawCandles).toHaveLength(input.m5Candles.filter(c=>c.time+300<=1791451200).length);
+ expect(after.rawCandles.some(c=>c.ignored)).toBe(true);
+ expect(after.candles.every(c=>!c.ignored)).toBe(true);
 });
 it('never turns missing D1/H1 anchor history or a late M5 window into a ready trend',()=>{
  expect(prepareTradeSetup11Context({...input,d1Candles:[],evaluatedAt:1791451200}).status).toBe('unknown');

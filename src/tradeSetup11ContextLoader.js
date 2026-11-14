@@ -1,8 +1,13 @@
 import {fetchInitialCandles} from './forexCandles.js';
 import {fetchCandlesCached} from './candleCache.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
+import {barSecondsFor} from './timeframes.js';
 
 export const TRADE_SETUP_11_CONTEXT_COUNTS={h1:2500,d1:300};
+
+export function tradeSetup11RequestedBoundary({replayUntil,currentBar,now}){
+  return replayUntil==null?now:Math.min(now,replayUntil+barSecondsFor(currentBar));
+}
 
 export async function loadTradeSetup11Context({symbol,evaluatedAt}) {
   if(!Number.isFinite(evaluatedAt)||evaluatedAt<=0)return {symbol,h1:[],d1:[]};

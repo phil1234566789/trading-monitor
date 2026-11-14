@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient.js";
 import { normalizeStrategySetup } from './strategySetupLabels.js';
 import { ALL_ACCOUNTS_ID } from "./tradingAccounts.js";
 import {privateJournalAvailable,loadPrivateJournalPages} from './privateJournal.js';
+import {restoreTradeSetupSourceSnapshot} from '../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
 
 export {computeTradeStats} from './tradeStats.js';
 
@@ -111,6 +112,7 @@ function toConfirmation(c, level) {
     kind: c.kind,
     category: c.category,
     ...(c.historical_only ? { historicalOnly: true } : {}),
+    ...(c.source_context ? {sourceContext:c.source_context} : {}),
     sourceTime: c.source_time ? Math.floor(new Date(c.source_time).getTime() / 1000) : null,
     touchedTime: c.touched_time ? Math.floor(new Date(c.touched_time).getTime() / 1000) : null,
     liquidityLevel: toLiquidityLevel(c),
@@ -193,13 +195,13 @@ export async function fetchTrades(instrument, accountId = null, dealingRangeId =
     supabase
       .from("trade_evidence")
       .select(
-        "id, dealing_range_id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, dealing_range_id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
       )
       .in("dealing_range_id", rangeIds),
     supabase
       .from("trade_evidence")
       .select(
-        "id, trade_position_id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, trade_position_id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
       )
       .in("trade_position_id", positionIds),
     lessonTargetIds.length > 0
@@ -339,11 +341,13 @@ export async function fetchActiveTscRangeId(instrument) {
 export async function fetchDealingRangeCockpit(dealingRangeId) {
   const { data: range, error: rangeError } = await supabase
     .from("dealing_ranges")
-    .select(`id, instrument, direction, invalidation, strategy_setup, ${INVALIDATION_OBJECT_EMBED}`)
+    .select(`id, instrument, direction, invalidation, strategy_setup, trade_setup_source_snapshot_id, trade_setup_source_snapshots(payload), ${INVALIDATION_OBJECT_EMBED}`)
     .eq("id", dealingRangeId)
     .maybeSingle();
   if (rangeError) throw rangeError;
   if (!range) return null;
+  if(range.trade_setup_source_snapshot_id!=null&&!range.trade_setup_source_snapshots?.payload)
+    throw new Error('Der eingefrorene Quellenstand der Dealing Range fehlt.');
 
   const LIQUIDITY_LEVEL_EMBED = "liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)";
   const [
@@ -352,7 +356,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
   ] = await Promise.all([
     supabase
       .from("trade_evidence")
-      .select(`id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
@@ -369,6 +373,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
     instrument: range.instrument,
     direction: range.direction,
     strategySetup: normalizeStrategySetup(range.strategy_setup) ?? null,
+    sourceSetup:range.trade_setup_source_snapshots?.payload?restoreTradeSetupSourceSnapshot(range.trade_setup_source_snapshots.payload):null,
     // Bug-Report Philip 2026-08-27: fehlte hier komplett (weder im select() oben noch hier) —
     // die TSC-Karte bekam eine per Code abgeleitete Invalidierung (z.B. aus einer OB-Bestätigung,
     // siehe tradeIntake.js: insertConfirmation) dadurch nie zu sehen, obwohl sie in der DB stand.

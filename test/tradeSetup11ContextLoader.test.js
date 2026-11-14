@@ -1,8 +1,19 @@
 import {beforeEach,expect,it,vi} from 'vitest';
 const fetch=vi.hoisted(()=>vi.fn());
 vi.mock('../src/candleCache.js',()=>({fetchCandlesCached:fetch}));
-import {loadTradeSetup11Context,TRADE_SETUP_11_CONTEXT_COUNTS} from '../src/tradeSetup11ContextLoader.js';
+import {loadTradeSetup11Context,TRADE_SETUP_11_CONTEXT_COUNTS,tradeSetup11RequestedBoundary} from '../src/tradeSetup11ContextLoader.js';
 beforeEach(()=>{fetch.mockReset();});
+it('loads a new replay boundary independently of stale chart candles or fetch lookahead',async()=>{
+ const replay=Date.parse('2026-11-05T14:45:00Z')/1000,now=replay+86400;
+ const evaluatedAt=tradeSetup11RequestedBoundary({replayUntil:replay,currentBar:'5m',now});
+ fetch.mockResolvedValue([{time:replay-3600},{time:replay+300},{time:replay+86400}]);
+ const context=await loadTradeSetup11Context({symbol:'XAUUSD',evaluatedAt,toMs:(replay+86400)*1000,
+  staleChartCandles:[{time:Date.parse('2026-07-10T20:45:00Z')/1000}]});
+ expect(evaluatedAt).toBe(replay+300);
+ expect(fetch.mock.calls.every(c=>c[4]===(replay+300)*1000)).toBe(true);
+ expect(context.h1).toEqual([{time:replay-3600}]);
+ expect(tradeSetup11RequestedBoundary({replayUntil:now+86400,currentBar:'1D',now})).toBe(now);
+});
 it('bounds both native contexts independently of chart timeframe and excludes unclosed bars',async()=>{
   fetch.mockResolvedValue([{time:0},{time:86400},{time:172800}]);
   expect(await loadTradeSetup11Context({symbol:'XAUUSD',evaluatedAt:172800,chartTimeframe:'1D'})).toEqual({symbol:'XAUUSD',h1:[{time:0},{time:86400}],d1:[{time:0},{time:86400}]});

@@ -9,6 +9,9 @@ import { detectOrderBlocks, type Candle } from "./orderBlocks.ts";
 import { businessSecondsBetween } from "./ageTier.ts";
 import type { LiquidityLevel } from "./liquidity.ts";
 import { liquidityTouch } from "./liquidity.ts";
+import {orderBlockSweepSources,evaluateSweepConfirmation,orderBlockRecognitionTimes,sweepSourceKey} from './tradeSetupSweepSources.ts';
+import {TRADE_SETUP_OB_SWEEP_PROFILE} from './tradeSetupSourceSnapshot.js';
+export {TRADE_SETUP_OB_SWEEP_PROFILE};
 
 export interface SetupOb {
   dir: 1 | -1; // 1 = bullische Lücke, -1 = bärische Lücke
@@ -31,6 +34,9 @@ export interface DetectedTradeSetup {
   fractal: LiquidityLevel; // M5-Fraktal ("Protected High/Low")
   ls: LiquidityLevel; // sweependes LQ-Level (H1 oder M5) — das "Liquidity Sweep"
   sweeps: SetupSweep[]; // Höchstens drei stärkste Level, ältester zuerst — sweeps[0].level === ls
+  confirmationSources?:SetupSweep[];
+  confirmationHistory?:Array<SetupSweep&ReturnType<typeof evaluateSweepConfirmation>&{sourceKey:string}>;
+  sweepSourceProfile?:string;
   obTop: number;
   obBottom: number;
   obStartTime: number;
@@ -43,6 +49,7 @@ export interface DetectedTradeSetup {
 }
 
 export interface TradeSetupParams {
+  sweepSourceProfile?:string;
   graceSec: number; // Toleranz NACH dem Fraktal, bis zu der der LS noch zählt (i.d.R. eine M5-Kerzenlänge)
   lsMaxLeadSecH1: number; // wie weit VOR dem Fraktal ein H1-LS liegen darf — eigenes, größeres
   // Fenster als M5, da ein H1-Sweep typischerweise deutlich länger vor dem bestätigenden
@@ -71,7 +78,7 @@ export interface TradeSetupParams {
 // derselben Deno-Runtime, Task "Live-Trade-Setup-Erkennung serverseitig für Lana", 2026-09-05).
 // Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
 export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-uninterrupted-sweep-v3';
-export const TRADE_SETUP_M5_FRACTAL_PERIOD = 5; // liqM5Period
+export {TRADE_SETUP_M5_FRACTAL_PERIOD} from './tradeSetupSweepSources.ts';
 export const TRADE_SETUP_H1_FRACTAL_PERIOD = 10; // liqH1Period — bewusst ANDERS als LIQUIDITY_FRACTAL_PERIOD (eigene 1H-Notification, andere Abstimmung)
 export const TRADE_SETUP_PIP_SIZE = 0.0001; // gilt für beide FX-Paare (GBPUSD/EURUSD)
 
@@ -385,7 +392,11 @@ export function detectTradeSetup(
   setupObs: SetupOb[],
   params: TradeSetupParams,
   m5Candles: Candle[],
+  sourceCandles: Candle[]=m5Candles,
 ): DetectedTradeSetup | null {
+  const originalM5Levels=m5Levels,typedSweeps=params.sweepSourceProfile===TRADE_SETUP_OB_SWEEP_PROFILE;
+  const confirmationTimes=typedSweeps?orderBlockRecognitionTimes(sourceCandles):null;
+  if(typedSweeps)m5Levels=[...m5Levels,...orderBlockSweepSources(setupObs,sourceCandles,dir,params.nowTime+300)];
   const obDir: 1 | -1 = dir === 1 ? -1 : 1;
 
   // Regel 3+4: die Zahlen eines Setups hängen am OB, nicht am Pfad — deshalb rechnet dieselbe
@@ -394,13 +405,19 @@ export function detectTradeSetup(
   const baueSetup = (ob: SetupOb, ownLs: LiquidityLevel, fractal: LiquidityLevel | null, pathType: "A" | "B"): DetectedTradeSetup | null => {
     const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params, dir, m5Candles);
     if (!sweeps) return null;
-    const validSweeps = sweeps.filter(sw => hasUninterruptedSweepReaction({ dir, ls: sw.level, sweeps: [sw], obStartTime: ob.startTime }, setupObs, m5Candles));
+    const uninterrupted=sweeps.filter(sw => hasUninterruptedSweepReaction({ dir, ls: sw.level, sweeps: [sw], obStartTime: ob.startTime }, setupObs, m5Candles));
+    const confirmationHistory=typedSweeps?uninterrupted.map(sw=>({...sw,sourceKey:sweepSourceKey({...sw.level,dir},sw.timeframe),
+      ...evaluateSweepConfirmation({...sw.level,dir},m5Candles,confirmationTimes!.get(ob.startTime)??NaN,sw.timeframe,originalM5Levels.map(level=>({...level,dir})))})):undefined;
+    const validSweeps=typedSweeps?confirmationHistory!.filter(sw=>sw.status==='valid').map(({level,timeframe})=>({level,timeframe})):uninterrupted;
     if (!validSweeps.length) return null;
     const ls = validSweeps[0].level;
-    const fensterVon = Math.min(...validSweeps.map((sw) => sw.level.touchedTime!));
+    const original=uninterrupted.filter(sw=>sw.timeframe==='1H'||originalM5Levels.includes(sw.level));
+    const fensterVon = Math.min(...(original.length?original:uninterrupted).map((sw) => sw.level.touchedTime!));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
     // Das Extrem braucht alle gültigen Touches; das fertige Setup trägt höchstens drei Sweeps.
-    return { dir, fractal: fractal ?? ls, ls, sweeps: strongestSetupSweeps(validSweeps), obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
+    return { dir, fractal: fractal ?? ls, ls, sweeps: strongestSetupSweeps(validSweeps),
+      ...(typedSweeps?{confirmationSources:validSweeps,confirmationHistory,sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE}:{}),
+      obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
   };
 
   let pathA: DetectedTradeSetup | null = null;

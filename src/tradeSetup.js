@@ -9,9 +9,13 @@
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
 import { liquidityTouch } from "./liquidityDetection.js";
+import {orderBlockSweepSources,evaluateSweepConfirmation,sweepSourceKey} from './tradeSetupSweepSources.js';
+import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 
 // Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
 export const TRADE_SETUP_DETECTOR_VERSION = 'setup1-fxcm-uninterrupted-sweep-v3';
+import {TRADE_SETUP_OB_SWEEP_PROFILE} from '../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
+export {TRADE_SETUP_OB_SWEEP_PROFILE};
 
 // Bis Bug-Report Philip 2026-07-29 ("M5 OBs bei trade-setup passen noch nicht") eine EIGENE, von
 // detectOrderBlocks() unabhängige 3-Kerzen-FVG-Existenzprüfung — bewusst OHNE Mindestgröße (jede
@@ -270,7 +274,12 @@ function widenObForSweep(ob, fensterVonSec, dir, m5Candles) {
 // für denselben OB dasselbe Setup melden. Path B füllt nur OBs, die Path A nicht beansprucht.
 // `pathType` ("A"/"B") bleibt als reine Debug-Info erhalten (A = eigenes bestätigtes
 // Protected-Pivot, B = fractal===ls) — seit 2026-09-20 steuert es weder Anzeige noch Auswertung.
-export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupObs, params, m5Candles) {
+export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupObs, params, m5Candles, sourceCandles=m5Candles) {
+  const originalM5Levels=m5Levels;
+  const typedSweeps=params.sweepSourceProfile===TRADE_SETUP_OB_SWEEP_PROFILE;
+  // Die FVG-Verfügbarkeit braucht dieselbe ungekürzte Kerzenfolge wie die OB-Erkennung.
+  const confirmationTimes=typedSweeps?orderBlockRecognitionTimes(sourceCandles??[],'5m'):null;
+  if(typedSweeps)m5Levels=[...m5Levels,...orderBlockSweepSources(setupObs,sourceCandles??[],dir,params.nowTime+300)];
   const obDir = dir === 1 ? -1 : 1;
   const byObStartTime = new Map();
 
@@ -280,13 +289,20 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
   const baueSetup = (ob, ownLs, fractal, pathType) => {
     const sweeps = collectObSweeps(ob, ownLs, h1Levels, m5Levels, params, dir, m5Candles);
     if (!sweeps) return null;
-    const validSweeps = sweeps.filter(sw => hasUninterruptedSweepReaction({ dir, ls: sw.level, sweeps: [sw], obStartTime: ob.startTime }, setupObs, m5Candles));
+    const uninterrupted=sweeps.filter(sw => hasUninterruptedSweepReaction({ dir, ls: sw.level, sweeps: [sw], obStartTime: ob.startTime }, setupObs, m5Candles));
+    const confirmationHistory=typedSweeps?uninterrupted.map(sw=>({...sw,sourceKey:sweepSourceKey(sw.level,sw.timeframe),
+      ...evaluateSweepConfirmation(sw.level,m5Candles??[],confirmationTimes.get(ob.startTime),sw.timeframe,originalM5Levels)})):null;
+    const validSweeps=typedSweeps?confirmationHistory.filter(sw=>sw.status==='valid').map(({level,timeframe})=>({level,timeframe})):uninterrupted;
     if (!validSweeps.length) return null;
     const ls = validSweeps[0].level;
-    const fensterVon = Math.min(...validSweeps.map((sw) => sw.level.touchedTime));
+    // Bestätigungs-Verfall darf die bereits erfasste Roh-Kraftzone nicht nachträglich verkleinern.
+    const original=uninterrupted.filter(sw=>sw.timeframe==='1H'||originalM5Levels.includes(sw.level));
+    const fensterVon = Math.min(...(original.length?original:uninterrupted).map((sw) => sw.level.touchedTime));
     const widened = widenObForSweep(ob, fensterVon, dir, m5Candles);
     // Das Extrem braucht alle gültigen Touches; das fertige Setup trägt höchstens drei Sweeps.
-    return { dir, fractal: fractal ?? ls, ls, sweeps: strongestSetupSweeps(validSweeps), obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
+    return { dir, fractal: fractal ?? ls, ls, sweeps: strongestSetupSweeps(validSweeps),
+      ...(typedSweeps?{confirmationSources:validSweeps,confirmationHistory,sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE}:{}),
+      obTop: widened.top, obBottom: widened.bottom, obStartTime: widened.startTime, obFvg: widened.fvg, pathType };
   };
 
   for (const { fractal, ls } of findAllProtectedFractals(fractalLevels, h1Levels, m5Levels, dir, params)) {

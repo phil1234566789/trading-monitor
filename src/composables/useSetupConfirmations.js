@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import {captureCurrentTradeSetupSources} from '../tradeSetupSourceSnapshots.js';
 import { strongestSetupSweeps } from "../tradeSetup.js";
 import { addRangeConfirmation, addConfirmationToTrade, createDealingRange,
   directionForSetup, deriveSetupEntryInvalidation, linkTradeToSetup, updateTrade } from "../tradeIntake.js";
@@ -23,6 +24,7 @@ export function useSetupConfirmations({ currentSymbol, confirmationAddTrade, ran
     error.value = "";
     let dealingRangeId = trade?.dealingRangeId;
     try {
+      await captureCurrentTradeSetupSources(setup,instrument);
       if (bootstrapping) {
         const range = await createDealingRange({ instrument, direction: directionForSetup(setup) });
         if (!range) throw new Error("Dealing Range konnte nicht angelegt werden.");
@@ -31,7 +33,13 @@ export function useSetupConfirmations({ currentSymbol, confirmationAddTrade, ran
       }
       // Nur die drei stärksten übernehmen; DB-Kindzeilen sind anders als Live-Sweeps nicht sortiert.
       const sweeps = strongestSetupSweeps(setup.sweeps ?? [{ level: setup.ls, timeframe: "5M" }]);
-      const confirmations = sweeps.map((sw) => ({
+      const confirmations = sweeps.map((sw) => sw.level.sourceKind === 'orderBlock' ? ({
+        kind:'ob', price:sw.level.price, sourceTime:sw.level.sourceStartTime,
+        touchedTime:sw.level.touchedTime ?? null, instrument, timeframe:sw.timeframe,
+        direction:sw.level.sourceDirection===1?'long':'short',
+        rangeLow:sw.level.sourceBottom, rangeHigh:sw.level.sourceTop,
+        sourceContext:{role:'orderBlockEdgeSweep',level:sw.level,timeframe:sw.timeframe},
+      }) : ({
         kind: "pivot", price: sw.level.price, sourceTime: sw.level.pivotTime,
         touchedTime: sw.level.touchedTime ?? null, instrument, timeframe: sw.timeframe,
         levelDirection: setup.dir === 1 ? "high" : "low",

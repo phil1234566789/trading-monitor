@@ -1,6 +1,7 @@
 import { reconstructObLifecycle } from "../_shared/obReplayLifecycle.ts";
 import { pinTypeFields, type PinType } from './pinType.ts';
 import {persistDoubleOrderBlockPin} from '../_shared/doubleOrderBlockPinStore.js';
+import {assertTradeSetupSourceSnapshot} from '../_shared/tradeSetupSourceSnapshot.js';
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { berlinDayRangeUtcMs } from "../_shared/berlinTime.ts";
@@ -271,10 +272,10 @@ export async function getJournal(instrument?: string, source?: string, limit = 5
 // trade_partial_exits) für trade_position, volle Zeile für die übrigen drei — damit Lana beim
 // Fetch immer die aktuellen Werte sieht statt eines möglicherweise veralteten Stands.
 export async function getPinContext() {
-  return fetchAllRows((from, to) => supabase
+  const rows=await fetchAllRows((from, to) => supabase
     .from("pin_context")
     .select(
-      "id, kind, dob_pin_key, dob_context, pin_type, note, created_at, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, " +
+      "id, kind, dob_pin_key, dob_context, trade_setup_source_snapshot_id, trade_setup_source_snapshots(payload), pin_type, note, created_at, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, " +
         "trade_positions(*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)), " +
         "ob_zones(*), " +
         "trade_setups(*), " +
@@ -290,6 +291,15 @@ export async function getPinContext() {
         "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi",
     )
     .order("created_at", { ascending: true }).order('id').range(from, to));
+  for(const row of rows){
+    const value:unknown=row;
+    if(value===null||typeof value!=='object')throw new Error('Ungültiger Pin-Kontext.');
+    const record=value as Record<string,unknown>,embedded=record.trade_setup_source_snapshots;
+    const payload=embedded&&typeof embedded==='object'&&'payload' in embedded?embedded.payload:null;
+    if(record.trade_setup_source_snapshot_id!=null&&!payload)throw new Error('Der eingefrorene Quellenstand des Pins fehlt.');
+    if(payload)assertTradeSetupSourceSnapshot(payload);
+  }
+  return rows;
 }
 
 // Schreib-Pendant zu getPinContext (Chat 2026-08-17: Lana darf Chart-POIs jetzt selbst pinnen,

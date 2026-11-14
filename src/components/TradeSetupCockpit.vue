@@ -9,6 +9,7 @@ import { toPips } from "../pipConfig.js";
 import CrudListSection from "./CrudListSection.vue";
 import ActionButton from "./ui/ActionButton.vue";
 import IconButton from "./ui/IconButton.vue";
+import {tradeSetupSourceDetails} from '../tradeSetupSourcePresentation.js';
 
 // Trade-Setup-Cockpit (Chat 2026-08-26: "TSC clear, fangen wir von vorne an") — Neuaufbau Schritt
 // 1: Bestätigungen + Targets, "erst mal alles manuell" (Philip) heißt hier: keine automatische
@@ -189,6 +190,7 @@ const accentStyle = computed(() => {
       </div>
     </div>
 
+    <p v-if="range?.sourceSetup" class="tsc-source-details">Quellen / GO-Beleg: {{ tradeSetupSourceDetails(range.sourceSetup,instrument) }}</p>
     <p v-if="saving" class="tsc-saving" role="status"><span class="tsc-spinner" aria-hidden="true"></span> Trade-Setup wird übernommen…</p>
     <div :inert="saving">
     <p v-if="fromJournal">Journal · Dealing Range #{{ range?.id }} · Änderungen werden direkt gespeichert.</p>

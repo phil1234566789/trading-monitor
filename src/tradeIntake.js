@@ -5,6 +5,8 @@ import {privateJournalApi} from './privateJournal.js';
 import { deriveSetupEntryInvalidation, TRADE_SETUP_DETECTOR_VERSION } from "./tradeSetup.js";
 import { tradeSetupProvenance } from '../supabase/functions/_shared/tradeSetupProvenance.js';
 import { tradeSetupFromRow } from "./tradeSetups.js";
+import {captureCurrentTradeSetupSources,ensureTradeSetupSourceSnapshot} from './tradeSetupSourceSnapshots.js';
+import {isOrderBlockEdgeSweep} from './tradeEvidence.ts';
 
 // "Setup als Trade übernehmen" (Chat 2026-07-27, Trade-Modus) — verbindet einen im Chart
 // angeklickten Trade-Setup (dir/label/obTop/obBottom/ls/fractal, siehe
@@ -33,7 +35,7 @@ export { deriveSetupEntryInvalidation };
 // Pfad, über den es gefunden wurde (siehe detectTradeSetups). poi-watcher läuft nur alle 5 Minuten —
 // bei einem ganz frisch entstandenen Setup kann die Zeile noch fehlen, dann bleibt null (kein Retry
 // hier, das müsste man bei Bedarf später nachtragen).
-async function findMatchingTradeSetupId(instrument, direction, obStartTimeSec) {
+async function findMatchingTradeSetupId(instrument, direction, obStartTimeSec, {throwOnError=false}={}) {
   const { data, error } = await supabase
     .from("trade_setups")
     .select("id")
@@ -42,6 +44,7 @@ async function findMatchingTradeSetupId(instrument, direction, obStartTimeSec) {
     .eq("ob_start_time", new Date(obStartTimeSec * 1000).toISOString())
     .maybeSingle();
   if (error) {
+    if(throwOnError)throw new Error(error.message);
     console.error("Trade-Setup-Match fehlgeschlagen:", error);
     return null;
   }
@@ -57,6 +60,10 @@ async function findMatchingTradeSetupId(instrument, direction, obStartTimeSec) {
 // über dieselbe findOrCreateObZoneId-Funktion wie poi-watcher (Timeframe immer "5M", siehe
 // detectSetupObs()). setup = ein Eintrag aus tradeSetupsMetadata (usePriceChartTradeSetups.js).
 export async function findOrCreateTradeSetupId({ instrument, direction, setup }) {
+  if(setup.sourceSnapshotContext||setup.persistedSourceSnapshot){
+    const existing=await findMatchingTradeSetupId(instrument,direction,setup.obStartTime,{throwOnError:true});
+    if(existing!=null)return existing;
+  }
   const obZoneId = await findOrCreateObZoneId({
     instrument,
     timeframe: "5M",
@@ -216,16 +223,19 @@ export async function addPositionToDealingRange(dealingRangeId, { tradingAccount
 // Ausführung, seit die beiden getrennt sind) — setupEntry wird hier bewusst NICHT mehr übernommen,
 // das wäre jetzt eine Bestätigung auf einer konkreten Ausführung, keine Idee-Eigenschaft.
 export async function linkTradeToSetup(dealingRangeId, instrument, setup) {
+  const snapshot=await captureCurrentTradeSetupSources(setup,instrument);
   const direction = directionForSetup(setup);
   const { invalidation } = deriveSetupEntryInvalidation(setup);
   const [tradeSetupId, invalidationFields] = await Promise.all([
-    findMatchingTradeSetupId(instrument, direction, setup.obStartTime),
+    snapshot?findOrCreateTradeSetupId({instrument,direction,setup}):findMatchingTradeSetupId(instrument, direction, setup.obStartTime),
     resolveInvalidationFields(setup.invalidationTarget ?? { price: invalidation }),
   ]);
+  const snapshotId=snapshot?await ensureTradeSetupSourceSnapshot(tradeSetupId,snapshot):null;
 
   const { error } = await supabase
     .from("dealing_ranges")
-    .update({ trade_setup_id: tradeSetupId, ...invalidationFields })
+    .update({ trade_setup_id: tradeSetupId, ...invalidationFields,
+      trade_setup_source_snapshot_id:snapshotId })
     .eq("id", dealingRangeId);
 
   if (error) {
@@ -472,6 +482,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     kind: confirmation.kind,
     category,
     ...(confirmation.historicalOnly ? { historical_only: true } : {}),
+    ...(confirmation.sourceContext ? {source_context:confirmation.sourceContext} : {}),
     source_time: confirmation.sourceTime != null ? new Date(confirmation.sourceTime * 1000).toISOString() : null,
     touched_time: confirmation.touchedTime != null ? new Date(confirmation.touchedTime * 1000).toISOString() : null,
     // Nur bei kind='fib' gesetzt (siehe PriceChart.vue: findClickedFibLevel) — die zwei Ankerpreise
@@ -522,6 +533,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     dealingRangeId != null &&
     category === "confirmation" &&
     !confirmation.historicalOnly &&
+    !isOrderBlockEdgeSweep(confirmation) &&
     confirmation.kind === "ob" &&
     confirmation.rangeLow != null &&
     confirmation.rangeHigh != null &&

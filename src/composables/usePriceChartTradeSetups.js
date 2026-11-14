@@ -36,7 +36,7 @@ import { fetchInitialCandles as fetchInitialForexCandles, fetchOlderCandles as f
 import { fetchCandlesCached } from "../candleCache.js";
 import { REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
 
-export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated } = {}) {
+export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, sweepSourceProfile } = {}) {
   let m5Candles = [];
   let trendAnalysisM5Candles = [];
   let fetchSeq = 0;
@@ -67,7 +67,8 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated } = {
     // Einmal markiert fuer Fraktale UND die bestaetigende FVG — die beiden Erkennungen lesen das
     // Flag unterschiedlich (siehe markIgnoredCandles), brauchen aber denselben Kerzensatz.
     const kerzen = markIgnored(candles, symbol);
-    const params = tradeSetupParameters(symbol, candles[candles.length - 1].time);
+    const params = {...tradeSetupParameters(symbol, candles[candles.length - 1].time),
+      ...(sweepSourceProfile ? {sweepSourceProfile} : {})};
     const symbolSessions = sessions.filter((s) => s.instrument === symbol);
     const minGap = obMinimum(symbol, '5m');
     // H1-/M5-Lader und DB-Poll können denselben Stand liefern. Innenkorrekturen bleiben relevant.
@@ -115,8 +116,8 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated } = {
     // vorherigen Instruments hält (gleicher Grund wie filterDbObZones).
     const dbFor = (dir) => dbTradeSetups.filter((s) => s.instrument === symbol && s.dir === dir);
     const merged = [
-      ...mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, kerzenOhneIgnorierte), dbFor(1)),
-      ...mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, kerzenOhneIgnorierte), dbFor(-1)),
+      ...mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, kerzenOhneIgnorierte, kerzen), dbFor(1)),
+      ...mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, kerzenOhneIgnorierte, kerzen), dbFor(-1)),
     ].filter(notForbidden).map(s => s.fromDb ? s : { ...s, instrument:symbol, detectorVersion: TRADE_SETUP_DETECTOR_VERSION, detectionConfiguration });
     // Neue Policies prüfen auch DB-Treffer vor der Historie; verworfene Treffer dürfen keinen Platz belegen.
     const candidates = evaluateCandidates ? evaluateCandidates(merged, policyContext) : merged;

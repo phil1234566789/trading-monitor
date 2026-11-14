@@ -1,4 +1,5 @@
 <script setup>
+import {tradeSetup11RequestedBoundary} from '../tradeSetup11ContextLoader.js';
 import {closedReplayEvaluationTime} from '../tradeSetupChecklistTimeBasis.js';
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { nextCandlePollDelay } from "../candlePolling.js";
@@ -17,6 +18,7 @@ import { useGoldChartHistory } from '../composables/useGoldChartHistory.js';
 import {useDoubleOrderBlockChart} from '../composables/useDoubleOrderBlockChart.js';
 import DoubleOrderBlockStatus from './DoubleOrderBlockStatus.vue';
 import TradeSetup11Status from './TradeSetup11Status.vue';
+import {tradeSetupSourceDetails,tradeSetupInteractionRows} from '../tradeSetupSourcePresentation.js';
 import ChartIndicatorStatusStack from './ChartIndicatorStatusStack.vue';
 import { goldNativeZones } from '../priceChartObZones.js';
 import M5CandleClock from "./M5CandleClock.vue";
@@ -115,7 +117,7 @@ import { loadCandlesAroundTrade, computeJumpViewport } from "../priceChartJumpTo
 import { classifyAge } from "../ageTier";
 import { kindLabel as targetKindLabel } from "../tradeTargets";
 import { tradesVisible } from "../tradeVisibility.js";
-import { kindLabel as confirmationKindLabel } from "../tradeEvidence";
+import { evidenceKindLabel, isOrderBlockEdgeSweep } from "../tradeEvidence";
 import { useStatusBar } from "../composables/useStatusBar.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 import MetadataPanel from "./MetadataPanel.vue";
@@ -459,6 +461,12 @@ const {
   if(!chart)return;
   renderTradeSetupsInternal();refreshCockpitInternal();applyCandleData();
 }});
+const tradeSetup11HoverDetails=ref('');
+watch([()=>props.symbol,()=>props.replayUntil,tradeSetupsMetadata],()=>{tradeSetup11HoverDetails.value='';});
+const selectedFrozenSetup=computed(()=>props.pinnedTradeSetups.find(s=>s.tradeSetupId===props.hoveredPinTradeSetupId)?.frozenSetup);
+const interactiveTradeSetups=computed(()=>tradeSetupInteractionRows(tradeSetupsMetadata.value,selectedFrozenSetup.value));
+const tradeSetup11Details=computed(()=>selectedFrozenSetup.value
+  ?`Eingefrorener Pin · ${tradeSetupSourceDetails(selectedFrozenSetup.value,props.symbol)}`:tradeSetup11HoverDetails.value);
 // Ranges/1h-Struktur-Trend + Market-Structure-Zeichnung (siehe usePriceChartMarketStructure.js,
 // Phase 6g) — marketStructureState/rangesMetadata/rangesMetadata2 direkt im Template/in anderen
 // Composables' ctx gebunden, daher destructured.
@@ -1044,7 +1052,7 @@ function refreshTradeConfirmationLinksInternal() {
       // Die Invalidierung hat keine trade_evidence-Id (sie steht auf der dealing_ranges-Zeile) —
       // ohne den Guard stünde "#undefined" am Chart-Objekt.
       const idHint = confirmation.id != null ? ` #${confirmation.id}` : "";
-      const kindPriceId = `${confirmationKindLabel(confirmation.kind)}${bonusHint} ${fmtPrice(confirmation.price, precision)}${idHint}`;
+      const kindPriceId = `${evidenceKindLabel(confirmation)}${bonusHint} ${fmtPrice(confirmation.price, precision)}${idHint}`;
       // Anti-Confluence zeichnet das Icon getrennt und größer statt es wie bei Confirmation/
       // Confluence einfach vor den Text zu schreiben (Philip, Chat 2026-08-28: erst "Label 2x
       // größer" gewünscht, dann korrigiert auf "nur der Totenkopf 1,5x größer, Rest der Schrift
@@ -1088,7 +1096,7 @@ function refreshTradeConfirmationLinksInternal() {
       }
       // OB-Bestätigungen als echte Box statt nur einer Linie (siehe refreshTradeTargetLinksInternal
       // — dieselbe Begründung, dieselbe touchedTime-vor-liveObZoneState-Priorität).
-      if (confirmation.kind === "ob" && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
+      if (confirmation.kind === "ob" && !isOrderBlockEdgeSweep(confirmation) && confirmation.rangeLow != null && confirmation.rangeHigh != null) {
         const { touched, endTime } = obBoxTouchState(confirmation, candles, obZoneCtx());
         // Pin-Kontext, vierte Art (Chat 2026-08-01, vierte Runde — Bug-Report Philip: DIESE
         // Box, "✔ OB 1,15229 #22", wurde mit der Trade-Setup-Link-Box verwechselt, war bisher
@@ -1663,7 +1671,8 @@ function computeTradeSetupsInternal() {
 
 function tradeSetup11EvaluationTime() {
   const now=Math.floor(Date.now()/1000);
-  return closedReplayEvaluationTime(props.replayUntil,now,allCandles,props.currentBar)??props.replayUntil??now;
+  // Alte Chartkerzen dürfen einen neuen Replay-Abruf nicht wieder auf den vorherigen Monat begrenzen.
+  return tradeSetup11RequestedBoundary({replayUntil:props.replayUntil,currentBar:props.currentBar,now});
 }
 
 // Dünne Koordinaten-Wrapper um die reinen Match-Funktionen in priceChartHitTest.js (siehe dort für
@@ -1675,7 +1684,7 @@ function findClickedSetup(param) {
   const price = candleSeries.coordinateToPrice(param.point.y);
   const time = chart.timeScale().coordinateToTime(param.point.x);
   if (price == null || time == null) return null;
-  return matchTradeSetup(tradeSetupsMetadata.value, price, time, {
+  return matchTradeSetup(interactiveTradeSetups.value, price, time, {
     replayUntil: props.replayUntil,
     showTradeSetupsShort: props.showTradeSetupsShort,
     showTradeSetupsLong: props.showTradeSetupsLong,
@@ -1766,7 +1775,7 @@ function renderTradeSetupsInternal() {
   // Async-Fetch (loadTradeSetupM5/-H1) kann noch laufen, wenn die Komponente schon
   // unmounted wurde — siehe gleicher Guard in refreshChart().
   if (!chart) return;
-  refreshTradeSetupDrawing(tradeSetupsMetadata.value, {
+  refreshTradeSetupDrawing(interactiveTradeSetups.value, {
     candles: clipReplay(allCandles),
     showTradeSetups: props.showTradeSetups,
     showTradeSetupsShort: props.showTradeSetupsShort,
@@ -2263,6 +2272,7 @@ onMounted(() => {
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     doubleOrderBlocks.hover({x,y});
+    tradeSetup11HoverDetails.value=tradeSetupSourceDetails(findClickedSetup({point:{x,y}}),props.symbol);
     const targetCursor=targetDrawing.cursorAt(x,y);
     if(targetCursor){chartContainerRef.value.style.cursor=targetCursor;return;}
     ideaDrawing.move({x,y});
@@ -2403,7 +2413,7 @@ watch(() => props.pinRsiDivergenceKeys, refreshRsiDivergenceInternal);
 // Pin-Panel-Hover (Chat 2026-08-18) — dieselben Refresh-Funktionen wie die dauerhaften pin*Keys/
 // pin*Ids-Watches oben, nur für die zusätzliche Auswahl-Hervorhebung.
 watch(() => props.hoveredPinObZoneKey, refreshPoiZonesInternal);
-watch(() => props.hoveredPinTradeSetupId, refreshTradeSetupLinksInternal);
+watch(() => props.hoveredPinTradeSetupId, ()=>{refreshTradeSetupLinksInternal();renderTradeSetupsInternal();});
 watch(() => props.hoveredPinTradeConfirmationId, refreshTradeConfirmationLinksInternal);
 watch(() => props.hoveredTradeTargetId, refreshTradeTargetLinksInternal);
 watch(() => props.hoveredPinLiquidityLevelKey, refreshLiquidityInternal);
@@ -2763,7 +2773,7 @@ defineExpose({
 
 <template>
   <div class="chart-wrapper" :style="{ height: chartWrapperHeight + 'px' }">
-    <div ref="chartContainerRef" class="chart-container"></div>
+    <div ref="chartContainerRef" class="chart-container" @mouseleave="tradeSetup11HoverDetails='' "></div>
     <TradeSetup2Loading v-if="snapshotView && showTradeSetup2" :steps="snapshotSteps" :error="setup2Error || snapshotCandleError"
       @retry="setup2.refresh(); loadInitial()" />
     <TradeSetup2Controls v-if="showTradeSetup2" :positions="setup2Positions" :selected="setup2Selected" :loading="setup2Loading"
@@ -2772,7 +2782,7 @@ defineExpose({
     <ChartIndicatorStatusStack>
       <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
       <DoubleOrderBlockStatus v-if="(showDoubleOrderBlocks || pinnedDoubleOrderBlocks.length) && dobStatus" :status="dobStatus" :details="dobDetails" />
-      <TradeSetup11Status v-if="showTradeSetups && (showTradeSetupsLong || showTradeSetupsShort) && !snapshotView" :status="tradeSetup11Status" />
+      <TradeSetup11Status v-if="showTradeSetups && (showTradeSetupsLong || showTradeSetupsShort) && !snapshotView" :status="tradeSetup11Status" :details="tradeSetup11Details" />
     </ChartIndicatorStatusStack>
     <div v-if="ideaEditingStatus && !ideaDrawing.active.value" class="idea-drawing-controls" role="status">{{ideaEditingStatus}}</div>
     <div v-if="ideaDrawing.active.value" class="idea-drawing-controls" role="status">

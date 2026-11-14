@@ -4,6 +4,21 @@ import {usePriceChartTradeSetups} from '../src/composables/usePriceChartTradeSet
 import candles from './fixtures/gbpusd-m5-2026-07-20-long-setup.json';
 afterEach(()=>vi.restoreAllMocks());
 
+it('opts into typed sweep sources without changing legacy detection or removing ignored formation bars',()=>{
+  const detect=vi.spyOn(detection,'detectTradeSetups').mockReturnValue([]);
+  const input={candles,marketStructureState:null,symbol:'GBPUSD',tradeSetupHistoryCount:1};
+  usePriceChartTradeSetups({sweepSourceProfile:detection.TRADE_SETUP_OB_SWEEP_PROFILE}).computeTradeSetups(input);
+  expect(detect.mock.calls).toHaveLength(2);
+  for(const call of detect.mock.calls){
+    expect(call[5].sweepSourceProfile).toBe(detection.TRADE_SETUP_OB_SWEEP_PROFILE);
+    expect(call[7]).toHaveLength(candles.length);
+    expect(call[6].every(c=>!c.ignored)).toBe(true);
+  }
+  detect.mockClear();
+  usePriceChartTradeSetups().computeTradeSetups(input);
+  expect(detect.mock.calls.every(call=>call[5].sweepSourceProfile===undefined)).toBe(true);
+});
+
 it('applies the new policy to merged candidates before history, preserving legacy default behavior',()=>{
   const input={candles,marketStructureState:null,symbol:'GBPUSD',tradeSetupHistoryCount:1};
   const baseline=usePriceChartTradeSetups();baseline.computeTradeSetups({...input,tradeSetupHistoryCount:20});

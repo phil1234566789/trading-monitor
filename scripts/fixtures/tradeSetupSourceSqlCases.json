@@ -1,0 +1,2956 @@
+{
+  "schemaVersion": 1,
+  "description": "SQL/JS boundary parity data.9 real new-profile positive references plus1 explicitly synthetic H1 fine-touch contract.",
+  "nativeHashes": {
+    "d1": "5c263a415d437370949b04a9d850967f3bac852943364104b64f127456a956a8",
+    "h1": "55d74beca95236ea367791d69202c6ad832f32b5ace8f119b65fac73481969c7",
+    "m5": "d50530385db02676083a6c39b37dfaabb1d3359289327d37f20d28e2d7384a50"
+  },
+  "validCases": [
+    {
+      "id": "native-pin-479",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 479,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:-1:1791564000",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1791564600,
+        "evaluationAsOf": 1791564600,
+        "frozenAt": 1791564600,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4186.2,
+            "dir": -1,
+            "pivotTime": 1791560700,
+            "touched": true,
+            "touchedTime": 1791563400,
+            "endTime": 1791563400
+          },
+          "ls": {
+            "price": 4186.2,
+            "dir": -1,
+            "pivotTime": 1791560700,
+            "touched": true,
+            "touchedTime": 1791563400,
+            "endTime": 1791563400
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4186.2,
+                "dir": -1,
+                "pivotTime": 1791560700,
+                "touched": true,
+                "touchedTime": 1791563400,
+                "endTime": 1791563400
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "price": 4186.2,
+                "dir": -1,
+                "pivotTime": 1791560700,
+                "touched": true,
+                "touchedTime": 1791563400,
+                "endTime": 1791563400
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "price": 4186.2,
+                "dir": -1,
+                "pivotTime": 1791560700,
+                "touched": true,
+                "touchedTime": 1791563400,
+                "endTime": 1791563400
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791560700:4186.2:1791563400",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791563700
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4187.68,
+          "obBottom": 4185.08,
+          "obStartTime": 1791564000,
+          "obFvg": 2.8299999999999272,
+          "pathType": "B",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1791564600,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1791564600,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1791564600
+            },
+            "sourceLevel": {
+              "price": 4186.2,
+              "pivotTime": 1791560700,
+              "touchedTime": 1791563400
+            },
+            "anchor": {
+              "direction": "low",
+              "price": 4110.69,
+              "pivotTime": 1790542800,
+              "knownAt": 1790974800,
+              "structureStartTime": 1790604000
+            },
+            "stateKnownAt": 1791564600,
+            "currentRange": {
+              "trend": "uptrend",
+              "low": {
+                "type": "low",
+                "price": 4168.46,
+                "pivotTime": 1791550500,
+                "pivotAt": "1791550500",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4193.58,
+                "pivotTime": 1791561900,
+                "pivotAt": "1791561900",
+                "touched": false
+              },
+              "depth": 3,
+              "basis": "confirmedNestedRange",
+              "knownAt": 1791564600
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4186.2,
+                "dir": -1,
+                "pivotTime": 1791560700,
+                "touched": true,
+                "touchedTime": 1791563400,
+                "endTime": 1791563400
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791560700:4186.2:1791563400",
+              "knownAt": 1791564600,
+              "ownerProof": {
+                "trend": "uptrend",
+                "low": {
+                  "type": "low",
+                  "price": 4168.46,
+                  "pivotTime": 1791550500,
+                  "pivotAt": "1791550500",
+                  "touched": false
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4193.58,
+                  "pivotTime": 1791561900,
+                  "pivotAt": "1791561900",
+                  "touched": false
+                },
+                "depth": 3,
+                "basis": "confirmedNestedRange",
+                "knownAt": 1791564600
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "liquidity:5M:-1:1791560700:4186.2:1791563400",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "native-pin-480",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 480,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:-1:1791544500",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1791545100,
+        "evaluationAsOf": 1791545100,
+        "frozenAt": 1791545100,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4176.94,
+            "dir": -1,
+            "pivotTime": 1791521400,
+            "touched": true,
+            "touchedTime": 1791543900,
+            "endTime": 1791543900
+          },
+          "ls": {
+            "price": 4176.94,
+            "dir": -1,
+            "pivotTime": 1791521400,
+            "touched": true,
+            "touchedTime": 1791543900,
+            "endTime": 1791543900
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791521400,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791521700,
+                "sourceKnownAt": 1791522300,
+                "sourceDirection": 1,
+                "sourceTop": 4178.62,
+                "sourceBottom": 4176.94,
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791521700,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791522000,
+                "sourceKnownAt": 1791522600,
+                "sourceDirection": 1,
+                "sourceTop": 4181.88,
+                "sourceBottom": 4176.94,
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791522000,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791521400,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791521700,
+                "sourceKnownAt": 1791522300,
+                "sourceDirection": 1,
+                "sourceTop": 4178.62,
+                "sourceBottom": 4176.94,
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791521700,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791522000,
+                "sourceKnownAt": 1791522600,
+                "sourceDirection": 1,
+                "sourceTop": 4181.88,
+                "sourceBottom": 4176.94,
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791522000,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791522900,
+                "sourceKnownAt": 1791523500,
+                "sourceDirection": 1,
+                "sourceTop": 4187.72,
+                "sourceBottom": 4182.43,
+                "price": 4182.43,
+                "dir": -1,
+                "pivotTime": 1791522900,
+                "touched": true,
+                "touchedTime": 1791541800,
+                "endTime": 1791541800
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4182.72,
+                "dir": -1,
+                "pivotTime": 1791538500,
+                "touched": true,
+                "touchedTime": 1791541800,
+                "endTime": 1791541800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791521400,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791521400:4176.94:1791543900",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791544200
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791521700,
+                "sourceKnownAt": 1791522300,
+                "sourceDirection": 1,
+                "sourceTop": 4178.62,
+                "sourceBottom": 4176.94,
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791521700,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791521700:4176.94:1791543900",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791522000,
+                "sourceKnownAt": 1791522600,
+                "sourceDirection": 1,
+                "sourceTop": 4181.88,
+                "sourceBottom": 4176.94,
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791522000,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791522000:4176.94:1791543900",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791522900,
+                "sourceKnownAt": 1791523500,
+                "sourceDirection": 1,
+                "sourceTop": 4187.72,
+                "sourceBottom": 4182.43,
+                "price": 4182.43,
+                "dir": -1,
+                "pivotTime": 1791522900,
+                "touched": true,
+                "touchedTime": 1791541800,
+                "endTime": 1791541800
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791522900:4182.43:1791541800",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "price": 4182.72,
+                "dir": -1,
+                "pivotTime": 1791538500,
+                "touched": true,
+                "touchedTime": 1791541800,
+                "endTime": 1791541800
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791538500:4182.72:1791541800",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791542100
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4179.92,
+          "obBottom": 4175.1,
+          "obStartTime": 1791544500,
+          "obFvg": 1.7799999999997453,
+          "pathType": "B",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1791545100,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1791545100,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1791545100
+            },
+            "sourceLevel": {
+              "price": 4176.94,
+              "pivotTime": 1791521400,
+              "touchedTime": 1791543900
+            },
+            "anchor": {
+              "direction": "low",
+              "price": 4110.69,
+              "pivotTime": 1790542800,
+              "knownAt": 1790974800,
+              "structureStartTime": 1790604000
+            },
+            "stateKnownAt": 1791545100,
+            "currentRange": {
+              "trend": "downtrend",
+              "low": {
+                "type": "low",
+                "price": 4175.1,
+                "pivotTime": 1791544200,
+                "pivotAt": "1791544200",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4207.58,
+                "pivotTime": 1791524100,
+                "pivotAt": "1791524100",
+                "touched": false
+              },
+              "depth": 2,
+              "basis": "confirmedNestedRange",
+              "knownAt": 1791545100
+            },
+            "sourceOwner": {
+              "status": "ready",
+              "range": {
+                "trend": "uptrend",
+                "low": {
+                  "type": "low",
+                  "price": 4066.33,
+                  "pivotTime": 1791377400,
+                  "pivotAt": "1791377400",
+                  "touched": false
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4188.24,
+                  "pivotTime": 1791522000,
+                  "pivotAt": "1791522000",
+                  "touched": {
+                    "price": 4188.24,
+                    "touchedAt": "1791522900",
+                    "touchedTime": 1791522900
+                  }
+                }
+              },
+              "depth": 1,
+              "knownAt": 1791523200,
+              "basis": "deepestRangeAtLevelBirth",
+              "pivot": {
+                "price": 4176.94,
+                "pivotTime": 1791521400
+              }
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4176.94,
+                "dir": -1,
+                "pivotTime": 1791521400,
+                "touched": true,
+                "touchedTime": 1791543900,
+                "endTime": 1791543900
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791521400:4176.94:1791543900",
+              "knownAt": 1791545100,
+              "ownerProof": {
+                "status": "ready",
+                "range": {
+                  "trend": "uptrend",
+                  "low": {
+                    "type": "low",
+                    "price": 4066.33,
+                    "pivotTime": 1791377400,
+                    "pivotAt": "1791377400",
+                    "touched": false
+                  },
+                  "high": {
+                    "type": "high",
+                    "price": 4188.24,
+                    "pivotTime": 1791522000,
+                    "pivotAt": "1791522000",
+                    "touched": {
+                      "price": 4188.24,
+                      "touchedAt": "1791522900",
+                      "touchedTime": 1791522900
+                    }
+                  }
+                },
+                "depth": 1,
+                "knownAt": 1791523200,
+                "basis": "deepestRangeAtLevelBirth",
+                "pivot": {
+                  "price": 4176.94,
+                  "pivotTime": 1791521400
+                }
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "liquidity:5M:-1:1791521400:4176.94:1791543900",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791521700:4176.94:1791543900",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791522000:4176.94:1791543900",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791522900:4182.43:1791541800",
+                "status": "unmet",
+                "reason": "orderBlockSourceRangeNotAssociated"
+              },
+              {
+                "sourceKey": "liquidity:5M:-1:1791538500:4182.72:1791541800",
+                "status": "unmet",
+                "reason": "sourceRangeNotAssociated"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "native-pin-481",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 481,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:-1:1791453000",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1791453600,
+        "evaluationAsOf": 1791453600,
+        "frozenAt": 1791453600,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4121.07,
+            "dir": -1,
+            "pivotTime": 1791448800,
+            "touched": true,
+            "touchedTime": 1791451800,
+            "endTime": 1791451800
+          },
+          "ls": {
+            "price": 4121.07,
+            "dir": -1,
+            "pivotTime": 1791448800,
+            "touched": true,
+            "touchedTime": 1791451800,
+            "endTime": 1791451800
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4121.07,
+                "dir": -1,
+                "pivotTime": 1791448800,
+                "touched": true,
+                "touchedTime": 1791451800,
+                "endTime": 1791451800
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791449100,
+                "sourceKnownAt": 1791449700,
+                "sourceDirection": 1,
+                "sourceTop": 4124.9,
+                "sourceBottom": 4121.07,
+                "price": 4121.07,
+                "dir": -1,
+                "pivotTime": 1791449100,
+                "touched": true,
+                "touchedTime": 1791451800,
+                "endTime": 1791451800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "price": 4121.07,
+                "dir": -1,
+                "pivotTime": 1791448800,
+                "touched": true,
+                "touchedTime": 1791451800,
+                "endTime": 1791451800
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791449100,
+                "sourceKnownAt": 1791449700,
+                "sourceDirection": 1,
+                "sourceTop": 4124.9,
+                "sourceBottom": 4121.07,
+                "price": 4121.07,
+                "dir": -1,
+                "pivotTime": 1791449100,
+                "touched": true,
+                "touchedTime": 1791451800,
+                "endTime": 1791451800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "price": 4121.07,
+                "dir": -1,
+                "pivotTime": 1791448800,
+                "touched": true,
+                "touchedTime": 1791451800,
+                "endTime": 1791451800
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791448800:4121.07:1791451800",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791452100
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791449100,
+                "sourceKnownAt": 1791449700,
+                "sourceDirection": 1,
+                "sourceTop": 4124.9,
+                "sourceBottom": 4121.07,
+                "price": 4121.07,
+                "dir": -1,
+                "pivotTime": 1791449100,
+                "touched": true,
+                "touchedTime": 1791451800,
+                "endTime": 1791451800
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791449100:4121.07:1791451800",
+              "status": "valid",
+              "validUntil": null
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4121.58,
+          "obBottom": 4119.3,
+          "obStartTime": 1791453000,
+          "obFvg": 0.36999999999989086,
+          "pathType": "B",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1791453600,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1791453600,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1791453600
+            },
+            "sourceLevel": {
+              "price": 4121.07,
+              "pivotTime": 1791448800,
+              "touchedTime": 1791451800
+            },
+            "anchor": {
+              "direction": "low",
+              "price": 4110.69,
+              "pivotTime": 1790542800,
+              "knownAt": 1790974800,
+              "structureStartTime": 1790604000
+            },
+            "stateKnownAt": 1791453600,
+            "currentRange": {
+              "trend": "uptrend",
+              "low": {
+                "type": "low",
+                "price": 4114.3,
+                "pivotTime": 1791441300,
+                "pivotAt": "1791441300",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4130.76,
+                "pivotTime": 1791450300,
+                "pivotAt": "1791450300",
+                "touched": false
+              },
+              "depth": 3,
+              "basis": "confirmedNestedRange",
+              "knownAt": 1791453600
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4121.07,
+                "dir": -1,
+                "pivotTime": 1791448800,
+                "touched": true,
+                "touchedTime": 1791451800,
+                "endTime": 1791451800
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791448800:4121.07:1791451800",
+              "knownAt": 1791453600,
+              "ownerProof": {
+                "trend": "uptrend",
+                "low": {
+                  "type": "low",
+                  "price": 4114.3,
+                  "pivotTime": 1791441300,
+                  "pivotAt": "1791441300",
+                  "touched": false
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4130.76,
+                  "pivotTime": 1791450300,
+                  "pivotAt": "1791450300",
+                  "touched": false
+                },
+                "depth": 3,
+                "basis": "confirmedNestedRange",
+                "knownAt": 1791453600
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "liquidity:5M:-1:1791448800:4121.07:1791451800",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791449100:4121.07:1791451800",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "native-pin-482",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 482,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:-1:1791476100",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1791476700,
+        "evaluationAsOf": 1791476700,
+        "frozenAt": 1791476700,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4105.38,
+            "dir": -1,
+            "pivotTime": 1791420000,
+            "touched": true,
+            "touchedTime": 1791475500,
+            "endTime": 1791475500
+          },
+          "ls": {
+            "price": 4105.38,
+            "dir": -1,
+            "pivotTime": 1791420000,
+            "touched": true,
+            "touchedTime": 1791475500,
+            "endTime": 1791475500
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420000,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791420300,
+                "sourceKnownAt": 1791420900,
+                "sourceDirection": 1,
+                "sourceTop": 4109.43,
+                "sourceBottom": 4105.38,
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420300,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791420600,
+                "sourceKnownAt": 1791421200,
+                "sourceDirection": 1,
+                "sourceTop": 4115.67,
+                "sourceBottom": 4105.38,
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420600,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420000,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791420300,
+                "sourceKnownAt": 1791420900,
+                "sourceDirection": 1,
+                "sourceTop": 4109.43,
+                "sourceBottom": 4105.38,
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420300,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791420600,
+                "sourceKnownAt": 1791421200,
+                "sourceDirection": 1,
+                "sourceTop": 4115.67,
+                "sourceBottom": 4105.38,
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420600,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4109.8,
+                "dir": -1,
+                "pivotTime": 1791455700,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791456000,
+                "sourceKnownAt": 1791456600,
+                "sourceDirection": 1,
+                "sourceTop": 4113.62,
+                "sourceBottom": 4109.8,
+                "price": 4109.8,
+                "dir": -1,
+                "pivotTime": 1791456000,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791456300,
+                "sourceKnownAt": 1791456900,
+                "sourceDirection": 1,
+                "sourceTop": 4115.6,
+                "sourceBottom": 4109.8,
+                "price": 4109.8,
+                "dir": -1,
+                "pivotTime": 1791456300,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791456600,
+                "sourceKnownAt": 1791457200,
+                "sourceDirection": 1,
+                "sourceTop": 4118.75,
+                "sourceBottom": 4109.85,
+                "price": 4109.85,
+                "dir": -1,
+                "pivotTime": 1791456600,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420000,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791420000:4105.38:1791475500",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791475800
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791420300,
+                "sourceKnownAt": 1791420900,
+                "sourceDirection": 1,
+                "sourceTop": 4109.43,
+                "sourceBottom": 4105.38,
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420300,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791420300:4105.38:1791475500",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791420600,
+                "sourceKnownAt": 1791421200,
+                "sourceDirection": 1,
+                "sourceTop": 4115.67,
+                "sourceBottom": 4105.38,
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420600,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791420600:4105.38:1791475500",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "price": 4109.8,
+                "dir": -1,
+                "pivotTime": 1791455700,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791455700:4109.8:1791475200",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791475500
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791456000,
+                "sourceKnownAt": 1791456600,
+                "sourceDirection": 1,
+                "sourceTop": 4113.62,
+                "sourceBottom": 4109.8,
+                "price": 4109.8,
+                "dir": -1,
+                "pivotTime": 1791456000,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791456000:4109.8:1791475200",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791456300,
+                "sourceKnownAt": 1791456900,
+                "sourceDirection": 1,
+                "sourceTop": 4115.6,
+                "sourceBottom": 4109.8,
+                "price": 4109.8,
+                "dir": -1,
+                "pivotTime": 1791456300,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791456300:4109.8:1791475200",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791456600,
+                "sourceKnownAt": 1791457200,
+                "sourceDirection": 1,
+                "sourceTop": 4118.75,
+                "sourceBottom": 4109.85,
+                "price": 4109.85,
+                "dir": -1,
+                "pivotTime": 1791456600,
+                "touched": true,
+                "touchedTime": 1791475200,
+                "endTime": 1791475200
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791456600:4109.85:1791475200",
+              "status": "valid",
+              "validUntil": null
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4112.93,
+          "obBottom": 4105.36,
+          "obStartTime": 1791476100,
+          "obFvg": 3.759999999999309,
+          "pathType": "B",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1791476700,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1791476700,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1791476700
+            },
+            "sourceLevel": {
+              "price": 4105.38,
+              "pivotTime": 1791420000,
+              "touchedTime": 1791475500
+            },
+            "anchor": {
+              "direction": "low",
+              "price": 4110.69,
+              "pivotTime": 1790542800,
+              "knownAt": 1790974800,
+              "structureStartTime": 1790604000
+            },
+            "stateKnownAt": 1791476700,
+            "currentRange": {
+              "trend": "downtrend",
+              "low": {
+                "type": "low",
+                "price": 4105.36,
+                "pivotTime": 1791475500,
+                "pivotAt": "1791475500",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4143.26,
+                "pivotTime": 1791427200,
+                "pivotAt": "1791427200",
+                "touched": false
+              },
+              "depth": 2,
+              "basis": "confirmedNestedRange",
+              "knownAt": 1791476700
+            },
+            "sourceOwner": {
+              "status": "ready",
+              "range": {
+                "trend": "uptrend",
+                "low": {
+                  "type": "low",
+                  "price": 4066.33,
+                  "pivotTime": 1791377400,
+                  "pivotAt": "1791377400",
+                  "touched": false
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4135.09,
+                  "pivotTime": 1791421500,
+                  "pivotAt": "1791421500",
+                  "touched": false
+                }
+              },
+              "depth": 1,
+              "knownAt": 1791422400,
+              "basis": "protectedPivotBeforeSweep",
+              "pivot": {
+                "price": 4105.38,
+                "pivotTime": 1791420000
+              }
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4105.38,
+                "dir": -1,
+                "pivotTime": 1791420000,
+                "touched": true,
+                "touchedTime": 1791475500,
+                "endTime": 1791475500
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791420000:4105.38:1791475500",
+              "knownAt": 1791476700,
+              "ownerProof": {
+                "status": "ready",
+                "range": {
+                  "trend": "uptrend",
+                  "low": {
+                    "type": "low",
+                    "price": 4066.33,
+                    "pivotTime": 1791377400,
+                    "pivotAt": "1791377400",
+                    "touched": false
+                  },
+                  "high": {
+                    "type": "high",
+                    "price": 4135.09,
+                    "pivotTime": 1791421500,
+                    "pivotAt": "1791421500",
+                    "touched": false
+                  }
+                },
+                "depth": 1,
+                "knownAt": 1791422400,
+                "basis": "protectedPivotBeforeSweep",
+                "pivot": {
+                  "price": 4105.38,
+                  "pivotTime": 1791420000
+                }
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "liquidity:5M:-1:1791420000:4105.38:1791475500",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791420300:4105.38:1791475500",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791420600:4105.38:1791475500",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "liquidity:5M:-1:1791455700:4109.8:1791475200",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791456000:4109.8:1791475200",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791456300:4109.8:1791475200",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791456600:4109.85:1791475200",
+                "status": "unmet",
+                "reason": "orderBlockSourceRangeNotAssociated"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "native-pin-483",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 483,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:1:1791212700",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1791213300,
+        "evaluationAsOf": 1791213300,
+        "frozenAt": 1791213300,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": 1,
+          "fractal": {
+            "price": 4147.1,
+            "dir": 1,
+            "pivotTime": 1791209100,
+            "touched": true,
+            "touchedTime": 1791211800,
+            "endTime": 1791211800
+          },
+          "ls": {
+            "price": 4147.1,
+            "dir": 1,
+            "pivotTime": 1791209100,
+            "touched": true,
+            "touchedTime": 1791211800,
+            "endTime": 1791211800
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4147.1,
+                "dir": 1,
+                "pivotTime": 1791209100,
+                "touched": true,
+                "touchedTime": 1791211800,
+                "endTime": 1791211800
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791210300,
+                "sourceKnownAt": 1791210900,
+                "sourceDirection": -1,
+                "sourceTop": 4142.98,
+                "sourceBottom": 4139.03,
+                "price": 4142.98,
+                "dir": 1,
+                "pivotTime": 1791210300,
+                "touched": true,
+                "touchedTime": 1791211800,
+                "endTime": 1791211800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "price": 4147.1,
+                "dir": 1,
+                "pivotTime": 1791209100,
+                "touched": true,
+                "touchedTime": 1791211800,
+                "endTime": 1791211800
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791210300,
+                "sourceKnownAt": 1791210900,
+                "sourceDirection": -1,
+                "sourceTop": 4142.98,
+                "sourceBottom": 4139.03,
+                "price": 4142.98,
+                "dir": 1,
+                "pivotTime": 1791210300,
+                "touched": true,
+                "touchedTime": 1791211800,
+                "endTime": 1791211800
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "price": 4147.1,
+                "dir": 1,
+                "pivotTime": 1791209100,
+                "touched": true,
+                "touchedTime": 1791211800,
+                "endTime": 1791211800
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:1:1791209100:4147.1:1791211800",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791212100
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791210300,
+                "sourceKnownAt": 1791210900,
+                "sourceDirection": -1,
+                "sourceTop": 4142.98,
+                "sourceBottom": 4139.03,
+                "price": 4142.98,
+                "dir": 1,
+                "pivotTime": 1791210300,
+                "touched": true,
+                "touchedTime": 1791211800,
+                "endTime": 1791211800
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:1:1791210300:4142.98:1791211800",
+              "status": "valid",
+              "validUntil": null
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4148.26,
+          "obBottom": 4142.72,
+          "obStartTime": 1791212700,
+          "obFvg": 1.1000000000003638,
+          "pathType": "B",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1791213300,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1791213300,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1791213300
+            },
+            "sourceLevel": {
+              "price": 4147.1,
+              "pivotTime": 1791209100,
+              "touchedTime": 1791211800
+            },
+            "anchor": {
+              "direction": "low",
+              "price": 4110.69,
+              "pivotTime": 1790542800,
+              "knownAt": 1790974800,
+              "structureStartTime": 1790604000
+            },
+            "stateKnownAt": 1791213300,
+            "currentRange": {
+              "trend": "downtrend",
+              "low": {
+                "type": "sweeped-low",
+                "price": 4125.16,
+                "pivotTime": 1790956500,
+                "pivotAt": "1790956500",
+                "touched": {
+                  "price": 4125.16,
+                  "touchedAt": "1791174300",
+                  "touchedTime": 1791174300
+                }
+              },
+              "high": {
+                "type": "high",
+                "price": 4225.52,
+                "pivotTime": 1790944200,
+                "pivotAt": "1790944200",
+                "touched": false
+              },
+              "depth": 1,
+              "basis": "existingCloseReactionChoch",
+              "knownAt": 1790946900,
+              "confirmation": {
+                "type": "CHoCH",
+                "direction": "short",
+                "depth": 0,
+                "originTime": 1790944200,
+                "price": 4203.78,
+                "pivotTime": 1790945400,
+                "candleTime": 1790946600,
+                "recognizedAt": 1790946900
+              }
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4147.1,
+                "dir": 1,
+                "pivotTime": 1791209100,
+                "touched": true,
+                "touchedTime": 1791211800,
+                "endTime": 1791211800
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:1:1791209100:4147.1:1791211800",
+              "knownAt": 1791213300,
+              "ownerProof": {
+                "trend": "downtrend",
+                "low": {
+                  "type": "sweeped-low",
+                  "price": 4125.16,
+                  "pivotTime": 1790956500,
+                  "pivotAt": "1790956500",
+                  "touched": {
+                    "price": 4125.16,
+                    "touchedAt": "1791174300",
+                    "touchedTime": 1791174300
+                  }
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4225.52,
+                  "pivotTime": 1790944200,
+                  "pivotAt": "1790944200",
+                  "touched": false
+                },
+                "depth": 1,
+                "basis": "existingCloseReactionChoch",
+                "knownAt": 1790946900,
+                "confirmation": {
+                  "type": "CHoCH",
+                  "direction": "short",
+                  "depth": 0,
+                  "originTime": 1790944200,
+                  "price": 4203.78,
+                  "pivotTime": 1790945400,
+                  "candleTime": 1790946600,
+                  "recognizedAt": 1790946900
+                }
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "liquidity:5M:1:1791209100:4147.1:1791211800",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:1:1791210300:4142.98:1791211800",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "native-pin-485",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 485,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:1:1791314700",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1791315300,
+        "evaluationAsOf": 1791315300,
+        "frozenAt": 1791315300,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": 1,
+          "fractal": {
+            "price": 4182.62,
+            "dir": 1,
+            "pivotTime": 1791313200,
+            "touched": false,
+            "touchedTime": null,
+            "endTime": 1791315000
+          },
+          "ls": {
+            "sourceKind": "orderBlock",
+            "sourceStartTime": 1790952300,
+            "sourceKnownAt": 1790952900,
+            "sourceDirection": -1,
+            "sourceTop": 4181.38,
+            "sourceBottom": 4174.82,
+            "price": 4181.38,
+            "dir": 1,
+            "pivotTime": 1790952300,
+            "touched": true,
+            "touchedTime": 1791313200,
+            "endTime": 1791313200
+          },
+          "sweeps": [
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790952300,
+                "sourceKnownAt": 1790952900,
+                "sourceDirection": -1,
+                "sourceTop": 4181.38,
+                "sourceBottom": 4174.82,
+                "price": 4181.38,
+                "dir": 1,
+                "pivotTime": 1790952300,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790952600,
+                "sourceKnownAt": 1790953200,
+                "sourceDirection": -1,
+                "sourceTop": 4181.38,
+                "sourceBottom": 4170.42,
+                "price": 4181.38,
+                "dir": 1,
+                "pivotTime": 1790952600,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4179.51,
+                "dir": 1,
+                "pivotTime": 1791288600,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790952300,
+                "sourceKnownAt": 1790952900,
+                "sourceDirection": -1,
+                "sourceTop": 4181.38,
+                "sourceBottom": 4174.82,
+                "price": 4181.38,
+                "dir": 1,
+                "pivotTime": 1790952300,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790952600,
+                "sourceKnownAt": 1790953200,
+                "sourceDirection": -1,
+                "sourceTop": 4181.38,
+                "sourceBottom": 4170.42,
+                "price": 4181.38,
+                "dir": 1,
+                "pivotTime": 1790952600,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4179.51,
+                "dir": 1,
+                "pivotTime": 1791288600,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4174.39,
+                "dir": 1,
+                "pivotTime": 1791292200,
+                "touched": true,
+                "touchedTime": 1791312900,
+                "endTime": 1791312900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791292500,
+                "sourceKnownAt": 1791293100,
+                "sourceDirection": -1,
+                "sourceTop": 4174.39,
+                "sourceBottom": 4171.26,
+                "price": 4174.39,
+                "dir": 1,
+                "pivotTime": 1791292500,
+                "touched": true,
+                "touchedTime": 1791312900,
+                "endTime": 1791312900
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790952300,
+                "sourceKnownAt": 1790952900,
+                "sourceDirection": -1,
+                "sourceTop": 4181.38,
+                "sourceBottom": 4174.82,
+                "price": 4181.38,
+                "dir": 1,
+                "pivotTime": 1790952300,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:1:1790952300:4181.38:1791313200",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790952600,
+                "sourceKnownAt": 1790953200,
+                "sourceDirection": -1,
+                "sourceTop": 4181.38,
+                "sourceBottom": 4170.42,
+                "price": 4181.38,
+                "dir": 1,
+                "pivotTime": 1790952600,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:1:1790952600:4181.38:1791313200",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "price": 4179.51,
+                "dir": 1,
+                "pivotTime": 1791288600,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:1:1791288600:4179.51:1791313200",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791313500
+            },
+            {
+              "level": {
+                "price": 4174.39,
+                "dir": 1,
+                "pivotTime": 1791292200,
+                "touched": true,
+                "touchedTime": 1791312900,
+                "endTime": 1791312900
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:1:1791292200:4174.39:1791312900",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791313200
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791292500,
+                "sourceKnownAt": 1791293100,
+                "sourceDirection": -1,
+                "sourceTop": 4174.39,
+                "sourceBottom": 4171.26,
+                "price": 4174.39,
+                "dir": 1,
+                "pivotTime": 1791292500,
+                "touched": true,
+                "touchedTime": 1791312900,
+                "endTime": 1791312900
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:1:1791292500:4174.39:1791312900",
+              "status": "valid",
+              "validUntil": null
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4182.62,
+          "obBottom": 4173.38,
+          "obStartTime": 1791314700,
+          "obFvg": 1.4099999999998545,
+          "pathType": "A",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1791315300,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1791315300,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1791315300
+            },
+            "sourceLevel": {
+              "price": 4179.51,
+              "pivotTime": 1791288600,
+              "touchedTime": 1791313200
+            },
+            "anchor": {
+              "direction": "low",
+              "price": 4110.69,
+              "pivotTime": 1790542800,
+              "knownAt": 1790974800,
+              "structureStartTime": 1790604000
+            },
+            "stateKnownAt": 1791315300,
+            "currentRange": {
+              "trend": "uptrend",
+              "low": {
+                "type": "low",
+                "price": 4143.49,
+                "pivotTime": 1791297000,
+                "pivotAt": "1791297000",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4182.62,
+                "pivotTime": 1791313200,
+                "pivotAt": "1791313200",
+                "touched": false
+              },
+              "depth": 4,
+              "basis": "confirmedNestedRange",
+              "knownAt": 1791315300
+            },
+            "sourceOwner": {
+              "status": "ready",
+              "range": {
+                "trend": "downtrend",
+                "low": {
+                  "type": "low",
+                  "price": 4151.69,
+                  "pivotTime": 1791295200,
+                  "pivotAt": "1791295200",
+                  "touched": false
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4179.51,
+                  "pivotTime": 1791288600,
+                  "pivotAt": "1791288600",
+                  "touched": false
+                }
+              },
+              "depth": 3,
+              "knownAt": 1791296100,
+              "basis": "rangeBoundaryBeforeSweep",
+              "pivot": {
+                "price": 4179.51,
+                "pivotTime": 1791288600
+              }
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4179.51,
+                "dir": 1,
+                "pivotTime": 1791288600,
+                "touched": true,
+                "touchedTime": 1791313200,
+                "endTime": 1791313200
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:1:1791288600:4179.51:1791313200",
+              "knownAt": 1791315300,
+              "ownerProof": {
+                "status": "ready",
+                "range": {
+                  "trend": "downtrend",
+                  "low": {
+                    "type": "low",
+                    "price": 4151.69,
+                    "pivotTime": 1791295200,
+                    "pivotAt": "1791295200",
+                    "touched": false
+                  },
+                  "high": {
+                    "type": "high",
+                    "price": 4179.51,
+                    "pivotTime": 1791288600,
+                    "pivotAt": "1791288600",
+                    "touched": false
+                  }
+                },
+                "depth": 3,
+                "knownAt": 1791296100,
+                "basis": "rangeBoundaryBeforeSweep",
+                "pivot": {
+                  "price": 4179.51,
+                  "pivotTime": 1791288600
+                }
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "orderBlock:5M:1:1790952300:4181.38:1791313200",
+                "status": "unmet",
+                "reason": "orderBlockSourceRangeNotAssociated"
+              },
+              {
+                "sourceKey": "orderBlock:5M:1:1790952600:4181.38:1791313200",
+                "status": "unmet",
+                "reason": "orderBlockSourceRangeNotAssociated"
+              },
+              {
+                "sourceKey": "liquidity:5M:1:1791288600:4179.51:1791313200",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "liquidity:5M:1:1791292200:4174.39:1791312900",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:1:1791292500:4174.39:1791312900",
+                "status": "passed",
+                "reason": "sourceRangeDirection"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "native-pin-486",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 486,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:-1:1791282600",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1791283200,
+        "evaluationAsOf": 1791283200,
+        "frozenAt": 1791283200,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4149.86,
+            "dir": -1,
+            "pivotTime": 1791278100,
+            "touched": true,
+            "touchedTime": 1791281700,
+            "endTime": 1791281700
+          },
+          "ls": {
+            "price": 4149.86,
+            "dir": -1,
+            "pivotTime": 1791278100,
+            "touched": true,
+            "touchedTime": 1791281700,
+            "endTime": 1791281700
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4149.86,
+                "dir": -1,
+                "pivotTime": 1791278100,
+                "touched": true,
+                "touchedTime": 1791281700,
+                "endTime": 1791281700
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791278100,
+                "sourceKnownAt": 1791278700,
+                "sourceDirection": 1,
+                "sourceTop": 4153.98,
+                "sourceBottom": 4149.86,
+                "price": 4149.86,
+                "dir": -1,
+                "pivotTime": 1791278100,
+                "touched": true,
+                "touchedTime": 1791281700,
+                "endTime": 1791281700
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "price": 4149.86,
+                "dir": -1,
+                "pivotTime": 1791278100,
+                "touched": true,
+                "touchedTime": 1791281700,
+                "endTime": 1791281700
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791278100,
+                "sourceKnownAt": 1791278700,
+                "sourceDirection": 1,
+                "sourceTop": 4153.98,
+                "sourceBottom": 4149.86,
+                "price": 4149.86,
+                "dir": -1,
+                "pivotTime": 1791278100,
+                "touched": true,
+                "touchedTime": 1791281700,
+                "endTime": 1791281700
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "price": 4149.86,
+                "dir": -1,
+                "pivotTime": 1791278100,
+                "touched": true,
+                "touchedTime": 1791281700,
+                "endTime": 1791281700
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791278100:4149.86:1791281700",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1791282000
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1791278100,
+                "sourceKnownAt": 1791278700,
+                "sourceDirection": 1,
+                "sourceTop": 4153.98,
+                "sourceBottom": 4149.86,
+                "price": 4149.86,
+                "dir": -1,
+                "pivotTime": 1791278100,
+                "touched": true,
+                "touchedTime": 1791281700,
+                "endTime": 1791281700
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1791278100:4149.86:1791281700",
+              "status": "valid",
+              "validUntil": null
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4154.77,
+          "obBottom": 4148.71,
+          "obStartTime": 1791282600,
+          "obFvg": 1.7999999999992724,
+          "pathType": "B",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1791283200,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1791283200,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1791283200
+            },
+            "sourceLevel": {
+              "price": 4149.86,
+              "pivotTime": 1791278100,
+              "touchedTime": 1791281700
+            },
+            "anchor": {
+              "direction": "low",
+              "price": 4110.69,
+              "pivotTime": 1790542800,
+              "knownAt": 1790974800,
+              "structureStartTime": 1790604000
+            },
+            "stateKnownAt": 1791283200,
+            "currentRange": {
+              "trend": "uptrend",
+              "low": {
+                "type": "low",
+                "price": 4103.22,
+                "pivotTime": 1791254100,
+                "pivotAt": "1791254100",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4158.23,
+                "pivotTime": 1791279000,
+                "pivotAt": "1791279000",
+                "touched": {
+                  "price": 4158.23,
+                  "touchedAt": "1791282900",
+                  "touchedTime": 1791282900
+                }
+              },
+              "depth": 2,
+              "basis": "confirmedNestedRange",
+              "knownAt": 1791283200
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4149.86,
+                "dir": -1,
+                "pivotTime": 1791278100,
+                "touched": true,
+                "touchedTime": 1791281700,
+                "endTime": 1791281700
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1791278100:4149.86:1791281700",
+              "knownAt": 1791283200,
+              "ownerProof": {
+                "trend": "uptrend",
+                "low": {
+                  "type": "low",
+                  "price": 4103.22,
+                  "pivotTime": 1791254100,
+                  "pivotAt": "1791254100",
+                  "touched": false
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4158.23,
+                  "pivotTime": 1791279000,
+                  "pivotAt": "1791279000",
+                  "touched": {
+                    "price": 4158.23,
+                    "touchedAt": "1791282900",
+                    "touchedTime": 1791282900
+                  }
+                },
+                "depth": 2,
+                "basis": "confirmedNestedRange",
+                "knownAt": 1791283200
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "liquidity:5M:-1:1791278100:4149.86:1791281700",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1791278100:4149.86:1791281700",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "native-pin-488",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 488,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:-1:1790767200",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1790767800,
+        "evaluationAsOf": 1790767800,
+        "frozenAt": 1790767800,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4178.78,
+            "dir": -1,
+            "pivotTime": 1790750400,
+            "touched": true,
+            "touchedTime": 1790766900,
+            "endTime": 1790766900
+          },
+          "ls": {
+            "price": 4178.78,
+            "dir": -1,
+            "pivotTime": 1790750400,
+            "touched": true,
+            "touchedTime": 1790766900,
+            "endTime": 1790766900
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4178.78,
+                "dir": -1,
+                "pivotTime": 1790750400,
+                "touched": true,
+                "touchedTime": 1790766900,
+                "endTime": 1790766900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790751000,
+                "sourceKnownAt": 1790751600,
+                "sourceDirection": 1,
+                "sourceTop": 4182.6,
+                "sourceBottom": 4178.78,
+                "price": 4178.78,
+                "dir": -1,
+                "pivotTime": 1790751000,
+                "touched": true,
+                "touchedTime": 1790766900,
+                "endTime": 1790766900
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "price": 4178.78,
+                "dir": -1,
+                "pivotTime": 1790750400,
+                "touched": true,
+                "touchedTime": 1790766900,
+                "endTime": 1790766900
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790751000,
+                "sourceKnownAt": 1790751600,
+                "sourceDirection": 1,
+                "sourceTop": 4182.6,
+                "sourceBottom": 4178.78,
+                "price": 4178.78,
+                "dir": -1,
+                "pivotTime": 1790751000,
+                "touched": true,
+                "touchedTime": 1790766900,
+                "endTime": 1790766900
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "price": 4178.78,
+                "dir": -1,
+                "pivotTime": 1790750400,
+                "touched": true,
+                "touchedTime": 1790766900,
+                "endTime": 1790766900
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1790750400:4178.78:1790766900",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1790767200
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790751000,
+                "sourceKnownAt": 1790751600,
+                "sourceDirection": 1,
+                "sourceTop": 4182.6,
+                "sourceBottom": 4178.78,
+                "price": 4178.78,
+                "dir": -1,
+                "pivotTime": 1790751000,
+                "touched": true,
+                "touchedTime": 1790766900,
+                "endTime": 1790766900
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1790751000:4178.78:1790766900",
+              "status": "valid",
+              "validUntil": null
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4180.35,
+          "obBottom": 4176.38,
+          "obStartTime": 1790767200,
+          "obFvg": 1.2199999999993452,
+          "pathType": "B",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1790767800,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1790767800,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1790767800
+            },
+            "sourceLevel": {
+              "price": 4178.78,
+              "pivotTime": 1790750400,
+              "touchedTime": 1790766900
+            },
+            "anchor": {
+              "direction": "high",
+              "price": 4399.5,
+              "pivotTime": 1789678800,
+              "knownAt": 1790283600,
+              "structureStartTime": 1789714800
+            },
+            "stateKnownAt": 1790767800,
+            "currentRange": {
+              "trend": "uptrend",
+              "low": {
+                "type": "low",
+                "price": 4110.69,
+                "pivotTime": 1790607300,
+                "pivotAt": "1790607300",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4202.24,
+                "pivotTime": 1790757300,
+                "pivotAt": "1790757300",
+                "touched": false
+              },
+              "depth": 1,
+              "basis": "confirmedNestedRange",
+              "knownAt": 1790767800
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4178.78,
+                "dir": -1,
+                "pivotTime": 1790750400,
+                "touched": true,
+                "touchedTime": 1790766900,
+                "endTime": 1790766900
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1790750400:4178.78:1790766900",
+              "knownAt": 1790767800,
+              "ownerProof": {
+                "trend": "uptrend",
+                "low": {
+                  "type": "low",
+                  "price": 4110.69,
+                  "pivotTime": 1790607300,
+                  "pivotAt": "1790607300",
+                  "touched": false
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4202.24,
+                  "pivotTime": 1790757300,
+                  "pivotAt": "1790757300",
+                  "touched": false
+                },
+                "depth": 1,
+                "basis": "confirmedNestedRange",
+                "knownAt": 1790767800
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "liquidity:5M:-1:1790750400:4178.78:1790766900",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1790751000:4178.78:1790766900",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "native-pin-489",
+      "origin": "native FXCM fixture; original pin is reference identity only",
+      "pin": 489,
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:-1:1790745900",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 1790746500,
+        "evaluationAsOf": 1790746500,
+        "frozenAt": 1790746500,
+        "settingsHash": "86710d53c706e8333e67f1c2c49a9327345e9fe688283d281fc2f72693ea845f",
+        "setup": {
+          "dir": -1,
+          "fractal": {
+            "price": 4167.22,
+            "dir": -1,
+            "pivotTime": 1790731800,
+            "touched": true,
+            "touchedTime": 1790745300,
+            "endTime": 1790745300
+          },
+          "ls": {
+            "price": 4167.22,
+            "dir": -1,
+            "pivotTime": 1790731800,
+            "touched": true,
+            "touchedTime": 1790745300,
+            "endTime": 1790745300
+          },
+          "sweeps": [
+            {
+              "level": {
+                "price": 4167.22,
+                "dir": -1,
+                "pivotTime": 1790731800,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790733900,
+                "sourceKnownAt": 1790734500,
+                "sourceDirection": 1,
+                "sourceTop": 4174.55,
+                "sourceBottom": 4170.84,
+                "price": 4170.84,
+                "dir": -1,
+                "pivotTime": 1790733900,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4171.18,
+                "dir": -1,
+                "pivotTime": 1790735400,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationSources": [
+            {
+              "level": {
+                "price": 4167.22,
+                "dir": -1,
+                "pivotTime": 1790731800,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790733900,
+                "sourceKnownAt": 1790734500,
+                "sourceDirection": 1,
+                "sourceTop": 4174.55,
+                "sourceBottom": 4170.84,
+                "price": 4170.84,
+                "dir": -1,
+                "pivotTime": 1790733900,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4171.18,
+                "dir": -1,
+                "pivotTime": 1790735400,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "price": 4171.27,
+                "dir": -1,
+                "pivotTime": 1790740200,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790741700,
+                "sourceKnownAt": 1790742300,
+                "sourceDirection": 1,
+                "sourceTop": 4173.82,
+                "sourceBottom": 4172.06,
+                "price": 4172.06,
+                "dir": -1,
+                "pivotTime": 1790741700,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M"
+            }
+          ],
+          "confirmationHistory": [
+            {
+              "level": {
+                "price": 4167.22,
+                "dir": -1,
+                "pivotTime": 1790731800,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1790731800:4167.22:1790745300",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1790745600
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790733900,
+                "sourceKnownAt": 1790734500,
+                "sourceDirection": 1,
+                "sourceTop": 4174.55,
+                "sourceBottom": 4170.84,
+                "price": 4170.84,
+                "dir": -1,
+                "pivotTime": 1790733900,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1790733900:4170.84:1790745300",
+              "status": "valid",
+              "validUntil": null
+            },
+            {
+              "level": {
+                "price": 4171.18,
+                "dir": -1,
+                "pivotTime": 1790735400,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1790735400:4171.18:1790745300",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1790745600
+            },
+            {
+              "level": {
+                "price": 4171.27,
+                "dir": -1,
+                "pivotTime": 1790740200,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1790740200:4171.27:1790745300",
+              "status": "valid",
+              "validUntil": null,
+              "knownAt": 1790745600
+            },
+            {
+              "level": {
+                "sourceKind": "orderBlock",
+                "sourceStartTime": 1790741700,
+                "sourceKnownAt": 1790742300,
+                "sourceDirection": 1,
+                "sourceTop": 4173.82,
+                "sourceBottom": 4172.06,
+                "price": 4172.06,
+                "dir": -1,
+                "pivotTime": 1790741700,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M",
+              "sourceKey": "orderBlock:5M:-1:1790741700:4172.06:1790745300",
+              "status": "valid",
+              "validUntil": null
+            }
+          ],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "obTop": 4171.32,
+          "obBottom": 4165.42,
+          "obStartTime": 1790745900,
+          "obFvg": 1.3900000000003274,
+          "pathType": "B",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvaluationSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvidence": {
+            "version": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+            "evaluatedAt": 1790746500,
+            "sourceTimes": {
+              "status": "ready",
+              "reason": null,
+              "nativeGeometryKnownAt": 1790746500,
+              "storedFirstSeenAt": null,
+              "sourceKnownAt": 1790746500
+            },
+            "sourceLevel": {
+              "price": 4167.22,
+              "pivotTime": 1790731800,
+              "touchedTime": 1790745300
+            },
+            "anchor": {
+              "direction": "high",
+              "price": 4399.5,
+              "pivotTime": 1789678800,
+              "knownAt": 1790283600,
+              "structureStartTime": 1789714800
+            },
+            "stateKnownAt": 1790746500,
+            "currentRange": {
+              "trend": "uptrend",
+              "low": {
+                "type": "low",
+                "price": 4110.69,
+                "pivotTime": 1790607300,
+                "pivotAt": "1790607300",
+                "touched": false
+              },
+              "high": {
+                "type": "high",
+                "price": 4187.51,
+                "pivotTime": 1790726100,
+                "pivotAt": "1790726100",
+                "touched": false
+              },
+              "depth": 1,
+              "basis": "confirmedNestedRange",
+              "knownAt": 1790746500
+            },
+            "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+            "goWitness": {
+              "level": {
+                "price": 4167.22,
+                "dir": -1,
+                "pivotTime": 1790731800,
+                "touched": true,
+                "touchedTime": 1790745300,
+                "endTime": 1790745300
+              },
+              "timeframe": "5M",
+              "sourceKey": "liquidity:5M:-1:1790731800:4167.22:1790745300",
+              "knownAt": 1790746500,
+              "ownerProof": {
+                "trend": "uptrend",
+                "low": {
+                  "type": "low",
+                  "price": 4110.69,
+                  "pivotTime": 1790607300,
+                  "pivotAt": "1790607300",
+                  "touched": false
+                },
+                "high": {
+                  "type": "high",
+                  "price": 4187.51,
+                  "pivotTime": 1790726100,
+                  "pivotAt": "1790726100",
+                  "touched": false
+                },
+                "depth": 1,
+                "basis": "confirmedNestedRange",
+                "knownAt": 1790746500
+              }
+            },
+            "sourceAssessments": [
+              {
+                "sourceKey": "liquidity:5M:-1:1790731800:4167.22:1790745300",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1790733900:4170.84:1790745300",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              },
+              {
+                "sourceKey": "liquidity:5M:-1:1790735400:4171.18:1790745300",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              },
+              {
+                "sourceKey": "liquidity:5M:-1:1790740200:4171.27:1790745300",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              },
+              {
+                "sourceKey": "orderBlock:5M:-1:1790741700:4172.06:1790745300",
+                "status": "passed",
+                "reason": "currentTrendDirection"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "synthetic-h1-fine-touch",
+      "origin": "SYNTHETIC contract fixture, not native prices or a user trade",
+      "payload": {
+        "schemaVersion": "trade-setup-source-snapshot-v1",
+        "sourceProfile": "ts11-ob-edge-p5-supersession-v1",
+        "instrument": "XAUUSD",
+        "setupKey": "XAUUSD:1:2400",
+        "engineVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+        "canonicalSetupKnownAt": 3000,
+        "evaluationAsOf": 3600,
+        "frozenAt": 3600,
+        "settingsHash": "0198b2aa5ee5f847ade019df2683035a358aea0b1a14f8ebab5bea1eab94e244",
+        "setup": {
+          "dir": 1,
+          "obStartTime": 2400,
+          "obTop": 103,
+          "obBottom": 95,
+          "obFvg": 1,
+          "pathType": "B",
+          "ls": {
+            "price": 100,
+            "dir": 1,
+            "pivotTime": 300,
+            "touchedTime": 1800,
+            "fineTouchedTime": 2100,
+            "recognizedAt": 2400,
+            "touched": true,
+            "endTime": 1800
+          },
+          "fractal": {
+            "price": 100,
+            "dir": 1,
+            "pivotTime": 300,
+            "touchedTime": 1800,
+            "fineTouchedTime": 2100,
+            "recognizedAt": 2400,
+            "touched": true,
+            "endTime": 1800
+          },
+          "sweeps": [
+            {
+              "timeframe": "1H",
+              "level": {
+                "price": 100,
+                "dir": 1,
+                "pivotTime": 300,
+                "touchedTime": 1800,
+                "fineTouchedTime": 2100,
+                "recognizedAt": 2400,
+                "touched": true,
+                "endTime": 1800
+              }
+            }
+          ],
+          "confirmationSources": [
+            {
+              "timeframe": "1H",
+              "level": {
+                "price": 100,
+                "dir": 1,
+                "pivotTime": 300,
+                "touchedTime": 1800,
+                "fineTouchedTime": 2100,
+                "recognizedAt": 2400,
+                "touched": true,
+                "endTime": 1800
+              }
+            }
+          ],
+          "confirmationHistory": [],
+          "sweepSourceProfile": "ts11-ob-edge-p5-supersession-v1",
+          "trendEvaluationVersion": "ts11-causal-inner-trend-ob-sources-p5-supersession-v2",
+          "trendEvidence": {
+            "goWitness": {
+              "timeframe": "1H",
+              "level": {
+                "price": 100,
+                "dir": 1,
+                "pivotTime": 300,
+                "touchedTime": 1800,
+                "fineTouchedTime": 2100,
+                "recognizedAt": 2400,
+                "touched": true,
+                "endTime": 1800
+              },
+              "sourceKey": "liquidity:1H:1:300:100:1800",
+              "knownAt": 3000,
+              "ownerProof": {
+                "trend": "downtrend",
+                "depth": 1,
+                "basis": "confirmedNestedRange",
+                "knownAt": 3000,
+                "low": {
+                  "price": 90,
+                  "pivotTime": 1200
+                },
+                "high": {
+                  "price": 110,
+                  "pivotTime": 1500
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "invalidMutations": [
+    {
+      "id": "missing-profile",
+      "patch": [
+        {
+          "op": "remove",
+          "path": "/sourceProfile"
+        }
+      ]
+    },
+    {
+      "id": "string-time",
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/setup/obStartTime",
+          "value": "2400"
+        }
+      ]
+    },
+    {
+      "id": "known-after-capture",
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/canonicalSetupKnownAt",
+          "value": 2000000000
+        }
+      ]
+    },
+    {
+      "id": "missing-go-owner",
+      "patch": [
+        {
+          "op": "remove",
+          "path": "/setup/trendEvidence/goWitness/ownerProof"
+        }
+      ]
+    },
+    {
+      "id": "future-go-owner",
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/setup/trendEvidence/goWitness/ownerProof/knownAt",
+          "value": 2000000000
+        }
+      ]
+    },
+    {
+      "id": "foreign-go-source",
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/setup/trendEvidence/goWitness/sourceKey",
+          "value": "foreign"
+        }
+      ]
+    },
+    {
+      "id": "unbound-setup-key",
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/setupKey",
+          "value": "XAUUSD:1:300"
+        }
+      ]
+    },
+    {
+      "id": "wrong-engine-version",
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/engineVersion",
+          "value": "foreign"
+        }
+      ]
+    }
+  ]
+}

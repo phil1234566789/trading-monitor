@@ -1328,6 +1328,8 @@ const pinnedTradeSetups = computed(() => {
       top: e.tradeSetup.obTop,
       bottom: e.tradeSetup.obBottom,
       startTime: toUnixSec(e.tradeSetup.obStartTime),
+      frozenSetup:e.tradeSetup.frozenSetup,
+      sourceSnapshot:e.tradeSetup.sourceSnapshot,
     }));
 });
 // TF-Kopplung bewusst NICHT aufgehoben (siehe PriceChart.vue: mergePinnedDivergences) — RSI-Werte

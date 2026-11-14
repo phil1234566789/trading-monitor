@@ -23,6 +23,16 @@ beforeEach(() => {
   intake.createDealingRange.mockResolvedValue({ id: 42 });
   for (const name of ["addRangeConfirmation", "addConfirmationToTrade", "updateTrade", "linkTradeToSetup"]) intake[name].mockResolvedValue(true);
 });
+it('retains typed OB sweep sources as real OB evidence rather than inventing pivot rows',async()=>{
+  const level={sourceKind:'orderBlock',sourceStartTime:100,sourceKnownAt:700,
+    sourceDirection:-1,sourceTop:15,sourceBottom:12,price:15,pivotTime:100,touchedTime:800};
+  await useSetupConfirmations(context()).save({...setup,sweeps:[{level,timeframe:'5M'}]});
+  const evidence=intake.addRangeConfirmation.mock.calls[0][1];
+  expect(evidence).toMatchObject({kind:'ob',direction:'short',sourceTime:100,
+    rangeLow:12,rangeHigh:15,price:15,timeframe:'5M'});
+  expect(evidence.levelDirection).toBeUndefined();
+  expect(evidence.sourceContext).toEqual({role:'orderBlockEdgeSweep',level,timeframe:'5M'});
+});
 it("saves evidence concurrently, links only afterwards and stays busy through refresh", async () => {
   const writes = [deferred(), deferred(), deferred()];
   writes.forEach((d) => intake.addRangeConfirmation.mockImplementationOnce(() => d.promise));

@@ -7,10 +7,27 @@ vi.mock('../src/composables/usePriceChartTradeSetups.js',()=>({usePriceChartTrad
   return {tradeSetupsMetadata:{value:[]},getM5Candles:()=>[{time:300}],invalidate:vi.fn(),computeTradeSetups:mocks.compute,fetchM5Candles:mocks.baseFetch};
 }}));
 import {usePriceChartTradeSetup11,TRADE_SETUP_11_CONTEXT_COUNTS} from '../src/composables/usePriceChartTradeSetup11.js';
+import sqlCases from '../scripts/fixtures/tradeSetupSourceSqlCases.json';
+import {captureCurrentTradeSetupSources} from '../src/tradeSetupSourceSnapshots.js';
 beforeEach(()=>{
   vi.clearAllMocks();mocks.compute.mockReset();mocks.baseFetch.mockResolvedValue({ok:true,applied:true});
   mocks.fetch.mockResolvedValue([{time:0},{time:86400},{time:172800}]);
   mocks.filter.mockReturnValue({version:'ts11',status:'unknown',setups:[],assessments:[],counts:{passed:0,unmet:0,unknown:2}});
+});
+it('uses the evaluated native DB projection for capture while preserving historical provenance separately',async()=>{
+ const p=sqlCases.validCases[0].payload,projection=structuredClone(p.setup);
+ projection.historicalSourceProvenance={detectorVersion:'legacy-original',tradeSetupId:17};
+ const original={dir:projection.dir,obStartTime:projection.obStartTime,tradeSetupId:17,detectorVersion:'legacy-original'};
+ const before=structuredClone(original),evidence={...p.setup.trendEvidence,sourceProfile:p.sourceProfile,
+  sourceTimes:{nativeGeometryKnownAt:p.canonicalSetupKnownAt}};
+ mocks.filter.mockResolvedValue({version:p.engineVersion,status:'ready',counts:{passed:1,unmet:0,unknown:0},
+  assessments:[{setupKey:p.setupKey,status:'passed',setup:original,evaluatedSetupProjection:projection,trendEvidence:evidence}]});
+ usePriceChartTradeSetup11({worker:{run:mocks.filter,cancel:vi.fn(),dispose:vi.fn()}});
+ const [evaluated]=await mocks.evaluate([original],{instrument:p.instrument,evaluatedAt:p.evaluationAsOf,settings:{}});
+ const snapshot=await captureCurrentTradeSetupSources(evaluated,p.instrument);
+ expect(snapshot.setup.confirmationSources).toEqual(projection.confirmationSources);
+ expect(snapshot.setup.historicalSourceProvenance).toEqual(projection.historicalSourceProvenance);
+ expect(original).toEqual(before);
 });
 it('loads bounded closed native context and forwards settings/asOf without rewriting source provenance',async()=>{
   const api=usePriceChartTradeSetup11({worker:{run:mocks.filter,cancel:vi.fn(),dispose:vi.fn()}}),evaluatedAt=172800;

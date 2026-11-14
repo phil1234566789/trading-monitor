@@ -22,6 +22,8 @@ import { fetchAllRows } from './dbReadPaging.js';
 import {scopePinSource} from './simulationPinSource.js';
 import { pinTypeFields } from './pinType.js';
 import {persistDoubleOrderBlockPin} from '../supabase/functions/_shared/doubleOrderBlockPinStore.js';
+import {captureCurrentTradeSetupSources,ensureTradeSetupSourceSnapshot} from './tradeSetupSourceSnapshots.js';
+import {assertTradeSetupSourceSnapshot,restoreTradeSetupSourceSnapshot} from '../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
 // addPinM5ObEntry (unten) löst erst per find-or-create einen ob_zone_id auf und ruft dann ganz
@@ -35,7 +37,7 @@ const REF_COLUMN = {
 };
 
 const ROW_COLUMNS =
-  "id, kind, dob_pin_key, dob_context, trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
+  "id, kind, dob_pin_key, dob_context, trade_setup_source_snapshot_id, trade_setup_source_snapshots(payload), trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
@@ -49,10 +51,13 @@ const ROW_COLUMNS =
   // hier bisher nicht mit ausgewählt, weil ungenutzt.
   "ob_zones(id, instrument, direction, timeframe, top, bottom, start_time, end_time, touched, invalidated), " +
   "trade_setups(id, instrument, direction, ob_top, ob_bottom, ob_start_time, ls_touched_time), " +
-  "trade_evidence(id, kind, category, historical_only, price, range_low, range_high, touched_time), " +
+  "trade_evidence(id, kind, category, historical_only, source_context, price, range_low, range_high, touched_time), " +
   "liquidity_levels(id, instrument, direction, timeframe, price, pivot_time, end_time, touched)";
 
 function toEntry(row) {
+  const sourceSnapshot=row.trade_setup_source_snapshots?.payload;
+  if(row.trade_setup_source_snapshot_id!=null&&!sourceSnapshot)throw new Error('Der eingefrorene Quellenstand des Pins fehlt.');
+  if(sourceSnapshot)assertTradeSetupSourceSnapshot(sourceSnapshot);
   return {
     id: row.id,
     kind: row.kind,
@@ -135,6 +140,10 @@ function toEntry(row) {
           obBottom: row.trade_setups.ob_bottom,
           obStartTime: row.trade_setups.ob_start_time,
           lsTouchedTime: row.trade_setups.ls_touched_time,
+          ...(sourceSnapshot?{sourceSnapshot,
+            obTop:sourceSnapshot.setup.obTop,obBottom:sourceSnapshot.setup.obBottom,
+            obStartTime:new Date(sourceSnapshot.setup.obStartTime*1000).toISOString(),
+            frozenSetup:{...restoreTradeSetupSourceSnapshot(sourceSnapshot),persistedSourceSnapshot:sourceSnapshot}}:{}),
         }
       : null,
     tradeConfirmation: row.trade_evidence
@@ -143,6 +152,7 @@ function toEntry(row) {
           kind: row.trade_evidence.kind,
           category: row.trade_evidence.category,
           ...(row.trade_evidence.historical_only ? { historicalOnly: true } : {}),
+          ...(row.trade_evidence.source_context?{sourceContext:row.trade_evidence.source_context}:{}),
           price: row.trade_evidence.price,
           rangeLow: row.trade_evidence.range_low,
           rangeHigh: row.trade_evidence.range_high,
@@ -201,7 +211,7 @@ export async function addSimulationPin({kind,key,snapshotId,entrySnapshotId,chec
 // Upsert auf trade_position_id/ob_zone_id/trade_setup_id (siehe Unique-Indizes in den Migrationen)
 // — ein zweiter Rechtsklick auf dasselbe Objekt legt keinen Zweiteintrag an, sondern aktualisiert
 // nur dessen Notiz.
-export async function addPinEntry(kind, refId, note, pinType) {
+export async function addPinEntry(kind, refId, note, pinType, sourceSnapshotId = null) {
   const column = REF_COLUMN[kind];
   const { data, error } = await supabase
     .from("pin_context")
@@ -214,6 +224,7 @@ export async function addPinEntry(kind, refId, note, pinType) {
         trade_confirmation_id: null,
         liquidity_level_id: null,
         [column]: refId,
+        ...(sourceSnapshotId != null ? {trade_setup_source_snapshot_id:sourceSnapshotId} : {}),
         note: note || null,
         ...pinTypeFields(pinType),
       },
@@ -335,9 +346,21 @@ export async function addPinRsiDivergenceEntry(instrument, divergence, note, pin
 // Pin wie bei einem bereits verlinkten Setup. setup = { instrument, direction, setup } aus
 // priceChartHitTest.js' tsc_setup-Kandidat (setup selbst im Rohformat aus tradeSetupsMetadata).
 export async function addPinTscSetupEntry({ instrument, direction, setup }, note, pinType) {
+  const snapshot=await captureCurrentTradeSetupSources(setup,instrument);
   const tradeSetupId = await findOrCreateTradeSetupId({ instrument, direction, setup });
   if (tradeSetupId == null) return null;
-  return addPinEntry("trade_setup", tradeSetupId, note, pinType);
+  let snapshotId=null;
+  if(snapshot){
+    const {data:existing,error}=await supabase.from('pin_context').select(ROW_COLUMNS).eq('kind','trade_setup')
+      .eq('trade_setup_id',tradeSetupId).maybeSingle();
+    if(error)throw error;
+    if(existing){
+      if(!await updatePinNote(existing.id,note,pinType))throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
+      return toEntry({...existing,note:note||null,...pinTypeFields(pinType)});
+    }
+    snapshotId=await ensureTradeSetupSourceSnapshot(tradeSetupId,snapshot);
+  }
+  return addPinEntry("trade_setup", tradeSetupId, note, pinType,snapshotId);
 }
 
 export async function removePinEntry(id) {

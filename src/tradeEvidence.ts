@@ -29,6 +29,7 @@ export interface TradeEvidence {
   // Dashboard.vue explizit gesetzt (siehe tradeIntake.js: insertConfirmation).
   category: TradeEvidenceCategory;
   historicalOnly?: boolean;
+  sourceContext?: {role: 'orderBlockEdgeSweep'; level: Record<string, unknown>; timeframe: string};
   sourceTime: number | null;
   touchedTime: number | null;
   // Nur bei kind='fib' gesetzt (siehe marketStructureAnalysis.ts: computeFibLevels) — die zwei
@@ -68,6 +69,12 @@ const KIND_LABEL: Record<TradeEvidenceKind, string> = { pivot: "Sweep", ob: "OB"
 export function kindLabel(kind: TradeEvidenceKind): string {
   return KIND_LABEL[kind] ?? kind;
 }
+export function isOrderBlockEdgeSweep(evidence: Pick<TradeEvidence,'sourceContext'>): boolean {
+  return evidence.sourceContext?.role==='orderBlockEdgeSweep';
+}
+export function evidenceKindLabel(evidence: Pick<TradeEvidence,'kind'|'sourceContext'>): string {
+  return isOrderBlockEdgeSweep(evidence)?'OB-Kanten-Sweep':kindLabel(evidence.kind);
+}
 
 function evidenceAgeSeconds(evidence: TradeEvidence, nowSec: number): number | null {
   if (evidence.sourceTime == null) return null;
@@ -92,7 +99,7 @@ export function formatEvidenceLabel(evidence: TradeEvidence, instrument: string,
   const historyHint = historicalEvidenceHint(evidence);
   const precision = pricePrecisionForInstrument(instrument);
   const price = fmtPrice(evidence.price, precision);
-  const kind = kindLabel(evidence.kind);
+  const kind = evidenceKindLabel(evidence);
   // Nur bei kind='pivot' gesetzt — "Sweep Asia-Mid 1,33195 ..." statt des generischen "Sweep
   // 1,33195 ...", das den Session-Kontext eines Levels sonst komplett verschluckt (Bug-Report
   // Philip 2026-08-29).

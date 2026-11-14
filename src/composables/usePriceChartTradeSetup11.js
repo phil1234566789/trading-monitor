@@ -4,13 +4,15 @@ import {loadTradeSetup11Context} from '../tradeSetup11ContextLoader.js';
 import {sessions} from '../sessions.js';
 import {createTradeSetup11Worker} from '../tradeSetup11WorkerClient.js';
 import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
+import {TRADE_SETUP_OB_SWEEP_PROFILE} from '../tradeSetup.js';
+import {restoreTradeSetupSourceReferences} from '../../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
 
 export {TRADE_SETUP_11_CONTEXT_COUNTS} from '../tradeSetup11ContextLoader.js';
 
 export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onUpdate}={}) {
   const status=ref('TS1.1: Trendkontext noch nicht geladen.'),assessments=ref([]);
   let context={symbol:null,h1:[],d1:[]},revision=0,evaluation=0,disposed=false,loadState='idle',loadError=null,pendingInput=null;
-  const base=usePriceChartTradeSetups({onEvaluated:onUpdate,async evaluateCandidates(setups,input){
+  const base=usePriceChartTradeSetups({sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE,onEvaluated:onUpdate,async evaluateCandidates(setups,input){
     const request=++evaluation;
     status.value='TS1.1: Trend-Policy wird im Hintergrund geprüft …';
     try {
@@ -23,7 +25,11 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
     // JSON-Workertransport verliert Infinity und gemeinsame Objektreferenzen; die Chartquelle bleibt original.
     const original=new Map(setups.map(s=>[`${input.instrument}:${s.dir}:${s.obStartTime}`,s]));
     return result.assessments.filter(a=>a.status==='passed').map(a=>({...original.get(a.setupKey),
-      trendEvaluationVersion:result.version,trendEvidence:a.trendEvidence}));
+      ...(a.evaluatedSetupProjection?restoreTradeSetupSourceReferences(a.evaluatedSetupProjection):{}),
+      sourceSnapshotContext:{evaluationAsOf:input.evaluatedAt,
+        canonicalSetupKnownAt:a.trendEvidence.sourceTimes?.nativeGeometryKnownAt,
+        configuration:{...original.get(a.setupKey)?.detectionConfiguration,settings:input.settings}},
+      trendEvaluationVersion:result.version,trendEvaluationSourceProfile:a.trendEvidence.sourceProfile,trendEvidence:a.trendEvidence}));
     } catch(error) {
       if(!disposed&&request===evaluation){assessments.value=[];status.value=error.name==='AbortError'?'TS1.1: Trenddaten werden neu geprüft.':'TS1.1: Trendprüfung nicht verfügbar.';}
       return [];
@@ -40,6 +46,7 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
     if(!input.candles.length){evaluation++;worker.cancel();assessments.value=[];status.value='TS1.1: M5-Daten fehlen.';}
     return base.computeTradeSetups({...input,policyContext:{
       instrument:input.symbol,m5Candles:input.candles,evaluatedAt:input.evaluatedAt,settings:input.settings??{},
+      sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE,
       h1Candles:matching?context.h1:[],d1Candles:matching?context.d1:[],
     }});
   }

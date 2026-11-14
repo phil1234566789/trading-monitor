@@ -4,6 +4,7 @@ import {formatDatedTime} from '../berlinTime.js';
 import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulationPinPresentation.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import PinTypeChips from './PinTypeChips.vue';
+import {tradeSetupSourceDetails} from '../tradeSetupSourcePresentation.js';
 
 // Pin-Kontext-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), daher derselbe
 // MetadataPanel.vue-Rahmen (Drag/Resize/Close) wie beim Debug-Metadaten-Panel. kind="trade_position"
@@ -114,6 +115,7 @@ function onEntryClick(event, entry) {
         <div v-if="row.entry.tradeSetup" class="pin-panel-entry-prices">
           M5-OB {{ fmtPrice(row.entry.tradeSetup.obBottom, pricePrecisionForInstrument(row.entry.tradeSetup.instrument)) }}
           – {{ fmtPrice(row.entry.tradeSetup.obTop, pricePrecisionForInstrument(row.entry.tradeSetup.instrument)) }}
+          <div v-if="row.entry.tradeSetup.frozenSetup">Eingefrorener Quellenstand · {{ tradeSetupSourceDetails(row.entry.tradeSetup.frozenSetup,row.entry.tradeSetup.instrument) }}</div>
         </div>
       </template>
       <template v-else-if="row.entry.kind === 'trade_confirmation'">

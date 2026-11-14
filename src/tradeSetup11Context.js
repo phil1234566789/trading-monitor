@@ -35,7 +35,8 @@ export function prepareTradeSetup11Context({instrument,m5Candles=[],h1Candles=[]
  if(!anchor)return unknown('dailyAnchorUnknown');
  if(m5[0].time>anchor.structureStartTime)return {...unknown('m5AnchorHistoryMissing'),anchor};
  const configs=sessionConfigs.filter(s=>s.instrument===instrument);
- const candles=markIgnoredCandles(m5,configs,s=>berlinOffsetMinutes(s*1000)).filter(c=>!c.ignored);
+ const rawCandles=markIgnoredCandles(m5,configs,s=>berlinOffsetMinutes(s*1000));
+ const candles=rawCandles.filter(c=>!c.ignored);
  const outer=computeRangesPivots(candles,outerPeriod,anchor.structureStartTime);
  const inner=computeRangesPivots(candles,innerPeriod,anchor.structureStartTime);
  const state=buildMarketStructureState(outer,inner,outerPeriod,innerPeriod,candles,{barSeconds:300});
@@ -43,5 +44,5 @@ export function prepareTradeSetup11Context({instrument,m5Candles=[],h1Candles=[]
  // Die Grafik darf Phasen zurückdatieren; dieser Beleg kennt ausschließlich das geschlossene Präfix.
  return {...base,status:'ready',reason:null,anchor,state,chain:collectNestedChain(state),
   stateKnownAt:m5.at(-1).time+300,periods:{outer:outerPeriod,inner:innerPeriod},
-  candles,pivotsOuter:outer,pivotsInner:inner};
+  candles,rawCandles,pivotsOuter:outer,pivotsInner:inner};
 }
