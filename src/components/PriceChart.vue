@@ -1,4 +1,5 @@
 <script setup>
+import CopyButton from "./ui/CopyButton.vue";
 import {tradeSetup11RequestedBoundary} from '../tradeSetup11ContextLoader.js';
 import {closedReplayEvaluationTime} from '../tradeSetupChecklistTimeBasis.js';
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
@@ -2867,27 +2868,27 @@ defineExpose({
     <MetadataPanel v-if="showRangesMetadata" title="Structure-Metadaten" @close="emit('close-ranges-metadata')">
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Structure-State</h4>
-        <button class="metadata-copy-btn" :disabled="!marketStructureTree" @click="copyJson('structureState', marketStructureTree)">
+        <CopyButton :disabled="!marketStructureTree" @click="copyJson('structureState', marketStructureTree)">
           {{ copiedSection === 'structureState' ? '✓ kopiert' : '📋 kopieren' }}
-        </button>
+        </CopyButton>
       </div>
       <JsonTree v-if="marketStructureTree" :value="marketStructureTree" />
       <p v-else class="metadata-empty">Kein Structure-State (mind. 2 Pivots nötig).</p>
 
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Periode {{ rangesPeriod }} (Rohdaten)</h4>
-        <button class="metadata-copy-btn" :disabled="!rangesMetadata" @click="copyJson('period5', rangesMetadata)">
+        <CopyButton :disabled="!rangesMetadata" @click="copyJson('period5', rangesMetadata)">
           {{ copiedSection === 'period5' ? '✓ kopiert' : '📋 kopieren' }}
-        </button>
+        </CopyButton>
       </div>
       <JsonTree v-if="rangesMetadata" :value="rangesMetadata" />
       <p v-else class="metadata-empty">Keine Ranges-Daten geladen.</p>
 
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Periode {{ ranges2Period }} (eingebettet, Rohdaten)</h4>
-        <button class="metadata-copy-btn" :disabled="!rangesMetadata2" @click="copyJson('period2', rangesMetadata2)">
+        <CopyButton :disabled="!rangesMetadata2" @click="copyJson('period2', rangesMetadata2)">
           {{ copiedSection === 'period2' ? '✓ kopiert' : '📋 kopieren' }}
-        </button>
+        </CopyButton>
       </div>
       <JsonTree v-if="rangesMetadata2" :value="rangesMetadata2" />
       <p v-else class="metadata-empty">Keine Ranges-Daten geladen.</p>
@@ -2896,14 +2897,13 @@ defineExpose({
     <MetadataPanel v-if="showDebugMetadata" title="Debug-Metadaten" @close="emit('close-debug-metadata')">
       <div class="metadata-subheading-row">
         <h4 class="metadata-subheading">Aktive Features</h4>
-        <button
-          class="metadata-copy-btn"
+        <CopyButton
           :disabled="!hasActiveMetadata"
           title="Kopiert ins Clipboard UND speichert zusätzlich lokal in .debug/metadata.json (nur im Dev-Server) — für sehr lange Daten, die im Chat-Fenster abgeschnitten würden"
           @click="copyJsonAndSaveLocally('debugMetadata', activeMetadataSnapshot)"
         >
           {{ copiedSection === 'debugMetadata' ? '✓ kopiert + gespeichert' : '📋 kopieren + lokal speichern (localhost only!)' }}
-        </button>
+        </CopyButton>
       </div>
       <p v-if="!hasActiveMetadata" class="metadata-empty">
         Keine der erfassten Features (Liquidität/Trade-Setups/TSC/Structure) ist gerade angetoggelt.
@@ -2987,28 +2987,6 @@ defineExpose({
 
 .metadata-subheading-row:first-child .metadata-subheading {
   margin-top: 0;
-}
-
-.metadata-copy-btn {
-  flex: none;
-  background: transparent;
-  border: 1px solid #2a2e39;
-  color: #787b86;
-  padding: 2px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.metadata-copy-btn:hover:not(:disabled) {
-  border-color: #2962ff;
-  color: #d1d4dc;
-}
-
-.metadata-copy-btn:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 .ranges-loading {

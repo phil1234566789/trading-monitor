@@ -1,4 +1,5 @@
 <script setup>
+import CopyButton from "./ui/CopyButton.vue";
 import { computed, ref, nextTick, onUnmounted } from "vue";
 import {isChartOrderBlockTimeframe} from '../chartOrderBlockPin.js';
 import {formatDatedTime} from '../berlinTime.js';
@@ -89,9 +90,9 @@ function onEntryClick(event, entry) {
       @click="onEntryClick($event, row.entry)"
     >
       <div class="pin-panel-identity" @click.stop>
-        <button type="button" class="pin-id-copy" :aria-label="`Pin-ID ${row.entry.id} kopieren`"
+        <CopyButton class="pin-id-copy" :aria-label="`Pin-ID ${row.entry.id} kopieren`"
           title="Pin-ID kopieren" :disabled="copyStatus?.id === row.entry.id && copyStatus.state === 'copying'"
-          @click.stop="copyPinId(row.entry.id, $event)">Pin #{{ row.entry.id }}</button>
+          @click.stop="copyPinId(row.entry.id, $event)">Pin #{{ row.entry.id }}</CopyButton>
         <small v-if="copyStatus?.id === row.entry.id" role="status" aria-live="polite">
           {{ copyStatus.state === 'copied' ? 'Pin-ID kopiert.' : copyStatus.state === 'failed' ? 'Kopieren nicht möglich. ID manuell kopieren.' : 'Kopiere…' }}
         </small>
@@ -276,12 +277,8 @@ function onEntryClick(event, entry) {
 }
 
 .pin-panel-identity { display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:#a6adbb;font-size:12px;cursor:default; }
-.pin-id-copy { display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:2px 0;background:transparent;border:0;border-radius:2px;color:inherit;font:inherit;cursor:pointer; }
-.pin-id-copy:hover { background:#2a2e39; }
-.pin-id-copy:focus-visible,.pin-id-fallback:focus-visible { outline:2px solid #91b8ff;outline-offset:2px; }
-.pin-id-copy:disabled { opacity:.5;cursor:wait; }
 .pin-id-fallback { width:7rem;max-width:100%;background:#131722;border:1px solid #626b7f;border-radius:4px;color:#d1d4dc;padding:4px 6px;font:inherit; }
-@media(max-width:540px),(pointer:coarse) { .pin-id-copy { min-width:44px;min-height:44px; } }
+.pin-id-fallback:focus-visible { outline:2px solid #91b8ff;outline-offset:2px; }
 
 .pin-panel-remove {
   margin-left: auto;

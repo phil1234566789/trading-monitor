@@ -5,11 +5,12 @@ import {compile} from '@vue/compiler-dom';
 import {readFileSync} from 'node:fs';
 import PinPanel from '../src/components/PinPanel.vue';
 import PinTypeChips from '../src/components/PinTypeChips.vue';
+import CopyButton from '../src/components/ui/CopyButton.vue';
 import {COPIED_FEEDBACK_MS} from '../src/priceChartConstants.js';
-for(const [component,file] of [[PinPanel,'PinPanel.vue'],[PinTypeChips,'PinTypeChips.vue']]){
+for(const [component,file] of [[PinPanel,'PinPanel.vue'],[PinTypeChips,'PinTypeChips.vue'],[CopyButton,'ui/CopyButton.vue']]){
  const {descriptor}=parse(readFileSync(new URL('../src/components/'+file,import.meta.url),'utf8'));
  component.render=new Function('Vue',compile(descriptor.template.content,{mode:'function',prefixIdentifiers:true,
-  bindingMetadata:compileScript(descriptor,{id:file}).bindings}).code)(Vue);
+  bindingMetadata:descriptor.scriptSetup?compileScript(descriptor,{id:file}).bindings:{}}).code)(Vue);
 }
 const all=n=>[n,...(n.children??[]).flatMap(all)];
 const renderer=Vue.createRenderer({createElement:type=>({type,children:[],props:{},focus:vi.fn(),select:vi.fn()}),
@@ -46,7 +47,8 @@ it('shows M1 pins as snapshots without claiming the untracked DB default is an a
 });
 it('uses the entire visible pin label as the single native copy control without a normal-state input or icon',()=>{
  const {root}=mount(),button=copyButton(root);
- expect(button.text).toBe('Pin #472');
+ expect(all(button).some(n=>n.text==='Pin #472')).toBe(true);
+ expect(button.props.class).toContain('ui-copy-button');
  expect(button.props.type).toBe('button');
  expect(all(button).some(n=>n.props?.['aria-hidden']==='true')).toBe(false);
  expect(all(root).some(n=>n.type==='input'&&n.props.class==='pin-id-fallback')).toBe(false);
