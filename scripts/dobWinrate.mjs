@@ -1,6 +1,6 @@
 // DOB-Winrate XAUUSD ab 01.10.2026 (Berlin) als Vorher/Nachher-Messung gegen den jeweiligen Checkout-src.
 // Methodik steht in report.methodology. Flags: --refresh (Kerzen neu holen), --name <x> (Reportname,
-// Default version-gitHash), --crosscheck (eine Woche jeden M5-Schluss gegen das Tagesraster prüfen).
+// Default version-gitHash), --from YYYY-MM-DD (Default 2026-10-01), --crosscheck (eine Woche je M5-Schluss).
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -10,7 +10,8 @@ import { createServer } from 'vite';
 import { aggregateDobByMonth } from './dobWinrateAggregate.mjs';
 
 const flag = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
-const SYMBOL = 'XAUUSD', START_DAY = '2026-10-01', CHECK_WEEK = ['2026-11-02', '2026-11-07'];
+const DEFAULT_START = '2026-10-01', SYMBOL = 'XAUUSD', START_DAY = flag('--from') ?? DEFAULT_START, CHECK_WEEK = ['2026-11-02', '2026-11-07'];
+if (!/^\d{4}-\d{2}-\d{2}$/.test(START_DAY)) throw Error(`--from braucht YYYY-MM-DD, nicht ${START_DAY}`);
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 const outDir = path.join(root, '.debug', 'dob-winrate');
 // Worktrees haben keine eigene .env; sie liegt im Haupt-Checkout darüber.
@@ -39,11 +40,20 @@ try {
     await fs.writeFile(file, JSON.stringify(data));
     return data;
   };
-  // Kalenderbars ab Start plus Fenster: Wochenenden machen das zur sicheren Obergrenze für den Vorlauf.
-  const candles = (bar, seconds, window) => cached(`candles-${SYMBOL}-${bar === '1m' ? 'm1' : 'm5'}.json`, () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    return fetchInitialCandles(SYMBOL, bar, Math.ceil((nowSec - startSec) / seconds) + window, nowSec * 1000);
-  });
+  // Kalenderbars bis Start plus Fenster: Wochenenden machen das zur sicheren Obergrenze für den Vorlauf.
+  // coveredFrom = frühester Start, dessen Fenster der Cache trägt; ein früheres --from lädt nur das Ältere nach.
+  const candles = async (bar, seconds, window) => {
+    const file = path.join(outDir, `candles-${SYMBOL}-${bar === '1m' ? 'm1' : 'm5'}.json`);
+    let cache = !process.argv.includes('--refresh') && existsSync(file) ? JSON.parse(await fs.readFile(file, 'utf8')) : null;
+    if (Array.isArray(cache)) cache = { coveredFrom: berlinDayRangeUtcMs(DEFAULT_START).startUtcMs / 1000, rows: cache };
+    if (cache && cache.coveredFrom <= startSec) return cache.rows;
+    const toSec = cache ? cache.rows[0].time : Math.floor(Date.now() / 1000);
+    const rows = await fetchInitialCandles(SYMBOL, bar, Math.ceil((toSec - startSec) / seconds) + window, toSec * 1000 - 1);
+    cache = { coveredFrom: startSec, rows: [...rows.filter(c => c.time < toSec), ...(cache?.rows ?? [])] };
+    await fs.mkdir(outDir, { recursive: true });
+    await fs.writeFile(file, JSON.stringify(cache));
+    return cache.rows;
+  };
   const m5All = await candles('5m', 300, TRADE_SETUP_M5_CANDLE_COUNT);
   const m1All = await candles('1m', 60, TRADE_SETUP_M5_CANDLE_COUNT * 5 + 5);
   // Gleiche Ignore-Fenster wie markIgnored() im Dashboard; Philips Browser läuft in Berlin.
