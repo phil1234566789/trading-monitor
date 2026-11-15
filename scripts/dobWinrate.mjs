@@ -15,6 +15,8 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 import { aggregateDobByMonth } from './dobWinrateAggregate.mjs';
 
+// `--name <x>` trennt Reports derselben Engine-Version, z. B. vor/nach einem Outcome-Fix.
+const flag = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const SYMBOL = 'XAUUSD', START_DAY = '2026-10-01';
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 const outDir = path.join(root, '.debug', 'dob-winrate');
@@ -90,7 +92,7 @@ try {
       entries: Object.fromEntries(Object.entries(p.entries).map(([r, e]) => [r, { status: e.status, entryTime: e.entryTime,
         entryPrice: e.entryPrice, stopPrice: e.stopPrice, outcome: e.outcome?.status ?? null, outcomeReason: e.outcome?.reason ?? null, reason: e.reason ?? null }])) })) };
   await fs.mkdir(outDir, { recursive: true });
-  await fs.writeFile(path.join(outDir, `report-${version}.json`), JSON.stringify(report, null, 2));
+  await fs.writeFile(path.join(outDir, `report-${flag('--name') ?? version}.json`), JSON.stringify(report, null, 2));
 
   console.log(`${version} · ${SYMBOL} ${START_DAY} → ${berlinDateStrFor(dataEnd)} · ${days.length} Läufe · Engine ${report.engineMs} ms · ${requests} Requests`);
   console.table(Object.entries({ gesamt: summary.total, ...summary.months }).flatMap(([scope, s]) => Object.entries(s.routes).map(([route, c]) =>
