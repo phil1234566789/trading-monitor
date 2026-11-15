@@ -1,0 +1,1513 @@
+{
+  "source": "T6f: node scripts/dobWinrate.mjs --from 2026-02-01 at b0fe0053 (v8 retest-extreme SL, main 65610258) plus a temporary touchTolerance switch (never committed); 0 = report t6d-F0 (identical to v8). Cached XAUUSD candles 2026-02-01..2026-11-14, 0 requests.",
+  "rule": "touchTolerance t (share of OB height), in orderBlockReaction.js for both roles: near edge, a candle within t*height of the OB counts as contact (W1 otherwise exact); far edge, a candle within t*height of the far edge makes the reaction false (route b: rejected) until reaction FVG / entry b. M5 invalidation and OB1 hold unchanged.",
+  "references": "16 positive pairs (references.json) + P17; negatives 471-476 = pair key not detected on their native fixtures at evaluatedAt; 503 = reaction false",
+  "decision": "pending (Philip); code default unchanged (0)",
+  "variants": {
+    "0": {
+      "touchTolerance": 0,
+      "pin501": {
+        "state": "true",
+        "reason": null,
+        "contact": {
+          "status": "touch",
+          "at": "05:31"
+        },
+        "knownAt": "05:40",
+        "a": {
+          "status": "entry",
+          "reason": null,
+          "entry": "05:40",
+          "stop": 4132.61,
+          "knownAt": null
+        },
+        "b": {
+          "status": "pending",
+          "reason": "entryBPending",
+          "entry": null,
+          "stop": null,
+          "knownAt": null
+        }
+      },
+      "pin504": {
+        "state": "true",
+        "reason": null,
+        "contact": {
+          "status": "touch",
+          "at": "08:09"
+        },
+        "knownAt": "08:15",
+        "a": {
+          "status": "entry",
+          "reason": null,
+          "entry": "08:15",
+          "stop": 4114.07,
+          "knownAt": null
+        },
+        "b": {
+          "status": "entry",
+          "reason": null,
+          "entry": "08:19",
+          "stop": 4114.07,
+          "knownAt": null
+        }
+      },
+      "pin503": {
+        "state": "false",
+        "reason": "m5OrderBlockBroken"
+      },
+      "positiveReferencesChanged": [],
+      "negatives": {
+        "471": "negative",
+        "472": "negative",
+        "473": "negative",
+        "474": "negative",
+        "475": "negative",
+        "476": "negative"
+      },
+      "pairs": 1891,
+      "routes": {
+        "a": {
+          "total": {
+            "trades": 1873,
+            "winners": 646,
+            "losers": 1227,
+            "winrate": 0.3449,
+            "sumR": 65,
+            "avgR": 0.035
+          },
+          "removedVsV8": {
+            "trades": 0,
+            "winners": 0,
+            "losers": 0,
+            "winrate": null,
+            "sumR": 0,
+            "avgR": null
+          },
+          "addedVsV8": {
+            "trades": 0,
+            "winners": 0,
+            "losers": 0,
+            "winrate": null,
+            "sumR": 0,
+            "avgR": null
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 181,
+              "winners": 63,
+              "losers": 118,
+              "winrate": 0.3481,
+              "sumR": 8,
+              "avgR": 0.044,
+              "sumRvsV8": 0
+            },
+            "2026-03": {
+              "trades": 177,
+              "winners": 60,
+              "losers": 117,
+              "winrate": 0.339,
+              "sumR": 3,
+              "avgR": 0.017,
+              "sumRvsV8": 0
+            },
+            "2026-04": {
+              "trades": 210,
+              "winners": 64,
+              "losers": 146,
+              "winrate": 0.3048,
+              "sumR": -18,
+              "avgR": -0.086,
+              "sumRvsV8": 0
+            },
+            "2026-05": {
+              "trades": 183,
+              "winners": 68,
+              "losers": 115,
+              "winrate": 0.3716,
+              "sumR": 21,
+              "avgR": 0.115,
+              "sumRvsV8": 0
+            },
+            "2026-06": {
+              "trades": 188,
+              "winners": 70,
+              "losers": 118,
+              "winrate": 0.3723,
+              "sumR": 22,
+              "avgR": 0.117,
+              "sumRvsV8": 0
+            },
+            "2026-07": {
+              "trades": 181,
+              "winners": 53,
+              "losers": 128,
+              "winrate": 0.2928,
+              "sumR": -22,
+              "avgR": -0.122,
+              "sumRvsV8": 0
+            },
+            "2026-08": {
+              "trades": 196,
+              "winners": 59,
+              "losers": 137,
+              "winrate": 0.301,
+              "sumR": -19,
+              "avgR": -0.097,
+              "sumRvsV8": 0
+            },
+            "2026-09": {
+              "trades": 210,
+              "winners": 85,
+              "losers": 125,
+              "winrate": 0.4048,
+              "sumR": 45,
+              "avgR": 0.214,
+              "sumRvsV8": 0
+            },
+            "2026-10": {
+              "trades": 209,
+              "winners": 74,
+              "losers": 135,
+              "winrate": 0.3541,
+              "sumR": 13,
+              "avgR": 0.062,
+              "sumRvsV8": 0
+            },
+            "2026-11": {
+              "trades": 138,
+              "winners": 50,
+              "losers": 88,
+              "winrate": 0.3623,
+              "sumR": 12,
+              "avgR": 0.087,
+              "sumRvsV8": 0
+            }
+          }
+        },
+        "b": {
+          "total": {
+            "trades": 904,
+            "winners": 292,
+            "losers": 612,
+            "winrate": 0.323,
+            "sumR": -28,
+            "avgR": -0.031
+          },
+          "removedVsV8": {
+            "trades": 0,
+            "winners": 0,
+            "losers": 0,
+            "winrate": null,
+            "sumR": 0,
+            "avgR": null
+          },
+          "addedVsV8": {
+            "trades": 0,
+            "winners": 0,
+            "losers": 0,
+            "winrate": null,
+            "sumR": 0,
+            "avgR": null
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 88,
+              "winners": 25,
+              "losers": 63,
+              "winrate": 0.2841,
+              "sumR": -13,
+              "avgR": -0.148,
+              "sumRvsV8": 0
+            },
+            "2026-03": {
+              "trades": 76,
+              "winners": 23,
+              "losers": 53,
+              "winrate": 0.3026,
+              "sumR": -7,
+              "avgR": -0.092,
+              "sumRvsV8": 0
+            },
+            "2026-04": {
+              "trades": 115,
+              "winners": 28,
+              "losers": 87,
+              "winrate": 0.2435,
+              "sumR": -31,
+              "avgR": -0.27,
+              "sumRvsV8": 0
+            },
+            "2026-05": {
+              "trades": 98,
+              "winners": 36,
+              "losers": 62,
+              "winrate": 0.3673,
+              "sumR": 10,
+              "avgR": 0.102,
+              "sumRvsV8": 0
+            },
+            "2026-06": {
+              "trades": 92,
+              "winners": 34,
+              "losers": 58,
+              "winrate": 0.3696,
+              "sumR": 10,
+              "avgR": 0.109,
+              "sumRvsV8": 0
+            },
+            "2026-07": {
+              "trades": 83,
+              "winners": 27,
+              "losers": 56,
+              "winrate": 0.3253,
+              "sumR": -2,
+              "avgR": -0.024,
+              "sumRvsV8": 0
+            },
+            "2026-08": {
+              "trades": 88,
+              "winners": 27,
+              "losers": 61,
+              "winrate": 0.3068,
+              "sumR": -7,
+              "avgR": -0.08,
+              "sumRvsV8": 0
+            },
+            "2026-09": {
+              "trades": 107,
+              "winners": 34,
+              "losers": 73,
+              "winrate": 0.3178,
+              "sumR": -5,
+              "avgR": -0.047,
+              "sumRvsV8": 0
+            },
+            "2026-10": {
+              "trades": 100,
+              "winners": 38,
+              "losers": 62,
+              "winrate": 0.38,
+              "sumR": 14,
+              "avgR": 0.14,
+              "sumRvsV8": 0
+            },
+            "2026-11": {
+              "trades": 57,
+              "winners": 20,
+              "losers": 37,
+              "winrate": 0.3509,
+              "sumR": 3,
+              "avgR": 0.053,
+              "sumRvsV8": 0
+            }
+          }
+        }
+      }
+    },
+    "0.01": {
+      "touchTolerance": 0.01,
+      "pin501": {
+        "state": "true",
+        "reason": null,
+        "contact": {
+          "status": "touch",
+          "at": "05:31"
+        },
+        "knownAt": "05:40",
+        "a": {
+          "status": "entry",
+          "reason": null,
+          "entry": "05:40",
+          "stop": 4132.61,
+          "knownAt": null
+        },
+        "b": {
+          "status": "pending",
+          "reason": "entryBPending",
+          "entry": null,
+          "stop": null,
+          "knownAt": null
+        }
+      },
+      "pin504": {
+        "state": "true",
+        "reason": null,
+        "contact": {
+          "status": "touch",
+          "at": "08:09"
+        },
+        "knownAt": "08:15",
+        "a": {
+          "status": "entry",
+          "reason": null,
+          "entry": "08:15",
+          "stop": 4114.07,
+          "knownAt": null
+        },
+        "b": {
+          "status": "entry",
+          "reason": null,
+          "entry": "08:19",
+          "stop": 4114.07,
+          "knownAt": null
+        }
+      },
+      "pin503": {
+        "state": "false",
+        "reason": "m5OrderBlockBroken"
+      },
+      "positiveReferencesChanged": [],
+      "negatives": {
+        "471": "negative",
+        "472": "negative",
+        "473": "negative",
+        "474": "negative",
+        "475": "negative",
+        "476": "negative"
+      },
+      "pairs": 1902,
+      "routes": {
+        "a": {
+          "total": {
+            "trades": 1884,
+            "winners": 657,
+            "losers": 1227,
+            "winrate": 0.3487,
+            "sumR": 87,
+            "avgR": 0.046
+          },
+          "removedVsV8": {
+            "trades": 46,
+            "winners": 13,
+            "losers": 33,
+            "winrate": 0.2826,
+            "sumR": -7,
+            "avgR": -0.152
+          },
+          "addedVsV8": {
+            "trades": 57,
+            "winners": 24,
+            "losers": 33,
+            "winrate": 0.4211,
+            "sumR": 15,
+            "avgR": 0.263
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 181,
+              "winners": 65,
+              "losers": 116,
+              "winrate": 0.3591,
+              "sumR": 14,
+              "avgR": 0.077,
+              "sumRvsV8": 6
+            },
+            "2026-03": {
+              "trades": 178,
+              "winners": 61,
+              "losers": 117,
+              "winrate": 0.3427,
+              "sumR": 5,
+              "avgR": 0.028,
+              "sumRvsV8": 2
+            },
+            "2026-04": {
+              "trades": 207,
+              "winners": 66,
+              "losers": 141,
+              "winrate": 0.3188,
+              "sumR": -9,
+              "avgR": -0.043,
+              "sumRvsV8": 9
+            },
+            "2026-05": {
+              "trades": 186,
+              "winners": 69,
+              "losers": 117,
+              "winrate": 0.371,
+              "sumR": 21,
+              "avgR": 0.113,
+              "sumRvsV8": 0
+            },
+            "2026-06": {
+              "trades": 187,
+              "winners": 70,
+              "losers": 117,
+              "winrate": 0.3743,
+              "sumR": 23,
+              "avgR": 0.123,
+              "sumRvsV8": 1
+            },
+            "2026-07": {
+              "trades": 181,
+              "winners": 55,
+              "losers": 126,
+              "winrate": 0.3039,
+              "sumR": -16,
+              "avgR": -0.088,
+              "sumRvsV8": 6
+            },
+            "2026-08": {
+              "trades": 201,
+              "winners": 59,
+              "losers": 142,
+              "winrate": 0.2935,
+              "sumR": -24,
+              "avgR": -0.119,
+              "sumRvsV8": -5
+            },
+            "2026-09": {
+              "trades": 214,
+              "winners": 87,
+              "losers": 127,
+              "winrate": 0.4065,
+              "sumR": 47,
+              "avgR": 0.22,
+              "sumRvsV8": 2
+            },
+            "2026-10": {
+              "trades": 211,
+              "winners": 75,
+              "losers": 136,
+              "winrate": 0.3555,
+              "sumR": 14,
+              "avgR": 0.066,
+              "sumRvsV8": 1
+            },
+            "2026-11": {
+              "trades": 138,
+              "winners": 50,
+              "losers": 88,
+              "winrate": 0.3623,
+              "sumR": 12,
+              "avgR": 0.087,
+              "sumRvsV8": 0
+            }
+          }
+        },
+        "b": {
+          "total": {
+            "trades": 899,
+            "winners": 296,
+            "losers": 603,
+            "winrate": 0.3293,
+            "sumR": -11,
+            "avgR": -0.012
+          },
+          "removedVsV8": {
+            "trades": 30,
+            "winners": 9,
+            "losers": 21,
+            "winrate": 0.3,
+            "sumR": -3,
+            "avgR": -0.1
+          },
+          "addedVsV8": {
+            "trades": 25,
+            "winners": 13,
+            "losers": 12,
+            "winrate": 0.52,
+            "sumR": 14,
+            "avgR": 0.56
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 85,
+              "winners": 26,
+              "losers": 59,
+              "winrate": 0.3059,
+              "sumR": -7,
+              "avgR": -0.082,
+              "sumRvsV8": 6
+            },
+            "2026-03": {
+              "trades": 77,
+              "winners": 24,
+              "losers": 53,
+              "winrate": 0.3117,
+              "sumR": -5,
+              "avgR": -0.065,
+              "sumRvsV8": 2
+            },
+            "2026-04": {
+              "trades": 112,
+              "winners": 29,
+              "losers": 83,
+              "winrate": 0.2589,
+              "sumR": -25,
+              "avgR": -0.223,
+              "sumRvsV8": 6
+            },
+            "2026-05": {
+              "trades": 99,
+              "winners": 36,
+              "losers": 63,
+              "winrate": 0.3636,
+              "sumR": 9,
+              "avgR": 0.091,
+              "sumRvsV8": -1
+            },
+            "2026-06": {
+              "trades": 89,
+              "winners": 33,
+              "losers": 56,
+              "winrate": 0.3708,
+              "sumR": 10,
+              "avgR": 0.112,
+              "sumRvsV8": 0
+            },
+            "2026-07": {
+              "trades": 83,
+              "winners": 28,
+              "losers": 55,
+              "winrate": 0.3373,
+              "sumR": 1,
+              "avgR": 0.012,
+              "sumRvsV8": 3
+            },
+            "2026-08": {
+              "trades": 89,
+              "winners": 27,
+              "losers": 62,
+              "winrate": 0.3034,
+              "sumR": -8,
+              "avgR": -0.09,
+              "sumRvsV8": -1
+            },
+            "2026-09": {
+              "trades": 108,
+              "winners": 36,
+              "losers": 72,
+              "winrate": 0.3333,
+              "sumR": 0,
+              "avgR": 0,
+              "sumRvsV8": 5
+            },
+            "2026-10": {
+              "trades": 100,
+              "winners": 37,
+              "losers": 63,
+              "winrate": 0.37,
+              "sumR": 11,
+              "avgR": 0.11,
+              "sumRvsV8": -3
+            },
+            "2026-11": {
+              "trades": 57,
+              "winners": 20,
+              "losers": 37,
+              "winrate": 0.3509,
+              "sumR": 3,
+              "avgR": 0.053,
+              "sumRvsV8": 0
+            }
+          }
+        }
+      }
+    },
+    "0.02": {
+      "touchTolerance": 0.02,
+      "pin501": {
+        "state": "false",
+        "reason": "m5OrderBlockBroken",
+        "contact": {
+          "status": "touch",
+          "at": "05:31"
+        },
+        "knownAt": "05:38",
+        "a": {
+          "status": "rejected",
+          "reason": "reactionFalse",
+          "entry": null,
+          "stop": null,
+          "knownAt": "05:38"
+        },
+        "b": {
+          "status": "rejected",
+          "reason": "reactionFalse",
+          "entry": null,
+          "stop": null,
+          "knownAt": "05:38"
+        }
+      },
+      "pin504": {
+        "state": "true",
+        "reason": null,
+        "contact": {
+          "status": "nearTouch",
+          "at": "07:43"
+        },
+        "knownAt": "07:47",
+        "a": {
+          "status": "entry",
+          "reason": null,
+          "entry": "07:47",
+          "stop": 4115.45,
+          "knownAt": null
+        },
+        "b": {
+          "status": "rejected",
+          "reason": "entryBOrderBlockTooDeep",
+          "entry": null,
+          "stop": null,
+          "knownAt": "07:54"
+        }
+      },
+      "pin503": {
+        "state": "false",
+        "reason": "m5OrderBlockBroken"
+      },
+      "positiveReferencesChanged": [],
+      "negatives": {
+        "471": "negative",
+        "472": "negative",
+        "473": "negative",
+        "474": "negative",
+        "475": "negative",
+        "476": "negative"
+      },
+      "pairs": 1918,
+      "routes": {
+        "a": {
+          "total": {
+            "trades": 1900,
+            "winners": 657,
+            "losers": 1243,
+            "winrate": 0.3458,
+            "sumR": 71,
+            "avgR": 0.037
+          },
+          "removedVsV8": {
+            "trades": 96,
+            "winners": 37,
+            "losers": 59,
+            "winrate": 0.3854,
+            "sumR": 15,
+            "avgR": 0.156
+          },
+          "addedVsV8": {
+            "trades": 123,
+            "winners": 48,
+            "losers": 75,
+            "winrate": 0.3902,
+            "sumR": 21,
+            "avgR": 0.171
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 183,
+              "winners": 67,
+              "losers": 116,
+              "winrate": 0.3661,
+              "sumR": 18,
+              "avgR": 0.098,
+              "sumRvsV8": 10
+            },
+            "2026-03": {
+              "trades": 177,
+              "winners": 62,
+              "losers": 115,
+              "winrate": 0.3503,
+              "sumR": 9,
+              "avgR": 0.051,
+              "sumRvsV8": 6
+            },
+            "2026-04": {
+              "trades": 210,
+              "winners": 67,
+              "losers": 143,
+              "winrate": 0.319,
+              "sumR": -9,
+              "avgR": -0.043,
+              "sumRvsV8": 9
+            },
+            "2026-05": {
+              "trades": 187,
+              "winners": 70,
+              "losers": 117,
+              "winrate": 0.3743,
+              "sumR": 23,
+              "avgR": 0.123,
+              "sumRvsV8": 2
+            },
+            "2026-06": {
+              "trades": 190,
+              "winners": 69,
+              "losers": 121,
+              "winrate": 0.3632,
+              "sumR": 17,
+              "avgR": 0.089,
+              "sumRvsV8": -5
+            },
+            "2026-07": {
+              "trades": 184,
+              "winners": 54,
+              "losers": 130,
+              "winrate": 0.2935,
+              "sumR": -22,
+              "avgR": -0.12,
+              "sumRvsV8": 0
+            },
+            "2026-08": {
+              "trades": 199,
+              "winners": 56,
+              "losers": 143,
+              "winrate": 0.2814,
+              "sumR": -31,
+              "avgR": -0.156,
+              "sumRvsV8": -12
+            },
+            "2026-09": {
+              "trades": 222,
+              "winners": 89,
+              "losers": 133,
+              "winrate": 0.4009,
+              "sumR": 45,
+              "avgR": 0.203,
+              "sumRvsV8": 0
+            },
+            "2026-10": {
+              "trades": 213,
+              "winners": 77,
+              "losers": 136,
+              "winrate": 0.3615,
+              "sumR": 18,
+              "avgR": 0.085,
+              "sumRvsV8": 5
+            },
+            "2026-11": {
+              "trades": 135,
+              "winners": 46,
+              "losers": 89,
+              "winrate": 0.3407,
+              "sumR": 3,
+              "avgR": 0.022,
+              "sumRvsV8": -9
+            }
+          }
+        },
+        "b": {
+          "total": {
+            "trades": 906,
+            "winners": 300,
+            "losers": 606,
+            "winrate": 0.3311,
+            "sumR": -6,
+            "avgR": -0.007
+          },
+          "removedVsV8": {
+            "trades": 58,
+            "winners": 18,
+            "losers": 40,
+            "winrate": 0.3103,
+            "sumR": -4,
+            "avgR": -0.069
+          },
+          "addedVsV8": {
+            "trades": 60,
+            "winners": 26,
+            "losers": 34,
+            "winrate": 0.4333,
+            "sumR": 18,
+            "avgR": 0.3
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 86,
+              "winners": 28,
+              "losers": 58,
+              "winrate": 0.3256,
+              "sumR": -2,
+              "avgR": -0.023,
+              "sumRvsV8": 11
+            },
+            "2026-03": {
+              "trades": 79,
+              "winners": 26,
+              "losers": 53,
+              "winrate": 0.3291,
+              "sumR": -1,
+              "avgR": -0.013,
+              "sumRvsV8": 6
+            },
+            "2026-04": {
+              "trades": 115,
+              "winners": 29,
+              "losers": 86,
+              "winrate": 0.2522,
+              "sumR": -28,
+              "avgR": -0.243,
+              "sumRvsV8": 3
+            },
+            "2026-05": {
+              "trades": 99,
+              "winners": 36,
+              "losers": 63,
+              "winrate": 0.3636,
+              "sumR": 9,
+              "avgR": 0.091,
+              "sumRvsV8": -1
+            },
+            "2026-06": {
+              "trades": 90,
+              "winners": 32,
+              "losers": 58,
+              "winrate": 0.3556,
+              "sumR": 6,
+              "avgR": 0.067,
+              "sumRvsV8": -4
+            },
+            "2026-07": {
+              "trades": 83,
+              "winners": 28,
+              "losers": 55,
+              "winrate": 0.3373,
+              "sumR": 1,
+              "avgR": 0.012,
+              "sumRvsV8": 3
+            },
+            "2026-08": {
+              "trades": 83,
+              "winners": 26,
+              "losers": 57,
+              "winrate": 0.3133,
+              "sumR": -5,
+              "avgR": -0.06,
+              "sumRvsV8": 2
+            },
+            "2026-09": {
+              "trades": 112,
+              "winners": 37,
+              "losers": 75,
+              "winrate": 0.3304,
+              "sumR": -1,
+              "avgR": -0.009,
+              "sumRvsV8": 4
+            },
+            "2026-10": {
+              "trades": 101,
+              "winners": 38,
+              "losers": 63,
+              "winrate": 0.3762,
+              "sumR": 13,
+              "avgR": 0.129,
+              "sumRvsV8": -1
+            },
+            "2026-11": {
+              "trades": 58,
+              "winners": 20,
+              "losers": 38,
+              "winrate": 0.3448,
+              "sumR": 2,
+              "avgR": 0.034,
+              "sumRvsV8": -1
+            }
+          }
+        }
+      }
+    },
+    "0.03": {
+      "touchTolerance": 0.03,
+      "pin501": {
+        "state": "false",
+        "reason": "m5OrderBlockBroken",
+        "contact": {
+          "status": "touch",
+          "at": "05:31"
+        },
+        "knownAt": "05:38",
+        "a": {
+          "status": "rejected",
+          "reason": "reactionFalse",
+          "entry": null,
+          "stop": null,
+          "knownAt": "05:38"
+        },
+        "b": {
+          "status": "rejected",
+          "reason": "reactionFalse",
+          "entry": null,
+          "stop": null,
+          "knownAt": "05:38"
+        }
+      },
+      "pin504": {
+        "state": "true",
+        "reason": null,
+        "contact": {
+          "status": "nearTouch",
+          "at": "07:43"
+        },
+        "knownAt": "07:47",
+        "a": {
+          "status": "entry",
+          "reason": null,
+          "entry": "07:47",
+          "stop": 4115.45,
+          "knownAt": null
+        },
+        "b": {
+          "status": "rejected",
+          "reason": "entryBOrderBlockTooDeep",
+          "entry": null,
+          "stop": null,
+          "knownAt": "07:54"
+        }
+      },
+      "pin503": {
+        "state": "false",
+        "reason": "m5OrderBlockBroken"
+      },
+      "positiveReferencesChanged": [],
+      "negatives": {
+        "471": "negative",
+        "472": "negative",
+        "473": "negative",
+        "474": "negative",
+        "475": "negative",
+        "476": "negative"
+      },
+      "pairs": 1948,
+      "routes": {
+        "a": {
+          "total": {
+            "trades": 1931,
+            "winners": 666,
+            "losers": 1265,
+            "winrate": 0.3449,
+            "sumR": 67,
+            "avgR": 0.035
+          },
+          "removedVsV8": {
+            "trades": 146,
+            "winners": 55,
+            "losers": 91,
+            "winrate": 0.3767,
+            "sumR": 19,
+            "avgR": 0.13
+          },
+          "addedVsV8": {
+            "trades": 204,
+            "winners": 75,
+            "losers": 129,
+            "winrate": 0.3676,
+            "sumR": 21,
+            "avgR": 0.103
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 181,
+              "winners": 68,
+              "losers": 113,
+              "winrate": 0.3757,
+              "sumR": 23,
+              "avgR": 0.127,
+              "sumRvsV8": 15
+            },
+            "2026-03": {
+              "trades": 184,
+              "winners": 62,
+              "losers": 122,
+              "winrate": 0.337,
+              "sumR": 2,
+              "avgR": 0.011,
+              "sumRvsV8": -1
+            },
+            "2026-04": {
+              "trades": 212,
+              "winners": 70,
+              "losers": 142,
+              "winrate": 0.3302,
+              "sumR": -2,
+              "avgR": -0.009,
+              "sumRvsV8": 16
+            },
+            "2026-05": {
+              "trades": 194,
+              "winners": 69,
+              "losers": 125,
+              "winrate": 0.3557,
+              "sumR": 13,
+              "avgR": 0.067,
+              "sumRvsV8": -8
+            },
+            "2026-06": {
+              "trades": 191,
+              "winners": 69,
+              "losers": 122,
+              "winrate": 0.3613,
+              "sumR": 16,
+              "avgR": 0.084,
+              "sumRvsV8": -6
+            },
+            "2026-07": {
+              "trades": 188,
+              "winners": 57,
+              "losers": 131,
+              "winrate": 0.3032,
+              "sumR": -17,
+              "avgR": -0.09,
+              "sumRvsV8": 5
+            },
+            "2026-08": {
+              "trades": 203,
+              "winners": 56,
+              "losers": 147,
+              "winrate": 0.2759,
+              "sumR": -35,
+              "avgR": -0.172,
+              "sumRvsV8": -16
+            },
+            "2026-09": {
+              "trades": 226,
+              "winners": 90,
+              "losers": 136,
+              "winrate": 0.3982,
+              "sumR": 44,
+              "avgR": 0.195,
+              "sumRvsV8": -1
+            },
+            "2026-10": {
+              "trades": 219,
+              "winners": 79,
+              "losers": 140,
+              "winrate": 0.3607,
+              "sumR": 18,
+              "avgR": 0.082,
+              "sumRvsV8": 5
+            },
+            "2026-11": {
+              "trades": 133,
+              "winners": 46,
+              "losers": 87,
+              "winrate": 0.3459,
+              "sumR": 5,
+              "avgR": 0.038,
+              "sumRvsV8": -7
+            }
+          }
+        },
+        "b": {
+          "total": {
+            "trades": 927,
+            "winners": 307,
+            "losers": 620,
+            "winrate": 0.3312,
+            "sumR": -6,
+            "avgR": -0.006
+          },
+          "removedVsV8": {
+            "trades": 82,
+            "winners": 25,
+            "losers": 57,
+            "winrate": 0.3049,
+            "sumR": -7,
+            "avgR": -0.085
+          },
+          "addedVsV8": {
+            "trades": 105,
+            "winners": 40,
+            "losers": 65,
+            "winrate": 0.381,
+            "sumR": 15,
+            "avgR": 0.143
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 86,
+              "winners": 28,
+              "losers": 58,
+              "winrate": 0.3256,
+              "sumR": -2,
+              "avgR": -0.023,
+              "sumRvsV8": 11
+            },
+            "2026-03": {
+              "trades": 85,
+              "winners": 26,
+              "losers": 59,
+              "winrate": 0.3059,
+              "sumR": -7,
+              "avgR": -0.082,
+              "sumRvsV8": 0
+            },
+            "2026-04": {
+              "trades": 115,
+              "winners": 31,
+              "losers": 84,
+              "winrate": 0.2696,
+              "sumR": -22,
+              "avgR": -0.191,
+              "sumRvsV8": 9
+            },
+            "2026-05": {
+              "trades": 103,
+              "winners": 37,
+              "losers": 66,
+              "winrate": 0.3592,
+              "sumR": 8,
+              "avgR": 0.078,
+              "sumRvsV8": -2
+            },
+            "2026-06": {
+              "trades": 91,
+              "winners": 32,
+              "losers": 59,
+              "winrate": 0.3516,
+              "sumR": 5,
+              "avgR": 0.055,
+              "sumRvsV8": -5
+            },
+            "2026-07": {
+              "trades": 85,
+              "winners": 29,
+              "losers": 56,
+              "winrate": 0.3412,
+              "sumR": 2,
+              "avgR": 0.024,
+              "sumRvsV8": 4
+            },
+            "2026-08": {
+              "trades": 89,
+              "winners": 26,
+              "losers": 63,
+              "winrate": 0.2921,
+              "sumR": -11,
+              "avgR": -0.124,
+              "sumRvsV8": -4
+            },
+            "2026-09": {
+              "trades": 113,
+              "winners": 38,
+              "losers": 75,
+              "winrate": 0.3363,
+              "sumR": 1,
+              "avgR": 0.009,
+              "sumRvsV8": 6
+            },
+            "2026-10": {
+              "trades": 105,
+              "winners": 40,
+              "losers": 65,
+              "winrate": 0.381,
+              "sumR": 15,
+              "avgR": 0.143,
+              "sumRvsV8": 1
+            },
+            "2026-11": {
+              "trades": 55,
+              "winners": 20,
+              "losers": 35,
+              "winrate": 0.3636,
+              "sumR": 5,
+              "avgR": 0.091,
+              "sumRvsV8": 2
+            }
+          }
+        }
+      }
+    },
+    "0.05": {
+      "touchTolerance": 0.05,
+      "pin501": {
+        "state": "false",
+        "reason": "m5OrderBlockBroken",
+        "contact": {
+          "status": "touch",
+          "at": "05:31"
+        },
+        "knownAt": "05:38",
+        "a": {
+          "status": "rejected",
+          "reason": "reactionFalse",
+          "entry": null,
+          "stop": null,
+          "knownAt": "05:38"
+        },
+        "b": {
+          "status": "rejected",
+          "reason": "reactionFalse",
+          "entry": null,
+          "stop": null,
+          "knownAt": "05:38"
+        }
+      },
+      "pin504": {
+        "state": "true",
+        "reason": null,
+        "contact": {
+          "status": "nearTouch",
+          "at": "07:43"
+        },
+        "knownAt": "07:47",
+        "a": {
+          "status": "entry",
+          "reason": null,
+          "entry": "07:47",
+          "stop": 4115.45,
+          "knownAt": null
+        },
+        "b": {
+          "status": "rejected",
+          "reason": "entryBOrderBlockTooDeep",
+          "entry": null,
+          "stop": null,
+          "knownAt": "07:54"
+        }
+      },
+      "pin503": {
+        "state": "false",
+        "reason": "m5OrderBlockBroken"
+      },
+      "positiveReferencesChanged": [],
+      "negatives": {
+        "471": "negative",
+        "472": "negative",
+        "473": "negative",
+        "474": "negative",
+        "475": "negative",
+        "476": "negative"
+      },
+      "pairs": 2004,
+      "routes": {
+        "a": {
+          "total": {
+            "trades": 1986,
+            "winners": 678,
+            "losers": 1308,
+            "winrate": 0.3414,
+            "sumR": 48,
+            "avgR": 0.024
+          },
+          "removedVsV8": {
+            "trades": 228,
+            "winners": 85,
+            "losers": 143,
+            "winrate": 0.3728,
+            "sumR": 27,
+            "avgR": 0.118
+          },
+          "addedVsV8": {
+            "trades": 341,
+            "winners": 117,
+            "losers": 224,
+            "winrate": 0.3431,
+            "sumR": 10,
+            "avgR": 0.029
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 181,
+              "winners": 66,
+              "losers": 115,
+              "winrate": 0.3646,
+              "sumR": 17,
+              "avgR": 0.094,
+              "sumRvsV8": 9
+            },
+            "2026-03": {
+              "trades": 190,
+              "winners": 67,
+              "losers": 123,
+              "winrate": 0.3526,
+              "sumR": 11,
+              "avgR": 0.058,
+              "sumRvsV8": 8
+            },
+            "2026-04": {
+              "trades": 214,
+              "winners": 70,
+              "losers": 144,
+              "winrate": 0.3271,
+              "sumR": -4,
+              "avgR": -0.019,
+              "sumRvsV8": 14
+            },
+            "2026-05": {
+              "trades": 204,
+              "winners": 72,
+              "losers": 132,
+              "winrate": 0.3529,
+              "sumR": 12,
+              "avgR": 0.059,
+              "sumRvsV8": -9
+            },
+            "2026-06": {
+              "trades": 198,
+              "winners": 69,
+              "losers": 129,
+              "winrate": 0.3485,
+              "sumR": 9,
+              "avgR": 0.045,
+              "sumRvsV8": -13
+            },
+            "2026-07": {
+              "trades": 190,
+              "winners": 58,
+              "losers": 132,
+              "winrate": 0.3053,
+              "sumR": -16,
+              "avgR": -0.084,
+              "sumRvsV8": 6
+            },
+            "2026-08": {
+              "trades": 207,
+              "winners": 58,
+              "losers": 149,
+              "winrate": 0.2802,
+              "sumR": -33,
+              "avgR": -0.159,
+              "sumRvsV8": -14
+            },
+            "2026-09": {
+              "trades": 233,
+              "winners": 88,
+              "losers": 145,
+              "winrate": 0.3777,
+              "sumR": 31,
+              "avgR": 0.133,
+              "sumRvsV8": -14
+            },
+            "2026-10": {
+              "trades": 238,
+              "winners": 85,
+              "losers": 153,
+              "winrate": 0.3571,
+              "sumR": 17,
+              "avgR": 0.071,
+              "sumRvsV8": 4
+            },
+            "2026-11": {
+              "trades": 131,
+              "winners": 45,
+              "losers": 86,
+              "winrate": 0.3435,
+              "sumR": 4,
+              "avgR": 0.031,
+              "sumRvsV8": -8
+            }
+          }
+        },
+        "b": {
+          "total": {
+            "trades": 956,
+            "winners": 325,
+            "losers": 631,
+            "winrate": 0.34,
+            "sumR": 19,
+            "avgR": 0.02
+          },
+          "removedVsV8": {
+            "trades": 120,
+            "winners": 35,
+            "losers": 85,
+            "winrate": 0.2917,
+            "sumR": -15,
+            "avgR": -0.125
+          },
+          "addedVsV8": {
+            "trades": 172,
+            "winners": 68,
+            "losers": 104,
+            "winrate": 0.3953,
+            "sumR": 32,
+            "avgR": 0.186
+          },
+          "byMonth": {
+            "2026-02": {
+              "trades": 86,
+              "winners": 29,
+              "losers": 57,
+              "winrate": 0.3372,
+              "sumR": 1,
+              "avgR": 0.012,
+              "sumRvsV8": 14
+            },
+            "2026-03": {
+              "trades": 91,
+              "winners": 31,
+              "losers": 60,
+              "winrate": 0.3407,
+              "sumR": 2,
+              "avgR": 0.022,
+              "sumRvsV8": 9
+            },
+            "2026-04": {
+              "trades": 116,
+              "winners": 32,
+              "losers": 84,
+              "winrate": 0.2759,
+              "sumR": -20,
+              "avgR": -0.172,
+              "sumRvsV8": 11
+            },
+            "2026-05": {
+              "trades": 107,
+              "winners": 39,
+              "losers": 68,
+              "winrate": 0.3645,
+              "sumR": 10,
+              "avgR": 0.093,
+              "sumRvsV8": 0
+            },
+            "2026-06": {
+              "trades": 98,
+              "winners": 36,
+              "losers": 62,
+              "winrate": 0.3673,
+              "sumR": 10,
+              "avgR": 0.102,
+              "sumRvsV8": 0
+            },
+            "2026-07": {
+              "trades": 86,
+              "winners": 31,
+              "losers": 55,
+              "winrate": 0.3605,
+              "sumR": 7,
+              "avgR": 0.081,
+              "sumRvsV8": 9
+            },
+            "2026-08": {
+              "trades": 94,
+              "winners": 28,
+              "losers": 66,
+              "winrate": 0.2979,
+              "sumR": -10,
+              "avgR": -0.106,
+              "sumRvsV8": -3
+            },
+            "2026-09": {
+              "trades": 112,
+              "winners": 37,
+              "losers": 75,
+              "winrate": 0.3304,
+              "sumR": -1,
+              "avgR": -0.009,
+              "sumRvsV8": 4
+            },
+            "2026-10": {
+              "trades": 113,
+              "winners": 43,
+              "losers": 70,
+              "winrate": 0.3805,
+              "sumR": 16,
+              "avgR": 0.142,
+              "sumRvsV8": 2
+            },
+            "2026-11": {
+              "trades": 53,
+              "winners": 19,
+              "losers": 34,
+              "winrate": 0.3585,
+              "sumR": 4,
+              "avgR": 0.075,
+              "sumRvsV8": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}
