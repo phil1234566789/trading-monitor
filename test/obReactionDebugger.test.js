@@ -16,14 +16,12 @@ describe('OB-Reaktions-Debugger: Fälle unter dem Produkt-Default W1 (nur exakte
  });
  it('shows the same reference outcomes as the product tests',async()=>{
   expect(ob2(await at('503'))).toMatchObject({state:'false',reason:'m5OrderBlockBroken',knownAt:1792556940});
-  // P14/Pin 500: der exakte Retest hat keinen belegten SL (Retest-Extrem unspezifiziert), also kein Paar.
+  // P14/Pin 500: ohne offene interne FVG ist der SL das Retest-Hoch (M1 16.10. 14:35 Berlin).
   const p14=await at('P14');
-  expect(p14.pair).toBeNull();
-  expect(ob2(p14)).toMatchObject({state:'true',contact:{status:'touch'},knownAt:1792154280,
-   routes:{a:{status:'unknown',reason:'retestEpisodeUnresolved',entryCandidate:{entryTime:1792154280,entryPrice:4177.28}},
-    b:{status:'unknown',reason:'retestEpisodeUnresolved',entryCandidate:{entryTime:1792158360,entryPrice:4175.33}}}});
+  expect(p14.pair.entries).toMatchObject({a:{status:'ready',entryTime:1792154280,entryPrice:4177.28,stopPrice:4181.45,stopAnchor:'retestExtreme'},
+   b:{status:'ready',entryTime:1792158360,entryPrice:4175.33,stopPrice:4181.45,stopAnchor:'retestExtreme'}});
   expect(ob2(await at('504'))).toMatchObject({state:'true',contact:{status:'touch'},knownAt:1792563300,
-   routes:{a:{status:'unknown',reason:'retestEpisodeUnresolved'},b:{status:'unknown',reason:'retestEpisodeUnresolved'}}});
+   routes:{a:{status:'entry',stopLoss:4114.07,stopAnchor:'retestExtreme'},b:{status:'entry',stopLoss:4114.07,stopAnchor:'retestExtreme'}}});
   expect((await at('P16')).pair.entries).toMatchObject({a:{status:'ready',entryTime:1792557120,entryPrice:4120.27,stopPrice:4112.95},
    b:{status:'ready',entryTime:1792557540,entryPrice:4117.62,stopPrice:4112.95}});
   expect((await at('P17')).pair.entries).toMatchObject({a:{status:'ready',entryTime:1792481460,entryPrice:4130.55,stopPrice:4136.58},b:{status:'pending'}});

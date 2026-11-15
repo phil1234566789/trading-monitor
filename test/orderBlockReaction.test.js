@@ -41,11 +41,18 @@ describe('internal FVG stop at entry',()=>{
   const below=rows.map(c=>({...c,low:101,high:103}));
   expect(evaluateReactionStop(context([{...inside,direction:'short',bottom:106,top:108}],below),{...ob,dir:-1},contact,1200).price).toBe(110);
  });
- it('never invents a tighter stop: filled, only-overlapping or later FVGs leave it unknown',()=>{
-  const filled=rows.map(c=>c.time===720?{...c,low:101}:c);
-  expect(evaluateReactionStop(context([inside],filled),ob,contact,1200)).toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved'});
+ it('without an open internal FVG the stop is the retest extreme from contact through the entry candle',()=>{
+  const filled=rows.map(c=>c.time===720?{...c,low:101}:c.time===1080?{...c,low:103.5}:c.time===1200?{...c,low:102}:c);
+  // 720 liegt vor dem Kontakt, 1200 nach der Entry-Kerze (entryAt = Schluss der Kerze 1140): beide zählen nicht.
+  expect(evaluateReactionStop(context([inside],filled),ob,contact,1200)).toMatchObject({status:'ready',anchor:'retestExtreme',price:103.5});
+  expect(evaluateReactionStop(context([{...inside,recognizedAt:960}]),ob,contact,1200)).toMatchObject({anchor:'retestExtreme',price:105});
+  const short=rows.map(c=>c.time===900?{...c,high:109.2}:c);
+  expect(evaluateReactionStop(context([],short),{...ob,dir:-1},contact,1200)).toMatchObject({anchor:'retestExtreme',price:109.2});
+  // Ignorierte Kerzen zählen wie bei Kontakt und M5-Bruch nicht.
+  expect(evaluateReactionStop(context([],filled.map(c=>c.time===1080?{...c,ignored:true}:c)),ob,contact,1200).price).toBe(105);
+ });
+ it('keeps a partially overlapping open FVG unknown instead of guessing',()=>{
   expect(evaluateReactionStop(context([{...inside,bottom:99,top:103}]),ob,contact,1200)).toMatchObject({status:'unknown',reason:'partialOverlapOpen'});
-  expect(evaluateReactionStop(context([{...inside,recognizedAt:960}]),ob,contact,1200).status).toBe('unknown');
  });
  it('judges the stop at entry time; a later fill does not change it, a gap or hidden candle before entry does',()=>{
   expect(evaluateReactionStop(context([inside],rows.map(c=>c.time===1500?{...c,low:101}:c)),ob,contact,1200).price).toBe(100);
@@ -60,7 +67,7 @@ describe('internal FVG stop at entry',()=>{
   expect(evaluateReactionStop(context([{...inside,recognizedAt:780},{...old,recognizedAt:660}],rows.filter(c=>c.time!==720)),ob,contact,1200).price).toBe(100);
  });
  it('ignores FVGs formed long before the M5 order block, so a longer history cannot change the stop',()=>{
-  expect(evaluateReactionStop(context([inside]),{...ob,startTime:600+901+120},{candleTime:1700},1740).status).toBe('unknown');
+  expect(evaluateReactionStop(context([inside]),{...ob,startTime:600+901+120},{candleTime:1700},1740).anchor).toBe('retestExtreme');
  });
 });
 
@@ -84,10 +91,10 @@ describe('native reaction references',()=>{
   expect(full.routes.b).toMatchObject({status:'entry',entryTime:1792151580,entryPrice:4175.75,stopLoss:4181.98});
   expect(react('2026-10-16',1792150200,-1,{evaluatedAt:1792151580}).routes).toEqual(full.routes);
  });
- it('Pin 501: reaction true at 05:40 Berlin without inventing an entry SL',()=>{
+ it('Pin 501: reaction true at 05:40 Berlin, Entry a stops at the retest high',()=>{
   const r=react('2026-11-09',1794192300,-1,{evaluatedAt:1794199200+3600});
   expect(r).toMatchObject({state:'true',knownAt:1794199200});
-  expect(r.routes.a).toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved',knownAt:1794199200,entryCandidate:{entryTime:1794199200,entryPrice:4128.84}});
+  expect(r.routes.a).toMatchObject({status:'entry',entryTime:1794199200,entryPrice:4128.84,stopLoss:4132.61,stopAnchor:'retestExtreme'});
  });
  it('stays unknown before contact, before the FVG and across a missing minute',()=>{
   expect(react('2026-10-21',1792552500,1,{evaluatedAt:1792555200}).reason).toBe('noContact');
@@ -95,13 +102,14 @@ describe('native reaction references',()=>{
   const m1=fixture('2026-10-21').candles.m1.filter(c=>c.time!==1792555500);
   expect(react('2026-10-21',1792552500,1,{m1})).toMatchObject({state:'unknown',reason:'missingHistory'});
  });
- it('keeps an unknown Entry a unknown when the M5 order block breaks only later (P8 OB2)',()=>{
+ it('P8 OB2: both routes stop at the retest high; a later M5 break does not relabel them',()=>{
   const r=react('2026-11-02',1793604600,-1);
-  expect(r.routes.a).toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved',knownAt:1793606700});
-  expect(r.routes.b).toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved'});
+  expect(r.routes.a).toMatchObject({status:'entry',entryTime:1793606700,stopLoss:3905.28,stopAnchor:'retestExtreme'});
+  expect(r.routes.b).toMatchObject({status:'entry',entryTime:1793606880,stopLoss:3905.28,stopAnchor:'retestExtreme'});
+  expect(react('2026-11-02',1793604600,-1,{evaluatedAt:r.routes.b.entryTime}).routes).toEqual(r.routes);
   const ob=nativeOrderBlock('2026-11-02',1793604600,-1);
   // Der Bruch liegt nach beiden Entry-Zeitpunkten und darf keine der Routen nachträglich umetikettieren.
-  expect(fixture('2026-11-02').candles.m1.some(c=>c.time>r.routes.b.knownAt&&c.high>ob.top)).toBe(true);
+  expect(fixture('2026-11-02').candles.m1.some(c=>c.time>r.routes.b.entryTime&&c.high>ob.top)).toBe(true);
  });
  it('decides every reaction of a day identically with the previous fixture day prepended',()=>{
   const day=fixture('2026-10-21'),previous=fixture('2026-10-16'),at=day.candles.m1.at(-1).time+60;

@@ -1,7 +1,7 @@
 {
-  "version": "m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-v7",
+  "version": "m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-v8",
   "scope": "16 selected positive examples; no general win-rate or trading approval",
-  "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
+  "nativeManifestSha256": "e3b44a4f915c0406e424ba9d74dea809ed0e6ec454eee08e2e8eaa9e8146e5ea",
   "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
   "previousPolicy": {
     "version": "latest-reaction-first-m1-fvg-both-depth50-hold-sameday-v5",
@@ -183,14 +183,14 @@
       "selection": "latest matching partner satisfying all policies; older eligible partners may replace a rejected latest partner",
       "overlap": "overlap and touch allowed; directional orderflow remains mandatory"
     },
-    "stop": "second M5 OB far edge while a pre-existing internal M1 FVG is open at entry, otherwise unknown (no entry)",
+    "stop": "second M5 OB far edge while a pre-existing internal M1 FVG is open at entry; otherwise the retest extreme (short highest high, long lowest low of non-ignored closed M1 candles from the contact candle through the entry candle, no buffer); a partially overlapping open FVG stays unknown (no entry)",
     "target": "2R price risk without commission",
     "variants": "a and b independently"
   },
   "footprint": [
     {
       "day": "2026-11-11",
-      "pairCount": 10,
+      "pairCount": 12,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 49,
@@ -211,11 +211,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 99,
-      "pairsWithoutEntry": 3
+      "pairsWithoutEntry": 1
     },
     {
       "day": "2026-11-09",
-      "pairCount": 6,
+      "pairCount": 17,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 69,
@@ -236,11 +236,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 2,
       "priceGapRejected": 162,
-      "pairsWithoutEntry": 13
+      "pairsWithoutEntry": 2
     },
     {
       "day": "2026-11-06",
-      "pairCount": 6,
+      "pairCount": 11,
       "m5Bars": 264,
       "m1Bars": 1309,
       "orderBlocks": 49,
@@ -261,11 +261,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 34,
-      "pairsWithoutEntry": 5
+      "pairsWithoutEntry": 0
     },
     {
       "day": "2026-11-05",
-      "pairCount": 10,
+      "pairCount": 20,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 60,
@@ -286,11 +286,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 90,
-      "pairsWithoutEntry": 11
+      "pairsWithoutEntry": 1
     },
     {
       "day": "2026-11-04",
-      "pairCount": 8,
+      "pairCount": 9,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 51,
@@ -311,11 +311,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 3,
       "priceGapRejected": 102,
-      "pairsWithoutEntry": 1
+      "pairsWithoutEntry": 0
     },
     {
       "day": "2026-11-03",
-      "pairCount": 9,
+      "pairCount": 17,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 59,
@@ -336,11 +336,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 128,
-      "pairsWithoutEntry": 9
+      "pairsWithoutEntry": 1
     },
     {
       "day": "2026-11-02",
-      "pairCount": 2,
+      "pairCount": 8,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 57,
@@ -361,11 +361,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 80,
-      "pairsWithoutEntry": 6
+      "pairsWithoutEntry": 0
     },
     {
       "day": "2026-10-30",
-      "pairCount": 7,
+      "pairCount": 10,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 56,
@@ -386,11 +386,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 142,
-      "pairsWithoutEntry": 3
+      "pairsWithoutEntry": 0
     },
     {
       "day": "2026-10-22",
-      "pairCount": 5,
+      "pairCount": 11,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 64,
@@ -411,11 +411,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 2,
       "priceGapRejected": 241,
-      "pairsWithoutEntry": 7
+      "pairsWithoutEntry": 1
     },
     {
       "day": "2026-10-21",
-      "pairCount": 3,
+      "pairCount": 6,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 57,
@@ -436,11 +436,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 35,
-      "pairsWithoutEntry": 3
+      "pairsWithoutEntry": 0
     },
     {
       "day": "2026-10-16",
-      "pairCount": 6,
+      "pairCount": 9,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 60,
@@ -461,11 +461,11 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 64,
-      "pairsWithoutEntry": 5
+      "pairsWithoutEntry": 2
     },
     {
       "day": "2026-10-08",
-      "pairCount": 9,
+      "pairCount": 18,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 71,
@@ -486,7 +486,7 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 2,
       "priceGapRejected": 90,
-      "pairsWithoutEntry": 11
+      "pairsWithoutEntry": 2
     }
   ],
   "references": [
@@ -533,9 +533,21 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "unknown",
-          "reason": "retestEpisodeUnresolved",
-          "knownAt": 1794387840
+          "status": "ready",
+          "entryTime": 1794387840,
+          "entryPrice": 4056.71,
+          "stopPrice": 4059.69,
+          "stopAnchor": "retestExtreme",
+          "confirmationCandleTime": 1794387780,
+          "targetPrice": 4050.75,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1794388560,
+            "exitPrice": 4050.75,
+            "targetPrice": 4050.75,
+            "checkedThrough": 1794388560,
+            "reason": null
+          }
         },
         "b": {
           "variant": "b",
@@ -990,7 +1002,77 @@
         454
       ],
       "day": "2026-11-02",
-      "recognized": false
+      "recognized": true,
+      "direction": "short",
+      "recognizedAt": 1793606700,
+      "firstRetest": 1793602800,
+      "firstReaction": 1793603340,
+      "secondRetest": 1793606520,
+      "secondReaction": 1793606700,
+      "firstM5ReactionKnownAt": 1793605200,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.0021551724138402055,
+        "extremePrice": 3910.09,
+        "candleTime": 1793602800
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.08290155440418476,
+        "extremePrice": 3905.28,
+        "candleTime": 1793606520
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1793603340,
+        "checkedThrough": 1793606700,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 1.2599999999997635
+      },
+      "entries": {
+        "a": {
+          "variant": "a",
+          "status": "ready",
+          "entryTime": 1793606700,
+          "entryPrice": 3903.21,
+          "stopPrice": 3905.28,
+          "stopAnchor": "retestExtreme",
+          "confirmationCandleTime": 1793606640,
+          "targetPrice": 3899.0699999999997,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793607000,
+            "exitPrice": 3899.0699999999997,
+            "targetPrice": 3899.0699999999997,
+            "checkedThrough": 1793607000,
+            "reason": null
+          }
+        },
+        "b": {
+          "variant": "b",
+          "status": "ready",
+          "entryTime": 1793606880,
+          "entryPrice": 3900.06,
+          "stopPrice": 3905.28,
+          "stopAnchor": "retestExtreme",
+          "confirmationCandleTime": 1793606820,
+          "targetPrice": 3889.6199999999994,
+          "outcome": {
+            "status": "loss",
+            "recognizedAt": 1793609460,
+            "exitPrice": 3905.28,
+            "targetPrice": 3889.6199999999994,
+            "checkedThrough": 1793609460,
+            "reason": null
+          }
+        }
+      }
     },
     {
       "reference": "P9",
@@ -1066,7 +1148,77 @@
         458
       ],
       "day": "2026-10-30",
-      "recognized": false
+      "recognized": true,
+      "direction": "short",
+      "recognizedAt": 1793352180,
+      "firstRetest": 1793350440,
+      "firstReaction": 1793351280,
+      "secondRetest": 1793351880,
+      "secondReaction": 1793352180,
+      "firstM5ReactionKnownAt": 1793351700,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.06625577812016191,
+        "extremePrice": 3999.23,
+        "candleTime": 1793350440
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.1115879828326176,
+        "extremePrice": 3994.79,
+        "candleTime": 1793351940
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1793351280,
+        "checkedThrough": 1793352180,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
+      "entries": {
+        "a": {
+          "variant": "a",
+          "status": "ready",
+          "entryTime": 1793352180,
+          "entryPrice": 3991.07,
+          "stopPrice": 3994.79,
+          "stopAnchor": "retestExtreme",
+          "confirmationCandleTime": 1793352120,
+          "targetPrice": 3983.6300000000006,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793355120,
+            "exitPrice": 3983.6300000000006,
+            "targetPrice": 3983.6300000000006,
+            "checkedThrough": 1793355120,
+            "reason": null
+          }
+        },
+        "b": {
+          "variant": "b",
+          "status": "ready",
+          "entryTime": 1793352300,
+          "entryPrice": 3990.96,
+          "stopPrice": 3994.79,
+          "stopAnchor": "retestExtreme",
+          "confirmationCandleTime": 1793352240,
+          "targetPrice": 3983.3,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793355180,
+            "exitPrice": 3983.3,
+            "targetPrice": 3983.3,
+            "checkedThrough": 1793355180,
+            "reason": null
+          }
+        }
+      }
     },
     {
       "reference": "P11",
@@ -1209,7 +1361,65 @@
         464
       ],
       "day": "2026-10-21",
-      "recognized": false
+      "recognized": true,
+      "direction": "long",
+      "recognizedAt": 1792578000,
+      "firstRetest": 1792565460,
+      "firstReaction": 1792566660,
+      "secondRetest": 1792577760,
+      "secondReaction": 1792578000,
+      "firstM5ReactionKnownAt": 1792566600,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.23780487804879175,
+        "extremePrice": 4110.62,
+        "candleTime": 1792565640
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.40935672514608373,
+        "extremePrice": 4111.63,
+        "candleTime": 1792577760
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1792566660,
+        "checkedThrough": 1792578000,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
+      "entries": {
+        "a": {
+          "variant": "a",
+          "status": "ready",
+          "entryTime": 1792578000,
+          "entryPrice": 4114.94,
+          "stopPrice": 4111.63,
+          "stopAnchor": "retestExtreme",
+          "confirmationCandleTime": 1792577940,
+          "targetPrice": 4121.559999999999,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1792578900,
+            "exitPrice": 4121.559999999999,
+            "targetPrice": 4121.559999999999,
+            "checkedThrough": 1792578900,
+            "reason": null
+          }
+        },
+        "b": {
+          "variant": "b",
+          "status": "invalid",
+          "reason": "entryBOrderBlockBroken",
+          "knownAt": 1792609260
+        }
+      }
     },
     {
       "reference": "P14",
@@ -1218,7 +1428,77 @@
         466
       ],
       "day": "2026-10-16",
-      "recognized": false
+      "recognized": true,
+      "direction": "short",
+      "recognizedAt": 1792154280,
+      "firstRetest": 1792149900,
+      "firstReaction": 1792150260,
+      "secondRetest": 1792153320,
+      "secondReaction": 1792154280,
+      "firstM5ReactionKnownAt": 1792150800,
+      "firstPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.3310104529616217,
+        "extremePrice": 4181.98,
+        "candleTime": 1792150080
+      },
+      "secondPenetration": {
+        "status": "ready",
+        "maxPenetrationFraction": 0.8279220779221566,
+        "extremePrice": 4181.45,
+        "candleTime": 1792154100
+      },
+      "firstRetestHold": {
+        "checkedFrom": 1792150260,
+        "checkedThrough": 1792154280,
+        "firstSweepTime": null,
+        "status": "passed",
+        "reason": null
+      },
+      "priceGap": {
+        "status": "passed",
+        "reason": null,
+        "maximum": 2,
+        "positiveZoneGap": 0
+      },
+      "entries": {
+        "a": {
+          "variant": "a",
+          "status": "ready",
+          "entryTime": 1792154280,
+          "entryPrice": 4177.28,
+          "stopPrice": 4181.45,
+          "stopAnchor": "retestExtreme",
+          "confirmationCandleTime": 1792154220,
+          "targetPrice": 4168.94,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1792155360,
+            "exitPrice": 4168.94,
+            "targetPrice": 4168.94,
+            "checkedThrough": 1792155360,
+            "reason": null
+          }
+        },
+        "b": {
+          "variant": "b",
+          "status": "ready",
+          "entryTime": 1792158360,
+          "entryPrice": 4175.33,
+          "stopPrice": 4181.45,
+          "stopAnchor": "retestExtreme",
+          "confirmationCandleTime": 1792158300,
+          "targetPrice": 4163.09,
+          "outcome": {
+            "status": "loss",
+            "recognizedAt": 1792158720,
+            "exitPrice": 4181.45,
+            "targetPrice": 4163.09,
+            "checkedThrough": 1792158720,
+            "reason": null
+          }
+        }
+      }
     },
     {
       "reference": "P15",

@@ -8,7 +8,7 @@ import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from './orderBlockRe
 import {evaluateDoubleOrderBlockRetestDay} from './doubleOrderBlockRetestDay.js';
 import {evaluateDoubleOrderBlockPriceGap} from './doubleOrderBlockPriceGap.js';
 
-export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-v7';
+export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-v8';
 
 // Nur Routen mit vollständigem Entry-Tupel bekommen ein Outcome; die Statuswörter bleiben die des Renderings.
 function pairEntries(reaction,direction,m1,evaluatedAt,instrument){

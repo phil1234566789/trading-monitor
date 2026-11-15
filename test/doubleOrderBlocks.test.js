@@ -17,42 +17,34 @@ const run=day=>{
 const find=(day,first,second)=>run(day).pairs.find(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
 const refs=pair=>pair.pins.map(pin=>manifest.references.find(ref=>ref.pin===pin));
 
-// Erwarteter Routenstatus je Referenz; ready-Werte = [entryTime, entryPrice]. null = Paar ohne möglichen Entry.
+// Erwarteter Routenstatus je Referenz; ready-Werte = [entryTime, entryPrice, Retest-Extrem-SL]; ohne SL = ferne M5-Kante.
 const EXPECTED={
- P1:{a:'unknown',b:'pending'},P2:{a:[1794217980,4097.82],b:[1794218520,4098.01]},P3:{a:[1793988960,4061.44],b:[1793997000,4063.99]},
+ P1:{a:[1794387840,4056.71,4059.69],b:'pending'},P2:{a:[1794217980,4097.82],b:[1794218520,4098.01]},P3:{a:[1793988960,4061.44],b:[1793997000,4063.99]},
  P4:{a:[1793908560,4112.9],b:'pending'},P5:{a:[1793769540,3953.11],b:'pending'},P6:{a:[1793694300,3908.58],b:[1793694420,3908.5]},
- P7:{a:[1793672220,3945.18],b:'invalid'},P8:null,P9:{a:[1793363880,3964.07],b:'pending'},P10:null,
- P11:{a:[1792691460,4045.14],b:'invalid'},P12:{a:[1792638060,4113.81],b:'pending'},P13:null,
- P14:null,P15:{a:[1791466380,4127.93],b:[1791466620,4125.29]},
+ P7:{a:[1793672220,3945.18],b:'invalid'},P8:{a:[1793606700,3903.21,3905.28],b:[1793606880,3900.06,3905.28]},
+ P9:{a:[1793363880,3964.07],b:'pending'},P10:{a:[1793352180,3991.07,3994.79],b:[1793352300,3990.96,3994.79]},
+ P11:{a:[1792691460,4045.14],b:'invalid'},P12:{a:[1792638060,4113.81],b:'pending'},P13:{a:[1792578000,4114.94,4111.63],b:'invalid'},
+ // P14/Pin 500: SL = High der M1-Kerze 16.10. 14:35 Berlin.
+ P14:{a:[1792154280,4177.28,4181.45],b:[1792158360,4175.33,4181.45]},P15:{a:[1791466380,4127.93],b:[1791466620,4125.29]},
  P16:{a:[1792557120,4120.27],b:[1792557540,4117.62]},
 };
 
 describe('double order blocks from native candles',()=>{
  // P16 war unter v6 wegen >50 % OB2-Tiefe abgelehnt; Entry b trifft den Handoff-Fall Pin 502 (06:39, 4117,62, SL 4112,95).
- // P14 (Pin 500) bleibt ohne Entry, weil sein SL das noch unspezifizierte Retest-Extrem bräuchte.
  it.each(manifest.pairs)('recognizes $id with its expected route statuses',pair=>{
   const [first,second]=refs(pair),dob=find(first.day,first,second),expected=EXPECTED[pair.id];
-  if(!expected){expect(dob).toBeUndefined();expect(run(first.day).stats.pairsWithoutEntry).toBeGreaterThan(0);return;}
   expect(dob.direction).toBe(first.dir===1?'long':'short');
   expect(dob.firstReaction.recognizedAt).toBeLessThanOrEqual(dob.secondRetest.candleTime);
   expect(dob.recognizedAt).toBe(dob.secondReaction.recognizedAt);
   for(const [route,want] of Object.entries(expected)){
    const entry=dob.entries[route];
    if(typeof want==='string'){expect(entry.status).toBe(want);continue;}
-   expect(entry).toMatchObject({status:'ready',entryTime:want[0],entryPrice:want[1],
-    stopPrice:first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top});
+   expect(entry).toMatchObject({status:'ready',entryTime:want[0],entryPrice:want[1],stopAnchor:want[2]?'retestExtreme':'m5-edge',
+    stopPrice:want[2]??(first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top)});
    expect(entry.targetPrice).toBeCloseTo(entry.entryPrice+first.dir*2*Math.abs(entry.entryPrice-entry.stopPrice),8);
   }
  });
- it.each(['P8','P13'])('shows %s while Entry b is still possible and drops it once no route can trade',id=>{
-  const [first,second]=refs(manifest.pairs.find(p=>p.id===id)),fixture=days.get(first.day);
-  const key=`dob:XAUUSD:${first.dir}:${first.startTime}:${second.startTime}`;
-  const at=evaluatedAt=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt}).pairs.find(p=>p.id===key);
-  const early=[...Array(60)].map((_,i)=>at(first.knownAt+i*600)).find(Boolean);
-  expect(early.entries.a.status).toBe('unknown');expect(early.entries.b.status).toBe('pending');
-  expect(find(first.day,first,second)).toBeUndefined();
- });
- it.each(manifest.pairs.filter(p=>EXPECTED[p.id]))('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
+ it.each(manifest.pairs)('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
   const [first,second]=refs(pair),fixture=days.get(first.day),full=find(first.day,first,second);
   const input={instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1};
   const prefix=detectDoubleOrderBlocks({...input,evaluatedAt:full.recognizedAt}).pairs.find(p=>p.id===full.id);
@@ -146,11 +138,12 @@ describe('double order blocks from native candles',()=>{
   expect(()=>reactionOptionsFor('first',{nearTouch:'sometimes'})).toThrow(RangeError);
   expect(()=>reactionOptionsFor('third')).toThrow(RangeError);
   expect(()=>detectDoubleOrderBlocks({evaluatedAt:1,options:{nearTouch:true}})).toThrow(RangeError);
-  // P14 ist nur mit Near-Touch auf OB2 handelbar (dort SL an der M5-Kante).
+  // P14: Near-Touch auf OB2 reagiert früher, dort ist die interne FVG noch offen (M5-Kante); exakt bleibt das Retest-Extrem.
   const [first,second]=refs(manifest.pairs.find(p=>p.id==='P14')),fixture=days.get(first.day);
-  const has=options=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
-   evaluatedAt:fixture.provenance.query.to,options}).pairs.some(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
-  expect(has({})).toBe(false);expect(has({nearTouch:'second'})).toBe(true);
+  const stop=options=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
+   evaluatedAt:fixture.provenance.query.to,options}).pairs.find(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime).entries.a;
+  expect(stop({})).toMatchObject({stopAnchor:'retestExtreme',stopPrice:4181.45});
+  expect(stop({nearTouch:'second'})).toMatchObject({stopAnchor:'m5-edge',stopPrice:4181.98});
  });
 });
 

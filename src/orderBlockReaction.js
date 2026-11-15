@@ -79,8 +79,17 @@ export function evaluateReactionStop(context,orderBlock,contact,entryAt) {
   else if(open)overlapping=true;
  }
  if(inside)return {status:'ready',anchor:'m5-edge',price:direction==='long'?orderBlock.bottom:orderBlock.top,reason:null};
- // ponytail: Retest-Extrem-SL braucht eine allgemeine Retest-Episode; bis sie spezifiziert ist, unknown statt geraten.
- return {status:'unknown',price:null,reason:missing?'internalFvgHistoryMissing':overlapping?'partialOverlapOpen':'retestEpisodeUnresolved'};
+ if(missing||overlapping)return {status:'unknown',price:null,reason:missing?'internalFvgHistoryMissing':'partialOverlapOpen'};
+ return {status:'ready',anchor:'retestExtreme',price:retestExtreme(context.rows,direction,contact.candleTime,entryAt),reason:null};
+}
+
+// Extrem von der Kontaktkerze bis einschließlich Entry-Kerze (entryAt = deren Schluss), ohne Puffer. Ignorierte Kerzen
+// zählen nicht, wie bei Kontakt und M5-Bruch; jenseits der fernen M5-Kante kann es nicht liegen, sonst wäre die Reaktion false.
+function retestExtreme(rows,direction,from,entryAt) {
+ let price=direction==='long'?Infinity:-Infinity;
+ for(let i=firstIndex(rows,c=>c.time>=from);i<rows.length&&rows[i].time<entryAt;i++)
+  if(!rows[i].ignored)price=direction==='long'?Math.min(price,rows[i].low):Math.max(price,rows[i].high);
+ return price;
 }
 
 function reactionFvg(context,direction,contact,knownAt) {

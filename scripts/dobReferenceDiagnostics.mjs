@@ -42,7 +42,7 @@ try{
     formula:'Long max(0,OB2.bottom-OB1.top); Short max(0,OB1.bottom-OB2.top)',
     selection:'latest matching partner satisfying all policies; older eligible partners may replace a rejected latest partner',
     overlap:'overlap and touch allowed; directional orderflow remains mandatory'},
-   stop:'second M5 OB far edge while a pre-existing internal M1 FVG is open at entry, otherwise unknown (no entry)',target:'2R price risk without commission',variants:'a and b independently'},
+   stop:'second M5 OB far edge while a pre-existing internal M1 FVG is open at entry; otherwise the retest extreme (short highest high, long lowest low of non-ignored closed M1 candles from the contact candle through the entry candle, no buffer); a partially overlapping open FVG stays unknown (no entry)',target:'2R price risk without commission',variants:'a and b independently'},
   footprint,references};
  const directory=new URL('../analysis/dob/',import.meta.url);
  await mkdir(directory,{recursive:true});
