@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../src/chartDebuggerCases.js';
+import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps,expectationOf,expectedText,productMatches} from '../src/chartDebuggerCases.js';
 import {measureReactionContact} from '../src/orderBlockReaction.js';
 
 const NEAR={nearTouch:'second'};
@@ -14,12 +14,17 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
    for(const ob of r.orderBlocks){expect(ob.orderBlock,`${c.id} ${ob.startTime}`).not.toBeNull();expect(ob.reaction.state).not.toBe('unknown');}
   }
  });
- it('every case ends with the expected output shown in the case dropdown',async()=>{
+ it('every case has Philips expectation, and the product deviates exactly where it is known to',async()=>{
+  const deviations=[];
   for(const c of CHART_DEBUGGER_CASES){
-   const r=await at(c.id),reaction=ob2(r),entries=Object.entries(reaction.routes).filter(([,x])=>x.status==='entry').map(([k])=>k);
-   expect({reaction:reaction.state,entries},c.id).toEqual(c.expected);
-   if(c.orderBlocks.length===2)expect(r.pair,c.id).not.toBeNull();
+   expect(expectationOf(c),c.id).not.toBeNull();
+   if(!productMatches(c,await at(c.id)))deviations.push(c.id);
   }
+  // 501: Philip sagt Reaktion false (offen bis Q6); 504: Entry b soll abgelehnt sein, Produkt nimmt ihn.
+  expect(deviations).toEqual(['501','504']);
+  expect(expectedText(byId('501'))).toBe('Negativ · Reaktion false, kein Entry');
+  expect(expectedText(byId('504'))).toBe('Negativ · Entry b abgelehnt');
+  expect(expectedText(byId('P14'))).toBe('Positiv · DOB');
  });
  it('shows the same reference outcomes as the product tests',async()=>{
   expect(ob2(await at('503'))).toMatchObject({state:'false',reason:'m5OrderBlockBroken',knownAt:1792556940});

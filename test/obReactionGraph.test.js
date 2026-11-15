@@ -8,6 +8,7 @@ import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
 
 // Gleicher Aufruf wie ChartDebugger.vue: Rolle wählen, Partner und Paar mitgeben.
+const OB_CASES=CHART_DEBUGGER_CASES;
 const caseOf=id=>CHART_DEBUGGER_CASES.find(x=>x.id===id);
 const graphOf=(c,r,at,role='second')=>{const entry=r.orderBlocks.find(o=>o.role===role);
  return obReactionGraph({dir:c.dir,entry,context:r.context,evaluatedAt:at,pair:r.pair,partner:r.orderBlocks.find(o=>o!==entry)??null});};
@@ -101,10 +102,16 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   const r=entry.reaction,key=[r.contact.knownAt,r.knownAt,r.routes.a.entryTime,r.routes.b.entryTime];
   const jumps=[];for(let at=from,next;(next=times.find(t=>t>at))!=null&&next<=through;at=next)jumps.push(next);
   expect(jumps.filter(t=>key.includes(t))).toEqual([...new Set(key)]);
-  // Wächter: jede Minute, in der sich Zustände/Texte ändern, ist ein Sprungziel (Prozentzahlen ausgenommen).
-  const sign=at=>{const g=graphOf(c,evaluateCase(c,fixture,at),at);
-   return JSON.stringify([g.head,Object.values(g.nodes).map(n=>[n.status,n.sub,(n.meters??[]).map(m=>m.value==null?m.label:m.label.replace(/[\d,.]+ %/g,''))])]);};
-  let previous=sign(from);
-  for(let at=from+60;at<=through;at+=60){const now=sign(at);if(now!==previous)expect(times,`Änderung um ${at}`).toContain(at);previous=now;}
  },60000);
+ // Wächter in beide Richtungen: jede sichtbare Änderung ist ein Sprungziel und jedes Sprungziel eine Änderung.
+ it.each(OB_CASES.flatMap(c=>(c.orderBlocks.length===2?['first','second']:['second']).map(role=>[c.id,role])))('Sprungziele %s %s = sichtbare Änderungen',async(id,role)=>{
+  const c=caseOf(id),fixture=await loadCaseFixture(c),{from,through}=caseSteps(c,fixture),end=evaluateCase(c,fixture,through);
+  const entry=end.orderBlocks.find(o=>o.role===role);
+  const times=graphChangeTimes({entry,context:end.context,pair:end.pair,partner:end.orderBlocks.find(o=>o!==entry)??null});
+  const sign=at=>{const g=graphOf(c,evaluateCase(c,fixture,at),at,role);
+   return JSON.stringify([g.head,g.text,g.history,Object.values(g.nodes).map(n=>[n.status,n.sub,n.headline,(n.meters??[]).map(m=>m.label.replace(/[\d,.]+ %/g,''))])]);};
+  const changes=[];let previous=sign(from);
+  for(let at=from+60;at<=through;at+=60){const now=sign(at);if(now!==previous)changes.push(at);previous=now;}
+  expect(times.filter(t=>t>from&&t<=through)).toEqual(changes);
+ },120000);
 });

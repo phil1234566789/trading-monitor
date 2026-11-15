@@ -79,8 +79,8 @@ function sideTrack(dir,entry,context){
 const routeText=(name,x)=>`${name}: ${x.status}${x.status==='entry'?` ${price(x.entryPrice)} · ${time(x.entryTime)} · SL ${price(x.stopLoss)}`:x.reason?' · '+reasonText(x.reason):''}`;
 // Ausgabe-Box: zuerst die Reaktion (das Ergebnis von evaluateOrderBlockReaction), darunter klein die Entry-Routen.
 // Produkt-unknown heißt aus Philips Sicht „pending“; der Produktwert steht klein darunter, nichts wird neu aggregiert.
-function resultNode(r,first){
- const state=r?.state??'unknown',routes=Object.entries(first?{}:r?.routes??{});
+function resultNode(r,first,resultRoutes){
+ const state=r?.state??'unknown',routes=Object.entries(resultRoutes);
  const lines=[state==='unknown'?`Produkt: unknown${r?.reason?' · '+reasonText(r.reason):''}`:null,
   first?'OB1 trägt keinen Entry':routes.length?null:'Entry-Routen: noch keine',...routes.map(([k,x])=>routeText(k,x))].filter(Boolean);
  return {label:'Ausgabe',headline:`Reaktion: ${state==='unknown'?'pending':state}`,
@@ -106,11 +106,16 @@ function bCheckNode(b){
  return node('unknown',b.status==='pending'?'◇ offen':`unknown · ${reasonText(b.reason)}`);
 }
 
-// role/pair/partner: OB1 eines DOB endet im Hold-Gate, OB2 bzw. Einzel-OB in SL und Entry-Routen.
-export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,bridgeClosures=false,pair=null,partner=null}){
- const {orderBlock:ob,reaction:r,role='second'}=entry,adj=adjective(dir);
- const contact=r?.contact,fvg=r?.fvg,rejected=r?.state==='false',closed=r?.reason==='marketClosed',live=r?.state==='true';
- const first=role==='first',routes=live&&!first?r.routes:{},open=s=>s?'unknown':'not-visited';
+// Rollen-Weiche für Graph und Sprungziele: OB1 eines DOB endet im Hold-Gate (nur dort zählen Paar und Partner),
+// OB2 bzw. Einzel-OB in SL und Entry-Routen (Routen-Knoten erst mit Reaktion true, Ausgabe zeigt alle Produktrouten).
+function roleView({entry,pair=null,partner=null}){
+ const r=entry.reaction,first=(entry.role??'second')==='first',live=r?.state==='true';
+ return {first,live,routes:live&&!first?r.routes:{},resultRoutes:first?{}:r?.routes??{},pair:first?pair:null,partner:first?partner:null};
+}
+
+export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,bridgeClosures=false,...links}){
+ const {orderBlock:ob,reaction:r}=entry,adj=adjective(dir),{first,live,routes,resultRoutes,pair,partner}=roleView({entry,...links});
+ const contact=r?.contact,fvg=r?.fvg,rejected=r?.state==='false',closed=r?.reason==='marketClosed',open=s=>s?'unknown':'not-visited';
  const n={};
  n.detect={label:`${dir===1?'Bullische':'Bärische'} M5-OB erkannt`,status:ob?'visited':'unknown',sub:ob?`${range(ob)} · ${time(ob.recognizedAt)}`:'noch nicht bekannt',
   detail:[ob?`M5-OB ${range(ob)}, bekannt ${time(ob.recognizedAt)}.`:'Die M5-OB ist zu diesem Stand noch nicht bekannt.']};
@@ -152,7 +157,7 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
  n.routeA={label:'Route a: Entry bei FVG-Bestätigung',...routeEntry(a,'Erst mit Reaktion true.')};
  n.bCheck=bCheckNode(b);
  n.entryB={label:'Entry b',...(n.bCheck.status==='visited'?routeEntry(b):routeEntry(null,b?'Route b hat das Entry-Gate nicht erreicht.':'Erst mit Reaktion true.'))};
- n.result=resultNode(r,first);
+ n.result=resultNode(r,first,resultRoutes);
  Object.assign(n,sideTrack(dir,entry,context));
 
  const v=s=>s==='visited'||s==='rejected'?s:'not-visited';
@@ -184,12 +189,21 @@ function history(ob,r,routes,evaluatedAt){
 
 // Sprungziele für „vorige/nächste Änderung“: alle Zeitpunkte, an denen sich der Plan ändert, aus den knownAt-Zeiten
 // des Endergebnisses. Das Produkt ist zeitpunkttreu, darum gelten sie auch für frühere Slider-Stände.
-export function graphChangeTimes({entry,context,pair=null,partner=null}){
- const {orderBlock:ob,reaction:r}=entry;
- const times=[ob?.recognizedAt,r?.contact?.knownAt,r?.knownAt,pair?.recognizedAt,partner?.reaction?.knownAt];
- for(const x of Object.values(r?.routes??{}))times.push(x.status==='entry'?x.entryTime:x.knownAt);
- for(const f of entry.internalFvgs??[])if(f!==r?.fvg)times.push(f.recognizedAt,...fillChangeTimes(context,f),...orderBlockChangeTimes(context,f.orderBlock));
- return [...new Set(times.filter(Number.isFinite))].sort((a,b)=>a-b);
+export function graphChangeTimes({entry,context,...links}){
+ const {orderBlock:ob,reaction:r}=entry,{resultRoutes,pair,partner}=roleView({entry,...links});
+ if(!ob)return [];
+ // Hold-Knoten zeigt Paar/Partner erst ab der eigenen Reaktion true; vorher wäre der Sprung leer.
+ const holdFrom=r?.state==='true'?r.knownAt:Infinity,fromHold=t=>t>=holdFrom?t:null;
+ const times=[ob.recognizedAt,r?.contact?.knownAt,r?.knownAt,fromHold(pair?.recognizedAt),fromHold(partner?.reaction?.knownAt)];
+ for(const x of Object.values(resultRoutes))times.push(x.status==='entry'?x.entryTime:x.knownAt);
+ const fvgs=(entry.internalFvgs??[]).filter(f=>f!==r?.fvg);
+ fvgs.forEach((f,i)=>{
+  // Die Seitenspur zeigt nur den M1-OB der jeweils jüngsten internen FVG, also nur in deren Zeitfenster.
+  const until=fvgs[i+1]?.recognizedAt??Infinity;
+  times.push(f.recognizedAt,...fillChangeTimes(context,f),...orderBlockChangeTimes(context,f.orderBlock).filter(t=>t<until));
+ });
+ // Vor dem Bekanntwerden der OB zeigt der Plan nur „noch nicht bekannt“; frühere Zeiten wären leere Sprünge.
+ return [...new Set(times.filter(t=>Number.isFinite(t)&&t>=ob.recognizedAt))].sort((a,b)=>a-b);
 }
 
 // Seitenspur wechselt bei erster Berührung (Label „berührt“) und beim Ende von „offen“ (gefüllt oder unbekannt).
