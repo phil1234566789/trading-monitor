@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zwei DOB-Paare im Screenshot</title>
+<style>
+:root{color-scheme:dark light;--bg:#131722;--fg:#e2e6ed;--muted:#a8b0bd;--line:#536071;--candleUp:#26a69a;--candleDown:#ef5350;--tradeLoss:#ef5350}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}main{max-width:850px;margin:auto;padding:20px}h1{font-size:23px;font-weight:600;margin:0 0 8px}h2{font-size:17px;font-weight:500;margin:0}p{margin:0 0 12px}.muted,small{color:var(--muted)}section{padding:18px 0;border-top:1px solid var(--line)}.head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.loss{color:var(--tradeLoss)}.facts{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:10px 0 0}.facts strong{font-weight:500}.facts span{display:block}.plot{display:block;width:100%;height:190px}.foot{margin-top:12px}.note{font-size:12px}
+@media(prefers-color-scheme:light){:root{--bg:#f7f9fc;--fg:#1c2633;--muted:#536071;--line:#a8b0bd;--candleUp:#16796f;--candleDown:#b73835;--tradeLoss:#b73835}}
+@media(max-width:430px){main{padding:12px}h1{font-size:20px}.facts{gap:12px}}
+</style>
+<main>
+<h1>Zwei sichtbare Boxen · zwei verschiedene DOB-Paare</h1>
+<p>Die roten Boxen im Ausschnitt sind jeweils <strong>OB2</strong>. Ihre Partner liegen außerhalb des Screenshots.</p>
+<p class="muted note">Rekonstruktion aus nativen XAUUSD-M5-Daten; noch keine durch einen Pin bestätigte Bildzuordnung. Zeiten: Europe/Berlin.</p>
+<section id="short"><div class="head"><h2>Short-Paar · beide OBs bärisch</h2><span class="loss">Chartfarbe rot: späterer Loss</span></div><svg class="plot" role="img" aria-label="Bärisches Paar: OB2 liegt unter OB1; OB1 liegt außerhalb des Screenshots"></svg><div class="facts"><div><strong>OB1 · außerhalb des Bilds</strong><span>10.11.2026 · 08:05</span><span>4.121,03–4.126,48 USD</span></div><div><strong>OB2 · obere sichtbare Box</strong><span>10.11.2026 · 11:45</span><span>4.076,37–4.078,52 USD</span></div></div></section>
+<section id="long"><div class="head"><h2>Long-Paar · beide OBs bullisch</h2><span class="loss">Chartfarbe rot: späterer Loss</span></div><svg class="plot" role="img" aria-label="Bullisches Paar: OB2 liegt über OB1 vom Vortag; OB1 liegt außerhalb des Screenshots"></svg><div class="facts"><div><strong>OB1 · außerhalb des Bilds</strong><span>09.11.2026 · 01:10</span><span>4.054,91–4.069,21 USD</span></div><div><strong>OB2 · untere sichtbare Box</strong><span>10.11.2026 · 13:00</span><span>4.069,32–4.074,10 USD</span></div></div><p class="muted note foot">Ein weiterer rekonstruierter Long-Partner beginnt am 09.11. um 01:05. Gezeigt ist das zuletzt zugeordnete Paar.</p></section>
+<p><strong>Die beiden sichtbaren OB2-Boxen gehören nicht zusammen.</strong> Rot beschreibt hier den Ausgang, nicht Long oder Short.</p>
+<p class="muted note">Nur Preiszonen, keine erfundenen Kerzen. Preisachse je Paar separat; Zeitabstand im Pfeil verkürzt. USD je Feinunze. Farbgrundlage: chartColors.js · candleUp / candleDown / tradeLoss.</p>
+</main>
+<script>
+(()=>{
+ const pairs=[{id:'short',first:[4121.03,4126.48],second:[4076.37,4078.52],token:'--candleDown',arrow:'OB2 tiefer'},
+ {id:'long',first:[4054.91,4069.21],second:[4069.32,4074.10],token:'--candleUp',arrow:'OB2 höher'}];
+ const ns='http://www.w3.org/2000/svg',format=n=>n.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+ function draw(pair){
+  const svg=document.querySelector('#'+pair.id+' svg'),w=svg.getBoundingClientRect().width;
+  svg.replaceChildren();const color=getComputedStyle(document.documentElement).getPropertyValue(pair.token).trim();
+  const low=Math.min(...pair.first,...pair.second)-3,high=Math.max(...pair.first,...pair.second)+3;
+  const y=p=>164-(p-low)/(high-low)*134,zw=w<360?72:94,x1=64,x2=w-zw-18;
+  const el=(tag,attrs,text)=>{const n=document.createElementNS(ns,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text)n.textContent=text;svg.append(n);return n;};
+  for(const price of [high-3,low+3]){el('line',{x1:64,x2:w-10,y1:y(price),y2:y(price),stroke:'var(--line)','stroke-opacity':'.35'});el('text',{x:2,y:y(price)-5,fill:'var(--muted)','font-size':11},format(price));}
+  for(const [i,zone]of [pair.first,pair.second].entries()){
+   const x=i?x2:x1,top=y(zone[1]),height=Math.max(3,y(zone[0])-top);
+   el('rect',{x,y:top,width:zw,height,fill:color,'fill-opacity':'.16',stroke:color,'stroke-width':1.5,...(!i?{'stroke-dasharray':'5 4'}:{})});
+   el('text',{x:x+zw/2,y:Math.max(20,top-8),'text-anchor':'middle',fill:'var(--fg)','font-size':13},i?'OB2':'OB1');
+  }
+  const a=x1+zw+8,b=x2-8,ay=y((pair.first[0]+pair.first[1])/2),by=y((pair.second[0]+pair.second[1])/2);
+  if(b>a){el('line',{x1:a,y1:ay,x2:b,y2:by,stroke:'var(--muted)','stroke-width':1.5,'stroke-dasharray':'4 4'});const angle=Math.atan2(by-ay,b-a);el('path',{d:`M${b-8*Math.cos(angle-.5)} ${by-8*Math.sin(angle-.5)}L${b} ${by}L${b-8*Math.cos(angle+.5)} ${by-8*Math.sin(angle+.5)}`,fill:'none',stroke:'var(--muted)','stroke-width':1.5});}
+  el('text',{x:w/2,y:187,'text-anchor':'middle',fill:'var(--muted)','font-size':12},pair.arrow+' · Zeitlücke verkürzt');
+ }
+ const resize=new ResizeObserver(()=>pairs.forEach(draw));pairs.forEach(pair=>resize.observe(document.querySelector('#'+pair.id+' svg')));pairs.forEach(draw);
+})();
+</script></html>

@@ -1,0 +1,265 @@
+{
+  "scope": "Reviewed standalone debugger/status quo; known Pin501 quality gap; excludes WIP bulk/screenshots/handoff/secrets/browser state",
+  "files": [
+    {
+      "path": "build-ob-reaction-entry.cjs",
+      "sha256": "76120e4bb8ac963d7eb705d2145b84352d77a0dc4757a731dfada6285c81d088",
+      "bytes": 2419
+    },
+    {
+      "path": "build-ob-reaction-rendering.cjs",
+      "sha256": "1cfecc005c41a1760b129e150226049ba73e76fb202cdc00e1467f891247bdc0",
+      "bytes": 1503
+    },
+    {
+      "path": "dob-pin471-retest-sweep.html",
+      "sha256": "855024fa7b098ffb194261b4636f899b02fc141fde5b8f9be9760cf26e9af3a0",
+      "bytes": 13222
+    },
+    {
+      "path": "dob-screenshot-pairs.html",
+      "sha256": "0d3b59d7330181839a9b949543960c61699cbd1169282b0866572d3a86101bb3",
+      "bytes": 5520
+    },
+    {
+      "path": "dob-status-quo.html",
+      "sha256": "fcf014915442f93dc13a257547cdabde5e5b3f6b58529ca11a0109c9de83b9e1",
+      "bytes": 184000
+    },
+    {
+      "path": "index.html",
+      "sha256": "f09fe5ce265012a773fb02f9b25f4e48f6d7580fb352f2a502d6a7f570eb5b09",
+      "bytes": 637
+    },
+    {
+      "path": "ob-mitigation-native-data-502.js",
+      "sha256": "754a8b717efb7a405f55cec1840e353cb15e5d663c0808b30b3146ff95d28688",
+      "bytes": 102918
+    },
+    {
+      "path": "ob-mitigation-native-data-502.json",
+      "sha256": "deb34c6d29f4addfd5d70baca8d627a5d6a768ebe2f06106a359d84387076c70",
+      "bytes": 173861
+    },
+    {
+      "path": "ob-mitigation-native-data-503.js",
+      "sha256": "b5e304382716336a886aad1e2df6451d7409358e7e8cf27fdafa190e953e3a16",
+      "bytes": 102563
+    },
+    {
+      "path": "ob-mitigation-native-data-503.json",
+      "sha256": "90c4c54cfa983bc798cbd0d766de0c5b1bbc2ec07892fc5a51bc3e38ec1dca26",
+      "bytes": 173308
+    },
+    {
+      "path": "ob-mitigation-native-data-504.js",
+      "sha256": "c1787df81cce912f0c6930df665be4490a6c88d4d7c77b8402d7cbf1360f0040",
+      "bytes": 103919
+    },
+    {
+      "path": "ob-mitigation-native-data-504.json",
+      "sha256": "9a0f4d78e0faf3c2c456d05561b0651bfcb8aae66f4bebecbbe241aef42c8968",
+      "bytes": 175442
+    },
+    {
+      "path": "ob-mitigation-native-data-505.js",
+      "sha256": "98e0df0bf5406cf9a40c25ce5f2041245bf636f379f9fc5ca32d135393c7e191",
+      "bytes": 63459
+    },
+    {
+      "path": "ob-mitigation-native-data-505.json",
+      "sha256": "2470bf83cfcbf8e4f15ac6673471756f843ba1a13899a3790f88b873169a7b27",
+      "bytes": 106268
+    },
+    {
+      "path": "ob-reaction-api.js",
+      "sha256": "4d33dd0c7ec7fb5b53cc55822d0c968ee205346d9eb91159b41ea040f60d878b",
+      "bytes": 3026
+    },
+    {
+      "path": "ob-reaction-api.test.cjs",
+      "sha256": "42341c2a9a6322239f327e1a80b84bf9f761b5e3349a3ecf62e5678a2baffa85",
+      "bytes": 5456
+    },
+    {
+      "path": "ob-reaction-contact.js",
+      "sha256": "60027ff8a30f07c066d2d5b0981d7aa93e79c38d13fc3f98cfb72a0ddd204f7d",
+      "bytes": 1880
+    },
+    {
+      "path": "ob-reaction-contact.test.cjs",
+      "sha256": "d3873bd7c4d612b0337069e268d6cea06fe7d24f11b96fb5cf17d3011e615a04",
+      "bytes": 3597
+    },
+    {
+      "path": "ob-reaction-content.js",
+      "sha256": "acbd55b38dc7c116dfd9fc09cae6136bdf39d37ebc66b4d141f020c41a076840",
+      "bytes": 8634
+    },
+    {
+      "path": "ob-reaction-content.json",
+      "sha256": "83aeb0ff1600b2531e593f195de89f28331d905b2851d75d13ff97f7f46e27fe",
+      "bytes": 9569
+    },
+    {
+      "path": "ob-reaction-counter.test.cjs",
+      "sha256": "facdd7e99cfab5d5bded1c6bdbb925ea1bf13af6f0bc4d161aecffb0f7df86cd",
+      "bytes": 2111
+    },
+    {
+      "path": "ob-reaction-debugger-cases.js",
+      "sha256": "4c651fc2e04467bb532b1025894f30fb55e2dcc20ee0ea64679267c413d23b04",
+      "bytes": 7568
+    },
+    {
+      "path": "ob-reaction-debugger-ui.js",
+      "sha256": "b6673ed9ba73a09682754f58975baec6111a8948034857dc82e4294f5cd1069d",
+      "bytes": 10850
+    },
+    {
+      "path": "ob-reaction-debugger.html",
+      "sha256": "a028f6c54fdaafd080062921f7e3eab6cee22927397c82e826bf712236d51a1c",
+      "bytes": 11337
+    },
+    {
+      "path": "ob-reaction-debugger.js",
+      "sha256": "ceb9a9d7b16f22e2999c8ed996d33478fbed0ea1a91e3badbecec3dfc79faca8",
+      "bytes": 2578
+    },
+    {
+      "path": "ob-reaction-debugger.test.cjs",
+      "sha256": "62706f09728fae03f406af7d12acb82b1f70120df6bf66fe701ffb8dd2ce273f",
+      "bytes": 11527
+    },
+    {
+      "path": "ob-reaction-entry-source-manifest.json",
+      "sha256": "c00bc2cd0a9e5f43e19b660db6214134b92fc80cba843cecbf92c46e2d1c6edb",
+      "bytes": 1749
+    },
+    {
+      "path": "ob-reaction-entry-source.js",
+      "sha256": "f6b800731607de348be3bdafd26a2f0232eaa0f5352bb2db8482ad95f77f3857",
+      "bytes": 30908
+    },
+    {
+      "path": "ob-reaction-entry.test.cjs",
+      "sha256": "1debdffb5eccefb673cc2772d92875e4914dc18223d95dc424a5aad0ed1bd00c",
+      "bytes": 2621
+    },
+    {
+      "path": "ob-reaction-graph-ui.js",
+      "sha256": "844fbb15e98894be0319533b14a6e16bda1f592b45bd11e3f7b1ff244c8aed31",
+      "bytes": 19188
+    },
+    {
+      "path": "ob-reaction-graph.js",
+      "sha256": "42532028da2eadf169551dbcca30abe40752e56b2a89fe96428c693ea7915413",
+      "bytes": 2433
+    },
+    {
+      "path": "ob-reaction-graph.test.cjs",
+      "sha256": "9e595d8ab7ba18d1f794fc4e97cff6aee30a90d5a144aff3c8f14c8712f495c2",
+      "bytes": 2745
+    },
+    {
+      "path": "ob-reaction-internal.js",
+      "sha256": "2c3f4e86d3722beb3ef1b6b4095af404a6c82d902ceca80f15e2af1c05aab1f4",
+      "bytes": 2479
+    },
+    {
+      "path": "ob-reaction-internal.test.cjs",
+      "sha256": "85d7c032bd4bdfa798fdf946d686967e7f16b5d9dd7b4fbab8d6dc86633a9ebe",
+      "bytes": 1590
+    },
+    {
+      "path": "ob-reaction-positive-dob.test.cjs",
+      "sha256": "b1bbad4404e4e07d40a7ef544ef6ae4a033aec6c2991836c9edeacd7d43dc1c3",
+      "bytes": 2943
+    },
+    {
+      "path": "ob-reaction-rendering.js",
+      "sha256": "ee4236a498b4a1fbe2434e39a21a561a9e51393838590b04421132c8ae68d6ee",
+      "bytes": 2107
+    },
+    {
+      "path": "ob-reaction-route-input.js",
+      "sha256": "43c92d8ea8fad526f8b276263d6345b00589885bca6865e43df8b66baaa44d93",
+      "bytes": 3055
+    },
+    {
+      "path": "ob-reaction-sl-evidence.js",
+      "sha256": "945dd1bfdd6f20c94f2acc5c979cd9b62d606e440db01e12c0b87675a6837f69",
+      "bytes": 68949
+    },
+    {
+      "path": "ob-reaction-sl-evidence.json",
+      "sha256": "0681ef5f1318c601c8de1d3949f90d4489da084aceb0eef9462b5a19c58f5e67",
+      "bytes": 128636
+    },
+    {
+      "path": "ob-reaction-sl.js",
+      "sha256": "1c15a8d673d26ab605606c41698c04982c64e6660c040743c7a7ce72a9895db8",
+      "bytes": 2723
+    },
+    {
+      "path": "ob-reaction-sl.test.cjs",
+      "sha256": "52cb09b75332020a9ad6a929cc6f8283d151d203ca1f748c2b81316db2354207",
+      "bytes": 2794
+    },
+    {
+      "path": "ob-reaction-user-decisions.js",
+      "sha256": "0fff2ba94b9d6cea8391236ed1d3f7d8b882460511add5b193b486e4f4bd5f41",
+      "bytes": 1181
+    },
+    {
+      "path": "ob-reaction-visual.js",
+      "sha256": "887f9cfa946d4b1213b589d06020676bd0b8e63f7f5c4b10a9b93123d5ff2de3",
+      "bytes": 1510
+    },
+    {
+      "path": "ob-reaction-visual.test.cjs",
+      "sha256": "598e2014454a8165a673bc28f180cdf69e306ce4cc1f8350c7219ba38dc491f2",
+      "bytes": 3505
+    },
+    {
+      "path": "p14-debug-native-data.js",
+      "sha256": "b5b077423eb10f91d95ea29a6785dc044052e0a0b8b8c900478c38ad48219d22",
+      "bytes": 53181
+    },
+    {
+      "path": "p14-debug-native-data.json",
+      "sha256": "ec22ebfb7248ac8b6944cf0311853b08266706d5b7d04adf8e7224ae2002bcb3",
+      "bytes": 90581
+    },
+    {
+      "path": "package.json",
+      "sha256": "b80d69725d670265452358a4d212672dedb3ca8ef0a19c1f40954fb291519ce7",
+      "bytes": 108
+    },
+    {
+      "path": "package.test.cjs",
+      "sha256": "f33a8518b50be7c7f00040006b078b6c25db82a29f88644c8dbd4e9429d641be",
+      "bytes": 1285
+    },
+    {
+      "path": "references/dob-positive-505-506.json",
+      "sha256": "24f73d8a88e7e543b7ab8e923442ab541e6680186cb609b7f4c9b93de4b1164c",
+      "bytes": 104336
+    },
+    {
+      "path": "ts11-pin480-sweep-extrem.html",
+      "sha256": "d52ecf24cfafea4919469fb06f49eb61140dd797cc0cbaa8b8c2c44050248bfd",
+      "bytes": 8259
+    },
+    {
+      "path": "ts11-pin481-context.html",
+      "sha256": "c7a3cf44efaccb0b770a54db94782775bb1106e3a18f105496b3ace008fe4969",
+      "bytes": 15189
+    },
+    {
+      "path": "ts11-sweep-abfolge.html",
+      "sha256": "344df76b0e5232fc2b42914848c0b1d5add84d415cf4ba7543864b89c7c8d1a6",
+      "bytes": 11596
+    }
+  ]
+}

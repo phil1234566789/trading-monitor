@@ -1,0 +1,3822 @@
+{
+  "schemaVersion": 1,
+  "scope": "Read-only SL source evidence; no production or new retest episode algorithm",
+  "definitions": {
+    "fullyInside": "same direction, FVG known at assessment, FVG bottom>=M5 bottom and FVG top<=M5 top; inclusive containment is explicit diagnostic convention",
+    "intersection": "existing candleTouchesOrderBlock({low:FVG.bottom,high:FVG.top},M5)",
+    "filled": "native closed M1 reaches far FVG boundary at/before assessment; future candles excluded",
+    "retestExtreme": "existing eligible touch to existing entry close only; initial episode endpoint remains separately undefined",
+    "slProposal": "User prototype rule only: at least one open internal FVG -> far M5 edge; none open -> known retest extreme at entry; unknown coverage/assignment/episode provenance stays unknown"
+  },
+  "cases": [
+    {
+      "caseID": "500",
+      "direction": "short",
+      "main": {
+        "top": 4181.98,
+        "bottom": 4178.9,
+        "dir": -1,
+        "fvg": 0.8599999999996726,
+        "active": false,
+        "touched": true,
+        "invalidated": false,
+        "retested": true,
+        "retestedAt": 1792154400,
+        "startTime": 1792150200,
+        "endTime": 1792153200,
+        "touchedTime": 1792153200,
+        "recognizedAt": 1792150800,
+        "firstOverlap": {
+          "candleTime": 1792153200,
+          "knownAt": 1792153500
+        },
+        "flagsAreFinalSourceSnapshot": true
+      },
+      "source": {
+        "file": "C:/Users/Philip/Documents/git/trading-monitor/.debug/pin-copy-button/test/fixtures/dob-native/2026-10-16.json",
+        "sha256": "d95c575a39696e1c4bde4591102fe248c4e16309da851d43ab12fd797cf60b82",
+        "fullSavedDayUsed": true,
+        "firstSavedM1": 1792108800,
+        "olderFormationsUnknown": true
+      },
+      "internalFvgInventory": [
+        {
+          "direction": "short",
+          "candleTime": 1792123620,
+          "recognizedAt": 1792123740,
+          "bottom": 4179.32,
+          "top": 4181.44,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792124460,
+          "firstFullFillKnownAt": 1792124520,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792123680,
+          "recognizedAt": 1792123800,
+          "bottom": 4177.83,
+          "top": 4179.1,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792124220,
+          "firstFullFillKnownAt": 1792124280,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792124520,
+          "recognizedAt": 1792124640,
+          "bottom": 4179.54,
+          "top": 4179.81,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792132380,
+          "firstFullFillKnownAt": 1792132440,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792138200,
+          "recognizedAt": 1792138320,
+          "bottom": 4180.13,
+          "top": 4180.55,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792138380,
+          "firstFullFillKnownAt": 1792138440,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792143600,
+          "recognizedAt": 1792143720,
+          "bottom": 4181.23,
+          "top": 4181.34,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792143840,
+          "firstFullFillKnownAt": 1792143900,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792144260,
+          "recognizedAt": 1792144380,
+          "bottom": 4181.84,
+          "top": 4182.12,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792145640,
+          "firstFullFillKnownAt": 1792145700,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792144320,
+          "recognizedAt": 1792144440,
+          "bottom": 4181.09,
+          "top": 4181.58,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792145520,
+          "firstFullFillKnownAt": 1792145580,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792144380,
+          "recognizedAt": 1792144500,
+          "bottom": 4179.27,
+          "top": 4180.7,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792145520,
+          "firstFullFillKnownAt": 1792145580,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792147680,
+          "recognizedAt": 1792147800,
+          "bottom": 4179.99,
+          "top": 4181.19,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792149960,
+          "firstFullFillKnownAt": 1792150020,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792147740,
+          "recognizedAt": 1792147860,
+          "bottom": 4179.1,
+          "top": 4179.71,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792149720,
+          "firstFullFillKnownAt": 1792149780,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792150140,
+          "recognizedAt": 1792150260,
+          "bottom": 4179.39,
+          "top": 4180.48,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792154040,
+          "firstFullFillKnownAt": 1792154100,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792150200,
+          "recognizedAt": 1792150320,
+          "bottom": 4178.65,
+          "top": 4178.9,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792150320,
+          "firstFullFillKnownAt": 1792150380,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        },
+        {
+          "direction": "short",
+          "candleTime": 1792154160,
+          "recognizedAt": 1792154280,
+          "bottom": 4178.92,
+          "top": 4179.16,
+          "fullyInside": true,
+          "firstFullFillCandleTime": null,
+          "firstFullFillKnownAt": null,
+          "checkedThrough": 1792155660,
+          "coverageComplete": true
+        }
+      ],
+      "inventoryAsOfContract": "Only include recognizedAt<=asOf; firstFullFillKnownAt<=asOf means filled; later fill remains open until known. coverageComplete=false -> unknown without decisive known fill.",
+      "assessments": [
+        {
+          "route": "a",
+          "variant": "immediate",
+          "evaluatedAt": 1792154280,
+          "evaluatedAtBerlin": "2026-10-16 14:38:00",
+          "entryKnownAt": 1792154280,
+          "entryStatus": "ready",
+          "entrySource": "Existing helper only, not a newly approved prototype entry; user entry-A rejection and M5 assignment remain independent",
+          "entry": {
+            "status": "ready",
+            "entryTime": 1792154280,
+            "entryPrice": 4177.28,
+            "confirmationCandleTime": 1792154220,
+            "fvg": {
+              "direction": "short",
+              "candleTime": 1792154160,
+              "recognizedAt": 1792154280,
+              "gap": 0.23999999999978172,
+              "bottom": 4178.92,
+              "top": 4179.16,
+              "confirmationCandleTime": 1792154220,
+              "confirmationPrice": 4177.28,
+              "orderBlock": {
+                "top": 4181.45,
+                "bottom": 4179.16,
+                "dir": -1,
+                "fvg": 0.23999999999978172,
+                "active": true,
+                "touched": false,
+                "invalidated": false,
+                "retested": false,
+                "retestedAt": null,
+                "startTime": 1792154160,
+                "endTime": 1792154220,
+                "recognizedAt": 1792154280,
+                "timeframe": "1M"
+              }
+            },
+            "variant": "immediate"
+          },
+          "entryCandidate": {
+            "knownAt": 1792154280,
+            "entryTime": 1792154280,
+            "entryPrice": 4177.28,
+            "confirmationCandleTime": 1792154220
+          },
+          "routeUserAssessment": {
+            "status": "notRejectedByThisEvidence",
+            "knownAt": 1792154280
+          },
+          "confirmedM5Assignment": true,
+          "assignmentStatus": "assigned",
+          "fullyInsideInternalFvgs": [
+            {
+              "direction": "short",
+              "candleTime": 1792123620,
+              "recognizedAt": 1792123740,
+              "bottom": 4179.32,
+              "top": 4181.44,
+              "fullFillAt": 1792124520,
+              "fullFillCandleTime": 1792124460,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 509,
+                "actual": 509,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792124520,
+              "recognizedAt": 1792124640,
+              "bottom": 4179.54,
+              "top": 4179.81,
+              "fullFillAt": 1792132440,
+              "fullFillCandleTime": 1792132380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 494,
+                "actual": 494,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792138200,
+              "recognizedAt": 1792138320,
+              "bottom": 4180.13,
+              "top": 4180.55,
+              "fullFillAt": 1792138440,
+              "fullFillCandleTime": 1792138380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 266,
+                "actual": 266,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792143600,
+              "recognizedAt": 1792143720,
+              "bottom": 4181.23,
+              "top": 4181.34,
+              "fullFillAt": 1792143900,
+              "fullFillCandleTime": 1792143840,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 176,
+                "actual": 176,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144320,
+              "recognizedAt": 1792144440,
+              "bottom": 4181.09,
+              "top": 4181.58,
+              "fullFillAt": 1792145580,
+              "fullFillCandleTime": 1792145520,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 164,
+                "actual": 164,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144380,
+              "recognizedAt": 1792144500,
+              "bottom": 4179.27,
+              "top": 4180.7,
+              "fullFillAt": 1792145580,
+              "fullFillCandleTime": 1792145520,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 163,
+                "actual": 163,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792147680,
+              "recognizedAt": 1792147800,
+              "bottom": 4179.99,
+              "top": 4181.19,
+              "fullFillAt": 1792150020,
+              "fullFillCandleTime": 1792149960,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 108,
+                "actual": 108,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792147740,
+              "recognizedAt": 1792147860,
+              "bottom": 4179.1,
+              "top": 4179.71,
+              "fullFillAt": 1792149780,
+              "fullFillCandleTime": 1792149720,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 107,
+                "actual": 107,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792150140,
+              "recognizedAt": 1792150260,
+              "bottom": 4179.39,
+              "top": 4180.48,
+              "fullFillAt": 1792154100,
+              "fullFillCandleTime": 1792154040,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 67,
+                "actual": 67,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792154160,
+              "recognizedAt": 1792154280,
+              "bottom": 4178.92,
+              "top": 4179.16,
+              "fullFillAt": null,
+              "fullFillCandleTime": null,
+              "fillStatus": "open",
+              "coverage": {
+                "expected": 0,
+                "actual": 0,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "intersectingFvgs": [
+            {
+              "direction": "short",
+              "candleTime": 1792123620,
+              "recognizedAt": 1792123740,
+              "bottom": 4179.32,
+              "top": 4181.44,
+              "fullFillAt": 1792124520,
+              "fullFillCandleTime": 1792124460,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 509,
+                "actual": 509,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792123680,
+              "recognizedAt": 1792123800,
+              "bottom": 4177.83,
+              "top": 4179.1,
+              "fullFillAt": 1792124280,
+              "fullFillCandleTime": 1792124220,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 508,
+                "actual": 508,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792124520,
+              "recognizedAt": 1792124640,
+              "bottom": 4179.54,
+              "top": 4179.81,
+              "fullFillAt": 1792132440,
+              "fullFillCandleTime": 1792132380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 494,
+                "actual": 494,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792138200,
+              "recognizedAt": 1792138320,
+              "bottom": 4180.13,
+              "top": 4180.55,
+              "fullFillAt": 1792138440,
+              "fullFillCandleTime": 1792138380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 266,
+                "actual": 266,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792143600,
+              "recognizedAt": 1792143720,
+              "bottom": 4181.23,
+              "top": 4181.34,
+              "fullFillAt": 1792143900,
+              "fullFillCandleTime": 1792143840,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 176,
+                "actual": 176,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144260,
+              "recognizedAt": 1792144380,
+              "bottom": 4181.84,
+              "top": 4182.12,
+              "fullFillAt": 1792145700,
+              "fullFillCandleTime": 1792145640,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 165,
+                "actual": 165,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144320,
+              "recognizedAt": 1792144440,
+              "bottom": 4181.09,
+              "top": 4181.58,
+              "fullFillAt": 1792145580,
+              "fullFillCandleTime": 1792145520,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 164,
+                "actual": 164,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144380,
+              "recognizedAt": 1792144500,
+              "bottom": 4179.27,
+              "top": 4180.7,
+              "fullFillAt": 1792145580,
+              "fullFillCandleTime": 1792145520,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 163,
+                "actual": 163,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792147680,
+              "recognizedAt": 1792147800,
+              "bottom": 4179.99,
+              "top": 4181.19,
+              "fullFillAt": 1792150020,
+              "fullFillCandleTime": 1792149960,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 108,
+                "actual": 108,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792147740,
+              "recognizedAt": 1792147860,
+              "bottom": 4179.1,
+              "top": 4179.71,
+              "fullFillAt": 1792149780,
+              "fullFillCandleTime": 1792149720,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 107,
+                "actual": 107,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792150140,
+              "recognizedAt": 1792150260,
+              "bottom": 4179.39,
+              "top": 4180.48,
+              "fullFillAt": 1792154100,
+              "fullFillCandleTime": 1792154040,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 67,
+                "actual": 67,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792150200,
+              "recognizedAt": 1792150320,
+              "bottom": 4178.65,
+              "top": 4178.9,
+              "fullFillAt": 1792150380,
+              "fullFillCandleTime": 1792150320,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 66,
+                "actual": 66,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792154160,
+              "recognizedAt": 1792154280,
+              "bottom": 4178.92,
+              "top": 4179.16,
+              "fullFillAt": null,
+              "fullFillCandleTime": null,
+              "fillStatus": "open",
+              "coverage": {
+                "expected": 0,
+                "actual": 0,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "partialOverlapFvgs": [
+            {
+              "direction": "short",
+              "candleTime": 1792123680,
+              "recognizedAt": 1792123800,
+              "bottom": 4177.83,
+              "top": 4179.1,
+              "fullFillAt": 1792124280,
+              "fullFillCandleTime": 1792124220,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 508,
+                "actual": 508,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144260,
+              "recognizedAt": 1792144380,
+              "bottom": 4181.84,
+              "top": 4182.12,
+              "fullFillAt": 1792145700,
+              "fullFillCandleTime": 1792145640,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 165,
+                "actual": 165,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792150200,
+              "recognizedAt": 1792150320,
+              "bottom": 4178.65,
+              "top": 4178.9,
+              "fullFillAt": 1792150380,
+              "fullFillCandleTime": 1792150320,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 66,
+                "actual": 66,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "openInternalCount": 1,
+          "unknownInternalCount": 0,
+          "retestWindowEvidence": {
+            "status": "ready",
+            "from": 1792153320,
+            "throughExclusive": 1792154280,
+            "extreme": 4181.45,
+            "extremeCandleTime": 1792154100,
+            "source": "Existing first eligible M1 touch through existing entry-confirmation close; not a newly inferred retest episode",
+            "episodeBoundaryStatus": "notSeparatelyDefined",
+            "bars": 16
+          },
+          "retestEpisode": {
+            "status": "unknown",
+            "reason": "No separate episode-end rule was authorized; do not convert the measured touch-to-entry window into a new episode definition"
+          },
+          "farM5Edge": 4181.98,
+          "stopLossEvidence": {
+            "status": "ready",
+            "stopLoss": 4181.98,
+            "source": "User prototype SL rule: at least one known open same-direction fully-contained M1 FVG at candidate entry"
+          },
+          "decisionNotApplied": true
+        },
+        {
+          "route": "b",
+          "variant": "retestReaction",
+          "evaluatedAt": 1792155660,
+          "evaluatedAtBerlin": "2026-10-16 15:01:00",
+          "entryKnownAt": null,
+          "entryStatus": "pending",
+          "entrySource": "Existing helper only, not a newly approved prototype entry; user entry-A rejection and M5 assignment remain independent",
+          "entry": {
+            "status": "pending",
+            "reason": "Die bestätigte FVG wurde am gewählten Stand noch nicht mindestens 50 % retestet (bei vollständiger Füllung ist derselbe Kerzenkontakt mit dem zugehörigen M1-OB erforderlich)."
+          },
+          "entryCandidate": null,
+          "routeUserAssessment": {
+            "status": "notRejectedByThisEvidence",
+            "knownAt": null
+          },
+          "confirmedM5Assignment": true,
+          "assignmentStatus": "assigned",
+          "fullyInsideInternalFvgs": [
+            {
+              "direction": "short",
+              "candleTime": 1792123620,
+              "recognizedAt": 1792123740,
+              "bottom": 4179.32,
+              "top": 4181.44,
+              "fullFillAt": 1792124520,
+              "fullFillCandleTime": 1792124460,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 532,
+                "actual": 532,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792124520,
+              "recognizedAt": 1792124640,
+              "bottom": 4179.54,
+              "top": 4179.81,
+              "fullFillAt": 1792132440,
+              "fullFillCandleTime": 1792132380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 517,
+                "actual": 517,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792138200,
+              "recognizedAt": 1792138320,
+              "bottom": 4180.13,
+              "top": 4180.55,
+              "fullFillAt": 1792138440,
+              "fullFillCandleTime": 1792138380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 289,
+                "actual": 289,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792143600,
+              "recognizedAt": 1792143720,
+              "bottom": 4181.23,
+              "top": 4181.34,
+              "fullFillAt": 1792143900,
+              "fullFillCandleTime": 1792143840,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 199,
+                "actual": 199,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144320,
+              "recognizedAt": 1792144440,
+              "bottom": 4181.09,
+              "top": 4181.58,
+              "fullFillAt": 1792145580,
+              "fullFillCandleTime": 1792145520,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 187,
+                "actual": 187,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144380,
+              "recognizedAt": 1792144500,
+              "bottom": 4179.27,
+              "top": 4180.7,
+              "fullFillAt": 1792145580,
+              "fullFillCandleTime": 1792145520,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 186,
+                "actual": 186,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792147680,
+              "recognizedAt": 1792147800,
+              "bottom": 4179.99,
+              "top": 4181.19,
+              "fullFillAt": 1792150020,
+              "fullFillCandleTime": 1792149960,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 131,
+                "actual": 131,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792147740,
+              "recognizedAt": 1792147860,
+              "bottom": 4179.1,
+              "top": 4179.71,
+              "fullFillAt": 1792149780,
+              "fullFillCandleTime": 1792149720,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 130,
+                "actual": 130,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792150140,
+              "recognizedAt": 1792150260,
+              "bottom": 4179.39,
+              "top": 4180.48,
+              "fullFillAt": 1792154100,
+              "fullFillCandleTime": 1792154040,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 90,
+                "actual": 90,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792154160,
+              "recognizedAt": 1792154280,
+              "bottom": 4178.92,
+              "top": 4179.16,
+              "fullFillAt": null,
+              "fullFillCandleTime": null,
+              "fillStatus": "open",
+              "coverage": {
+                "expected": 23,
+                "actual": 23,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "intersectingFvgs": [
+            {
+              "direction": "short",
+              "candleTime": 1792123620,
+              "recognizedAt": 1792123740,
+              "bottom": 4179.32,
+              "top": 4181.44,
+              "fullFillAt": 1792124520,
+              "fullFillCandleTime": 1792124460,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 532,
+                "actual": 532,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792123680,
+              "recognizedAt": 1792123800,
+              "bottom": 4177.83,
+              "top": 4179.1,
+              "fullFillAt": 1792124280,
+              "fullFillCandleTime": 1792124220,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 531,
+                "actual": 531,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792124520,
+              "recognizedAt": 1792124640,
+              "bottom": 4179.54,
+              "top": 4179.81,
+              "fullFillAt": 1792132440,
+              "fullFillCandleTime": 1792132380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 517,
+                "actual": 517,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792138200,
+              "recognizedAt": 1792138320,
+              "bottom": 4180.13,
+              "top": 4180.55,
+              "fullFillAt": 1792138440,
+              "fullFillCandleTime": 1792138380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 289,
+                "actual": 289,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792143600,
+              "recognizedAt": 1792143720,
+              "bottom": 4181.23,
+              "top": 4181.34,
+              "fullFillAt": 1792143900,
+              "fullFillCandleTime": 1792143840,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 199,
+                "actual": 199,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144260,
+              "recognizedAt": 1792144380,
+              "bottom": 4181.84,
+              "top": 4182.12,
+              "fullFillAt": 1792145700,
+              "fullFillCandleTime": 1792145640,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 188,
+                "actual": 188,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144320,
+              "recognizedAt": 1792144440,
+              "bottom": 4181.09,
+              "top": 4181.58,
+              "fullFillAt": 1792145580,
+              "fullFillCandleTime": 1792145520,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 187,
+                "actual": 187,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144380,
+              "recognizedAt": 1792144500,
+              "bottom": 4179.27,
+              "top": 4180.7,
+              "fullFillAt": 1792145580,
+              "fullFillCandleTime": 1792145520,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 186,
+                "actual": 186,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792147680,
+              "recognizedAt": 1792147800,
+              "bottom": 4179.99,
+              "top": 4181.19,
+              "fullFillAt": 1792150020,
+              "fullFillCandleTime": 1792149960,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 131,
+                "actual": 131,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792147740,
+              "recognizedAt": 1792147860,
+              "bottom": 4179.1,
+              "top": 4179.71,
+              "fullFillAt": 1792149780,
+              "fullFillCandleTime": 1792149720,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 130,
+                "actual": 130,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792150140,
+              "recognizedAt": 1792150260,
+              "bottom": 4179.39,
+              "top": 4180.48,
+              "fullFillAt": 1792154100,
+              "fullFillCandleTime": 1792154040,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 90,
+                "actual": 90,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792150200,
+              "recognizedAt": 1792150320,
+              "bottom": 4178.65,
+              "top": 4178.9,
+              "fullFillAt": 1792150380,
+              "fullFillCandleTime": 1792150320,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 89,
+                "actual": 89,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792154160,
+              "recognizedAt": 1792154280,
+              "bottom": 4178.92,
+              "top": 4179.16,
+              "fullFillAt": null,
+              "fullFillCandleTime": null,
+              "fillStatus": "open",
+              "coverage": {
+                "expected": 23,
+                "actual": 23,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "partialOverlapFvgs": [
+            {
+              "direction": "short",
+              "candleTime": 1792123680,
+              "recognizedAt": 1792123800,
+              "bottom": 4177.83,
+              "top": 4179.1,
+              "fullFillAt": 1792124280,
+              "fullFillCandleTime": 1792124220,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 531,
+                "actual": 531,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792144260,
+              "recognizedAt": 1792144380,
+              "bottom": 4181.84,
+              "top": 4182.12,
+              "fullFillAt": 1792145700,
+              "fullFillCandleTime": 1792145640,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 188,
+                "actual": 188,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "short",
+              "candleTime": 1792150200,
+              "recognizedAt": 1792150320,
+              "bottom": 4178.65,
+              "top": 4178.9,
+              "fullFillAt": 1792150380,
+              "fullFillCandleTime": 1792150320,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 89,
+                "actual": 89,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "openInternalCount": 1,
+          "unknownInternalCount": 0,
+          "retestWindowEvidence": {
+            "status": "unknown",
+            "reason": "No ready existing entry or missing retest history"
+          },
+          "retestEpisode": {
+            "status": "unknown",
+            "reason": "No separate episode-end rule was authorized; do not convert the measured touch-to-entry window into a new episode definition"
+          },
+          "farM5Edge": 4181.98,
+          "stopLossEvidence": {
+            "status": "unknown",
+            "reason": "No existing confirmed entry"
+          },
+          "decisionNotApplied": true
+        }
+      ]
+    },
+    {
+      "caseID": "502",
+      "direction": "long",
+      "main": {
+        "top": 4116.82,
+        "bottom": 4112.95,
+        "dir": 1,
+        "fvg": 0.9099999999998545,
+        "active": false,
+        "touched": true,
+        "invalidated": false,
+        "retested": true,
+        "retestedAt": 1792558800,
+        "startTime": 1792552500,
+        "endTime": 1792556700,
+        "touchedTime": 1792556700,
+        "recognizedAt": 1792553100,
+        "firstOverlap": {
+          "candleTime": 1792556700,
+          "knownAt": 1792557000
+        },
+        "flagsAreFinalSourceSnapshot": true
+      },
+      "source": {
+        "file": "C:/Users/Philip/Documents/git/trading-monitor/.debug/pin-copy-button/test/fixtures/dob-native/2026-10-21.json",
+        "sha256": "e20437177161c585e3181b42abb93e85fe8bca76821d79b18a9553d788c2839c",
+        "fullSavedDayUsed": true,
+        "firstSavedM1": 1792540800,
+        "olderFormationsUnknown": true
+      },
+      "internalFvgInventory": [
+        {
+          "direction": "long",
+          "candleTime": 1792540980,
+          "recognizedAt": 1792541100,
+          "bottom": 4114.05,
+          "top": 4114.1,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792544400,
+          "firstFullFillKnownAt": 1792544460,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792541040,
+          "recognizedAt": 1792541160,
+          "bottom": 4114.3,
+          "top": 4115.4,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792544400,
+          "firstFullFillKnownAt": 1792544460,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792541160,
+          "recognizedAt": 1792541280,
+          "bottom": 4116.59,
+          "top": 4117.41,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792541280,
+          "firstFullFillKnownAt": 1792541340,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792545900,
+          "recognizedAt": 1792546020,
+          "bottom": 4113.03,
+          "top": 4114.11,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792552380,
+          "firstFullFillKnownAt": 1792552440,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792545960,
+          "recognizedAt": 1792546080,
+          "bottom": 4115.57,
+          "top": 4116.26,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792547280,
+          "firstFullFillKnownAt": 1792547340,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792549500,
+          "recognizedAt": 1792549620,
+          "bottom": 4115.86,
+          "top": 4116.28,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792549740,
+          "firstFullFillKnownAt": 1792549800,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792550640,
+          "recognizedAt": 1792550760,
+          "bottom": 4114.88,
+          "top": 4115.8,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792551300,
+          "firstFullFillKnownAt": 1792551360,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792550700,
+          "recognizedAt": 1792550820,
+          "bottom": 4116.04,
+          "top": 4118.84,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792551240,
+          "firstFullFillKnownAt": 1792551300,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792552440,
+          "recognizedAt": 1792552560,
+          "bottom": 4114.81,
+          "top": 4115.98,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792558200,
+          "firstFullFillKnownAt": 1792558260,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792552500,
+          "recognizedAt": 1792552620,
+          "bottom": 4116.82,
+          "top": 4116.87,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792552620,
+          "firstFullFillKnownAt": 1792552680,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792559040,
+          "recognizedAt": 1792559160,
+          "bottom": 4116.01,
+          "top": 4116.47,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792561380,
+          "firstFullFillKnownAt": 1792561440,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792563180,
+          "recognizedAt": 1792563300,
+          "bottom": 4115.46,
+          "top": 4115.76,
+          "fullyInside": true,
+          "firstFullFillCandleTime": null,
+          "firstFullFillKnownAt": null,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        }
+      ],
+      "inventoryAsOfContract": "Only include recognizedAt<=asOf; firstFullFillKnownAt<=asOf means filled; later fill remains open until known. coverageComplete=false -> unknown without decisive known fill.",
+      "assessments": [
+        {
+          "route": "a",
+          "variant": "immediate",
+          "evaluatedAt": 1792557120,
+          "evaluatedAtBerlin": "2026-10-21 06:32:00",
+          "entryKnownAt": 1792557120,
+          "entryStatus": "ready",
+          "entrySource": "Existing helper only, not a newly approved prototype entry; user entry-A rejection and M5 assignment remain independent",
+          "entry": {
+            "status": "ready",
+            "entryTime": 1792557120,
+            "entryPrice": 4120.27,
+            "confirmationCandleTime": 1792557060,
+            "fvg": {
+              "direction": "long",
+              "candleTime": 1792557000,
+              "recognizedAt": 1792557120,
+              "gap": 1.6500000000005457,
+              "bottom": 4116.98,
+              "top": 4118.63,
+              "confirmationCandleTime": 1792557060,
+              "confirmationPrice": 4120.27,
+              "orderBlock": {
+                "top": 4116.98,
+                "bottom": 4114.84,
+                "dir": 1,
+                "fvg": 1.6500000000005457,
+                "active": true,
+                "touched": false,
+                "invalidated": false,
+                "retested": false,
+                "retestedAt": null,
+                "startTime": 1792557000,
+                "endTime": 1792557060,
+                "recognizedAt": 1792557120,
+                "timeframe": "1M"
+              }
+            },
+            "variant": "immediate"
+          },
+          "entryCandidate": {
+            "knownAt": 1792557120,
+            "entryTime": 1792557120,
+            "entryPrice": 4120.27,
+            "confirmationCandleTime": 1792557060
+          },
+          "routeUserAssessment": {
+            "status": "rejected",
+            "reason": "Explicit user: immediate entry unsuitable because of counter-direction FVG",
+            "knownAt": 1792557120
+          },
+          "confirmedM5Assignment": true,
+          "assignmentStatus": "assigned",
+          "fullyInsideInternalFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792540980,
+              "recognizedAt": 1792541100,
+              "bottom": 4114.05,
+              "top": 4114.1,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 267,
+                "actual": 267,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541040,
+              "recognizedAt": 1792541160,
+              "bottom": 4114.3,
+              "top": 4115.4,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 266,
+                "actual": 266,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545900,
+              "recognizedAt": 1792546020,
+              "bottom": 4113.03,
+              "top": 4114.11,
+              "fullFillAt": 1792552440,
+              "fullFillCandleTime": 1792552380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 185,
+                "actual": 185,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545960,
+              "recognizedAt": 1792546080,
+              "bottom": 4115.57,
+              "top": 4116.26,
+              "fullFillAt": 1792547340,
+              "fullFillCandleTime": 1792547280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 184,
+                "actual": 184,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792549500,
+              "recognizedAt": 1792549620,
+              "bottom": 4115.86,
+              "top": 4116.28,
+              "fullFillAt": 1792549800,
+              "fullFillCandleTime": 1792549740,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 125,
+                "actual": 125,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550640,
+              "recognizedAt": 1792550760,
+              "bottom": 4114.88,
+              "top": 4115.8,
+              "fullFillAt": 1792551360,
+              "fullFillCandleTime": 1792551300,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 106,
+                "actual": 106,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552440,
+              "recognizedAt": 1792552560,
+              "bottom": 4114.81,
+              "top": 4115.98,
+              "fullFillAt": null,
+              "fullFillCandleTime": null,
+              "fillStatus": "open",
+              "coverage": {
+                "expected": 76,
+                "actual": 76,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "intersectingFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792540980,
+              "recognizedAt": 1792541100,
+              "bottom": 4114.05,
+              "top": 4114.1,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 267,
+                "actual": 267,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541040,
+              "recognizedAt": 1792541160,
+              "bottom": 4114.3,
+              "top": 4115.4,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 266,
+                "actual": 266,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541160,
+              "recognizedAt": 1792541280,
+              "bottom": 4116.59,
+              "top": 4117.41,
+              "fullFillAt": 1792541340,
+              "fullFillCandleTime": 1792541280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 264,
+                "actual": 264,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545900,
+              "recognizedAt": 1792546020,
+              "bottom": 4113.03,
+              "top": 4114.11,
+              "fullFillAt": 1792552440,
+              "fullFillCandleTime": 1792552380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 185,
+                "actual": 185,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545960,
+              "recognizedAt": 1792546080,
+              "bottom": 4115.57,
+              "top": 4116.26,
+              "fullFillAt": 1792547340,
+              "fullFillCandleTime": 1792547280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 184,
+                "actual": 184,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792549500,
+              "recognizedAt": 1792549620,
+              "bottom": 4115.86,
+              "top": 4116.28,
+              "fullFillAt": 1792549800,
+              "fullFillCandleTime": 1792549740,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 125,
+                "actual": 125,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550640,
+              "recognizedAt": 1792550760,
+              "bottom": 4114.88,
+              "top": 4115.8,
+              "fullFillAt": 1792551360,
+              "fullFillCandleTime": 1792551300,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 106,
+                "actual": 106,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550700,
+              "recognizedAt": 1792550820,
+              "bottom": 4116.04,
+              "top": 4118.84,
+              "fullFillAt": 1792551300,
+              "fullFillCandleTime": 1792551240,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 105,
+                "actual": 105,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552440,
+              "recognizedAt": 1792552560,
+              "bottom": 4114.81,
+              "top": 4115.98,
+              "fullFillAt": null,
+              "fullFillCandleTime": null,
+              "fillStatus": "open",
+              "coverage": {
+                "expected": 76,
+                "actual": 76,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552500,
+              "recognizedAt": 1792552620,
+              "bottom": 4116.82,
+              "top": 4116.87,
+              "fullFillAt": 1792552680,
+              "fullFillCandleTime": 1792552620,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 75,
+                "actual": 75,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "partialOverlapFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792541160,
+              "recognizedAt": 1792541280,
+              "bottom": 4116.59,
+              "top": 4117.41,
+              "fullFillAt": 1792541340,
+              "fullFillCandleTime": 1792541280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 264,
+                "actual": 264,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550700,
+              "recognizedAt": 1792550820,
+              "bottom": 4116.04,
+              "top": 4118.84,
+              "fullFillAt": 1792551300,
+              "fullFillCandleTime": 1792551240,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 105,
+                "actual": 105,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552500,
+              "recognizedAt": 1792552620,
+              "bottom": 4116.82,
+              "top": 4116.87,
+              "fullFillAt": 1792552680,
+              "fullFillCandleTime": 1792552620,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 75,
+                "actual": 75,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "openInternalCount": 1,
+          "unknownInternalCount": 0,
+          "retestWindowEvidence": {
+            "status": "ready",
+            "from": 1792556940,
+            "throughExclusive": 1792557120,
+            "extreme": 4114.84,
+            "extremeCandleTime": 1792556940,
+            "source": "Existing first eligible M1 touch through existing entry-confirmation close; not a newly inferred retest episode",
+            "episodeBoundaryStatus": "notSeparatelyDefined",
+            "bars": 3
+          },
+          "retestEpisode": {
+            "status": "unknown",
+            "reason": "No separate episode-end rule was authorized; do not convert the measured touch-to-entry window into a new episode definition"
+          },
+          "farM5Edge": 4112.95,
+          "stopLossEvidence": {
+            "status": "ready",
+            "stopLoss": 4112.95,
+            "source": "User prototype SL rule: at least one known open same-direction fully-contained M1 FVG at candidate entry"
+          },
+          "decisionNotApplied": true
+        },
+        {
+          "route": "b",
+          "variant": "retestReaction",
+          "evaluatedAt": 1792557540,
+          "evaluatedAtBerlin": "2026-10-21 06:39:00",
+          "entryKnownAt": 1792557540,
+          "entryStatus": "ready",
+          "entrySource": "Existing helper only, not a newly approved prototype entry; user entry-A rejection and M5 assignment remain independent",
+          "entry": {
+            "status": "ready",
+            "entryTime": 1792557540,
+            "entryPrice": 4117.62,
+            "confirmationCandleTime": 1792557480,
+            "fvg": {
+              "direction": "long",
+              "candleTime": 1792557000,
+              "recognizedAt": 1792557120,
+              "gap": 1.6500000000005457,
+              "bottom": 4116.98,
+              "top": 4118.63,
+              "confirmationCandleTime": 1792557060,
+              "confirmationPrice": 4120.27,
+              "orderBlock": {
+                "top": 4116.98,
+                "bottom": 4114.84,
+                "dir": 1,
+                "fvg": 1.6500000000005457,
+                "active": true,
+                "touched": false,
+                "invalidated": false,
+                "retested": false,
+                "retestedAt": null,
+                "startTime": 1792557000,
+                "endTime": 1792557060,
+                "recognizedAt": 1792557120,
+                "timeframe": "1M"
+              }
+            },
+            "variant": "retestReaction",
+            "retestCandleTime": 1792557420
+          },
+          "entryCandidate": {
+            "knownAt": 1792557540,
+            "entryTime": 1792557540,
+            "entryPrice": 4117.62,
+            "confirmationCandleTime": 1792557480
+          },
+          "routeUserAssessment": {
+            "status": "notRejectedByThisEvidence",
+            "knownAt": 1792557540
+          },
+          "confirmedM5Assignment": true,
+          "assignmentStatus": "assigned",
+          "fullyInsideInternalFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792540980,
+              "recognizedAt": 1792541100,
+              "bottom": 4114.05,
+              "top": 4114.1,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 274,
+                "actual": 274,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541040,
+              "recognizedAt": 1792541160,
+              "bottom": 4114.3,
+              "top": 4115.4,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 273,
+                "actual": 273,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545900,
+              "recognizedAt": 1792546020,
+              "bottom": 4113.03,
+              "top": 4114.11,
+              "fullFillAt": 1792552440,
+              "fullFillCandleTime": 1792552380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 192,
+                "actual": 192,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545960,
+              "recognizedAt": 1792546080,
+              "bottom": 4115.57,
+              "top": 4116.26,
+              "fullFillAt": 1792547340,
+              "fullFillCandleTime": 1792547280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 191,
+                "actual": 191,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792549500,
+              "recognizedAt": 1792549620,
+              "bottom": 4115.86,
+              "top": 4116.28,
+              "fullFillAt": 1792549800,
+              "fullFillCandleTime": 1792549740,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 132,
+                "actual": 132,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550640,
+              "recognizedAt": 1792550760,
+              "bottom": 4114.88,
+              "top": 4115.8,
+              "fullFillAt": 1792551360,
+              "fullFillCandleTime": 1792551300,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 113,
+                "actual": 113,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552440,
+              "recognizedAt": 1792552560,
+              "bottom": 4114.81,
+              "top": 4115.98,
+              "fullFillAt": null,
+              "fullFillCandleTime": null,
+              "fillStatus": "open",
+              "coverage": {
+                "expected": 83,
+                "actual": 83,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "intersectingFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792540980,
+              "recognizedAt": 1792541100,
+              "bottom": 4114.05,
+              "top": 4114.1,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 274,
+                "actual": 274,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541040,
+              "recognizedAt": 1792541160,
+              "bottom": 4114.3,
+              "top": 4115.4,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 273,
+                "actual": 273,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541160,
+              "recognizedAt": 1792541280,
+              "bottom": 4116.59,
+              "top": 4117.41,
+              "fullFillAt": 1792541340,
+              "fullFillCandleTime": 1792541280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 271,
+                "actual": 271,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545900,
+              "recognizedAt": 1792546020,
+              "bottom": 4113.03,
+              "top": 4114.11,
+              "fullFillAt": 1792552440,
+              "fullFillCandleTime": 1792552380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 192,
+                "actual": 192,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545960,
+              "recognizedAt": 1792546080,
+              "bottom": 4115.57,
+              "top": 4116.26,
+              "fullFillAt": 1792547340,
+              "fullFillCandleTime": 1792547280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 191,
+                "actual": 191,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792549500,
+              "recognizedAt": 1792549620,
+              "bottom": 4115.86,
+              "top": 4116.28,
+              "fullFillAt": 1792549800,
+              "fullFillCandleTime": 1792549740,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 132,
+                "actual": 132,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550640,
+              "recognizedAt": 1792550760,
+              "bottom": 4114.88,
+              "top": 4115.8,
+              "fullFillAt": 1792551360,
+              "fullFillCandleTime": 1792551300,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 113,
+                "actual": 113,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550700,
+              "recognizedAt": 1792550820,
+              "bottom": 4116.04,
+              "top": 4118.84,
+              "fullFillAt": 1792551300,
+              "fullFillCandleTime": 1792551240,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 112,
+                "actual": 112,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552440,
+              "recognizedAt": 1792552560,
+              "bottom": 4114.81,
+              "top": 4115.98,
+              "fullFillAt": null,
+              "fullFillCandleTime": null,
+              "fillStatus": "open",
+              "coverage": {
+                "expected": 83,
+                "actual": 83,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552500,
+              "recognizedAt": 1792552620,
+              "bottom": 4116.82,
+              "top": 4116.87,
+              "fullFillAt": 1792552680,
+              "fullFillCandleTime": 1792552620,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 82,
+                "actual": 82,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "partialOverlapFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792541160,
+              "recognizedAt": 1792541280,
+              "bottom": 4116.59,
+              "top": 4117.41,
+              "fullFillAt": 1792541340,
+              "fullFillCandleTime": 1792541280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 271,
+                "actual": 271,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550700,
+              "recognizedAt": 1792550820,
+              "bottom": 4116.04,
+              "top": 4118.84,
+              "fullFillAt": 1792551300,
+              "fullFillCandleTime": 1792551240,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 112,
+                "actual": 112,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552500,
+              "recognizedAt": 1792552620,
+              "bottom": 4116.82,
+              "top": 4116.87,
+              "fullFillAt": 1792552680,
+              "fullFillCandleTime": 1792552620,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 82,
+                "actual": 82,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "openInternalCount": 1,
+          "unknownInternalCount": 0,
+          "retestWindowEvidence": {
+            "status": "ready",
+            "from": 1792556940,
+            "throughExclusive": 1792557540,
+            "extreme": 4114.84,
+            "extremeCandleTime": 1792556940,
+            "source": "Existing first eligible M1 touch through existing entry-confirmation close; not a newly inferred retest episode",
+            "episodeBoundaryStatus": "notSeparatelyDefined",
+            "bars": 10
+          },
+          "retestEpisode": {
+            "status": "unknown",
+            "reason": "No separate episode-end rule was authorized; do not convert the measured touch-to-entry window into a new episode definition"
+          },
+          "farM5Edge": 4112.95,
+          "stopLossEvidence": {
+            "status": "ready",
+            "stopLoss": 4112.95,
+            "source": "User prototype SL rule: at least one known open same-direction fully-contained M1 FVG at candidate entry"
+          },
+          "decisionNotApplied": true
+        }
+      ]
+    },
+    {
+      "caseID": "503",
+      "direction": "long",
+      "main": {
+        "top": 4121.1,
+        "bottom": 4117.12,
+        "dir": 1,
+        "fvg": 1.2899999999999636,
+        "active": false,
+        "touched": false,
+        "invalidated": true,
+        "retested": false,
+        "retestedAt": null,
+        "startTime": 1792555800,
+        "endTime": 1792556700,
+        "touchedTime": 1792556700,
+        "recognizedAt": 1792556400,
+        "firstOverlap": {
+          "candleTime": 1792556700,
+          "knownAt": 1792557000
+        },
+        "flagsAreFinalSourceSnapshot": true
+      },
+      "source": {
+        "file": "C:/Users/Philip/Documents/git/trading-monitor/.debug/pin-copy-button/test/fixtures/dob-native/2026-10-21.json",
+        "sha256": "e20437177161c585e3181b42abb93e85fe8bca76821d79b18a9553d788c2839c",
+        "fullSavedDayUsed": true,
+        "firstSavedM1": 1792540800,
+        "olderFormationsUnknown": true
+      },
+      "internalFvgInventory": [
+        {
+          "direction": "long",
+          "candleTime": 1792541160,
+          "recognizedAt": 1792541280,
+          "bottom": 4116.59,
+          "top": 4117.41,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792541280,
+          "firstFullFillKnownAt": 1792541340,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792541880,
+          "recognizedAt": 1792542000,
+          "bottom": 4117.58,
+          "top": 4118.18,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792542060,
+          "firstFullFillKnownAt": 1792542120,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792543440,
+          "recognizedAt": 1792543560,
+          "bottom": 4118.85,
+          "top": 4119.39,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792544100,
+          "firstFullFillKnownAt": 1792544160,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792546440,
+          "recognizedAt": 1792546560,
+          "bottom": 4119.86,
+          "top": 4122.04,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792546680,
+          "firstFullFillKnownAt": 1792546740,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792547640,
+          "recognizedAt": 1792547760,
+          "bottom": 4117.69,
+          "top": 4119.72,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792548000,
+          "firstFullFillKnownAt": 1792548060,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792548780,
+          "recognizedAt": 1792548900,
+          "bottom": 4117.81,
+          "top": 4118.13,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792548900,
+          "firstFullFillKnownAt": 1792548960,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792550700,
+          "recognizedAt": 1792550820,
+          "bottom": 4116.04,
+          "top": 4118.84,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792551240,
+          "firstFullFillKnownAt": 1792551300,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792551720,
+          "recognizedAt": 1792551840,
+          "bottom": 4118.2,
+          "top": 4118.72,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792551900,
+          "firstFullFillKnownAt": 1792551960,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792553340,
+          "recognizedAt": 1792553460,
+          "bottom": 4119.55,
+          "top": 4120.79,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792554180,
+          "firstFullFillKnownAt": 1792554240,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792554420,
+          "recognizedAt": 1792554540,
+          "bottom": 4121.04,
+          "top": 4121.18,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792554660,
+          "firstFullFillKnownAt": 1792554720,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792555980,
+          "recognizedAt": 1792556100,
+          "bottom": 4120.13,
+          "top": 4120.86,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792556820,
+          "firstFullFillKnownAt": 1792556880,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792556040,
+          "recognizedAt": 1792556160,
+          "bottom": 4120.92,
+          "top": 4122.39,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792556820,
+          "firstFullFillKnownAt": 1792556880,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792557000,
+          "recognizedAt": 1792557120,
+          "bottom": 4116.98,
+          "top": 4118.63,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792557420,
+          "firstFullFillKnownAt": 1792557480,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792559100,
+          "recognizedAt": 1792559220,
+          "bottom": 4117.28,
+          "top": 4117.71,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792561320,
+          "firstFullFillKnownAt": 1792561380,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792559160,
+          "recognizedAt": 1792559280,
+          "bottom": 4117.71,
+          "top": 4118.28,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792561320,
+          "firstFullFillKnownAt": 1792561380,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792559940,
+          "recognizedAt": 1792560060,
+          "bottom": 4120.54,
+          "top": 4120.75,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792561260,
+          "firstFullFillKnownAt": 1792561320,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792561500,
+          "recognizedAt": 1792561620,
+          "bottom": 4118.56,
+          "top": 4119.5,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792561920,
+          "firstFullFillKnownAt": 1792561980,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792561560,
+          "recognizedAt": 1792561680,
+          "bottom": 4120.31,
+          "top": 4120.64,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792561740,
+          "firstFullFillKnownAt": 1792561800,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        }
+      ],
+      "inventoryAsOfContract": "Only include recognizedAt<=asOf; firstFullFillKnownAt<=asOf means filled; later fill remains open until known. coverageComplete=false -> unknown without decisive known fill.",
+      "assessments": [
+        {
+          "route": "a",
+          "variant": "immediate",
+          "evaluatedAt": 1792556940,
+          "evaluatedAtBerlin": "2026-10-21 06:29:00",
+          "entryKnownAt": null,
+          "entryStatus": "unknown",
+          "entrySource": "Existing helper only, not a newly approved prototype entry; user entry-A rejection and M5 assignment remain independent",
+          "entry": {
+            "status": "unknown",
+            "reason": "No assigned confirmed direction FVG"
+          },
+          "entryCandidate": null,
+          "routeUserAssessment": {
+            "status": "rejected",
+            "reason": "Native M5 far edge broken before direction reaction",
+            "knownAt": 1792556940
+          },
+          "confirmedM5Assignment": false,
+          "assignmentStatus": "rejectedM5Break",
+          "fullyInsideInternalFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792541880,
+              "recognizedAt": 1792542000,
+              "bottom": 4117.58,
+              "top": 4118.18,
+              "fullFillAt": 1792542120,
+              "fullFillCandleTime": 1792542060,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 249,
+                "actual": 249,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792543440,
+              "recognizedAt": 1792543560,
+              "bottom": 4118.85,
+              "top": 4119.39,
+              "fullFillAt": 1792544160,
+              "fullFillCandleTime": 1792544100,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 223,
+                "actual": 223,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792547640,
+              "recognizedAt": 1792547760,
+              "bottom": 4117.69,
+              "top": 4119.72,
+              "fullFillAt": 1792548060,
+              "fullFillCandleTime": 1792548000,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 153,
+                "actual": 153,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792548780,
+              "recognizedAt": 1792548900,
+              "bottom": 4117.81,
+              "top": 4118.13,
+              "fullFillAt": 1792548960,
+              "fullFillCandleTime": 1792548900,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 134,
+                "actual": 134,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792551720,
+              "recognizedAt": 1792551840,
+              "bottom": 4118.2,
+              "top": 4118.72,
+              "fullFillAt": 1792551960,
+              "fullFillCandleTime": 1792551900,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 85,
+                "actual": 85,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792553340,
+              "recognizedAt": 1792553460,
+              "bottom": 4119.55,
+              "top": 4120.79,
+              "fullFillAt": 1792554240,
+              "fullFillCandleTime": 1792554180,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 58,
+                "actual": 58,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792555980,
+              "recognizedAt": 1792556100,
+              "bottom": 4120.13,
+              "top": 4120.86,
+              "fullFillAt": 1792556880,
+              "fullFillCandleTime": 1792556820,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 14,
+                "actual": 14,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "intersectingFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792541160,
+              "recognizedAt": 1792541280,
+              "bottom": 4116.59,
+              "top": 4117.41,
+              "fullFillAt": 1792541340,
+              "fullFillCandleTime": 1792541280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 261,
+                "actual": 261,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541880,
+              "recognizedAt": 1792542000,
+              "bottom": 4117.58,
+              "top": 4118.18,
+              "fullFillAt": 1792542120,
+              "fullFillCandleTime": 1792542060,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 249,
+                "actual": 249,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792543440,
+              "recognizedAt": 1792543560,
+              "bottom": 4118.85,
+              "top": 4119.39,
+              "fullFillAt": 1792544160,
+              "fullFillCandleTime": 1792544100,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 223,
+                "actual": 223,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792546440,
+              "recognizedAt": 1792546560,
+              "bottom": 4119.86,
+              "top": 4122.04,
+              "fullFillAt": 1792546740,
+              "fullFillCandleTime": 1792546680,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 173,
+                "actual": 173,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792547640,
+              "recognizedAt": 1792547760,
+              "bottom": 4117.69,
+              "top": 4119.72,
+              "fullFillAt": 1792548060,
+              "fullFillCandleTime": 1792548000,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 153,
+                "actual": 153,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792548780,
+              "recognizedAt": 1792548900,
+              "bottom": 4117.81,
+              "top": 4118.13,
+              "fullFillAt": 1792548960,
+              "fullFillCandleTime": 1792548900,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 134,
+                "actual": 134,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550700,
+              "recognizedAt": 1792550820,
+              "bottom": 4116.04,
+              "top": 4118.84,
+              "fullFillAt": 1792551300,
+              "fullFillCandleTime": 1792551240,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 102,
+                "actual": 102,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792551720,
+              "recognizedAt": 1792551840,
+              "bottom": 4118.2,
+              "top": 4118.72,
+              "fullFillAt": 1792551960,
+              "fullFillCandleTime": 1792551900,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 85,
+                "actual": 85,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792553340,
+              "recognizedAt": 1792553460,
+              "bottom": 4119.55,
+              "top": 4120.79,
+              "fullFillAt": 1792554240,
+              "fullFillCandleTime": 1792554180,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 58,
+                "actual": 58,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792554420,
+              "recognizedAt": 1792554540,
+              "bottom": 4121.04,
+              "top": 4121.18,
+              "fullFillAt": 1792554720,
+              "fullFillCandleTime": 1792554660,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 40,
+                "actual": 40,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792555980,
+              "recognizedAt": 1792556100,
+              "bottom": 4120.13,
+              "top": 4120.86,
+              "fullFillAt": 1792556880,
+              "fullFillCandleTime": 1792556820,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 14,
+                "actual": 14,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792556040,
+              "recognizedAt": 1792556160,
+              "bottom": 4120.92,
+              "top": 4122.39,
+              "fullFillAt": 1792556880,
+              "fullFillCandleTime": 1792556820,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 13,
+                "actual": 13,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "partialOverlapFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792541160,
+              "recognizedAt": 1792541280,
+              "bottom": 4116.59,
+              "top": 4117.41,
+              "fullFillAt": 1792541340,
+              "fullFillCandleTime": 1792541280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 261,
+                "actual": 261,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792546440,
+              "recognizedAt": 1792546560,
+              "bottom": 4119.86,
+              "top": 4122.04,
+              "fullFillAt": 1792546740,
+              "fullFillCandleTime": 1792546680,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 173,
+                "actual": 173,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550700,
+              "recognizedAt": 1792550820,
+              "bottom": 4116.04,
+              "top": 4118.84,
+              "fullFillAt": 1792551300,
+              "fullFillCandleTime": 1792551240,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 102,
+                "actual": 102,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792554420,
+              "recognizedAt": 1792554540,
+              "bottom": 4121.04,
+              "top": 4121.18,
+              "fullFillAt": 1792554720,
+              "fullFillCandleTime": 1792554660,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 40,
+                "actual": 40,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792556040,
+              "recognizedAt": 1792556160,
+              "bottom": 4120.92,
+              "top": 4122.39,
+              "fullFillAt": 1792556880,
+              "fullFillCandleTime": 1792556820,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 13,
+                "actual": 13,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "openInternalCount": 0,
+          "unknownInternalCount": 0,
+          "retestWindowEvidence": {
+            "status": "unknown",
+            "reason": "M5 broken before any assigned reaction/entry"
+          },
+          "retestEpisode": {
+            "status": "unknown",
+            "reason": "No separate episode-end rule was authorized; do not convert the measured touch-to-entry window into a new episode definition"
+          },
+          "farM5Edge": 4117.12,
+          "stopLossEvidence": {
+            "status": "unknown",
+            "reason": "Missing confirmed M5-to-entry assignment"
+          },
+          "decisionNotApplied": true
+        },
+        {
+          "route": "b",
+          "variant": "retestReaction",
+          "evaluatedAt": 1792556940,
+          "evaluatedAtBerlin": "2026-10-21 06:29:00",
+          "entryKnownAt": null,
+          "entryStatus": "unknown",
+          "entrySource": "Existing helper only, not a newly approved prototype entry; user entry-A rejection and M5 assignment remain independent",
+          "entry": {
+            "status": "unknown",
+            "reason": "No assigned confirmed direction FVG"
+          },
+          "entryCandidate": null,
+          "routeUserAssessment": {
+            "status": "rejected",
+            "reason": "Native M5 far edge broken before direction reaction",
+            "knownAt": 1792556940
+          },
+          "confirmedM5Assignment": false,
+          "assignmentStatus": "rejectedM5Break",
+          "fullyInsideInternalFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792541880,
+              "recognizedAt": 1792542000,
+              "bottom": 4117.58,
+              "top": 4118.18,
+              "fullFillAt": 1792542120,
+              "fullFillCandleTime": 1792542060,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 249,
+                "actual": 249,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792543440,
+              "recognizedAt": 1792543560,
+              "bottom": 4118.85,
+              "top": 4119.39,
+              "fullFillAt": 1792544160,
+              "fullFillCandleTime": 1792544100,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 223,
+                "actual": 223,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792547640,
+              "recognizedAt": 1792547760,
+              "bottom": 4117.69,
+              "top": 4119.72,
+              "fullFillAt": 1792548060,
+              "fullFillCandleTime": 1792548000,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 153,
+                "actual": 153,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792548780,
+              "recognizedAt": 1792548900,
+              "bottom": 4117.81,
+              "top": 4118.13,
+              "fullFillAt": 1792548960,
+              "fullFillCandleTime": 1792548900,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 134,
+                "actual": 134,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792551720,
+              "recognizedAt": 1792551840,
+              "bottom": 4118.2,
+              "top": 4118.72,
+              "fullFillAt": 1792551960,
+              "fullFillCandleTime": 1792551900,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 85,
+                "actual": 85,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792553340,
+              "recognizedAt": 1792553460,
+              "bottom": 4119.55,
+              "top": 4120.79,
+              "fullFillAt": 1792554240,
+              "fullFillCandleTime": 1792554180,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 58,
+                "actual": 58,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792555980,
+              "recognizedAt": 1792556100,
+              "bottom": 4120.13,
+              "top": 4120.86,
+              "fullFillAt": 1792556880,
+              "fullFillCandleTime": 1792556820,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 14,
+                "actual": 14,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "intersectingFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792541160,
+              "recognizedAt": 1792541280,
+              "bottom": 4116.59,
+              "top": 4117.41,
+              "fullFillAt": 1792541340,
+              "fullFillCandleTime": 1792541280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 261,
+                "actual": 261,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541880,
+              "recognizedAt": 1792542000,
+              "bottom": 4117.58,
+              "top": 4118.18,
+              "fullFillAt": 1792542120,
+              "fullFillCandleTime": 1792542060,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 249,
+                "actual": 249,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792543440,
+              "recognizedAt": 1792543560,
+              "bottom": 4118.85,
+              "top": 4119.39,
+              "fullFillAt": 1792544160,
+              "fullFillCandleTime": 1792544100,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 223,
+                "actual": 223,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792546440,
+              "recognizedAt": 1792546560,
+              "bottom": 4119.86,
+              "top": 4122.04,
+              "fullFillAt": 1792546740,
+              "fullFillCandleTime": 1792546680,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 173,
+                "actual": 173,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792547640,
+              "recognizedAt": 1792547760,
+              "bottom": 4117.69,
+              "top": 4119.72,
+              "fullFillAt": 1792548060,
+              "fullFillCandleTime": 1792548000,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 153,
+                "actual": 153,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792548780,
+              "recognizedAt": 1792548900,
+              "bottom": 4117.81,
+              "top": 4118.13,
+              "fullFillAt": 1792548960,
+              "fullFillCandleTime": 1792548900,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 134,
+                "actual": 134,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550700,
+              "recognizedAt": 1792550820,
+              "bottom": 4116.04,
+              "top": 4118.84,
+              "fullFillAt": 1792551300,
+              "fullFillCandleTime": 1792551240,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 102,
+                "actual": 102,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792551720,
+              "recognizedAt": 1792551840,
+              "bottom": 4118.2,
+              "top": 4118.72,
+              "fullFillAt": 1792551960,
+              "fullFillCandleTime": 1792551900,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 85,
+                "actual": 85,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792553340,
+              "recognizedAt": 1792553460,
+              "bottom": 4119.55,
+              "top": 4120.79,
+              "fullFillAt": 1792554240,
+              "fullFillCandleTime": 1792554180,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 58,
+                "actual": 58,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792554420,
+              "recognizedAt": 1792554540,
+              "bottom": 4121.04,
+              "top": 4121.18,
+              "fullFillAt": 1792554720,
+              "fullFillCandleTime": 1792554660,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 40,
+                "actual": 40,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792555980,
+              "recognizedAt": 1792556100,
+              "bottom": 4120.13,
+              "top": 4120.86,
+              "fullFillAt": 1792556880,
+              "fullFillCandleTime": 1792556820,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 14,
+                "actual": 14,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792556040,
+              "recognizedAt": 1792556160,
+              "bottom": 4120.92,
+              "top": 4122.39,
+              "fullFillAt": 1792556880,
+              "fullFillCandleTime": 1792556820,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 13,
+                "actual": 13,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "partialOverlapFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792541160,
+              "recognizedAt": 1792541280,
+              "bottom": 4116.59,
+              "top": 4117.41,
+              "fullFillAt": 1792541340,
+              "fullFillCandleTime": 1792541280,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 261,
+                "actual": 261,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792546440,
+              "recognizedAt": 1792546560,
+              "bottom": 4119.86,
+              "top": 4122.04,
+              "fullFillAt": 1792546740,
+              "fullFillCandleTime": 1792546680,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 173,
+                "actual": 173,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550700,
+              "recognizedAt": 1792550820,
+              "bottom": 4116.04,
+              "top": 4118.84,
+              "fullFillAt": 1792551300,
+              "fullFillCandleTime": 1792551240,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 102,
+                "actual": 102,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792554420,
+              "recognizedAt": 1792554540,
+              "bottom": 4121.04,
+              "top": 4121.18,
+              "fullFillAt": 1792554720,
+              "fullFillCandleTime": 1792554660,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 40,
+                "actual": 40,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792556040,
+              "recognizedAt": 1792556160,
+              "bottom": 4120.92,
+              "top": 4122.39,
+              "fullFillAt": 1792556880,
+              "fullFillCandleTime": 1792556820,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 13,
+                "actual": 13,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "openInternalCount": 0,
+          "unknownInternalCount": 0,
+          "retestWindowEvidence": {
+            "status": "unknown",
+            "reason": "M5 broken before any assigned reaction/entry"
+          },
+          "retestEpisode": {
+            "status": "unknown",
+            "reason": "No separate episode-end rule was authorized; do not convert the measured touch-to-entry window into a new episode definition"
+          },
+          "farM5Edge": 4117.12,
+          "stopLossEvidence": {
+            "status": "unknown",
+            "reason": "Missing confirmed M5-to-entry assignment"
+          },
+          "decisionNotApplied": true
+        }
+      ]
+    },
+    {
+      "caseID": "504",
+      "direction": "long",
+      "main": {
+        "top": 4115.43,
+        "bottom": 4114.05,
+        "dir": 1,
+        "fvg": 1.0399999999999636,
+        "active": false,
+        "touched": true,
+        "invalidated": false,
+        "retested": false,
+        "retestedAt": null,
+        "startTime": 1792558800,
+        "endTime": 1792562700,
+        "touchedTime": 1792562700,
+        "recognizedAt": 1792559400,
+        "firstOverlap": {
+          "candleTime": 1792562700,
+          "knownAt": 1792563000
+        },
+        "flagsAreFinalSourceSnapshot": true
+      },
+      "source": {
+        "file": "C:/Users/Philip/Documents/git/trading-monitor/.debug/pin-copy-button/test/fixtures/dob-native/2026-10-21.json",
+        "sha256": "e20437177161c585e3181b42abb93e85fe8bca76821d79b18a9553d788c2839c",
+        "fullSavedDayUsed": true,
+        "firstSavedM1": 1792540800,
+        "olderFormationsUnknown": true
+      },
+      "internalFvgInventory": [
+        {
+          "direction": "long",
+          "candleTime": 1792540980,
+          "recognizedAt": 1792541100,
+          "bottom": 4114.05,
+          "top": 4114.1,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792544400,
+          "firstFullFillKnownAt": 1792544460,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792541040,
+          "recognizedAt": 1792541160,
+          "bottom": 4114.3,
+          "top": 4115.4,
+          "fullyInside": true,
+          "firstFullFillCandleTime": 1792544400,
+          "firstFullFillKnownAt": 1792544460,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792545900,
+          "recognizedAt": 1792546020,
+          "bottom": 4113.03,
+          "top": 4114.11,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792552380,
+          "firstFullFillKnownAt": 1792552440,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792550640,
+          "recognizedAt": 1792550760,
+          "bottom": 4114.88,
+          "top": 4115.8,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792551300,
+          "firstFullFillKnownAt": 1792551360,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        },
+        {
+          "direction": "long",
+          "candleTime": 1792552440,
+          "recognizedAt": 1792552560,
+          "bottom": 4114.81,
+          "top": 4115.98,
+          "fullyInside": false,
+          "firstFullFillCandleTime": 1792558200,
+          "firstFullFillKnownAt": 1792558260,
+          "checkedThrough": 1792563360,
+          "coverageComplete": true
+        }
+      ],
+      "inventoryAsOfContract": "Only include recognizedAt<=asOf; firstFullFillKnownAt<=asOf means filled; later fill remains open until known. coverageComplete=false -> unknown without decisive known fill.",
+      "assessments": [
+        {
+          "route": "a",
+          "variant": "immediate",
+          "evaluatedAt": 1792561620,
+          "evaluatedAtBerlin": "2026-10-21 07:47:00",
+          "entryKnownAt": 1792561620,
+          "entryStatus": "ready",
+          "entrySource": "Existing helper only, not a newly approved prototype entry; user entry-A rejection and M5 assignment remain independent",
+          "entry": {
+            "status": "ready",
+            "entryTime": 1792561620,
+            "entryPrice": 4121.07,
+            "confirmationCandleTime": 1792561560,
+            "fvg": {
+              "direction": "long",
+              "candleTime": 1792561500,
+              "recognizedAt": 1792561620,
+              "gap": 0.9399999999995998,
+              "bottom": 4118.56,
+              "top": 4119.5,
+              "confirmationCandleTime": 1792561560,
+              "confirmationPrice": 4121.07,
+              "orderBlock": {
+                "top": 4118.56,
+                "bottom": 4115.45,
+                "dir": 1,
+                "fvg": 0.9399999999995998,
+                "active": true,
+                "touched": false,
+                "invalidated": false,
+                "retested": false,
+                "retestedAt": null,
+                "startTime": 1792561500,
+                "endTime": 1792561560,
+                "recognizedAt": 1792561620,
+                "timeframe": "1M"
+              }
+            },
+            "variant": "immediate"
+          },
+          "entryCandidate": {
+            "knownAt": 1792561620,
+            "entryTime": 1792561620,
+            "entryPrice": 4121.07,
+            "confirmationCandleTime": 1792561560
+          },
+          "routeUserAssessment": {
+            "status": "rejected",
+            "reason": "Explicit user: immediate entry unsuitable because of counter-direction FVG",
+            "knownAt": 1792561620
+          },
+          "confirmedM5Assignment": false,
+          "assignmentStatus": "unknown",
+          "fullyInsideInternalFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792540980,
+              "recognizedAt": 1792541100,
+              "bottom": 4114.05,
+              "top": 4114.1,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 342,
+                "actual": 342,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541040,
+              "recognizedAt": 1792541160,
+              "bottom": 4114.3,
+              "top": 4115.4,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 341,
+                "actual": 341,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "intersectingFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792540980,
+              "recognizedAt": 1792541100,
+              "bottom": 4114.05,
+              "top": 4114.1,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 342,
+                "actual": 342,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541040,
+              "recognizedAt": 1792541160,
+              "bottom": 4114.3,
+              "top": 4115.4,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 341,
+                "actual": 341,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545900,
+              "recognizedAt": 1792546020,
+              "bottom": 4113.03,
+              "top": 4114.11,
+              "fullFillAt": 1792552440,
+              "fullFillCandleTime": 1792552380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 260,
+                "actual": 260,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550640,
+              "recognizedAt": 1792550760,
+              "bottom": 4114.88,
+              "top": 4115.8,
+              "fullFillAt": 1792551360,
+              "fullFillCandleTime": 1792551300,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 181,
+                "actual": 181,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552440,
+              "recognizedAt": 1792552560,
+              "bottom": 4114.81,
+              "top": 4115.98,
+              "fullFillAt": 1792558260,
+              "fullFillCandleTime": 1792558200,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 151,
+                "actual": 151,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "partialOverlapFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792545900,
+              "recognizedAt": 1792546020,
+              "bottom": 4113.03,
+              "top": 4114.11,
+              "fullFillAt": 1792552440,
+              "fullFillCandleTime": 1792552380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 260,
+                "actual": 260,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550640,
+              "recognizedAt": 1792550760,
+              "bottom": 4114.88,
+              "top": 4115.8,
+              "fullFillAt": 1792551360,
+              "fullFillCandleTime": 1792551300,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 181,
+                "actual": 181,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552440,
+              "recognizedAt": 1792552560,
+              "bottom": 4114.81,
+              "top": 4115.98,
+              "fullFillAt": 1792558260,
+              "fullFillCandleTime": 1792558200,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 151,
+                "actual": 151,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "openInternalCount": 0,
+          "unknownInternalCount": 0,
+          "retestWindowEvidence": {
+            "status": "unknown",
+            "reason": "Pin504 M5 assignment not confirmed:07:43/44 remain above pinned zone"
+          },
+          "retestEpisode": {
+            "status": "unknown",
+            "reason": "No separate episode-end rule was authorized; do not convert the measured touch-to-entry window into a new episode definition"
+          },
+          "farM5Edge": 4114.05,
+          "stopLossEvidence": {
+            "status": "unknown",
+            "reason": "Missing confirmed M5-to-entry assignment"
+          },
+          "decisionNotApplied": true
+        },
+        {
+          "route": "b",
+          "variant": "retestReaction",
+          "evaluatedAt": 1792562100,
+          "evaluatedAtBerlin": "2026-10-21 07:55:00",
+          "entryKnownAt": 1792562100,
+          "entryStatus": "ready",
+          "entrySource": "Existing helper only, not a newly approved prototype entry; user entry-A rejection and M5 assignment remain independent",
+          "entry": {
+            "status": "ready",
+            "entryTime": 1792562100,
+            "entryPrice": 4116.87,
+            "confirmationCandleTime": 1792562040,
+            "fvg": {
+              "direction": "long",
+              "candleTime": 1792561500,
+              "recognizedAt": 1792561620,
+              "gap": 0.9399999999995998,
+              "bottom": 4118.56,
+              "top": 4119.5,
+              "confirmationCandleTime": 1792561560,
+              "confirmationPrice": 4121.07,
+              "orderBlock": {
+                "top": 4118.56,
+                "bottom": 4115.45,
+                "dir": 1,
+                "fvg": 0.9399999999995998,
+                "active": true,
+                "touched": false,
+                "invalidated": false,
+                "retested": false,
+                "retestedAt": null,
+                "startTime": 1792561500,
+                "endTime": 1792561560,
+                "recognizedAt": 1792561620,
+                "timeframe": "1M"
+              }
+            },
+            "variant": "retestReaction",
+            "retestCandleTime": 1792561920
+          },
+          "entryCandidate": {
+            "knownAt": 1792562100,
+            "entryTime": 1792562100,
+            "entryPrice": 4116.87,
+            "confirmationCandleTime": 1792562040
+          },
+          "routeUserAssessment": {
+            "status": "rejected",
+            "reason": "User prototype B rule: M1 OB after full FVG fill exceeds50%",
+            "knownAt": 1792562040
+          },
+          "confirmedM5Assignment": false,
+          "assignmentStatus": "unknown",
+          "fullyInsideInternalFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792540980,
+              "recognizedAt": 1792541100,
+              "bottom": 4114.05,
+              "top": 4114.1,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 350,
+                "actual": 350,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541040,
+              "recognizedAt": 1792541160,
+              "bottom": 4114.3,
+              "top": 4115.4,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 349,
+                "actual": 349,
+                "gaps": []
+              },
+              "fullyInside": true
+            }
+          ],
+          "intersectingFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792540980,
+              "recognizedAt": 1792541100,
+              "bottom": 4114.05,
+              "top": 4114.1,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 350,
+                "actual": 350,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792541040,
+              "recognizedAt": 1792541160,
+              "bottom": 4114.3,
+              "top": 4115.4,
+              "fullFillAt": 1792544460,
+              "fullFillCandleTime": 1792544400,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 349,
+                "actual": 349,
+                "gaps": []
+              },
+              "fullyInside": true
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792545900,
+              "recognizedAt": 1792546020,
+              "bottom": 4113.03,
+              "top": 4114.11,
+              "fullFillAt": 1792552440,
+              "fullFillCandleTime": 1792552380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 268,
+                "actual": 268,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550640,
+              "recognizedAt": 1792550760,
+              "bottom": 4114.88,
+              "top": 4115.8,
+              "fullFillAt": 1792551360,
+              "fullFillCandleTime": 1792551300,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 189,
+                "actual": 189,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552440,
+              "recognizedAt": 1792552560,
+              "bottom": 4114.81,
+              "top": 4115.98,
+              "fullFillAt": 1792558260,
+              "fullFillCandleTime": 1792558200,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 159,
+                "actual": 159,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "partialOverlapFvgs": [
+            {
+              "direction": "long",
+              "candleTime": 1792545900,
+              "recognizedAt": 1792546020,
+              "bottom": 4113.03,
+              "top": 4114.11,
+              "fullFillAt": 1792552440,
+              "fullFillCandleTime": 1792552380,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 268,
+                "actual": 268,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792550640,
+              "recognizedAt": 1792550760,
+              "bottom": 4114.88,
+              "top": 4115.8,
+              "fullFillAt": 1792551360,
+              "fullFillCandleTime": 1792551300,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 189,
+                "actual": 189,
+                "gaps": []
+              },
+              "fullyInside": false
+            },
+            {
+              "direction": "long",
+              "candleTime": 1792552440,
+              "recognizedAt": 1792552560,
+              "bottom": 4114.81,
+              "top": 4115.98,
+              "fullFillAt": 1792558260,
+              "fullFillCandleTime": 1792558200,
+              "fillStatus": "filled",
+              "coverage": {
+                "expected": 159,
+                "actual": 159,
+                "gaps": []
+              },
+              "fullyInside": false
+            }
+          ],
+          "openInternalCount": 0,
+          "unknownInternalCount": 0,
+          "retestWindowEvidence": {
+            "status": "unknown",
+            "reason": "Pin504 M5 assignment not confirmed:07:43/44 remain above pinned zone"
+          },
+          "retestEpisode": {
+            "status": "unknown",
+            "reason": "No separate episode-end rule was authorized; do not convert the measured touch-to-entry window into a new episode definition"
+          },
+          "farM5Edge": 4114.05,
+          "stopLossEvidence": {
+            "status": "unknown",
+            "reason": "Missing confirmed M5-to-entry assignment"
+          },
+          "decisionNotApplied": true
+        }
+      ]
+    }
+  ]
+}

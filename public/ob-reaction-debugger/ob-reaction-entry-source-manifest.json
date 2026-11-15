@@ -1,0 +1,53 @@
+{
+  "sources": [
+    {
+      "path": "src/m1FvgEntryProjection.js",
+      "sha256": "b2ef819ce0cf770e17967af06fdc241234e5bf19de17f55252f2fc0d8f554d04"
+    },
+    {
+      "path": "src/tradeSetupChecklistTimeBasis.js",
+      "sha256": "afbad4ebfe70d9efbff79d9ae72054b7967a14f0827828cb018d7a975ec3f4e1"
+    },
+    {
+      "path": "src/timeframes.js",
+      "sha256": "fe92c2eca49f4560609829820d4eece36b44513c7bf57bb1192b154548e91a22"
+    },
+    {
+      "path": "src/closedCandlePrefix.js",
+      "sha256": "39576f0e5accbcd0fe909c7e34d16eb6746841731ff6310359579d7ff0c94d4c"
+    },
+    {
+      "path": "src/m1FvgEntrySelection.js",
+      "sha256": "3f2732162fbd8a39abcd137d51507fb166b95aaf9a9d5850b3e51f1217b80e8a"
+    },
+    {
+      "path": "src/m1FairValueGap.js",
+      "sha256": "523ec0cc939b8bb07859c7301c4d73b422111b3b2ac5c8969d6923252d5ad3cb"
+    },
+    {
+      "path": "src/orderBlockDetection.js",
+      "sha256": "11d435e29e6c0b5f5b528491f37c880e6857fd3135840f758858943a3a75e984"
+    },
+    {
+      "path": "src/pipConfig.js",
+      "sha256": "5e10e427d01e3cd97b3a645ef1149072f43022e8e9a2fc38a0006991637eb884"
+    },
+    {
+      "path": "src/instrumentConfig.js",
+      "sha256": "c5905960b80e699cd97d3e4571ae13d2cb5f5abf9bb97983d09f24971d02fe00"
+    },
+    {
+      "path": "src/m1FvgEntrySequence.js",
+      "sha256": "565e75ec63d42b2aac09113f8cb886f029c42e4ce9c2820df9d7e7fa4316310b"
+    },
+    {
+      "path": "src/fvgCandleTint.js",
+      "sha256": "77a1b42c3503e3539a1ddee19e747c34de480c46e3960b2195249e62fe7d9a44"
+    }
+  ],
+  "colors": {
+    "fvgCandle": "#ffd54f",
+    "tradeConnector": "#fd80ff"
+  },
+  "colorSource": "PROD chart_colors read-only 2026-11-15; no preferences writes"
+}
