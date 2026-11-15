@@ -1,9 +1,10 @@
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {candleInvalidatesOrderBlock} from './orderBlockDetection.js';
 import {closedCandleEnd} from './closedCandlePrefix.js';
+import {m1GapCovered} from './goldWeekendGap.js';
 
 // Ein später gehaltener M5-Rand repariert kein bereits gesweeptes erstes Retestextrem.
-export function orderBlockRetestHoldHistory({candles,direction,anchorPrice,fromTime,evaluatedAt}) {
+export function orderBlockRetestHoldHistory({candles,direction,anchorPrice,fromTime,evaluatedAt,instrument}) {
  const history={fromTime,throughTime:fromTime,firstSweepTime:null,unavailableAt:null,reason:null};
  if(!['long','short'].includes(direction)||!Number.isFinite(anchorPrice)||!Number.isSafeInteger(fromTime)
   ||fromTime%60!==0||!Number.isFinite(evaluatedAt)||evaluatedAt<fromTime)
@@ -13,12 +14,12 @@ export function orderBlockRetestHoldHistory({candles,direction,anchorPrice,fromT
  const rows=closedChecklistCandles(candles,'1m',through);
  for(let i=closedCandleEnd(rows,1,fromTime);i<rows.length;i++) {
   const candle=rows[i];
-  if(candle.time!==history.throughTime||candle.ignored||![candle.low,candle.high].every(Number.isFinite)||candle.low>candle.high)
+  if(!m1GapCovered(instrument,history.throughTime,candle.time)||candle.ignored||![candle.low,candle.high].every(Number.isFinite)||candle.low>candle.high)
    return {...history,unavailableAt:history.throughTime+60,reason:'missingHistory'};
   history.throughTime=candle.time+60;
   if(candleInvalidatesOrderBlock(candle,boundary))return {...history,firstSweepTime:candle.time};
  }
- if(history.throughTime<through)return {...history,unavailableAt:history.throughTime+60,reason:'missingHistory'};
+ if(!m1GapCovered(instrument,history.throughTime,Math.max(history.throughTime,through)))return {...history,unavailableAt:history.throughTime+60,reason:'missingHistory'};
  return history;
 }
 

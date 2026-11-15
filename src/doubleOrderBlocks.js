@@ -28,7 +28,7 @@ function firstRetestHoldHistory(context,first,secondRetestAt,m1,evaluatedAt){
  const anchor=first.exactAnchor&&first.exactAnchor.fromTime<=secondRetestAt?first.exactAnchor
   :{fromTime:first.reaction.fvg.recognizedAt,price:first.reaction.penetration.extremePrice};
  if(!first.holds.has(anchor))first.holds.set(anchor,orderBlockRetestHoldHistory({candles:m1,direction:first.orderBlock.dir===1?'long':'short',
-  anchorPrice:anchor.price,fromTime:anchor.fromTime,evaluatedAt}));
+  anchorPrice:anchor.price,fromTime:anchor.fromTime,evaluatedAt,instrument:context.instrument}));
  return first.holds.get(anchor);
 }
 
@@ -43,7 +43,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
    firstHoldRejected:0,firstHoldUnknown:0,differentRetestDays:0,priceGapRejected:0}};
  if(!Number.isFinite(evaluatedAt)||!m5.length||!m1.length)return result;
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(instrument,'5m'));
- const context=createOrderBlockReactionContext(m1,evaluatedAt),qualified=[];
+ const context=createOrderBlockReactionContext(m1,evaluatedAt,instrument),qualified=[];
  const holdHistory=(first,secondRetestAt)=>firstRetestHoldHistory(context,first,secondRetestAt,m1,evaluatedAt);
  result.stats.orderBlocks=zones.length;
  for(const zone of zones){

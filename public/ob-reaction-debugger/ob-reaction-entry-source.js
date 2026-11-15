@@ -463,6 +463,8 @@ Object.assign(exports,{instrumentConfig,strategyDistance,obMinimum});
 },
 "m1FvgEntrySequence.js":function(require,exports){
 const {candleTouchesOrderBlock,candleInvalidatesOrderBlock}=require("orderBlockDetection.js");
+const {isGoldInstrument}=require("goldChartPolicy.js");
+const {goldM1ClosureCovered}=require("goldWeekendGap.js");
 const M1_FVG_MIN_RETEST_FRACTION=.5;
 
 function qualifiedFvgRetest(candle,fvg) {
@@ -478,8 +480,9 @@ function qualifiedFvgRetest(candle,fvg) {
   return half && (!full || candleTouchesOrderBlock(candle,fvg.orderBlock));
 }
 
-function m1FvgEntrySequence(fvg,variant) {
-  const state={fvg,variant,next:fvg.recognizedAt,retest:null,result:null};
+// Ohne instrument bleibt jede Lücke unknown; nur XAU kennt seine Marktschlüsse (goldWeekendGap.js).
+function m1FvgEntrySequence(fvg,variant,instrument) {
+  const state={fvg,variant,instrument,next:fvg.recognizedAt,retest:null,result:null};
   if(variant==='immediate')state.result=readyFvgEntry(state,{time:fvg.confirmationCandleTime,close:fvg.confirmationPrice});
   else if(variant!=='retestReaction')state.result={status:'unknown',reason:'Unbekannte Entry-Variante.'};
   return state;
@@ -491,8 +494,8 @@ function readyFvgEntry(state,candle) {
 }
 function advanceM1FvgEntrySequence(state,candle) {
   if(state.result || candle.time<state.fvg.recognizedAt)return;
-  if(candle.time!==state.next){state.result={status:'unknown',reason:'M1-Historie zwischen FVG und Reaktion ist lückenhaft.'};return;}
-  state.next+=60;
+  if(candle.time!==state.next&&!(isGoldInstrument(state.instrument)&&goldM1ClosureCovered(state.next,candle.time))){state.result={status:'unknown',reason:'M1-Historie zwischen FVG und Reaktion ist lückenhaft.'};return;}
+  state.next=candle.time+60;
   if(candle.ignored)return;
   // Ein gebrochener Ursprungs-OB kann keine spätere Reaktionskerze mehr bestätigen.
   if(state.fvg.orderBlock && candleInvalidatesOrderBlock(candle,state.fvg.orderBlock)){
@@ -512,6 +515,59 @@ function m1FvgSequenceResult(state) {
 }
 
 Object.assign(exports,{M1_FVG_MIN_RETEST_FRACTION,m1FvgEntrySequence,advanceM1FvgEntrySequence,m1FvgSequenceResult});
+},
+"goldChartPolicy.js":function(require,exports){
+// Gold nutzt denselben nativen FXCM-Archivfeed; fehlende Historie ist kein Broker-Live-Fallback.
+const { barSecondsFor }=require("timeframes.js");
+
+const isGoldInstrument = symbol => symbol === 'XAUUSD';
+const GOLD_CHART_BARS = ['1m', '3m', '5m', '1h', '4h', '1D'];
+function goldChartSelection(bar, replayTime, now = Date.now()) {
+  const selectedBar = GOLD_CHART_BARS.includes(bar) ? bar : '5m';
+  const start = Date.parse('2026-01-01T00:00:00Z') / 1000;
+  // Grobe native FXCM-Bars behalten ihre Tagesgrenzen; nur M1/M3 brauchen feinere Replay-Schritte.
+  const seconds = Math.min(300, barSecondsFor(selectedBar));
+  const end = Math.floor(now / (seconds * 1000)) * seconds - seconds;
+  return { bar: selectedBar, replayTime: replayTime >= start && replayTime <= end ? replayTime : end };
+}
+
+Object.assign(exports,{isGoldInstrument,GOLD_CHART_BARS,goldChartSelection});
+},
+"goldWeekendGap.js":function(require,exports){
+const newYorkClock = new Intl.DateTimeFormat('en-US', {
+  timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23',
+});
+const REOPEN=18*60;
+// FXCM liefert die 18:00-Minute nach einer Pause nie (Archiv 01.01.–14.11.2026: 0× 18:00, 221× 18:01).
+const M1_REOPEN=REOPEN+1;
+
+function clock(at) {
+  const parts=Object.fromEntries(newYorkClock.formatToParts(at*1000).map(p=>[p.type,p.value]));
+  return {day:parts.weekday,minutes:Number(parts.hour)*60+Number(parts.minute)};
+}
+
+// FXCM XAU-Wochenschluss 16:45 New York bis Sonntag18:00; beide US-DST-Grenzen folgen der Zone.
+function closedAt(at,reopen) {
+  const {day,minutes}=clock(at);
+  return day==='Sat' || day==='Fri' && minutes>=16*60+45 || day==='Sun' && minutes<reopen;
+}
+
+function goldWeekendGapCovered(from, to, reopen=REOPEN) {
+  if (!Number.isFinite(from) || !Number.isFinite(to) || from > to) return false;
+  if (from === to) return true;
+  // Unter drei Tagen können beide geschlossenen Grenzen nur zum selben Wochenende gehören.
+  return to-from <= 3*86400 && closedAt(from,reopen) && closedAt(to-0.001,reopen);
+}
+
+// Fehlende M1-Minuten [from,to) liegen komplett im Wochenende oder in der Tagespause Mo–Do ab 17:00 New York.
+function goldM1ClosureCovered(from, to) {
+  if (goldWeekendGapCovered(from,to,M1_REOPEN)) return true;
+  if (!Number.isFinite(from) || !Number.isFinite(to) || from >= to || to-from > (M1_REOPEN-17*60)*60) return false;
+  const start=clock(from),end=clock(to-0.001);
+  return ['Mon','Tue','Wed','Thu'].includes(start.day) && start.day===end.day && start.minutes>=17*60 && end.minutes<M1_REOPEN;
+}
+
+Object.assign(exports,{goldWeekendGapCovered,goldM1ClosureCovered});
 },
 "fvgCandleTint.js":function(require,exports){
 // Färbt die Impuls-Kerzen der bestätigenden FVGs ein (Test Philip 2026-09-23). Die FVG ist das

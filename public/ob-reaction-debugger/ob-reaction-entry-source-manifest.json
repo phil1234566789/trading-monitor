@@ -1,4 +1,5 @@
 {
+  "sha256Format": "UTF-8 with LF line endings",
   "sources": [
     {
       "path": "src/m1FvgEntryProjection.js",
@@ -38,7 +39,15 @@
     },
     {
       "path": "src/m1FvgEntrySequence.js",
-      "sha256": "17cb6d75b662d392222d1b40f3d276242c63b7367329af400d0b7bda49de7213"
+      "sha256": "5bdfa5f5056244aad4bdc54de256b9d0a6b9537787190db16c8550e59456c61a"
+    },
+    {
+      "path": "src/goldChartPolicy.js",
+      "sha256": "e219a9c0aba31340609620184e84d7d2ce9fbdbae11c9ca639b6adbfc3e4b9f3"
+    },
+    {
+      "path": "src/goldWeekendGap.js",
+      "sha256": "e36aaf7245289213091ec8321e3e63241c74b98a8cb74af0e86d9f04a75db436"
     },
     {
       "path": "src/fvgCandleTint.js",
@@ -49,6 +58,5 @@
     "fvgCandle": "#ffd54f",
     "tradeConnector": "#fd80ff"
   },
-  "colorSource": "PROD chart_colors read-only 2026-11-15; no preferences writes",
-  "sha256Format": "UTF-8 with LF line endings"
+  "colorSource": "PROD chart_colors read-only 2026-11-15; no preferences writes"
 }

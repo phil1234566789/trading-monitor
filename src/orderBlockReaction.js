@@ -4,6 +4,7 @@ import {m1FvgEntryCandidates} from './m1FvgEntrySelection.js';
 import {m1FvgEntrySequence,advanceM1FvgEntrySequence,m1FvgSequenceResult} from './m1FvgEntrySequence.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {closedCandleEnd} from './closedCandlePrefix.js';
+import {m1GapCovered} from './goldWeekendGap.js';
 
 export const NEAR_TOUCH_FRACTION=.1;
 export const ENTRY_B_MAX_ORDER_BLOCK_DEPTH=.5;
@@ -23,20 +24,20 @@ export function measureReactionContact(zone,candle,threshold=NEAR_TOUCH_FRACTION
 }
 
 // Einmal pro Auswertung: Kandidaten nach Bekanntwerden indiziert, Füllstände je FVG gemerkt.
-export function createOrderBlockReactionContext(m1Candles,evaluatedAt) {
+export function createOrderBlockReactionContext(m1Candles,evaluatedAt,instrument) {
  const rows=closedChecklistCandles(m1Candles,'1m',evaluatedAt),byKnownAt={long:new Map(),short:new Map()};
  const candidates=m1FvgEntryCandidates(rows,evaluatedAt);
  for(const fvg of candidates){const map=byKnownAt[fvg.direction];if(!map.has(fvg.recognizedAt))map.set(fvg.recognizedAt,[]);map.get(fvg.recognizedAt).push(fvg);}
- return {rows,evaluatedAt,candidates,byKnownAt,fills:new Map()};
+ return {rows,evaluatedAt,instrument,candidates,byKnownAt,fills:new Map()};
 }
 
 // Erste volle Füllung bis zur fernen Kante; eine Lücke davor macht jeden späteren Zustand unbekannt.
 function fvgFill(context,fvg) {
  if(context.fills.has(fvg))return context.fills.get(fvg);
  const rows=context.rows,result={filledAt:null,gapAt:null};
- for(let i=indexAt(rows,fvg.recognizedAt),next=fvg.recognizedAt;i<rows.length;i++,next+=60){
+ for(let i=indexAt(rows,fvg.recognizedAt),next=fvg.recognizedAt;i<rows.length;next=rows[i].time+60,i++){
   const c=rows[i];
-  if(c.time!==next){result.gapAt=next;break;}
+  if(!m1GapCovered(context.instrument,next,c.time)){result.gapAt=next;break;}
   if(!c.ignored&&(fvg.direction==='long'?c.low<=fvg.bottom:c.high>=fvg.top)){result.filledAt=c.time+60;break;}
  }
  context.fills.set(fvg,result);
@@ -68,7 +69,7 @@ function reactionFvg(context,direction,contact,knownAt) {
 // Ein Vorwärtslauf ab dem gemeinsamen FVG-Index: Entry-Sequenzen, M5-Bruch und Entry-b-OB-Tiefe.
 function evaluateRoutes(context,orderBlock,contact,fvg,start) {
  const rows=context.rows,direction=sideOf(orderBlock.dir),routes={};
- const sequences=Object.fromEntries([['a','immediate'],['b','retestReaction']].map(([route,variant])=>[route,m1FvgEntrySequence(fvg,variant)]));
+ const sequences=Object.fromEntries([['a','immediate'],['b','retestReaction']].map(([route,variant])=>[route,m1FvgEntrySequence(fvg,variant,context.instrument)]));
  const finish=(route,result)=>{routes[route]=result;};
  const settleEntry=route=>{
   const entry=m1FvgSequenceResult(sequences[route]);
@@ -81,11 +82,11 @@ function evaluateRoutes(context,orderBlock,contact,fvg,start) {
  };
  if(sequences.a.result?.status==='ready')settleEntry('a');else finish('a',{status:'pending',reason:'entryUnavailable'});
  let fullFill=false,gap=false;
- for(let i=start,next=fvg.recognizedAt;i<rows.length;i++,next+=60){
+ for(let i=start,next=fvg.recognizedAt;i<rows.length;next=rows[i].time+60,i++){
   const open=['a','b'].filter(r=>!routes[r]||routes[r].status==='pending');
   if(!open.length)break;
   const c=rows[i];
-  if(c.time!==next){gap=true;break;}
+  if(!m1GapCovered(context.instrument,next,c.time)){gap=true;break;}
   if(!c.ignored&&candleInvalidatesOrderBlock(c,orderBlock)){
    for(const r of open)finish(r,{status:'rejected',reason:'m5OrderBlockBroken',knownAt:c.time+60});
    break;
@@ -113,9 +114,9 @@ export function exactRetestAnchor(context,orderBlock,reaction) {
  if(reaction.penetration.maxPenetrationFraction>=0)return {fromTime:reaction.fvg.recognizedAt,price:reaction.penetration.extremePrice};
  const rows=context.rows,direction=sideOf(orderBlock.dir);
  let touch=-1;
- for(let i=indexAt(rows,reaction.fvg.recognizedAt),next=reaction.fvg.recognizedAt;i<rows.length;i++,next+=60){
+ for(let i=indexAt(rows,reaction.fvg.recognizedAt),next=reaction.fvg.recognizedAt;i<rows.length;next=rows[i].time+60,i++){
   const c=rows[i];
-  if(c.time!==next||(!c.ignored&&candleInvalidatesOrderBlock(c,orderBlock)))return null;
+  if(!m1GapCovered(context.instrument,next,c.time)||(!c.ignored&&candleInvalidatesOrderBlock(c,orderBlock)))return null;
   if(c.ignored)continue;
   if(touch<0){if(candleTouchesOrderBlock(c,orderBlock))touch=i;continue;}
   const fvg=reactionFvg(context,direction,{candleTime:rows[touch].time,knownAt:rows[touch].time+60},c.time+60);
@@ -132,9 +133,9 @@ export function evaluateOrderBlockReaction(context,orderBlock) {
   return unknown('invalidOrderBlock');
  const rows=context.rows,direction=sideOf(orderBlock.dir),begin=Math.ceil(orderBlock.recognizedAt/60)*60;
  let contactIndex=-1;
- for(let i=indexAt(rows,begin),next=begin;i<rows.length;i++,next+=60){
+ for(let i=indexAt(rows,begin),next=begin;i<rows.length;next=rows[i].time+60,i++){
   const c=rows[i];
-  if(c.time!==next)return unknown('missingHistory');
+  if(!m1GapCovered(context.instrument,next,c.time))return unknown('missingHistory');
   if(c.ignored)continue;
   if(candleInvalidatesOrderBlock(c,orderBlock))
    return {state:'false',reason:'m5OrderBlockBroken',contact,fvg:null,knownAt:c.time+60,penetration:null,
@@ -152,5 +153,5 @@ export function evaluateOrderBlockReaction(context,orderBlock) {
   }
  }
  const through=Math.floor(context.evaluatedAt/60)*60;
- return unknown(rows.length&&rows.at(-1).time+60<through?'missingHistory':contact?'awaitingFvg':'noContact');
+ return unknown(rows.length&&!m1GapCovered(context.instrument,rows.at(-1).time+60,Math.max(rows.at(-1).time+60,through))?'missingHistory':contact?'awaitingFvg':'noContact');
 }
