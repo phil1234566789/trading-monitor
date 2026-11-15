@@ -24,6 +24,7 @@ export const router = createRouter({
       try{const event=await createLiveWatcherRepository(supabase).event(to.query.event);return event?.payload?.entry?liveEntryLink(event):'/statistik';}catch{return '/statistik';}
     } },
     { path: "/algo-watcher", name: "algo-watcher", component: () => import("./views/AlgoWatcher.vue") },
+    { path: "/ob-reaktion", name: "ob-reaktion", component: () => import("./views/ObReactionDebugger.vue") },
   ],
 });
 installRouteRecovery(router);

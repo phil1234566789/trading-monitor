@@ -23,7 +23,7 @@ import {tradeSetupSourceDetails,tradeSetupInteractionRows} from '../tradeSetupSo
 import ChartIndicatorStatusStack from './ChartIndicatorStatusStack.vue';
 import { goldNativeZones } from '../priceChartObZones.js';
 import M5CandleClock from "./M5CandleClock.vue";
-import { createChart, CandlestickSeries, TickMarkType, CrosshairMode } from "lightweight-charts";
+import { createPriceChart } from "../priceChartSetup.js";
 import { historicalEvidenceHint } from "../tradeEvidence";
 import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
 import {
@@ -735,37 +735,6 @@ const hasActiveMetadata = computed(() =>
     showRanges: props.showRanges,
   }),
 );
-
-// lightweight-charts formatiert Zeit standardmäßig in UTC (unabhängig von der
-// Browser-Zeitzone) — hier auf lokale Zeit umgestellt, damit die Achse/der Crosshair
-// mit der Systemuhr des Nutzers übereinstimmt. Die zugrundeliegenden Zeitstempel
-// (UTC-Sekunden) bleiben unverändert, es wird nur die Anzeige angepasst.
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
-
-const WEEKDAYS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
-
-function tickMarkFormatter(time, tickMarkType) {
-  const d = new Date(time * 1000);
-  switch (tickMarkType) {
-    case TickMarkType.Year:
-      return `${d.getFullYear()}`;
-    case TickMarkType.Month:
-      return d.toLocaleDateString("de-DE", { month: "short", year: "numeric" });
-    case TickMarkType.DayOfMonth:
-      return `${WEEKDAYS_DE[d.getDay()]} ${d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" })}`;
-    case TickMarkType.TimeWithSeconds:
-      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-    default:
-      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-  }
-}
-
-function crosshairTimeFormatter(time) {
-  const d = new Date(time * 1000);
-  return `${d.toLocaleDateString("de-DE", { day: "2-digit", month: "short" })} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
 
 // Replay-Modus: alle Fetches (loadInitial/pollRecent/loadRangesCandles/loadTradeSetupM5/-H1)
 // laufen unverändert weiter — geclippt wird ausschließlich hier, an jeder Stelle, wo Kerzen
@@ -2101,48 +2070,7 @@ function scheduleNextPoll() {
 }
 
 onMounted(() => {
-  chart = createChart(chartContainerRef.value, {
-    layout: {
-      background: { color: "#131722" },
-      textColor: "#d1d4dc",
-    },
-    // Chat 2026-07-25: "brauch ich nicht bitte weg damit" — Raster (Stundenlinien X-Achse,
-    // Preislinien Y-Achse) komplett aus, war rein optisch und wurde als störend empfunden.
-    grid: {
-      vertLines: { visible: false },
-      horzLines: { visible: false },
-    },
-    timeScale: {
-      timeVisible: true,
-      secondsVisible: false,
-      tickMarkFormatter,
-      // Bug-Report Philip 2026-07-27: "die neueste Kerze wird nach ganz rechts auf die Y-Achse
-      // hingemacht, ich muss jedesmal den Chart etwas verschieben" — Default (0) lässt die letzte
-      // Kerze exakt an der Preisskala kleben. Ein paar Bar-Breiten Leerraum rechts bleibt auch nach
-      // dem TSC-Umzug in eine eigene Sidebar-Spalte (Chat 2026-08-28) sinnvoll, unabhängig von der
-      // TSC-Karte.
-      rightOffset: 70,
-    },
-    localization: {
-      timeFormatter: crosshairTimeFormatter,
-    },
-    // Bug-Report Philip 2026-08-07: Magnet-Crosshair (Default) snappt den Mauszeiger auf die
-    // nächste Kerze statt der tatsächlichen Cursor-Position zu folgen — wollte er nicht.
-    crosshair: {
-      mode: CrosshairMode.Normal,
-    },
-  });
-
-  candleSeries = chart.addSeries(CandlestickSeries, {
-    upColor: cssColor("candleUp"),
-    downColor: cssColor("candleDown"),
-    borderVisible: false,
-    wickUpColor: cssColor("candleUp"),
-    wickDownColor: cssColor("candleDown"),
-    // Forex-Kurse (GBPUSD z.B. 1.33941) brauchen 5 Nachkommastellen (Pipette) — der Default
-    // (precision 2 / minMove 0.01) würde sie auf 1.34 gerundet fast nutzlos machen.
-    priceFormat: { type: "price", precision: pricePrecisionForInstrument(props.symbol), minMove: props.symbol === 'XAUUSD' ? 0.01 : 0.00001 },
-  });
+  ({ chart, candleSeries } = createPriceChart(chartContainerRef.value, props.symbol));
 
   // EMA-Serien + RSI-Panel-Lifecycle leben in usePriceChartRsi.js (Phase 6b) — legt hier die
   // EMA-Serien an (RSI-Series+Pane erst bei Bedarf, siehe refreshRsiInternal/priceChartRsi.refreshRsi).

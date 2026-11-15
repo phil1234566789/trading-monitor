@@ -1,5 +1,0 @@
-(function(root){
- // Nutzerbestätigtes Retestextrem, als Eingabebeleg zur Episode statt Sonderfall im SL-Algorithmus.
- const data={rolePolicy:'preExistingOnly',roleDefinition:'preExistingInternal = FVG bereits vor Beginn der ersten M1-Retestkerze bekannt; spätere bekannte FVGs separat als reactionConfirmation. Lokale Rollenabgrenzung, allgemeine Definition weiter zu verfeinern.',retestApprovals:[{instrument:'XAUUSD',direction:'short',obStartTime:1792473900,route:'a',from:1792479060,throughExclusive:1792479900,extreme:4136.58,extremeKnownAt:1792479780,preExistingScopeConfirmed:true,source:'Nutzer bestätigt OB1 des DOB505/506: vorbestehende interne FVGs gefüllt, Entry a09:05, SL am nativen Retesthoch09:02; kein Puffer.'},{instrument:'XAUUSD',direction:'short',obStartTime:1792150200,route:'a',from:1792153320,throughExclusive:1792154280,extreme:4181.45,extremeKnownAt:1792154160,preExistingScopeConfirmed:true,source:'Explizite Nutzerbestätigung: Pin500 vorbestehende interne Rest-FVG gefüllt; SL hinter M1-Retestextrem 14:35, kein erfundener Puffer.'}]};
- if(typeof module!=='undefined')module.exports=data;root.OB_REACTION_USER_DECISIONS=data;
-})(globalThis);
