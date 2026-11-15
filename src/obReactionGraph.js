@@ -77,13 +77,15 @@ function sideTrack(dir,entry,context){
 
 // Kein eigenes Gesamturteil: Kopf und Ausgabe zeigen nur Reaktionsstatus und Routenstatus des Produkts.
 const routeText=(name,x)=>`${name}: ${x.status}${x.status==='entry'?` ${price(x.entryPrice)} · ${time(x.entryTime)} · SL ${price(x.stopLoss)}`:x.reason?' · '+reasonText(x.reason):''}`;
+// Ausgabe-Box: zuerst die Reaktion (das Ergebnis von evaluateOrderBlockReaction), darunter klein die Entry-Routen.
+// Produkt-unknown heißt aus Philips Sicht „pending“; der Produktwert steht klein darunter, nichts wird neu aggregiert.
 function resultNode(r,first){
- const routes=Object.entries(r?.routes??{});
- if(first)return {label:'Ausgabe',status:'not-visited',sub:'OB1 trägt keinen Entry',detail:['Entry-Routen gehören zu OB2.']};
- if(!routes.length)return {label:'Ausgabe',status:'unknown',sub:`Reaktion ${r?.state??'unknown'}${r?.reason?'\n'+reasonText(r.reason):''}`,
-  detail:['Noch keine Entry-Routen: das Produkt bewertet sie erst mit dem Reaktionsergebnis.']};
- const status=routes.some(([,x])=>x.status==='entry')?'visited':routes.every(([,x])=>x.status==='rejected')?'rejected':'unknown';
- return {label:'Ausgabe',status,sub:routes.map(([k,x])=>routeText(k,x)).join('\n'),detail:routes.map(([k,x])=>'Route '+routeText(k,x))};
+ const state=r?.state??'unknown',routes=Object.entries(first?{}:r?.routes??{});
+ const lines=[state==='unknown'?`Produkt: unknown${r?.reason?' · '+reasonText(r.reason):''}`:null,
+  first?'OB1 trägt keinen Entry':routes.length?null:'Entry-Routen: noch keine',...routes.map(([k,x])=>routeText(k,x))].filter(Boolean);
+ return {label:'Ausgabe',headline:`Reaktion: ${state==='unknown'?'pending':state}`,
+  status:state==='true'?'visited':state==='false'?'rejected':'unknown',sub:lines.join('\n'),
+  detail:[`evaluateOrderBlockReaction: ${state}${r?.reason?' · '+reasonText(r.reason):''}.`,...routes.map(([k,x])=>'Route '+routeText(k,x))]};
 }
 
 function routeEntry(x,unvisited){

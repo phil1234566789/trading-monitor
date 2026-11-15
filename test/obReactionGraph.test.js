@@ -24,6 +24,9 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(status(g)).toMatchObject({detect:'visited',touch:'visited',broken:'visited',reaction:'visited',stop:'visited',routeA:'visited',
    result:'visited',closed:'not-visited',false:'not-visited',hold:'not-visited'});
   expect(g.nodes.stop.sub).toContain('ferne M5-Kante');
+  // Ausgabe-Box: Reaktion groß zuerst, Routen klein darunter.
+  expect(g.nodes.result.headline).toBe('Reaktion: true');
+  expect(g.nodes.result.sub).toMatch(/^a: entry .*\nb: entry /);
   expect(g.edges).toMatchObject({reactionOb2:'visited',aResult:'visited',falseResult:'not-visited'});
  });
  it('P16 OB1: Hold-Gate hält, weil der DOB erkannt ist',async()=>{
@@ -64,7 +67,8 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   // Produktstatus unknown mit Grund, kein selbst erfundenes rejected.
   expect(g.head).toBe('Intern: unknown (Markt geschlossen, OB verfallen) · Routen: –');
   expect(status(g)).toMatchObject({touch:'unknown',closed:'unknown',broken:'not-visited',result:'unknown'});
-  expect(g.nodes.result.sub).toBe('Reaktion unknown\nMarkt geschlossen, OB verfallen');
+  expect(g.nodes.result).toMatchObject({headline:'Reaktion: pending',status:'unknown',
+   sub:'Produkt: unknown · Markt geschlossen, OB verfallen\nEntry-Routen: noch keine'});
  });
 
  it('Seitenspur übernimmt unknown aus der Produkt-Füllhistorie bei verdeckter Kerze und Lücke (Drift-Wächter)',async()=>{

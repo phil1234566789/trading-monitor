@@ -42,6 +42,7 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
     :data-status="graph.nodes[id].status" :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+nodeText(graph.nodes[id])"
     @click="toggle(id)">
     <span>{{ graph.nodes[id].label }}</span>
+    <strong v-if="graph.nodes[id].headline" class="headline">{{ graph.nodes[id].headline }}</strong>
     <small>{{ nodeText(graph.nodes[id]) }}</small>
    </button>
    <div class="side">
@@ -86,6 +87,7 @@ h2{font-size:17px;margin:4px 0}
 .edge[data-kind="support"]{stroke-dasharray:3 4;stroke-width:1.5;opacity:.8}
 .node{position:absolute;transform:translateX(-50%);padding:5px 3px;min-height:44px;font:12px/1.2 system-ui,sans-serif;
  color:var(--text);border:1px solid var(--edge);border-radius:4px;background:var(--surface);z-index:1;cursor:pointer}
+.node .headline{display:block;margin-top:3px;font-size:15px}
 .node small{display:block;margin-top:3px;font-size:10px;color:var(--muted);white-space:pre-line}
 .node:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .node[data-status="visited"]{border:2px solid color-mix(in srgb,var(--accent) 70%,white);background:color-mix(in srgb,var(--accent) 25%,var(--surface))}
