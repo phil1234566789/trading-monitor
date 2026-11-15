@@ -31,7 +31,7 @@ try{
  });
  const report={version:DOUBLE_ORDER_BLOCK_VERSION,scope:'16 selected positive examples; no general win-rate or trading approval',
   nativeManifestSha256:createHash('sha256').update(text).digest('hex'),sourceBaseline:manifest.codeBaseline,
-  previousPolicy,policy:{reaction:'first touch or near-touch (<=10% OB height), then first same-direction M1 FVG; M5 far edge broken first = false',
+  previousPolicy,policy:{reaction:'first touch (within 2% of the OB height), then first same-direction M1 FVG; M5 far edge reached within 2% first = false',
    pairing:'latest matching first reaction before second retest; simultaneous overlapping partners retained',
    entryB:'rejected when its M1 OB is pierced >50% after full FVG fill',
    firstRetestHold:{anchor:'first exact-touch retest extreme known before the second retest, else the near-touch reaction extreme',from:'first reaction knownAt',

@@ -2,13 +2,13 @@ import {detectOrderBlocks,candleInvalidatesOrderBlock} from './orderBlockDetecti
 import {obMinimum,instrumentConfig} from './instrumentConfig.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
-import {createOrderBlockReactionContext,evaluateOrderBlockReaction,exactRetestAnchor,NEAR_TOUCH_FRACTION,ENTRY_B_MAX_ORDER_BLOCK_DEPTH} from './orderBlockReaction.js';
+import {createOrderBlockReactionContext,evaluateOrderBlockReaction,exactRetestAnchor,NEAR_TOUCH_FRACTION,TOUCH_TOLERANCE_FRACTION,ENTRY_B_MAX_ORDER_BLOCK_DEPTH} from './orderBlockReaction.js';
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from './orderBlockRetestHold.js';
 import {evaluateDoubleOrderBlockRetestDay} from './doubleOrderBlockRetestDay.js';
 import {evaluateDoubleOrderBlockPriceGap} from './doubleOrderBlockPriceGap.js';
 
-export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-v8';
+export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-v9';
 
 // Nur Routen mit vollständigem Entry-Tupel bekommen ein Outcome; die Statuswörter bleiben die des Renderings.
 function pairEntries(reaction,direction,m1,evaluatedAt,instrument){
@@ -56,7 +56,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
  const {nearTouch}={...DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,...options};
  const m5=closedChecklistCandles(m5Candles,'5m',evaluatedAt),m1=closedChecklistCandles(m1Candles,'1m',evaluatedAt);
  const result={version:DOUBLE_ORDER_BLOCK_VERSION,status:m1.length?'ready':'unknown',pairs:[],
-  policy:{reaction:'first exact touch (near-touch via options), then first same-direction M1 FVG; M5 far edge broken first = false',nearTouchFraction:NEAR_TOUCH_FRACTION,
+  policy:{reaction:'first touch (within 2 % of the OB height; near-touch via options), then first same-direction M1 FVG; M5 far edge reached within 2 % first = false',touchToleranceFraction:TOUCH_TOLERANCE_FRACTION,nearTouchFraction:NEAR_TOUCH_FRACTION,
    entryBMaxOrderBlockDepth:ENTRY_B_MAX_ORDER_BLOCK_DEPTH,stop:'open internal M1 FVG at entry = M5 far edge, otherwise retest extreme (contact through entry candle, no buffer)',
    firstRetestHoldThrough:'secondReactionKnownAt',retestDay:'Europe/Berlin calendar date',maxPositiveZoneGap:instrumentConfig(instrument).dobMaxPositiveZoneGap,
    options:{nearTouch,bridgeClosures:roles.first.bridgeClosures}},

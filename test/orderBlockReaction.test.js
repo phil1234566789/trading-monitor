@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-import {measureReactionContact,createOrderBlockReactionContext,evaluateOrderBlockReaction,evaluateReactionStop} from '../src/orderBlockReaction.js';
+import {measureReactionContact,reactionBreaksOrderBlock,createOrderBlockReactionContext,evaluateOrderBlockReaction,evaluateReactionStop} from '../src/orderBlockReaction.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
 import {closedChecklistCandles} from '../src/tradeSetupChecklistTimeBasis.js';
@@ -20,8 +20,14 @@ const react=(day,startTime,dir,{evaluatedAt,m1,options={nearTouch:true}}={})=>{
 describe('reaction contact',()=>{
  const long={dir:1,bottom:100,top:110},short={dir:-1,bottom:100,top:110};
  it.each([[long,{low:109,high:112},'touch'],[long,{low:111,high:113},'nearTouch'],[long,{low:111.01,high:113},'none'],
-  [short,{low:98,high:100},'touch'],[short,{low:97,high:99},'nearTouch'],[short,{low:97,high:98.99},'none']])('classifies %o with %o as %s',(zone,candle,expected)=>{
+  [short,{low:98,high:100},'touch'],[short,{low:97,high:99},'nearTouch'],[short,{low:97,high:98.99},'none'],
+  // 2 % der OB-Höhe vor der Kante zählen als Touch (v9).
+  [long,{low:110.2,high:112},'touch'],[long,{low:110.21,high:112},'nearTouch'],[short,{low:98,high:99.8},'touch'],[short,{low:98,high:99.79},'nearTouch']])('classifies %o with %o as %s',(zone,candle,expected)=>{
   expect(measureReactionContact(zone,{time:0,...candle})).toBe(expected);
+ });
+ it('breaks the reaction once a candle reaches the far edge within 2 % of the OB height',()=>{
+  expect(reactionBreaksOrderBlock({low:100.2,high:105},long)).toBe(true);expect(reactionBreaksOrderBlock({low:100.21,high:105},long)).toBe(false);
+  expect(reactionBreaksOrderBlock({low:105,high:109.8},short)).toBe(true);expect(reactionBreaksOrderBlock({low:105,high:109.79},short)).toBe(false);
  });
  it('keeps an approach from the wrong side as no contact and invalid geometry unknown',()=>{
   expect(measureReactionContact(long,{time:0,low:95,high:99.5})).toBe('none');
@@ -77,9 +83,13 @@ describe('native reaction references',()=>{
   expect(r).toMatchObject({state:'false',reason:'m5OrderBlockBroken',knownAt:1792556940});
   expect(r.routes.a).toMatchObject({status:'rejected',knownAt:1792556940});expect(r.routes.b.status).toBe('rejected');
  });
- it('Pin 504: near-touch reaction 07:44/07:47, but Entry b is rejected for its M1 OB depth',()=>{
+ it('Pin 504: touch within 2 % at 07:43, reaction 07:47, but Entry b is rejected for its M1 OB depth',()=>{
+  for(const options of [{},{nearTouch:true}]){
+   const r=react('2026-10-21',1792558800,1,{options});
+   expect(r).toMatchObject({state:'true',contact:{status:'touch',knownAt:1792561440},knownAt:1792561620});
+   expect(r.routes.b).toMatchObject({status:'rejected',reason:'entryBOrderBlockTooDeep',knownAt:1792562040});
+  }
   const r=react('2026-10-21',1792558800,1);
-  expect(r).toMatchObject({state:'true',contact:{status:'nearTouch',knownAt:1792561440},knownAt:1792561620});
   expect(r.routes.b).toMatchObject({status:'rejected',reason:'entryBOrderBlockTooDeep'});
  });
  it('Pin 502: Entry a stops at the bullish M5 lower edge while the old internal FVG is still open',()=>{
@@ -91,10 +101,12 @@ describe('native reaction references',()=>{
   expect(full.routes.b).toMatchObject({status:'entry',entryTime:1792151580,entryPrice:4175.75,stopLoss:4181.98});
   expect(react('2026-10-16',1792150200,-1,{evaluatedAt:1792151580}).routes).toEqual(full.routes);
  });
- it('Pin 501: reaction true at 05:40 Berlin, Entry a stops at the retest high',()=>{
-  const r=react('2026-11-09',1794192300,-1,{evaluatedAt:1794199200+3600});
-  expect(r).toMatchObject({state:'true',knownAt:1794199200});
-  expect(r.routes.a).toMatchObject({status:'entry',entryTime:1794199200,entryPrice:4128.84,stopLoss:4132.61,stopAnchor:'retestExtreme'});
+ it('Pin 501: the 05:37 high 1.15 % below the far edge makes the reaction false from 05:38 Berlin, no entry',()=>{
+  const r=react('2026-11-09',1794192300,-1,{evaluatedAt:1794199200+3600,options:{}});
+  expect(r).toMatchObject({state:'false',reason:'m5OrderBlockBroken',knownAt:1794199080});
+  expect(r.routes.a).toMatchObject({status:'rejected',reason:'reactionFalse'});
+  expect(react('2026-11-09',1794192300,-1,{evaluatedAt:1794199080,options:{}}).state).toBe('false');
+  expect(react('2026-11-09',1794192300,-1,{evaluatedAt:1794199020,options:{}}).state).not.toBe('false');
  });
  it('stays unknown before contact, before the FVG and across a missing minute',()=>{
   expect(react('2026-10-21',1792552500,1,{evaluatedAt:1792555200}).reason).toBe('noContact');

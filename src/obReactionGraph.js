@@ -1,8 +1,9 @@
 import {measureOrderBlockPenetration,orderBlockPenetration} from './orderBlockPenetration.js';
 import {candleInvalidatesOrderBlock} from './orderBlockDetection.js';
-import {internalFvgOpenAt,firstIndex} from './orderBlockReaction.js';
+import {internalFvgOpenAt,firstIndex,TOUCH_TOLERANCE_FRACTION} from './orderBlockReaction.js';
 import {formatBerlinTime} from './berlinTime.js';
 import {fmtPrice} from './format.js';
+const TOUCH_PCT=`${TOUCH_TOLERANCE_FRACTION*100} %`;
 
 // Knotenplan der OB-Reaktion im Chart-Debugger: Knoten = v7-Entscheidungsbaum (Default W1), Zustände nur aus dem
 // Produktergebnis (evaluateCase → evaluateOrderBlockReaction/detectDoubleOrderBlocks) zum Slider-Stand.
@@ -120,18 +121,18 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
  n.detect={label:`${dir===1?'Bullische':'Bärische'} M5-OB erkannt`,status:ob?'visited':'unknown',sub:ob?`${range(ob)} · ${time(ob.recognizedAt)}`:'noch nicht bekannt',
   detail:[ob?`M5-OB ${range(ob)}, bekannt ${time(ob.recognizedAt)}.`:'Die M5-OB ist zu diesem Stand noch nicht bekannt.']};
  // marketClosed ist im Produkt unknown, kein false: der Pfad bleibt ◇ statt ×.
- n.touch={label:nearTouch?'Exakt oder Near ≤10 % vor dem nächsten Marktschluss?':'Exakter Touch vor dem nächsten Marktschluss?',
+ n.touch={label:nearTouch?'Exakt oder Near ≤10 % vor dem nächsten Marktschluss?':`Touch (≤ ${TOUCH_PCT} der OB-Höhe) vor dem nächsten Marktschluss?`,
   status:contact?'visited':open(ob&&!rejected),
   sub:contact?`${contact.status==='nearTouch'?'Near-Touch':'Touch'} ${time(contact.candleTime)}`:closed?'nein · Markt geschlossen':ob&&!rejected?'◇ offen':'○ nicht besucht',
   detail:[contact?`${contact.status} mit der M1-Kerze ${time(contact.candleTime)}, bekannt ${time(contact.knownAt)}.`:'Noch kein Touch einer geschlossenen M1-Kerze.',
-   nearTouch?'Near-Touch-Schalter an: ≤10 % der OB-Höhe vor der Kante zählt.':'Produkt-Default W1: nur exakter Touch.']};
+   nearTouch?'Near-Touch-Schalter an: ≤10 % der OB-Höhe vor der Kante zählt.':`Produkt-Default: Touch, auch bis ${TOUCH_PCT} der OB-Höhe vor der Kante.`]};
  n.closed={label:'Markt geschlossen, OB verfallen',status:open(closed),sub:closed?'Reaktion unknown':'○ nicht besucht',
   detail:[bridgeClosures?'Schalter „Marktschluss überbrücken“ an: die Reaktion läuft über die XAU-Pause weiter, dieser Ausgang tritt nicht ein.'
    :'Ohne Überbrückung verfällt eine OB, die bis zum ersten XAU-Marktschluss nach ihrer Erkennung nicht reagiert hat (Reaktion unknown).']};
- n.broken={label:`Gegenkante auf M1 gebrochen, bevor eine neue ${adj} M1-FVG bekannt ist?`,
+ n.broken={label:`Gegenkante auf M1 gebrochen (≤ ${TOUCH_PCT} der OB-Höhe), bevor eine neue ${adj} M1-FVG bekannt ist?`,
   status:rejected?'rejected':fvg?'visited':open(contact&&!closed),
   sub:rejected?`ja · ${time(r.knownAt)}`:fvg?'nein':contact&&!closed?'◇ offen':'○ nicht besucht',
-  detail:['Bricht eine M1-Kerze die ferne M5-Kante, bevor eine neue gleichgerichtete M1-FVG bekannt ist, ist die Reaktion false.',
+  detail:[`Erreicht eine M1-Kerze die ferne M5-Kante bis auf ${TOUCH_PCT} der OB-Höhe, bevor eine neue gleichgerichtete M1-FVG bekannt ist, ist die Reaktion false.`,
    'Ein Bruch in derselben Kerze wie der erste Touch zählt ebenfalls als false.']};
  n.false={label:'Reaktion false',status:rejected?'rejected':'not-visited',sub:rejected?reasonText(r.reason):'○ nicht besucht',
   detail:[rejected?`M5-Gegenkante gebrochen, bekannt ${time(r.knownAt)}.`:'Kein Bruch vor der Reaktions-FVG.']};

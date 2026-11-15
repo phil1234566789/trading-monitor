@@ -42,13 +42,19 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(g.edges.falseResult).toBe('rejected');
   expect(g.history.at(-1).text).toBe('Reaktion false · M5-Gegenkante gebrochen');
  });
- it('504 und P14: Reaktion true, SL ohne offene interne FVG → Retest-Extrem',async()=>{
-  for(const [id,sl] of [['504','4.114,07'],['P14','4.181,45']]){
-   const g=await graphAt(id);
-   expect(g.head,id).toBe('Intern: true · Routen: a entry, b entry');
-   expect(status(g),id).toMatchObject({reaction:'visited',stop:'visited',routeA:'visited',bCheck:'visited',entryB:'visited',result:'visited'});
-   expect(g.nodes.stop.sub,id).toBe(`${sl}\nkeine offen → Retest-Extrem`);
-  }
+ it('P14: Reaktion true, SL ohne offene interne FVG → Retest-Extrem; 504 lehnt Entry b ab',async()=>{
+  const g=await graphAt('P14');
+  expect(g.head).toBe('Intern: true · Routen: a entry, b entry');
+  expect(status(g)).toMatchObject({reaction:'visited',stop:'visited',routeA:'visited',bCheck:'visited',entryB:'visited',result:'visited'});
+  expect(g.nodes.stop.sub).toBe('4.181,45\nkeine offen → Retest-Extrem');
+  const g504=await graphAt('504');
+  expect(g504.head).toBe('Intern: true · Routen: a entry, b rejected');
+  expect(g504.nodes.stop.sub).toBe('4.115,45\nkeine offen → Retest-Extrem');
+ });
+ it('nennt die 2-%-Berührungstoleranz an Touch- und Bruch-Knoten',async()=>{
+  const g=await graphAt('P14');
+  expect(g.nodes.touch.label).toBe('Touch (≤ 2 % der OB-Höhe) vor dem nächsten Marktschluss?');
+  expect(g.nodes.broken.label).toContain('gebrochen (≤ 2 % der OB-Höhe)');
  });
  it('folgt dem Slider: vor der OB unbekannt, vor der FVG offen',async()=>{
   const c=CHART_DEBUGGER_CASES.find(x=>x.id==='503');

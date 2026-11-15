@@ -5,6 +5,9 @@ import {m1FvgEntrySequence,advanceM1FvgEntrySequence,m1FvgSequenceResult,m1FvgFu
 import {m1GapCovered} from './goldWeekendGap.js';
 
 export const NEAR_TOUCH_FRACTION=.1;
+// Philip wertet ≤ 2 % der OB-Höhe an beiden Kanten als Berührung (Pin 504 Kontakt, Pin 501 Gegenkante); kein Referenzpaar
+// und kein Negativ-Pin ändert sich (analysis/dob/touch-tolerance.json). Gilt für Kontakt und Bruch bis Reaktion bzw. Entry b.
+export const TOUCH_TOLERANCE_FRACTION=.02;
 export const ENTRY_B_MAX_ORDER_BLOCK_DEPTH=.5;
 // Interne FVGs entstehen in oder kurz vor der M5-OB-Formation; ältere Historie darf den SL nicht verändern.
 export const INTERNAL_FVG_LOOKBACK_SECONDS=900;
@@ -21,7 +24,14 @@ export function measureReactionContact(zone,candle,threshold=NEAR_TOUCH_FRACTION
  if(![-1,1].includes(zone?.dir)||m.status!=='ready')return 'unknown';
  if(candleTouchesOrderBlock(candle,zone))return 'touch';
  const height=zone.top-zone.bottom,approach=zone.dir===1?candle.low>zone.top:candle.high<zone.bottom;
- return approach&&-m.maxPenetrationFraction*height<=threshold*height+priceRoundingTolerance(zone)?'nearTouch':'none';
+ const within=fraction=>approach&&-m.maxPenetrationFraction*height<=fraction*height+priceRoundingTolerance(zone);
+ return within(TOUCH_TOLERANCE_FRACTION)?'touch':within(threshold)?'nearTouch':'none';
+}
+
+// Bruch der fernen M5-Kante für Reaktion und Route b, mit derselben Toleranz wie der Kontakt.
+export function reactionBreaksOrderBlock(candle,zone) {
+ const tolerance=TOUCH_TOLERANCE_FRACTION*(zone.top-zone.bottom);
+ return zone.dir===1?candle.low<=zone.bottom+tolerance:candle.high>=zone.top-tolerance;
 }
 
 // m1Candles müssen bereits auf geschlossene Kerzen bis evaluatedAt gefiltert sein (closedChecklistCandles).
@@ -114,7 +124,7 @@ function evaluateRoutes(context,orderBlock,contact,fvg) {
  let fullFill=false;
  const walk=walkM1(context,fvg.recognizedAt,c=>{
   if(!c.ignored){
-   if(candleInvalidatesOrderBlock(c,orderBlock))return finish('rejected','m5OrderBlockBroken',c);
+   if(reactionBreaksOrderBlock(c,orderBlock))return finish('rejected','m5OrderBlockBroken',c);
    fullFill||=Boolean(fvg.orderBlock)&&m1FvgFullyFilled(c,fvg);
    // Die 50 % betreffen nur den M1-OB der Entry-b-FVG nach voller Füllung, nicht den M5-Retest.
    if(fullFill&&measureOrderBlockPenetration(fvg.orderBlock,direction,[c]).maxPenetrationFraction>ENTRY_B_MAX_ORDER_BLOCK_DEPTH)
@@ -160,7 +170,7 @@ export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=false,b
  const rows=context.rows,direction=sideOf(orderBlock.dir);
  const walk=walkM1(context,Math.ceil(orderBlock.recognizedAt/60)*60,(c,i)=>{
   if(c.ignored)return false;
-  if(candleInvalidatesOrderBlock(c,orderBlock)){
+  if(reactionBreaksOrderBlock(c,orderBlock)){
    const rejected={status:'rejected',reason:'reactionFalse',knownAt:c.time+60};
    result={state:'false',reason:'m5OrderBlockBroken',contact,fvg:null,knownAt:c.time+60,penetration:null,routes:{a:rejected,b:rejected}};
    return true;
