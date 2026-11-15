@@ -26,8 +26,8 @@ const graphRole=ref('second');
 watch(caseId,()=>{graphRole.value='second';});
 const graph=computed(()=>{
  if(!result.value)return null;
- const {orderBlocks,m1,pair}=result.value,entry=orderBlocks.find(o=>o.role===graphRole.value);
- return obReactionGraph({dir:current.value.dir,m1,evaluatedAt:evaluatedAt.value,entry,pair,partner:orderBlocks.find(o=>o!==entry)??null,
+ const {orderBlocks,context,pair}=result.value,entry=orderBlocks.find(o=>o.role===graphRole.value);
+ return obReactionGraph({dir:current.value.dir,context,evaluatedAt:evaluatedAt.value,bridgeClosures:bridgeClosures.value,entry,pair,partner:orderBlocks.find(o=>o!==entry)??null,
   nearTouch:reactionOptionsFor(graphRole.value,{nearTouch:nearTouch.value}).nearTouch});
 });
 
@@ -71,7 +71,7 @@ function draw(){
  const {m1,orderBlocks,pair}=result.value,at=evaluatedAt.value,sec=tf.value==='m1'?60:300;
  const reactionFvgs=orderBlocks.map(o=>o.reaction?.fvg).filter(Boolean),candles=tf.value==='m1'?m1:result.value.m5;
  // M1-Zeitpunkte auf die M5-Kerze legen, sonst fehlen Marker zwischen zwei M5-Balken.
- const snap=t=>Math.floor(t/sec)*sec;
+ const snap=t=>Math.floor(t/sec)*sec,last=candles.at(-1)?.time??-Infinity;
  series.setData(tintM1FvgCandidates(candles,reactionFvgs,tf.value==='m1'?'1m':'5m',cssColor('fvgCandle')));
  // Sichtbereich erst nach setData setzen, sonst wirft lightweight-charts 'Value is null'.
  if(fitPending){fitPending=false;chart.timeScale().setVisibleRange({from:steps.value.from-1800,to:steps.value.through});}
@@ -82,10 +82,12 @@ function draw(){
  else renderPersistedZones(series,known,zonePrimitives,candles);
  // Einziges neues Overlay: FVG-Zonen über dasselbe Box-Primitive, Reaktions-FVG kräftig, interne blass mit Füllstand.
  for(const {internalFvgs,reaction} of orderBlocks)for(const fvg of internalFvgs??[]){
+  // Im M5-Modus fehlt die laufende M5-Kerze; eine FVG danach hätte keinen Balken zum Andocken.
+  if(snap(fvg.candleTime)>last)continue;
   const strong=fvg===reaction?.fvg,key=strong?'fvgCandle':'obInactiveM5';
   const primitive=new OrderBlockPrimitive({top:fvg.top,bottom:fvg.bottom,startTime:snap(fvg.candleTime),endTime:at,touched:true},
    {fillColor:cssColorScaled(key,strong?.25:.12),borderColor:cssColor(key),textColor:cssColor(key),borderWidth:1,
-    label:strong?'Reaktions-FVG':`FVG ${fvgFillMeter(fvg,m1).label}`},candles);
+    label:strong?'Reaktions-FVG':`FVG ${fvgFillMeter(result.value.context,fvg).label}`},candles);
   series.attachPrimitive(primitive);overlayPrimitives.push(primitive);
  }
  const list=[];
@@ -101,7 +103,7 @@ function draw(){
    list.push({time:snap(bar(r.entryTime)),position:current.value.dir===1?'belowBar':'aboveBar',shape:current.value.dir===1?'arrowUp':'arrowDown',color:cssColor('dobConfirmed'),text:`Entry ${name}`});
  }
  list.sort((a,b)=>a.time-b.time);
- markers.setMarkers(list.filter(m=>m.time<at));
+ markers.setMarkers(list.filter(m=>m.time<at&&m.time<=last));
  priceLines.forEach(l=>series.removePriceLine(l));priceLines=[];
  const entries=orderBlocks.filter(o=>o.role==='second').flatMap(o=>Object.entries(o.reaction?.routes??{})).filter(([,r])=>r.status==='entry');
  for(const [name,r] of entries){
