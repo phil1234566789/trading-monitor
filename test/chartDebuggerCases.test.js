@@ -1,15 +1,15 @@
 import {describe,expect,it} from 'vitest';
-import {OB_REACTION_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../src/obReactionDebuggerCases.js';
+import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../src/chartDebuggerCases.js';
 import {measureReactionContact} from '../src/orderBlockReaction.js';
 
 const NEAR={nearTouch:'second'};
-const byId=id=>OB_REACTION_CASES.find(c=>c.id===id);
+const byId=id=>CHART_DEBUGGER_CASES.find(c=>c.id===id);
 const at=async(id,evaluatedAt,options)=>{const c=byId(id),fixture=await loadCaseFixture(c);return evaluateCase(c,fixture,evaluatedAt??caseSteps(c,fixture).through,options);};
 const ob2=r=>r.orderBlocks.at(-1).reaction;
 
-describe('OB-Reaktions-Debugger: Fälle unter dem Produkt-Default W1 (nur exakter Touch)',()=>{
+describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur exakter Touch)',()=>{
  it('every case finds all its OBs and evaluates a reaction by the end of its window',async()=>{
-  for(const c of OB_REACTION_CASES){
+  for(const c of CHART_DEBUGGER_CASES){
    const r=await at(c.id);
    for(const ob of r.orderBlocks){expect(ob.orderBlock,`${c.id} ${ob.startTime}`).not.toBeNull();expect(ob.reaction.state).not.toBe('unknown');}
   }

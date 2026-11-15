@@ -24,7 +24,9 @@ export const router = createRouter({
       try{const event=await createLiveWatcherRepository(supabase).event(to.query.event);return event?.payload?.entry?liveEntryLink(event):'/statistik';}catch{return '/statistik';}
     } },
     { path: "/algo-watcher", name: "algo-watcher", component: () => import("./views/AlgoWatcher.vue") },
-    { path: "/ob-reaktion", name: "ob-reaktion", component: () => import("./views/ObReactionDebugger.vue") },
+    { path: "/chart-debugger", name: "chart-debugger", component: () => import("./views/ChartDebugger.vue") },
+    // Alte Adresse aus Status-Quo- und docs/ob-reaction-Links; Query (?fall=) bleibt erhalten.
+    { path: "/ob-reaktion", redirect: to => ({path: "/chart-debugger", query: to.query}) },
   ],
 });
 installRouteRecovery(router);

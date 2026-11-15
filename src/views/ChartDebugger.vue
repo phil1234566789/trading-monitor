@@ -9,14 +9,14 @@ import {tintM1FvgCandidates} from '../fvgCandleTint.js';
 import {cssColor,cssColorScaled} from '../chartColors.js';
 import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice} from '../format.js';
-import {OB_REACTION_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../obReactionDebuggerCases.js';
+import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../chartDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOrderBlocks.js';
 import {obReactionGraph,reasonText,fvgFillMeter} from '../obReactionGraph.js';
 import ObReactionGraph from '../components/ObReactionGraph.vue';
 
 const route=useRoute(),router=useRouter();
-const caseId=ref(OB_REACTION_CASES.some(c=>c.id===route.query.fall)?route.query.fall:OB_REACTION_CASES[0].id);
-const current=computed(()=>OB_REACTION_CASES.find(c=>c.id===caseId.value));
+const caseId=ref(CHART_DEBUGGER_CASES.some(c=>c.id===route.query.fall)?route.query.fall:CHART_DEBUGGER_CASES[0].id);
+const current=computed(()=>CHART_DEBUGGER_CASES.find(c=>c.id===caseId.value));
 const fixture=shallowRef(null),steps=ref({from:0,through:0}),evaluatedAt=ref(0),error=ref('');
 // Ablations-Schalter wie scripts/dobAblation.mjs, damit der Effekt von Near-Touch/Marktschluss je Fall sichtbar wird.
 const nearTouch=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.nearTouch),bridgeClosures=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.bridgeClosures);
@@ -125,9 +125,9 @@ watch(tf,()=>{fitPending=true;draw();});
 </script>
 
 <template>
- <div class="obr">
+ <div class="chart-debugger">
   <div class="bar">
-   <select v-model="caseId"><option v-for="c in OB_REACTION_CASES" :key="c.id" :value="c.id">{{ c.label }}</option></select>
+   <select v-model="caseId"><option v-for="c in CHART_DEBUGGER_CASES" :key="c.id" :value="c.id">{{ c.label }}</option></select>
    <button @click="step(-1)" title="Eine M1-Kerze zurück (←)">◀</button>
    <input type="range" :min="steps.from" :max="steps.through" step="60" :value="evaluatedAt" @input="evaluatedAt=Number($event.target.value)">
    <button @click="step(1)" title="Eine M1-Kerze vor (→)">▶</button>
@@ -172,7 +172,7 @@ watch(tf,()=>{fitPending=true;draw();});
 </template>
 
 <style scoped>
-.obr{display:flex;flex-direction:column;height:calc(100vh - 60px);padding:8px;gap:8px}
+.chart-debugger{display:flex;flex-direction:column;height:calc(100vh - 60px);padding:8px;gap:8px}
 .bar{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .bar input[type=range]{flex:1}
 .at{font-variant-numeric:tabular-nums;white-space:nowrap}

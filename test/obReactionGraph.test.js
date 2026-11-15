@@ -1,14 +1,14 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-import {OB_REACTION_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../src/obReactionDebuggerCases.js';
+import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../src/chartDebuggerCases.js';
 import {obReactionGraph} from '../src/obReactionGraph.js';
 import {createOrderBlockReactionContext,evaluateOrderBlockReaction,internalFvgOpenAt} from '../src/orderBlockReaction.js';
 import {reactionOptionsFor} from '../src/doubleOrderBlocks.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
 
-// Gleicher Aufruf wie ObReactionDebugger.vue: Rolle wählen, Partner und Paar mitgeben.
-const caseOf=id=>OB_REACTION_CASES.find(x=>x.id===id);
+// Gleicher Aufruf wie ChartDebugger.vue: Rolle wählen, Partner und Paar mitgeben.
+const caseOf=id=>CHART_DEBUGGER_CASES.find(x=>x.id===id);
 const graphOf=(c,r,at,role='second')=>{const entry=r.orderBlocks.find(o=>o.role===role);
  return obReactionGraph({dir:c.dir,entry,context:r.context,evaluatedAt:at,pair:r.pair,partner:r.orderBlocks.find(o=>o!==entry)??null});};
 const graphAt=async(id,evaluatedAt,role='second')=>{
@@ -47,7 +47,7 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   }
  });
  it('folgt dem Slider: vor der OB unbekannt, vor der FVG offen',async()=>{
-  const c=OB_REACTION_CASES.find(x=>x.id==='503');
+  const c=CHART_DEBUGGER_CASES.find(x=>x.id==='503');
   expect((await graphAt('503',c.orderBlocks[0]+60)).text).toBe('M5-OB noch nicht bekannt.');
   const knownAt=(await graphAt('P16')).history.find(h=>h.text.startsWith('Reaktion true')).at,before=await graphAt('P16',knownAt-60);
   expect(status(before)).toMatchObject({reaction:'not-visited',broken:'unknown'});

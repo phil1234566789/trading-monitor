@@ -16,7 +16,7 @@ const FIXTURES={
 export const loadCaseFixture=async c=>(await FIXTURES[c.day]()).default;
 
 // OB-Startzeiten aus references.json (P14/P16), 2026-10-20-p17.json (P17) und test/orderBlockReaction.test.js (Pins).
-export const OB_REACTION_CASES=[
+export const CHART_DEBUGGER_CASES=[
  {id:'P14',label:'P14 · DOB Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792147500,1792150200]},
  {id:'P16',label:'P16 · DOB Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792545900,1792552500]},
  {id:'500',label:'Pin 500 · Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792150200]},

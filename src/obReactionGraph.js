@@ -4,7 +4,7 @@ import {internalFvgOpenAt,firstIndex} from './orderBlockReaction.js';
 import {formatBerlinTime} from './berlinTime.js';
 import {fmtPrice} from './format.js';
 
-// Knotenplan des OB-Reaktions-Debuggers: Knoten = v7-Entscheidungsbaum (Default W1), Zustände nur aus dem
+// Knotenplan der OB-Reaktion im Chart-Debugger: Knoten = v7-Entscheidungsbaum (Default W1), Zustände nur aus dem
 // Produktergebnis (evaluateCase → evaluateOrderBlockReaction/detectDoubleOrderBlocks) zum Slider-Stand.
 export const REASON_TEXT={
  noContact:'noch kein Retest',awaitingFvg:'Retest da, noch keine neue FVG',marketClosed:'Markt geschlossen, OB verfallen',
