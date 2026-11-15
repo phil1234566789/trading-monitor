@@ -1,6 +1,7 @@
 // DOB-Winrate XAUUSD ab 01.10.2026 (Berlin) als Vorher/Nachher-Messung gegen den jeweiligen Checkout-src.
 // Methodik steht in report.methodology. Flags: --refresh (Kerzen neu holen), --name <x> (Reportname,
-// Default version-gitHash), --crosscheck (eine Woche jeden M5-Schluss gegen das Tagesraster prüfen).
+// Default version-gitHash), --crosscheck (eine Woche jeden M5-Schluss gegen das Tagesraster prüfen),
+// --options <json> (Ablations-Schalter von detectDoubleOrderBlocks, siehe DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS).
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -10,6 +11,7 @@ import { createServer } from 'vite';
 import { aggregateDobByMonth } from './dobWinrateAggregate.mjs';
 
 const flag = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
+const options = JSON.parse(flag('--options') ?? '{}');
 const SYMBOL = 'XAUUSD', START_DAY = '2026-10-01', CHECK_WEEK = ['2026-11-02', '2026-11-07'];
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 const outDir = path.join(root, '.debug', 'dob-winrate');
@@ -67,7 +69,7 @@ try {
     const first = new Map(), complete = new Map();
     for (const at of points) {
       const m5 = window(m5All, '5m', TRADE_SETUP_M5_CANDLE_COUNT, at);
-      const input = { m5Candles: m5, m1Candles: window(m1All, '1m', TRADE_SETUP_M5_CANDLE_COUNT * 5 + 5, at), instrument: SYMBOL, evaluatedAt: at };
+      const input = { m5Candles: m5, m1Candles: window(m1All, '1m', TRADE_SETUP_M5_CANDLE_COUNT * 5 + 5, at), instrument: SYMBOL, evaluatedAt: at, options };
       const t0 = performance.now();
       const result = detectDoubleOrderBlocks(input);
       engineMs += performance.now() - t0;
@@ -101,7 +103,7 @@ try {
   const summary = aggregateDobByMonth(pairs, p => berlinDateStrFor(p.recognizedAt).slice(0, 7));
   const gitHash = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
     + (execSync('git status --porcelain', { cwd: root }).toString().trim() ? '-dirty' : '');
-  const report = { version, git: gitHash, symbol: SYMBOL, from: START_DAY, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
+  const report = { version, options, git: gitHash, symbol: SYMBOL, from: START_DAY, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
     methodology: [
       'Kerzen: native forex_candles über fetchInitialCandles wie useDoubleOrderBlockChart, gecacht in .debug/dob-winrate.',
       'Raster: je Berliner Kalendertag mit M1-Daten evaluatedAt = Tagesende (zuletzt Datenende); Fenster wie Dashboard (2500 M5 / 12505 M1, closedChecklistCandles, Session-Ignore-Markierung).',
@@ -110,6 +112,8 @@ try {
       'Monat = Berliner Monat von pair.recognizedAt; Winrate = success/(success+loss); unknownRate = unknown/ready; R: Win +2, Loss −1.'],
     evaluations: days.length, engineMs: Math.round(dailyEngineMs), crosscheck, requests, candles: { m5: m5All.length, m1: m1All.length },
     ...summary, pairs: pairs.map(p => ({ id: p.id, direction: p.direction, recognizedAt: p.recognizedAt,
+      contacts: [p.firstRetest.contact, p.secondRetest.contact],
+      depths: [p.firstPenetration?.maxPenetrationFraction ?? null, p.secondPenetration?.maxPenetrationFraction ?? null],
       entries: Object.fromEntries(Object.entries(p.entries).map(([r, e]) => [r, { status: e.status, entryTime: e.entryTime,
         entryPrice: e.entryPrice, stopPrice: e.stopPrice, outcome: e.outcome?.status ?? null, outcomeReason: e.outcome?.reason ?? null, reason: e.reason ?? null }])) })) };
   await fs.mkdir(outDir, { recursive: true });

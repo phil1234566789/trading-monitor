@@ -136,4 +136,14 @@ describe('double order blocks from native candles',()=>{
   expect(firstRetestHoldAnchor(exact,1794386940)).toBe('near');
   expect(firstRetestHoldAnchor(false,1794387600)).toBe('near');
  });
+ it('exposes the ablation switches without changing the default result',()=>{
+  const day=refs(manifest.pairs.find(p=>p.id==='P14'))[0].day,fixture=days.get(day);
+  const at=options=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to,options});
+  const [first,second]=refs(manifest.pairs.find(p=>p.id==='P14')),has=r=>r.pairs.some(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
+  expect(at({}).pairs).toEqual(run(day).pairs);expect(at({}).policy.options.nearTouch).toBe('second');
+  // P14 lebt vom Near-Touch auf OB2 und von über 50 % OB2-Tiefe.
+  expect(has(at({nearTouch:'none'}))).toBe(false);
+  expect(has(at({maxRetestDepth:{first:null,second:.5}}))).toBe(has(at({})));
+  expect(at({stopRule:'m5Edge'}).pairs.flatMap(p=>Object.values(p.entries)).every(e=>e.status!=='unknown'||e.reason!=='retestEpisodeUnresolved')).toBe(true);
+ });
 });

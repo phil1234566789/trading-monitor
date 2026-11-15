@@ -26,13 +26,14 @@ export function measureReactionContact(zone,candle,threshold=NEAR_TOUCH_FRACTION
 
 // m1Candles müssen bereits auf geschlossene Kerzen bis evaluatedAt gefiltert sein (closedChecklistCandles).
 // Reaktions-FVG = Entry-Kandidat aus m1FvgEntryCandidates, nicht orderBlockMitigationFvg: dieselbe FVG trägt die Entry-Routen und ihren M1-OB.
-export function createOrderBlockReactionContext(m1Candles,evaluatedAt,instrument) {
+// stopRule 'm5Edge' setzt den SL immer an die ferne M5-Kante (v6-Vergleich in der Ablation).
+export function createOrderBlockReactionContext(m1Candles,evaluatedAt,instrument,{stopRule='internalFvg'}={}) {
  const candidates=m1FvgEntryCandidates(m1Candles,evaluatedAt),byKnownAt={long:new Map(),short:new Map()},byDirection={long:[],short:[]};
  for(const fvg of candidates){
   byDirection[fvg.direction].push(fvg);
   const map=byKnownAt[fvg.direction];if(!map.has(fvg.recognizedAt))map.set(fvg.recognizedAt,[]);map.get(fvg.recognizedAt).push(fvg);
  }
- return {rows:m1Candles,evaluatedAt,instrument,byKnownAt,byDirection,fills:new Map()};
+ return {rows:m1Candles,evaluatedAt,instrument,stopRule,byKnownAt,byDirection,fills:new Map()};
 }
 
 // Gemeinsamer Vorwärtslauf ab from: Einstieg per Binärsuche, Abbruch bei Lücke oder wenn step true liefert.
@@ -67,6 +68,7 @@ const openAt=(fill,at)=>fill.filledAt!=null&&fill.filledAt<=at?false:fill.gapAt!
 // SL zum Entry-Zeitpunkt: nur vor dem Retest bekannte interne FVGs zählen, die Reaktions-FVG nicht.
 export function evaluateReactionStop(context,orderBlock,contact,entryAt) {
  const direction=sideOf(orderBlock.dir),list=context.byDirection[direction];
+ if(context.stopRule==='m5Edge')return {status:'ready',anchor:'m5-edge',price:direction==='long'?orderBlock.bottom:orderBlock.top,reason:null};
  let inside=false,overlapping=false,missing=false;
  for(let i=firstIndex(list,f=>f.candleTime>=orderBlock.startTime-INTERNAL_FVG_LOOKBACK_SECONDS);
   i<list.length&&list[i].recognizedAt<=contact.candleTime;i++){
@@ -139,7 +141,7 @@ export function exactRetestAnchor(context,orderBlock,reaction) {
 }
 
 // Reaktion true: erste gleichgerichtete M1-FVG nach dem ersten (Near-)Touch; false: M5-Gegenkante vorher gebrochen.
-export function evaluateOrderBlockReaction(context,orderBlock) {
+export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=true}={}) {
  let contact=null,contactIndex=-1,result=null;
  const unknown=reason=>({state:'unknown',reason,contact,fvg:null,knownAt:null,penetration:null,routes:null});
  if(![-1,1].includes(orderBlock?.dir)||!Number.isFinite(orderBlock.recognizedAt)||!(orderBlock.top>orderBlock.bottom))
@@ -154,7 +156,7 @@ export function evaluateOrderBlockReaction(context,orderBlock) {
   }
   if(!contact){
    const status=measureReactionContact(orderBlock,c);
-   if(status==='touch'||status==='nearTouch'){contact={status,candleTime:c.time,knownAt:c.time+60};contactIndex=i;}
+   if(status==='touch'||nearTouch&&status==='nearTouch'){contact={status,candleTime:c.time,knownAt:c.time+60};contactIndex=i;}
    return false;
   }
   const fvg=reactionFvg(context,direction,contact,c.time+60);

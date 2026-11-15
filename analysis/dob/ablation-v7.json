@@ -1,0 +1,1247 @@
+{
+  "source": "node scripts/dobAblation.mjs on .debug/dob-winrate cached XAUUSD candles 2026-10-01..2026-11-14, 0 requests; baseline report-v6-final",
+  "variants": {
+    "V0": {},
+    "V1": {
+      "nearTouch": "none"
+    },
+    "V2": {
+      "nearTouch": "second"
+    },
+    "V3": {
+      "maxRetestDepth": {
+        "first": 0.5,
+        "second": null
+      }
+    },
+    "V4": {
+      "maxRetestDepth": {
+        "first": null,
+        "second": 0.5
+      }
+    },
+    "V6": {
+      "stopRule": "m5Edge"
+    },
+    "C1": {
+      "nearTouch": "none",
+      "maxRetestDepth": {
+        "first": 0.5,
+        "second": null
+      }
+    },
+    "C2": {
+      "nearTouch": "none",
+      "maxRetestDepth": {
+        "first": 0.5,
+        "second": 0.5
+      }
+    },
+    "C3": {
+      "nearTouch": "second",
+      "maxRetestDepth": {
+        "first": 0.5,
+        "second": null
+      }
+    },
+    "C4": {
+      "nearTouch": "none",
+      "maxRetestDepth": {
+        "first": 0.5,
+        "second": 0.5
+      },
+      "stopRule": "m5Edge"
+    },
+    "C5": {
+      "nearTouch": "none",
+      "stopRule": "m5Edge"
+    }
+  },
+  "rows": [
+    {
+      "variant": "v6",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 64,
+      "trades": 32,
+      "winrate": "40.6%",
+      "sumR": 7,
+      "avgR": "0.219"
+    },
+    {
+      "variant": "v6",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 64,
+      "trades": 64,
+      "winrate": "39.1%",
+      "sumR": 11,
+      "avgR": "0.172"
+    },
+    {
+      "variant": "v6",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 101,
+      "trades": 70,
+      "winrate": "37.1%",
+      "sumR": 8,
+      "avgR": "0.114"
+    },
+    {
+      "variant": "v6",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 101,
+      "trades": 101,
+      "winrate": "39.6%",
+      "sumR": 19,
+      "avgR": "0.188"
+    },
+    {
+      "variant": "v6",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 165,
+      "trades": 102,
+      "winrate": "38.2%",
+      "sumR": 15,
+      "avgR": "0.147"
+    },
+    {
+      "variant": "v6",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 165,
+      "trades": 165,
+      "winrate": "39.4%",
+      "sumR": 30,
+      "avgR": "0.182"
+    },
+    {
+      "variant": "V0",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 291,
+      "trades": 274,
+      "winrate": "35.4%",
+      "sumR": 17,
+      "avgR": "0.062",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V0",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 291,
+      "trades": 119,
+      "winrate": "34.5%",
+      "sumR": 4,
+      "avgR": "0.034",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V0",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 205,
+      "trades": 195,
+      "winrate": "32.3%",
+      "sumR": -6,
+      "avgR": "-0.031"
+    },
+    {
+      "variant": "V0",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 205,
+      "trades": 91,
+      "winrate": "33.0%",
+      "sumR": -1,
+      "avgR": "-0.011"
+    },
+    {
+      "variant": "V0",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 86,
+      "trades": 79,
+      "winrate": "43.0%",
+      "sumR": 23,
+      "avgR": "0.291"
+    },
+    {
+      "variant": "V0",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 86,
+      "trades": 28,
+      "winrate": "39.3%",
+      "sumR": 5,
+      "avgR": "0.179"
+    },
+    {
+      "variant": "V1",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 231,
+      "trades": 216,
+      "winrate": "38.4%",
+      "sumR": 33,
+      "avgR": "0.153",
+      "posRefs": "12/16 −P8,P10,P13,P14",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V1",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 231,
+      "trades": 92,
+      "winrate": "35.9%",
+      "sumR": 7,
+      "avgR": "0.076",
+      "posRefs": "12/16 −P8,P10,P13,P14",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V1",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 150,
+      "trades": 142,
+      "winrate": "33.8%",
+      "sumR": 2,
+      "avgR": "0.014"
+    },
+    {
+      "variant": "V1",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 150,
+      "trades": 65,
+      "winrate": "33.8%",
+      "sumR": 1,
+      "avgR": "0.015"
+    },
+    {
+      "variant": "V1",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 81,
+      "trades": 74,
+      "winrate": "47.3%",
+      "sumR": 31,
+      "avgR": "0.419"
+    },
+    {
+      "variant": "V1",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 81,
+      "trades": 27,
+      "winrate": "40.7%",
+      "sumR": 6,
+      "avgR": "0.222"
+    },
+    {
+      "variant": "V2",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 257,
+      "trades": 242,
+      "winrate": "36.8%",
+      "sumR": 25,
+      "avgR": "0.103",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V2",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 257,
+      "trades": 99,
+      "winrate": "36.4%",
+      "sumR": 9,
+      "avgR": "0.091",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V2",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 172,
+      "trades": 164,
+      "winrate": "33.5%",
+      "sumR": 1,
+      "avgR": "0.006"
+    },
+    {
+      "variant": "V2",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 172,
+      "trades": 72,
+      "winrate": "34.7%",
+      "sumR": 3,
+      "avgR": "0.042"
+    },
+    {
+      "variant": "V2",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 85,
+      "trades": 78,
+      "winrate": "43.6%",
+      "sumR": 24,
+      "avgR": "0.308"
+    },
+    {
+      "variant": "V2",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 85,
+      "trades": 27,
+      "winrate": "40.7%",
+      "sumR": 6,
+      "avgR": "0.222"
+    },
+    {
+      "variant": "V3",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 229,
+      "trades": 220,
+      "winrate": "35.5%",
+      "sumR": 14,
+      "avgR": "0.064",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V3",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 229,
+      "trades": 99,
+      "winrate": "34.3%",
+      "sumR": 3,
+      "avgR": "0.030",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V3",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 170,
+      "trades": 165,
+      "winrate": "33.9%",
+      "sumR": 3,
+      "avgR": "0.018"
+    },
+    {
+      "variant": "V3",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 170,
+      "trades": 80,
+      "winrate": "33.8%",
+      "sumR": 1,
+      "avgR": "0.013"
+    },
+    {
+      "variant": "V3",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 59,
+      "trades": 55,
+      "winrate": "40.0%",
+      "sumR": 11,
+      "avgR": "0.200"
+    },
+    {
+      "variant": "V3",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 59,
+      "trades": 19,
+      "winrate": "36.8%",
+      "sumR": 2,
+      "avgR": "0.105"
+    },
+    {
+      "variant": "V4",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 261,
+      "trades": 250,
+      "winrate": "34.4%",
+      "sumR": 8,
+      "avgR": "0.032",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V4",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 261,
+      "trades": 105,
+      "winrate": "31.4%",
+      "sumR": -6,
+      "avgR": "-0.057",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V4",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 185,
+      "trades": 178,
+      "winrate": "31.5%",
+      "sumR": -10,
+      "avgR": "-0.056"
+    },
+    {
+      "variant": "V4",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 185,
+      "trades": 79,
+      "winrate": "29.1%",
+      "sumR": -10,
+      "avgR": "-0.127"
+    },
+    {
+      "variant": "V4",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 76,
+      "trades": 72,
+      "winrate": "41.7%",
+      "sumR": 18,
+      "avgR": "0.250"
+    },
+    {
+      "variant": "V4",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 76,
+      "trades": 26,
+      "winrate": "38.5%",
+      "sumR": 4,
+      "avgR": "0.154"
+    },
+    {
+      "variant": "V6",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 519,
+      "trades": 515,
+      "winrate": "33.6%",
+      "sumR": 4,
+      "avgR": "0.008",
+      "posRefs": "16/16",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V6",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 519,
+      "trades": 241,
+      "winrate": "38.2%",
+      "sumR": 35,
+      "avgR": "0.145",
+      "posRefs": "16/16",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "V6",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 357,
+      "trades": 357,
+      "winrate": "33.6%",
+      "sumR": 3,
+      "avgR": "0.008"
+    },
+    {
+      "variant": "V6",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 357,
+      "trades": 176,
+      "winrate": "40.3%",
+      "sumR": 37,
+      "avgR": "0.210"
+    },
+    {
+      "variant": "V6",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 162,
+      "trades": 158,
+      "winrate": "33.5%",
+      "sumR": 1,
+      "avgR": "0.006"
+    },
+    {
+      "variant": "V6",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 162,
+      "trades": 65,
+      "winrate": "32.3%",
+      "sumR": -2,
+      "avgR": "-0.031"
+    },
+    {
+      "variant": "C1",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 163,
+      "trades": 156,
+      "winrate": "38.5%",
+      "sumR": 24,
+      "avgR": "0.154",
+      "posRefs": "12/16 −P8,P10,P13,P14",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C1",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 163,
+      "trades": 68,
+      "winrate": "36.8%",
+      "sumR": 7,
+      "avgR": "0.103",
+      "posRefs": "12/16 −P8,P10,P13,P14",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C1",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 108,
+      "trades": 105,
+      "winrate": "35.2%",
+      "sumR": 6,
+      "avgR": "0.057"
+    },
+    {
+      "variant": "C1",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 108,
+      "trades": 50,
+      "winrate": "34.0%",
+      "sumR": 1,
+      "avgR": "0.020"
+    },
+    {
+      "variant": "C1",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 55,
+      "trades": 51,
+      "winrate": "45.1%",
+      "sumR": 18,
+      "avgR": "0.353"
+    },
+    {
+      "variant": "C1",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 55,
+      "trades": 18,
+      "winrate": "44.4%",
+      "sumR": 6,
+      "avgR": "0.333"
+    },
+    {
+      "variant": "C2",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 140,
+      "trades": 137,
+      "winrate": "37.2%",
+      "sumR": 16,
+      "avgR": "0.117",
+      "posRefs": "11/16 −P8,P10,P13,P14,P16",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C2",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 140,
+      "trades": 56,
+      "winrate": "30.4%",
+      "sumR": -5,
+      "avgR": "-0.089",
+      "posRefs": "11/16 −P8,P10,P13,P14,P16",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C2",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 93,
+      "trades": 92,
+      "winrate": "33.7%",
+      "sumR": 1,
+      "avgR": "0.011"
+    },
+    {
+      "variant": "C2",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 93,
+      "trades": 40,
+      "winrate": "25.0%",
+      "sumR": -10,
+      "avgR": "-0.250"
+    },
+    {
+      "variant": "C2",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 47,
+      "trades": 45,
+      "winrate": "44.4%",
+      "sumR": 15,
+      "avgR": "0.333"
+    },
+    {
+      "variant": "C2",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 47,
+      "trades": 16,
+      "winrate": "43.8%",
+      "sumR": 5,
+      "avgR": "0.313"
+    },
+    {
+      "variant": "C3",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 184,
+      "trades": 177,
+      "winrate": "37.9%",
+      "sumR": 24,
+      "avgR": "0.136",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C3",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 184,
+      "trades": 76,
+      "winrate": "36.8%",
+      "sumR": 8,
+      "avgR": "0.105",
+      "posRefs": "13/16 −P8,P10,P13",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C3",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 127,
+      "trades": 124,
+      "winrate": "36.3%",
+      "sumR": 11,
+      "avgR": "0.089"
+    },
+    {
+      "variant": "C3",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 127,
+      "trades": 58,
+      "winrate": "36.2%",
+      "sumR": 5,
+      "avgR": "0.086"
+    },
+    {
+      "variant": "C3",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 57,
+      "trades": 53,
+      "winrate": "41.5%",
+      "sumR": 13,
+      "avgR": "0.245"
+    },
+    {
+      "variant": "C3",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 57,
+      "trades": 18,
+      "winrate": "38.9%",
+      "sumR": 3,
+      "avgR": "0.167"
+    },
+    {
+      "variant": "C4",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 192,
+      "trades": 190,
+      "winrate": "37.4%",
+      "sumR": 23,
+      "avgR": "0.121",
+      "posRefs": "14/16 −P14,P16",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C4",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 192,
+      "trades": 83,
+      "winrate": "37.3%",
+      "sumR": 10,
+      "avgR": "0.120",
+      "posRefs": "14/16 −P14,P16",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C4",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 123,
+      "trades": 123,
+      "winrate": "37.4%",
+      "sumR": 15,
+      "avgR": "0.122"
+    },
+    {
+      "variant": "C4",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 123,
+      "trades": 56,
+      "winrate": "35.7%",
+      "sumR": 4,
+      "avgR": "0.071"
+    },
+    {
+      "variant": "C4",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 69,
+      "trades": 67,
+      "winrate": "37.3%",
+      "sumR": 8,
+      "avgR": "0.119"
+    },
+    {
+      "variant": "C4",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 69,
+      "trades": 27,
+      "winrate": "40.7%",
+      "sumR": 6,
+      "avgR": "0.222"
+    },
+    {
+      "variant": "C5",
+      "scope": "gesamt",
+      "route": "a",
+      "pairs": 426,
+      "trades": 422,
+      "winrate": "35.3%",
+      "sumR": 25,
+      "avgR": "0.059",
+      "posRefs": "16/16",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C5",
+      "scope": "gesamt",
+      "route": "b",
+      "pairs": 426,
+      "trades": 195,
+      "winrate": "37.4%",
+      "sumR": 24,
+      "avgR": "0.123",
+      "posRefs": "16/16",
+      "negRejected": "6/6"
+    },
+    {
+      "variant": "C5",
+      "scope": "2026-10",
+      "route": "a",
+      "pairs": 272,
+      "trades": 272,
+      "winrate": "35.3%",
+      "sumR": 16,
+      "avgR": "0.059"
+    },
+    {
+      "variant": "C5",
+      "scope": "2026-10",
+      "route": "b",
+      "pairs": 272,
+      "trades": 129,
+      "winrate": "40.3%",
+      "sumR": 27,
+      "avgR": "0.209"
+    },
+    {
+      "variant": "C5",
+      "scope": "2026-11",
+      "route": "a",
+      "pairs": 154,
+      "trades": 150,
+      "winrate": "35.3%",
+      "sumR": 9,
+      "avgR": "0.060"
+    },
+    {
+      "variant": "C5",
+      "scope": "2026-11",
+      "route": "b",
+      "pairs": 154,
+      "trades": 66,
+      "winrate": "31.8%",
+      "sumR": -3,
+      "avgR": "-0.045"
+    }
+  ],
+  "diagnosis": {
+    "V0": {
+      "nearTouch:a": {
+        "trades": 146,
+        "success": 48,
+        "sumR": -2,
+        "winrate": "32.9%"
+      },
+      "depth>50%:a": {
+        "trades": 83,
+        "success": 33,
+        "sumR": 16,
+        "winrate": "39.8%"
+      },
+      "nearTouch:b": {
+        "trades": 72,
+        "success": 26,
+        "sumR": 6,
+        "winrate": "36.1%"
+      },
+      "depth>50%:b": {
+        "trades": 38,
+        "success": 16,
+        "sumR": 10,
+        "winrate": "42.1%"
+      },
+      "newPartner:a": {
+        "trades": 13,
+        "success": 6,
+        "sumR": 5,
+        "winrate": "46.2%"
+      },
+      "newPartner:b": {
+        "trades": 3,
+        "success": 1,
+        "sumR": 0,
+        "winrate": "33.3%"
+      },
+      "other:a": {
+        "trades": 2,
+        "success": 1,
+        "sumR": 1,
+        "winrate": "50.0%"
+      },
+      "other:b": {
+        "trades": 1,
+        "success": 1,
+        "sumR": 2,
+        "winrate": "100.0%"
+      }
+    },
+    "V1": {
+      "depth>50%:a": {
+        "trades": 84,
+        "success": 34,
+        "sumR": 18,
+        "winrate": "40.5%"
+      },
+      "depth>50%:b": {
+        "trades": 38,
+        "success": 16,
+        "sumR": 10,
+        "winrate": "42.1%"
+      },
+      "newPartner:a": {
+        "trades": 9,
+        "success": 4,
+        "sumR": 3,
+        "winrate": "44.4%"
+      },
+      "other:a": {
+        "trades": 23,
+        "success": 5,
+        "sumR": -8,
+        "winrate": "21.7%"
+      },
+      "other:b": {
+        "trades": 12,
+        "success": 3,
+        "sumR": -3,
+        "winrate": "25.0%"
+      },
+      "newPartner:b": {
+        "trades": 1,
+        "success": 0,
+        "sumR": -1,
+        "winrate": "0.0%"
+      }
+    },
+    "V2": {
+      "depth>50%:a": {
+        "trades": 87,
+        "success": 32,
+        "sumR": 9,
+        "winrate": "36.8%"
+      },
+      "nearTouch:a": {
+        "trades": 88,
+        "success": 32,
+        "sumR": 8,
+        "winrate": "36.4%"
+      },
+      "nearTouch:b": {
+        "trades": 39,
+        "success": 18,
+        "sumR": 15,
+        "winrate": "46.2%"
+      },
+      "depth>50%:b": {
+        "trades": 35,
+        "success": 14,
+        "sumR": 7,
+        "winrate": "40.0%"
+      },
+      "newPartner:a": {
+        "trades": 9,
+        "success": 4,
+        "sumR": 3,
+        "winrate": "44.4%"
+      },
+      "other:a": {
+        "trades": 12,
+        "success": 4,
+        "sumR": 0,
+        "winrate": "33.3%"
+      },
+      "other:b": {
+        "trades": 7,
+        "success": 2,
+        "sumR": -1,
+        "winrate": "28.6%"
+      },
+      "newPartner:b": {
+        "trades": 1,
+        "success": 0,
+        "sumR": -1,
+        "winrate": "0.0%"
+      }
+    },
+    "V3": {
+      "nearTouch:a": {
+        "trades": 101,
+        "success": 31,
+        "sumR": -8,
+        "winrate": "30.7%"
+      },
+      "depth>50%:a": {
+        "trades": 21,
+        "success": 10,
+        "sumR": 9,
+        "winrate": "47.6%"
+      },
+      "nearTouch:b": {
+        "trades": 56,
+        "success": 19,
+        "sumR": 1,
+        "winrate": "33.9%"
+      },
+      "depth>50%:b": {
+        "trades": 14,
+        "success": 8,
+        "sumR": 10,
+        "winrate": "57.1%"
+      },
+      "newPartner:a": {
+        "trades": 4,
+        "success": 2,
+        "sumR": 2,
+        "winrate": "50.0%"
+      },
+      "newPartner:b": {
+        "trades": 2,
+        "success": 1,
+        "sumR": 1,
+        "winrate": "50.0%"
+      },
+      "other:a": {
+        "trades": 2,
+        "success": 1,
+        "sumR": 1,
+        "winrate": "50.0%"
+      },
+      "other:b": {
+        "trades": 1,
+        "success": 1,
+        "sumR": 2,
+        "winrate": "100.0%"
+      }
+    },
+    "V4": {
+      "nearTouch:a": {
+        "trades": 127,
+        "success": 38,
+        "sumR": -13,
+        "winrate": "29.9%"
+      },
+      "nearTouch:b": {
+        "trades": 60,
+        "success": 19,
+        "sumR": -3,
+        "winrate": "31.7%"
+      },
+      "depth>50%:a": {
+        "trades": 59,
+        "success": 22,
+        "sumR": 7,
+        "winrate": "37.3%"
+      },
+      "newPartner:a": {
+        "trades": 13,
+        "success": 6,
+        "sumR": 5,
+        "winrate": "46.2%"
+      },
+      "depth>50%:b": {
+        "trades": 24,
+        "success": 8,
+        "sumR": 0,
+        "winrate": "33.3%"
+      },
+      "newPartner:b": {
+        "trades": 3,
+        "success": 1,
+        "sumR": 0,
+        "winrate": "33.3%"
+      },
+      "other:a": {
+        "trades": 2,
+        "success": 1,
+        "sumR": 1,
+        "winrate": "50.0%"
+      },
+      "other:b": {
+        "trades": 1,
+        "success": 1,
+        "sumR": 2,
+        "winrate": "100.0%"
+      }
+    },
+    "V6": {
+      "nearTouch:a": {
+        "trades": 289,
+        "success": 91,
+        "sumR": -16,
+        "winrate": "31.5%"
+      },
+      "depth>50%:a": {
+        "trades": 248,
+        "success": 86,
+        "sumR": 10,
+        "winrate": "34.7%"
+      },
+      "depth>50%:b": {
+        "trades": 121,
+        "success": 51,
+        "sumR": 32,
+        "winrate": "42.1%"
+      },
+      "nearTouch:b": {
+        "trades": 142,
+        "success": 54,
+        "sumR": 20,
+        "winrate": "38.0%"
+      },
+      "newPartner:a": {
+        "trades": 21,
+        "success": 9,
+        "sumR": 6,
+        "winrate": "42.9%"
+      },
+      "newPartner:b": {
+        "trades": 6,
+        "success": 4,
+        "sumR": 6,
+        "winrate": "66.7%"
+      },
+      "other:a": {
+        "trades": 2,
+        "success": 1,
+        "sumR": 1,
+        "winrate": "50.0%"
+      },
+      "other:b": {
+        "trades": 1,
+        "success": 1,
+        "sumR": 2,
+        "winrate": "100.0%"
+      }
+    },
+    "C1": {
+      "depth>50%:a": {
+        "trades": 19,
+        "success": 9,
+        "sumR": 8,
+        "winrate": "47.4%"
+      },
+      "depth>50%:b": {
+        "trades": 12,
+        "success": 8,
+        "sumR": 12,
+        "winrate": "66.7%"
+      },
+      "other:a": {
+        "trades": 24,
+        "success": 5,
+        "sumR": -9,
+        "winrate": "20.8%"
+      },
+      "other:b": {
+        "trades": 13,
+        "success": 3,
+        "sumR": -4,
+        "winrate": "23.1%"
+      }
+    },
+    "C2": {
+      "other:a": {
+        "trades": 24,
+        "success": 5,
+        "sumR": -9,
+        "winrate": "20.8%"
+      },
+      "other:b": {
+        "trades": 13,
+        "success": 3,
+        "sumR": -4,
+        "winrate": "23.1%"
+      }
+    },
+    "C3": {
+      "depth>50%:a": {
+        "trades": 16,
+        "success": 8,
+        "sumR": 8,
+        "winrate": "50.0%"
+      },
+      "nearTouch:a": {
+        "trades": 41,
+        "success": 14,
+        "sumR": 1,
+        "winrate": "34.1%"
+      },
+      "nearTouch:b": {
+        "trades": 21,
+        "success": 10,
+        "sumR": 9,
+        "winrate": "47.6%"
+      },
+      "depth>50%:b": {
+        "trades": 10,
+        "success": 6,
+        "sumR": 8,
+        "winrate": "60.0%"
+      },
+      "other:a": {
+        "trades": 12,
+        "success": 4,
+        "sumR": 0,
+        "winrate": "33.3%"
+      },
+      "other:b": {
+        "trades": 7,
+        "success": 2,
+        "sumR": -1,
+        "winrate": "28.6%"
+      }
+    },
+    "C4": {
+      "other:a": {
+        "trades": 25,
+        "success": 6,
+        "sumR": -7,
+        "winrate": "24.0%"
+      },
+      "other:b": {
+        "trades": 14,
+        "success": 4,
+        "sumR": -2,
+        "winrate": "28.6%"
+      }
+    },
+    "C5": {
+      "depth>50%:a": {
+        "trades": 242,
+        "success": 81,
+        "sumR": 1,
+        "winrate": "33.5%"
+      },
+      "depth>50%:b": {
+        "trades": 115,
+        "success": 43,
+        "sumR": 14,
+        "winrate": "37.4%"
+      },
+      "newPartner:a": {
+        "trades": 14,
+        "success": 5,
+        "sumR": 1,
+        "winrate": "35.7%"
+      },
+      "other:a": {
+        "trades": 24,
+        "success": 6,
+        "sumR": -6,
+        "winrate": "25.0%"
+      },
+      "other:b": {
+        "trades": 13,
+        "success": 4,
+        "sumR": -1,
+        "winrate": "30.8%"
+      },
+      "newPartner:b": {
+        "trades": 2,
+        "success": 1,
+        "sumR": 1,
+        "winrate": "50.0%"
+      }
+    }
+  },
+  "decision": "Default nearTouch=second (V2): dominates v7-b in Oct and Nov on both routes, keeps all 13 tradeable references; no variant beats v6 in both months."
+}

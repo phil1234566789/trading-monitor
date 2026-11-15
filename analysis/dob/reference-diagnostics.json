@@ -1,5 +1,5 @@
 {
-  "version": "m1-reaction-near10-entry-sl-hold-sameday-xau-gap2-v7",
+  "version": "m1-reaction-exact-ob1-near10-ob2-entry-sl-hold-sameday-xau-gap2-v7",
   "scope": "16 selected positive examples; no general win-rate or trading approval",
   "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
   "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
@@ -198,10 +198,10 @@
       "reactionFalse": 9,
       "reactionUnknown": 11,
       "pairChecks": 406,
-      "firstHoldRejected": 14,
+      "firstHoldRejected": 13,
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
-      "priceGapRejected": 122,
+      "priceGapRejected": 109,
       "pairsWithoutEntry": 3
     },
     {
@@ -217,7 +217,7 @@
       "firstHoldRejected": 19,
       "firstHoldUnknown": 0,
       "differentRetestDays": 2,
-      "priceGapRejected": 174,
+      "priceGapRejected": 170,
       "pairsWithoutEntry": 13
     },
     {
@@ -230,15 +230,15 @@
       "reactionFalse": 16,
       "reactionUnknown": 6,
       "pairChecks": 351,
-      "firstHoldRejected": 25,
+      "firstHoldRejected": 23,
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 36,
-      "pairsWithoutEntry": 9
+      "pairsWithoutEntry": 7
     },
     {
       "day": "2026-11-05",
-      "pairCount": 14,
+      "pairCount": 13,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 60,
@@ -249,7 +249,7 @@
       "firstHoldRejected": 41,
       "firstHoldUnknown": 0,
       "differentRetestDays": 1,
-      "priceGapRejected": 114,
+      "priceGapRejected": 102,
       "pairsWithoutEntry": 9
     },
     {
@@ -265,7 +265,7 @@
       "firstHoldRejected": 10,
       "firstHoldUnknown": 0,
       "differentRetestDays": 3,
-      "priceGapRejected": 103,
+      "priceGapRejected": 102,
       "pairsWithoutEntry": 1
     },
     {
@@ -278,10 +278,10 @@
       "reactionFalse": 13,
       "reactionUnknown": 13,
       "pairChecks": 528,
-      "firstHoldRejected": 15,
+      "firstHoldRejected": 14,
       "firstHoldUnknown": 0,
       "differentRetestDays": 3,
-      "priceGapRejected": 146,
+      "priceGapRejected": 136,
       "pairsWithoutEntry": 9
     },
     {
@@ -294,15 +294,15 @@
       "reactionFalse": 19,
       "reactionUnknown": 7,
       "pairChecks": 465,
-      "firstHoldRejected": 17,
+      "firstHoldRejected": 15,
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
-      "priceGapRejected": 100,
+      "priceGapRejected": 80,
       "pairsWithoutEntry": 6
     },
     {
       "day": "2026-10-30",
-      "pairCount": 14,
+      "pairCount": 8,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 56,
@@ -313,12 +313,12 @@
       "firstHoldRejected": 4,
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
-      "priceGapRejected": 215,
-      "pairsWithoutEntry": 5
+      "priceGapRejected": 186,
+      "pairsWithoutEntry": 3
     },
     {
       "day": "2026-10-22",
-      "pairCount": 6,
+      "pairCount": 5,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 64,
@@ -326,11 +326,11 @@
       "reactionFalse": 15,
       "reactionUnknown": 8,
       "pairChecks": 820,
-      "firstHoldRejected": 10,
+      "firstHoldRejected": 12,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 4,
-      "priceGapRejected": 282,
-      "pairsWithoutEntry": 10
+      "differentRetestDays": 2,
+      "priceGapRejected": 271,
+      "pairsWithoutEntry": 7
     },
     {
       "day": "2026-10-21",
@@ -342,15 +342,15 @@
       "reactionFalse": 22,
       "reactionUnknown": 5,
       "pairChecks": 435,
-      "firstHoldRejected": 37,
+      "firstHoldRejected": 36,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 5,
-      "priceGapRejected": 72,
+      "differentRetestDays": 4,
+      "priceGapRejected": 67,
       "pairsWithoutEntry": 3
     },
     {
       "day": "2026-10-16",
-      "pairCount": 12,
+      "pairCount": 9,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 60,
@@ -358,15 +358,15 @@
       "reactionFalse": 19,
       "reactionUnknown": 6,
       "pairChecks": 595,
-      "firstHoldRejected": 34,
+      "firstHoldRejected": 32,
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
-      "priceGapRejected": 83,
-      "pairsWithoutEntry": 5
+      "priceGapRejected": 72,
+      "pairsWithoutEntry": 4
     },
     {
       "day": "2026-10-08",
-      "pairCount": 16,
+      "pairCount": 11,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 71,
@@ -376,9 +376,9 @@
       "pairChecks": 946,
       "firstHoldRejected": 87,
       "firstHoldUnknown": 0,
-      "differentRetestDays": 12,
-      "priceGapRejected": 135,
-      "pairsWithoutEntry": 12
+      "differentRetestDays": 11,
+      "priceGapRejected": 110,
+      "pairsWithoutEntry": 9
     }
   ],
   "references": [
@@ -392,16 +392,16 @@
       "recognized": true,
       "direction": "short",
       "recognizedAt": 1794387840,
-      "firstRetest": 1794383700,
-      "firstReaction": 1794384120,
+      "firstRetest": 1794386460,
+      "firstReaction": 1794387000,
       "secondRetest": 1794387540,
       "secondReaction": 1794387840,
       "firstM5ReactionKnownAt": 1794387300,
       "firstPenetration": {
         "status": "ready",
-        "maxPenetrationFraction": -0.08722109533474753,
-        "extremePrice": 4060.74,
-        "candleTime": 1794383700
+        "maxPenetrationFraction": 0.09939148073018216,
+        "extremePrice": 4061.66,
+        "candleTime": 1794386520
       },
       "secondPenetration": {
         "status": "ready",
@@ -447,7 +447,7 @@
       "recognized": true,
       "direction": "long",
       "recognizedAt": 1794217980,
-      "firstRetest": 1794216000,
+      "firstRetest": 1794216060,
       "firstReaction": 1794216660,
       "secondRetest": 1794217200,
       "secondReaction": 1794217980,
@@ -526,16 +526,16 @@
       "recognized": true,
       "direction": "long",
       "recognizedAt": 1793988960,
-      "firstRetest": 1793983200,
-      "firstReaction": 1793983560,
+      "firstRetest": 1793986860,
+      "firstReaction": 1793987220,
       "secondRetest": 1793988540,
       "secondReaction": 1793988960,
       "firstM5ReactionKnownAt": 1793988300,
       "firstPenetration": {
         "status": "ready",
-        "maxPenetrationFraction": -0.005444646098040178,
-        "extremePrice": 4056.21,
-        "candleTime": 1793983200
+        "maxPenetrationFraction": 0.45553539019961364,
+        "extremePrice": 4053.67,
+        "candleTime": 1793986980
       },
       "secondPenetration": {
         "status": "ready",
@@ -605,16 +605,16 @@
       "recognized": true,
       "direction": "short",
       "recognizedAt": 1793908560,
-      "firstRetest": 1793891340,
-      "firstReaction": 1793891640,
+      "firstRetest": 1793897280,
+      "firstReaction": 1793898120,
       "secondRetest": 1793908080,
       "secondReaction": 1793908560,
       "firstM5ReactionKnownAt": 1793899800,
       "firstPenetration": {
         "status": "ready",
-        "maxPenetrationFraction": -0.004844290657482307,
-        "extremePrice": 4121.36,
-        "candleTime": 1793891340
+        "maxPenetrationFraction": 0.458823529411778,
+        "extremePrice": 4128.06,
+        "candleTime": 1793897820
       },
       "secondPenetration": {
         "status": "ready",
@@ -672,7 +672,7 @@
       "recognized": true,
       "direction": "long",
       "recognizedAt": 1793769540,
-      "firstRetest": 1793766660,
+      "firstRetest": 1793767020,
       "firstReaction": 1793767320,
       "secondRetest": 1793768640,
       "secondReaction": 1793769540,
@@ -739,7 +739,7 @@
       "recognized": true,
       "direction": "short",
       "recognizedAt": 1793694300,
-      "firstRetest": 1793689740,
+      "firstRetest": 1793691000,
       "firstReaction": 1793691180,
       "secondRetest": 1793693520,
       "secondReaction": 1793694300,
@@ -818,7 +818,7 @@
       "recognized": true,
       "direction": "short",
       "recognizedAt": 1793672220,
-      "firstRetest": 1793670540,
+      "firstRetest": 1793670600,
       "firstReaction": 1793671080,
       "secondRetest": 1793671980,
       "secondReaction": 1793672220,
@@ -970,16 +970,16 @@
       "recognized": true,
       "direction": "short",
       "recognizedAt": 1792691460,
-      "firstRetest": 1792685760,
-      "firstReaction": 1792686060,
+      "firstRetest": 1792686300,
+      "firstReaction": 1792686660,
       "secondRetest": 1792691100,
       "secondReaction": 1792691460,
       "firstM5ReactionKnownAt": 1792687200,
       "firstPenetration": {
         "status": "ready",
-        "maxPenetrationFraction": -0.07522123893808559,
-        "extremePrice": 4050.04,
-        "candleTime": 1792685760
+        "maxPenetrationFraction": 0.09955752212385396,
+        "extremePrice": 4050.83,
+        "candleTime": 1792686300
       },
       "secondPenetration": {
         "status": "ready",
@@ -1113,7 +1113,7 @@
       "recognized": true,
       "direction": "short",
       "recognizedAt": 1792151400,
-      "firstRetest": 1792149840,
+      "firstRetest": 1792149900,
       "firstReaction": 1792150260,
       "secondRetest": 1792150860,
       "secondReaction": 1792151400,
@@ -1271,16 +1271,16 @@
       "recognized": true,
       "direction": "long",
       "recognizedAt": 1792556100,
-      "firstRetest": 1792549440,
-      "firstReaction": 1792549620,
+      "firstRetest": 1792552380,
+      "firstReaction": 1792552560,
       "secondRetest": 1792555200,
       "secondReaction": 1792556100,
       "firstM5ReactionKnownAt": 1792553100,
       "firstPenetration": {
         "status": "ready",
-        "maxPenetrationFraction": -0.02555366269174591,
-        "extremePrice": 4113.18,
-        "candleTime": 1792549440
+        "maxPenetrationFraction": 0.01362862010220251,
+        "extremePrice": 4112.95,
+        "candleTime": 1792552380
       },
       "secondPenetration": {
         "status": "ready",

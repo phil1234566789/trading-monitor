@@ -55,8 +55,8 @@ it.each(['GBPUSD','EURUSD'])('keeps the price-gap policy unconfigured for %s in 
  const example=manifest.cases.find(c=>c.pin===475);
  const result=detectDoubleOrderBlocks({instrument,m5Candles:nativeRows(example,'m5'),m1Candles:nativeRows(example),evaluatedAt:example.second.knownAt});
  expect(result.policy.maxPositiveZoneGap).toBeNull();expect(result.stats.priceGapRejected).toBe(0);
- // Ohne XAU-Abstandsgrenze gewinnt die Partnerwahl den jüngeren OB1 1794184500 (letzte Reaktion vor dem OB2-Retest).
- expect(result.pairs.map(pair=>pair.id)).toContain(`dob:${instrument}:1:1794184500:${example.second.startTime}`);
+ // Ohne XAU-Abstandsgrenze ist genau das von Philip abgelehnte Paar wieder ein Paar; nur die Preisgrenze verwirft es.
+ expect(result.pairs.map(pair=>pair.id)).toContain(`dob:${instrument}:1:${example.first.startTime}:${example.second.startTime}`);
 });
 
 it.each(manifest.cases)('does not confirm pin $pin through native M5 OB detection and M1 qualification',example=>{
