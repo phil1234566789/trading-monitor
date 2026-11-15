@@ -1,7 +1,8 @@
 // DOB-Winrate XAUUSD ab 01.10.2026 (Berlin) als Vorher/Nachher-Messung gegen den jeweiligen Checkout-src.
 // Methodik steht in report.methodology. Flags: --refresh (Kerzen neu holen), --name <x> (Reportname,
 // Default version-gitHash), --crosscheck (eine Woche jeden M5-Schluss gegen das Tagesraster prüfen),
-// --options <json> (Ablations-Schalter von detectDoubleOrderBlocks, siehe DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS).
+// --options <json> (Ablations-Schalter von detectDoubleOrderBlocks, siehe DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS),
+// --detector <vite-pfad> (anderes Modul mit detectDoubleOrderBlocks, z. B. eine lokale v6-Kopie für dobTradeDiff.mjs).
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -29,7 +30,7 @@ try {
   const [{ fetchInitialCandles }, { supabase }, { detectDoubleOrderBlocks }, { evaluateDoubleOrderBlockOutcome },
     { closedChecklistCandles }, { markIgnoredCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { TRADE_SETUP_M5_CANDLE_COUNT }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js',
-    '/src/doubleOrderBlocks.js', '/src/doubleOrderBlockOutcome.js', '/src/tradeSetupChecklistTimeBasis.js',
+    flag('--detector') ?? '/src/doubleOrderBlocks.js', '/src/doubleOrderBlockOutcome.js', '/src/tradeSetupChecklistTimeBasis.js',
     '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/priceChartConstants.js'].map(load));
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
