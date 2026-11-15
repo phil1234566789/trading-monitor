@@ -1,5 +1,5 @@
 {
-  "source": "node scripts/dobAblation.mjs on .debug/dob-winrate cached XAUUSD candles 2026-10-01..2026-11-14, 0 requests; baseline report-v6-final",
+  "source": "Measured with scripts/dobAblation.mjs and scripts/dobTradeDiff.mjs at commit 6577e486 (removed afterwards; restore with git show 6577e486:scripts/<name>). node scripts/dobAblation.mjs on .debug/dob-winrate cached XAUUSD candles 2026-10-01..2026-11-14, 0 requests; baseline report-v6-final",
   "variants": {
     "V0": {},
     "V1": {
@@ -1720,7 +1720,7 @@
       }
     }
   },
-  "decision": "Default W1: nearTouch none + bridgeClosures false. Best non-replica variant over Feb-Nov (a +121 R vs v6 +125, b +26 vs +27), not better than v6 by the criterion (5/10 months on route a). Near-touch on OB2 cost route a 53 R over ten months; the Oct/Nov preference for V2 did not hold.",
+  "decision": "Default W1: nearTouch none + bridgeClosures false. Best non-replica variant over Feb-Nov (a +121 R vs v6 +125, b +26 vs +27), not better than v6 by the criterion (5/10 months on route a). Near-touch on OB2 cost route a 53 R over ten months; the Oct/Nov preference for V2 did not hold. Shipped as v7 default; ablation-only switches (maxRetestDepth, stopRule, trace) removed from the product code after this measurement.",
   "tradeDiffV6vsC4": {
     "summary": {
       "onlyLeft": {
@@ -4016,5 +4016,6 @@
       }
     ],
     "note": "V1,V2,C3,C4 with bridgeClosures=true (T2c state); D = previous default (nearTouch second, no bridging); W1 = nearTouch none, no bridging (new default); W4 = v6 replica without bridging, identical to v6 on route a."
-  }
+  },
+  "scriptsCommit": "6577e486"
 }

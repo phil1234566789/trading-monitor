@@ -26,28 +26,28 @@ export function measureReactionContact(zone,candle,threshold=NEAR_TOUCH_FRACTION
 
 // m1Candles müssen bereits auf geschlossene Kerzen bis evaluatedAt gefiltert sein (closedChecklistCandles).
 // Reaktions-FVG = Entry-Kandidat aus m1FvgEntryCandidates, nicht orderBlockMitigationFvg: dieselbe FVG trägt die Entry-Routen und ihren M1-OB.
-// stopRule 'm5Edge' setzt den SL immer an die ferne M5-Kante (v6-Vergleich in der Ablation).
-export function createOrderBlockReactionContext(m1Candles,evaluatedAt,instrument,{stopRule='internalFvg'}={}) {
+export function createOrderBlockReactionContext(m1Candles,evaluatedAt,instrument) {
  const candidates=m1FvgEntryCandidates(m1Candles,evaluatedAt),byKnownAt={long:new Map(),short:new Map()},byDirection={long:[],short:[]};
  for(const fvg of candidates){
   byDirection[fvg.direction].push(fvg);
   const map=byKnownAt[fvg.direction];if(!map.has(fvg.recognizedAt))map.set(fvg.recognizedAt,[]);map.get(fvg.recognizedAt).push(fvg);
  }
- return {rows:m1Candles,evaluatedAt,instrument,stopRule,byKnownAt,byDirection,fills:new Map()};
+ return {rows:m1Candles,evaluatedAt,instrument,byKnownAt,byDirection,fills:new Map()};
 }
 
 // Gemeinsamer Vorwärtslauf ab from: Einstieg per Binärsuche, Abbruch bei Lücke oder wenn step true liefert.
+// Ohne bridgeClosures endet der Lauf an einem XAU-Marktschluss mit status 'closed' statt 'gap'.
 function walkM1(context,from,step,{bridgeClosures=true}={}) {
  const rows=context.rows,instrument=bridgeClosures?context.instrument:null;
+ const stop=(to,at)=>m1GapCovered(instrument,at,to)?null:{status:m1GapCovered(context.instrument,at,to)?'closed':'gap',at};
  let next=from;
  for(let i=firstIndex(rows,c=>c.time>=from);i<rows.length;i++){
-  const c=rows[i];
-  if(!m1GapCovered(instrument,next,c.time))return {status:'gap',at:next};
+  const c=rows[i],gap=stop(c.time,next);
+  if(gap)return gap;
   next=c.time+60;
   if(step(c,i))return {status:'stopped',at:c.time};
  }
- const through=Math.max(next,Math.floor(context.evaluatedAt/60)*60);
- return m1GapCovered(instrument,next,through)?{status:'end',at:next}:{status:'gap',at:next};
+ return stop(Math.max(next,Math.floor(context.evaluatedAt/60)*60),next)??{status:'end',at:next};
 }
 
 // Erste volle Füllung; eine Lücke oder verdeckte (ignorierte) Kerze davor macht jeden späteren Zustand unbekannt.
@@ -68,7 +68,6 @@ const openAt=(fill,at)=>fill.filledAt!=null&&fill.filledAt<=at?false:fill.gapAt!
 // SL zum Entry-Zeitpunkt: nur vor dem Retest bekannte interne FVGs zählen, die Reaktions-FVG nicht.
 export function evaluateReactionStop(context,orderBlock,contact,entryAt) {
  const direction=sideOf(orderBlock.dir),list=context.byDirection[direction];
- if(context.stopRule==='m5Edge')return {status:'ready',anchor:'m5-edge',price:direction==='long'?orderBlock.bottom:orderBlock.top,reason:null};
  let inside=false,overlapping=false,missing=false;
  for(let i=firstIndex(list,f=>f.candleTime>=orderBlock.startTime-INTERNAL_FVG_LOOKBACK_SECONDS);
   i<list.length&&list[i].recognizedAt<=contact.candleTime;i++){
@@ -124,7 +123,7 @@ function evaluateRoutes(context,orderBlock,contact,fvg) {
 
 // Nach einer Near-Touch-Reaktion ist erst der spätere exakte Retest das Extrem, an dem der DOB-Hold gemessen wird
 // (sonst schwemmt dieser Retest den Near-Anker aus, siehe Referenzpaare P1/P3/P4/P11/P13/P16).
-export function exactRetestAnchor(context,orderBlock,reaction) {
+export function exactRetestAnchor(context,orderBlock,reaction,{bridgeClosures=false}={}) {
  // Ein exakter Touch innerhalb des Reaktionsfensters ist bereits dieser Retest.
  if(reaction.penetration.maxPenetrationFraction>=0)return {fromTime:reaction.fvg.recognizedAt,price:reaction.penetration.extremePrice};
  const rows=context.rows,direction=sideOf(orderBlock.dir);
@@ -136,13 +135,14 @@ export function exactRetestAnchor(context,orderBlock,reaction) {
   const fvg=reactionFvg(context,direction,{candleTime:rows[touch].time,knownAt:rows[touch].time+60},c.time+60);
   if(fvg)anchor={fromTime:fvg.recognizedAt,price:measureOrderBlockPenetration(orderBlock,direction,rows.slice(touch,i+1)).extremePrice};
   return Boolean(fvg);
- });
+ },{bridgeClosures});
  return anchor;
 }
 
 // Reaktion true: erste gleichgerichtete M1-FVG nach dem ersten (Near-)Touch; false: M5-Gegenkante vorher gebrochen.
-// bridgeClosures false: Die Reaktion muss in derselben Handelssitzung fallen, ein Marktschluss davor macht sie unknown.
-export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=true,bridgeClosures=true}={}) {
+// Defaults = Produkt (reactionOptionsFor in doubleOrderBlocks.js). Ohne bridgeClosures verfällt ein OB, der bis zum ersten
+// XAU-Marktschluss nach seiner Erkennung nicht reagiert hat: unknown mit Grund marketClosed, auch während der Pause.
+export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=false,bridgeClosures=false}={}) {
  let contact=null,contactIndex=-1,result=null;
  const unknown=reason=>({state:'unknown',reason,contact,fvg:null,knownAt:null,penetration:null,routes:null});
  if(![-1,1].includes(orderBlock?.dir)||!Number.isFinite(orderBlock.recognizedAt)||!(orderBlock.top>orderBlock.bottom))
@@ -166,5 +166,5 @@ export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=true,br
    penetration:measureOrderBlockPenetration(orderBlock,direction,rows.slice(contactIndex,i+1)),routes:evaluateRoutes(context,orderBlock,contact,fvg)};
   return true;
  },{bridgeClosures});
- return result??unknown(walk.status==='gap'?'missingHistory':contact?'awaitingFvg':'noContact');
+ return result??unknown(walk.status==='closed'?'marketClosed':walk.status==='gap'?'missingHistory':contact?'awaitingFvg':'noContact');
 }
