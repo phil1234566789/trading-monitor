@@ -1,5 +1,22 @@
 {
   "schemaVersion": 1,
+  "currentExpectedAssessmentOverrides": [
+    {
+      "pin": 501,
+      "expectedReaction": true,
+      "scope": "additional OB-reaction reference, not an additional DOB pair",
+      "source": "Explicit user correction; annotation 33d53b02-5a33-4bfd-9cc7-185a1d3d5afe",
+      "replaces": "historical negative interpretation of morning05:31–05:40",
+      "acceptedKnownAtBerlin": "09.11.2026 05:40",
+      "technicalEntryCandidate": {
+        "entryPrice": 4128.84,
+        "entryTimeBerlin": "09.11.2026 05:40"
+      },
+      "openIssue": "Technical SL-episode specification/adapter incomplete; do not invent entry/SL or a negative quality rule. Preserve accepted earlier entry if later break occurs.",
+      "decisionDateBerlin": "2026-11-15"
+    }
+  ],
+  "historicalRunAssessmentNote": "negativeExamples grouping/expectedNegative values and numeric outputs are the unchanged historical run, BEFORE the explicit user correction for501. Current expectation is the override above.",
   "sourceTimingDecision": "Earlier near10% reaction explicitly accepted by user; exact/reference timings are diagnostic, not acceptance gates.",
   "pendingDiagnostics": {
     "specUnresolved": 10,
@@ -11255,7 +11272,7 @@
   ],
   "limitations": [
     "First reaction=true follows known contact+direction FVG in current prototype; this is weaker than a generally validated good-reaction classifier.",
-    "Negative501 has no generic depth-quality rejection after removing blanketM5depth; countercheck result must not be hidden.",
+    "Pin501 internaltrue05:40 is now explicitly accepted positive by user. Only technical SL-episode linkage remains open; late20:41break is not a rejection of the morning reaction.",
     "No manually curated counter-FVG relevance/strength facts or manual case adapter injected. Existing explicit user SL approvals remain in shared route adapter only.",
     "Unknown retest episode/SL is public pending with separate specUnresolved diagnostic, not an internal reaction failure or pair rejection. Available closed candles are nevertheless evaluated until first public terminal event or saved horizon.",
     "Existing rest-gate detector with maximum1 is a diagnostic projection only, including latest-qualified-partner selection; no generic new DOB indicator shipped."
@@ -11289,6 +11306,14 @@
   "packagingNotes": [
     "Frozen independently reviewed diagnostic snapshot. Original source SHA values refer to the original read-only run; paths are provenance, not runtime dependencies.",
     "Reproduce from repository root: node public/ob-reaction-debugger/regression/dob-reaction-regression.mjs. Existing test/fixtures/dob-native files plus packaged references/dob-positive-505-506.json supply all inputs.",
-    "Eight earlier near-contact timings are explicitly accepted, not failures. No production DOB replacement or generalized reaction-quality claim."
+    "Eight earlier near-contact timings are explicitly accepted, not failures. No production DOB replacement or generalized reaction-quality claim.",
+    "Current user assessment override501 is positive. Original pin note and old run outputs remain untouched; this changes expected interpretation, not computed results."
+  ],
+  "historicalRunLimitations": [
+    "First reaction=true follows known contact+direction FVG in current prototype; this is weaker than a generally validated good-reaction classifier.",
+    "Negative501 has no generic depth-quality rejection after removing blanketM5depth; countercheck result must not be hidden.",
+    "No manually curated counter-FVG relevance/strength facts or manual case adapter injected. Existing explicit user SL approvals remain in shared route adapter only.",
+    "Unknown retest episode/SL is public pending with separate specUnresolved diagnostic, not an internal reaction failure or pair rejection. Available closed candles are nevertheless evaluated until first public terminal event or saved horizon.",
+    "Existing rest-gate detector with maximum1 is a diagnostic projection only, including latest-qualified-partner selection; no generic new DOB indicator shipped."
   ]
 }

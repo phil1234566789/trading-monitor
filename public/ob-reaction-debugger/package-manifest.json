@@ -1,6 +1,6 @@
 {
   "sha256Format": "UTF-8 with LF line endings (portable across Git checkouts)",
-  "scope": "Reviewed debugger/status quo, frozen diagnostic regression, explicit Brain task snapshot; no generalized quality/prod detector claim",
+  "scope": "Reviewed debugger/status quo and diagnostic run; current user501-positive override with provenance; raw run outputs unchanged",
   "files": [
     {
       "path": "build-ob-reaction-entry.cjs",
@@ -24,8 +24,8 @@
     },
     {
       "path": "dob-status-quo.html",
-      "sha256": "738a7b35e0d0de0c662d8e53bd60c17ab5c4d189c3318d120d107ee038576d47",
-      "bytes": 202870
+      "sha256": "099e0c929b7c7cacf8f47f5cbc90fd97a7d7afe744861537636469529a2e2bed",
+      "bytes": 204106
     },
     {
       "path": "index.html",
@@ -94,13 +94,13 @@
     },
     {
       "path": "ob-reaction-content.js",
-      "sha256": "7dc202cd68733c7f5b5073abf0075b72a807f9fb62bf3ad8b6456833b966ce7f",
-      "bytes": 8633
+      "sha256": "860b22266509874d5494d842d7a215ca5abffb2375943d60e6ab55aef23d53e6",
+      "bytes": 9259
     },
     {
       "path": "ob-reaction-content.json",
-      "sha256": "08fdc4ced6849c3210dc0f8d1514f1416e99fab20daf871fa94b0bb07d93628b",
-      "bytes": 9456
+      "sha256": "0a2eb0b17aa9890a3c2570599357b9566bf3d9c709abe9ccc083071ade6d382d",
+      "bytes": 10198
     },
     {
       "path": "ob-reaction-counter.test.cjs",
@@ -249,8 +249,8 @@
     },
     {
       "path": "package.test.cjs",
-      "sha256": "35a2ab49964afb861b7a37d3f791331226bee3a74291025321013b584de1f616",
-      "bytes": 2391
+      "sha256": "63ac7784ba1fd655792c5b90534016ab9767cfeba6ef3951f89a9d1701e82fdd",
+      "bytes": 2393
     },
     {
       "path": "references/dob-positive-505-506.json",
@@ -259,8 +259,8 @@
     },
     {
       "path": "regression/dob-reaction-regression.json",
-      "sha256": "8f19e0b201780b0307d5842b755a182eb793e22acf76fff653457bb6b5a7adfc",
-      "bytes": 434250
+      "sha256": "93aeac43b727e07cf71ac64f8a182d4521a35712d06105cb32421f951a157d5f",
+      "bytes": 436363
     },
     {
       "path": "regression/dob-reaction-regression.mjs",
@@ -269,8 +269,8 @@
     },
     {
       "path": "task-snapshot.json",
-      "sha256": "7633550b9d866516630e4cf9fee065b17e3b28ff512cc3ae56df082114b48f34",
-      "bytes": 3401
+      "sha256": "5ea55650cc131855ee27cbced5d3630b45297fa4ba557fd528749195006f213e",
+      "bytes": 3403
     },
     {
       "path": "ts11-pin480-sweep-extrem.html",

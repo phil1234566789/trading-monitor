@@ -110,5 +110,21 @@
     }
   ],
   "marketModel": "Philips Marktmodell: FVGs deutet er als institutionell bzw. durch Banken ausgelöst; angenommene Restorders könnten Abweisung oder erneuten Test erklären. Eine offene Rest-FVG kann erneut getestet werden, muss es aber nicht. Wann genug Kauf-/Verkaufsorders gefüllt sind, ist vorab nicht sicher bekannt. Weder Bankherkunft noch tatsächlich gefüllte Restorders sind durch OHLC bewiesen.",
-  "scope": "Nur Desktop-Prototyp. Keine Produkt-, Pin-, Journal- oder DB-Änderung; bestehende DOB-50-%-Regeln bleiben bis zu einem gesonderten Umsetzungsauftrag unverändert."
+  "scope": "Nur Desktop-Prototyp. Keine Produkt-, Pin-, Journal- oder DB-Änderung; bestehende DOB-50-%-Regeln bleiben bis zu einem gesonderten Umsetzungsauftrag unverändert.",
+  "assessmentOverrides": [
+    {
+      "pin": 501,
+      "expectedReaction": true,
+      "scope": "additional OB-reaction reference, not an additional DOB pair",
+      "source": "Explicit user correction; annotation 33d53b02-5a33-4bfd-9cc7-185a1d3d5afe",
+      "replaces": "historical negative interpretation of morning05:31–05:40",
+      "acceptedKnownAtBerlin": "09.11.2026 05:40",
+      "technicalEntryCandidate": {
+        "entryPrice": 4128.84,
+        "entryTimeBerlin": "09.11.2026 05:40"
+      },
+      "openIssue": "Technical SL-episode specification/adapter incomplete; do not invent entry/SL or a negative quality rule. Preserve accepted earlier entry if later break occurs.",
+      "decisionDateBerlin": "2026-11-15"
+    }
+  ]
 }
