@@ -47,7 +47,7 @@
     },
     {
       "path": "src/goldWeekendGap.js",
-      "sha256": "cc384d7709ec26abb2afd985b1ff67aa8913f9e4f163f270498b59994d0745af"
+      "sha256": "e36aaf7245289213091ec8321e3e63241c74b98a8cb74af0e86d9f04a75db436"
     },
     {
       "path": "src/fvgCandleTint.js",

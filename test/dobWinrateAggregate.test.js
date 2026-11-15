@@ -13,8 +13,8 @@ describe('aggregateDobRoutes', () => {
       pair('11', ready('open'), undefined),
     ]);
     expect(r.pairs).toBe(4);
-    expect(r.routes.a).toEqual({ success: 1, loss: 2, ambiguous: 0, open: 1, unknown: 0, notReady: 0, winrate: 1 / 3, sumR: 0 });
-    expect(r.routes.b).toMatchObject({ ambiguous: 1, unknown: 1, notReady: 2, winrate: null, sumR: 0 });
+    expect(r.routes.a).toEqual({ success: 1, loss: 2, ambiguous: 0, open: 1, unknown: 0, notReady: 0, winrate: 1 / 3, unknownRate: 0, sumR: 0 });
+    expect(r.routes.b).toMatchObject({ ambiguous: 1, unknown: 1, notReady: 2, winrate: null, unknownRate: 0.5, sumR: 0 });
   });
 
   it('trennt Monate', () => {

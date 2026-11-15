@@ -11,6 +11,8 @@ export function aggregateDobRoutes(pairs) {
   }
   for (const c of Object.values(routes)) {
     c.winrate = c.success + c.loss ? c.success / (c.success + c.loss) : null;
+    const ready = pairs.length - c.notReady;
+    c.unknownRate = ready ? c.unknown / ready : null;
     c.sumR = 2 * c.success - c.loss;
   }
   return { pairs: pairs.length, routes };
