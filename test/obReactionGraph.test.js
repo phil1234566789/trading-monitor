@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../src/chartDebuggerCases.js';
-import {obReactionGraph} from '../src/obReactionGraph.js';
+import {obReactionGraph,graphChangeTimes} from '../src/obReactionGraph.js';
 import {createOrderBlockReactionContext,evaluateOrderBlockReaction,internalFvgOpenAt} from '../src/orderBlockReaction.js';
 import {reactionOptionsFor} from '../src/doubleOrderBlocks.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
@@ -91,4 +91,16 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
    expect(g.nodes.entryB.status,reason).toBe('not-visited');
   }
  });
+ it('P16: „nächste Änderung“ springt nacheinander zu Kontakt, Reaktion, Entry a, Entry b und verpasst keine Änderung',async()=>{
+  const c=caseOf('P16'),fixture=await loadCaseFixture(c),{from,through}=caseSteps(c,fixture),end=evaluateCase(c,fixture,through);
+  const entry=end.orderBlocks[1],times=graphChangeTimes({entry,context:end.context,pair:end.pair,partner:end.orderBlocks[0]});
+  const r=entry.reaction,key=[r.contact.knownAt,r.knownAt,r.routes.a.entryTime,r.routes.b.entryTime];
+  const jumps=[];for(let at=from,next;(next=times.find(t=>t>at))!=null&&next<=through;at=next)jumps.push(next);
+  expect(jumps.filter(t=>key.includes(t))).toEqual([...new Set(key)]);
+  // Wächter: jede Minute, in der sich Zustände/Texte ändern, ist ein Sprungziel (Prozentzahlen ausgenommen).
+  const sign=at=>{const g=graphOf(c,evaluateCase(c,fixture,at),at);
+   return JSON.stringify([g.head,Object.values(g.nodes).map(n=>[n.status,n.sub,(n.meters??[]).map(m=>m.value==null?m.label:m.label.replace(/[\d,.]+ %/g,''))])]);};
+  let previous=sign(from);
+  for(let at=from+60;at<=through;at+=60){const now=sign(at);if(now!==previous)expect(times,`Änderung um ${at}`).toContain(at);previous=now;}
+ },60000);
 });

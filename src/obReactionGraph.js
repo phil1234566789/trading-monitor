@@ -1,4 +1,4 @@
-import {measureOrderBlockPenetration} from './orderBlockPenetration.js';
+import {measureOrderBlockPenetration,orderBlockPenetration} from './orderBlockPenetration.js';
 import {candleInvalidatesOrderBlock} from './orderBlockDetection.js';
 import {internalFvgOpenAt,firstIndex} from './orderBlockReaction.js';
 import {formatBerlinTime} from './berlinTime.js';
@@ -50,7 +50,8 @@ export function fvgFillMeter(context,fvg){
 
 function orderBlockMeter(context,ob,dir){
  const rows=rowsFrom(context,ob.recognizedAt),m=measureOrderBlockPenetration(ob,dir===1?'long':'short',rows);
- if(m.status!=='ready')return {...UNKNOWN_METER('Messung unbekannt'),state:'Messung unbekannt'};
+ // Ohne Kerze seit Bekanntwerden ist der OB schlicht unberührt, nicht unbekannt.
+ if(m.status!=='ready')return {...UNKNOWN_METER('Messung unbekannt'),state:rows.length?'Messung unbekannt':'noch nicht berührt'};
  if(m.maxPenetrationFraction<0)return {...UNKNOWN_METER('Messung unbekannt'),state:'noch nicht berührt'};
  const depth=Math.min(100,m.maxPenetrationFraction*100),broken=rows.some(c=>candleInvalidatesOrderBlock(c,ob));
  return {...meterOf(100-depth,['intakt','eingestochen'],`OB intakt ${pct(100-depth)} · Einstich ${pct(depth)}${broken?' · gebrochen':''}`,!broken),
@@ -177,4 +178,33 @@ function history(ob,r,routes,evaluatedAt){
   if(at!=null)list.push({at,text:`Route ${name} ${x.status}${x.reason?' · '+reasonText(x.reason):''}`});
  }
  return list.filter(h=>h.at<=evaluatedAt).sort((a,b)=>a.at-b.at).map(h=>({...h,time:time(h.at)}));
+}
+
+// Sprungziele für „vorige/nächste Änderung“: alle Zeitpunkte, an denen sich der Plan ändert, aus den knownAt-Zeiten
+// des Endergebnisses. Das Produkt ist zeitpunkttreu, darum gelten sie auch für frühere Slider-Stände.
+export function graphChangeTimes({entry,context,pair=null,partner=null}){
+ const {orderBlock:ob,reaction:r}=entry;
+ const times=[ob?.recognizedAt,r?.contact?.knownAt,r?.knownAt,pair?.recognizedAt,partner?.reaction?.knownAt];
+ for(const x of Object.values(r?.routes??{}))times.push(x.status==='entry'?x.entryTime:x.knownAt);
+ for(const f of entry.internalFvgs??[])if(f!==r?.fvg)times.push(f.recognizedAt,...fillChangeTimes(context,f),...orderBlockChangeTimes(context,f.orderBlock));
+ return [...new Set(times.filter(Number.isFinite))].sort((a,b)=>a-b);
+}
+
+// Seitenspur wechselt bei erster Berührung (Label „berührt“) und beim Ende von „offen“ (gefüllt oder unbekannt).
+function fillChangeTimes(context,fvg){
+ const touch=rowsFrom(context,fvg.recognizedAt).find(c=>orderBlockPenetration(fvg,fvg.direction,c)>0);
+ const times=[touch&&touch.time+60];
+ // offen → nicht offen ist monoton: Binärsuche über Minuten auf der einmal berechneten Produkt-Füllhistorie.
+ let lo=fvg.recognizedAt,hi=Math.floor(context.evaluatedAt/60)*60;
+ if(internalFvgOpenAt(context,fvg,hi)===true)return times;
+ while(hi-lo>60){const mid=lo+Math.floor((hi-lo)/120)*60;if(internalFvgOpenAt(context,fvg,mid)===true)lo=mid;else hi=mid;}
+ return [...times,hi];
+}
+
+// Interner M1-OB: Label wechselt bei erster Berührung und beim Bruch (gehalten → gebrochen).
+function orderBlockChangeTimes(context,ob){
+ if(!ob)return [];
+ const rows=rowsFrom(context,ob.recognizedAt),dir=ob.dir===1?'long':'short';
+ const touch=rows.find(c=>orderBlockPenetration(ob,dir,c)>=0),broken=rows.find(c=>candleInvalidatesOrderBlock(c,ob));
+ return [touch&&touch.time+60,broken&&broken.time+60];
 }

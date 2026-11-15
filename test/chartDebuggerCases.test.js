@@ -14,6 +14,13 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
    for(const ob of r.orderBlocks){expect(ob.orderBlock,`${c.id} ${ob.startTime}`).not.toBeNull();expect(ob.reaction.state).not.toBe('unknown');}
   }
  });
+ it('every case ends with the expected output shown in the case dropdown',async()=>{
+  for(const c of CHART_DEBUGGER_CASES){
+   const r=await at(c.id),reaction=ob2(r),entries=Object.entries(reaction.routes).filter(([,x])=>x.status==='entry').map(([k])=>k);
+   expect({reaction:reaction.state,entries},c.id).toEqual(c.expected);
+   if(c.orderBlocks.length===2)expect(r.pair,c.id).not.toBeNull();
+  }
+ });
  it('shows the same reference outcomes as the product tests',async()=>{
   expect(ob2(await at('503'))).toMatchObject({state:'false',reason:'m5OrderBlockBroken',knownAt:1792556940});
   // P14/Pin 500: ohne offene interne FVG ist der SL das Retest-Hoch (M1 16.10. 14:35 Berlin).

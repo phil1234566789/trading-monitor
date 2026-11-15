@@ -16,16 +16,20 @@ const FIXTURES={
 export const loadCaseFixture=async c=>(await FIXTURES[c.day]()).default;
 
 // OB-Startzeiten aus references.json (P14/P16), 2026-10-20-p17.json (P17) und test/orderBlockReaction.test.js (Pins).
+// expected = Produktergebnis des entry-tragenden OB am Fensterende unter W1; einzige Quelle für Dropdown und Test.
 export const CHART_DEBUGGER_CASES=[
- {id:'P14',label:'P14 · DOB Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792147500,1792150200]},
- {id:'P16',label:'P16 · DOB Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792545900,1792552500]},
- {id:'500',label:'Pin 500 · Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792150200]},
- {id:'501',label:'Pin 501 · Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794192300]},
- {id:'502',label:'Pin 502 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792552500]},
- {id:'503',label:'Pin 503 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792555800]},
- {id:'504',label:'Pin 504 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792558800]},
- {id:'P17',label:'P17 · DOB Short · 20.10.',day:'2026-10-20-p17',dir:-1,orderBlocks:[1792473900,1792479900]},
+ {id:'P14',label:'P14 · DOB Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792147500,1792150200],expected:{reaction:'true',entries:['a','b']}},
+ {id:'P16',label:'P16 · DOB Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792545900,1792552500],expected:{reaction:'true',entries:['a','b']}},
+ {id:'500',label:'Pin 500 · Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792150200],expected:{reaction:'true',entries:['a','b']}},
+ {id:'501',label:'Pin 501 · Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794192300],expected:{reaction:'true',entries:['a']}},
+ {id:'502',label:'Pin 502 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792552500],expected:{reaction:'true',entries:['a','b']}},
+ {id:'503',label:'Pin 503 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792555800],expected:{reaction:'false',entries:[]}},
+ {id:'504',label:'Pin 504 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792558800],expected:{reaction:'true',entries:['a','b']}},
+ {id:'P17',label:'P17 · DOB Short · 20.10.',day:'2026-10-20-p17',dir:-1,orderBlocks:[1792473900,1792479900],expected:{reaction:'true',entries:['a']}},
 ];
+export const expectedText=({expected:{reaction,entries}})=>entries.length?`Entry ${entries.join('+')}`:`Reaktion ${reaction}, kein Entry`;
+export const CASE_GROUPS=[['Positiv · Entry',CHART_DEBUGGER_CASES.filter(c=>c.expected.entries.length)],
+ ['Negativ · kein Entry',CHART_DEBUGGER_CASES.filter(c=>!c.expected.entries.length)]];
 
 // Replay-Fenster: ab Bildung von OB1 vier Stunden, damit Reaktion und beide Entry-Routen sicher drinliegen.
 export const CASE_WINDOW_SECONDS=4*3600;
