@@ -21,7 +21,7 @@ function pairEntries(reaction,direction,m1,evaluatedAt,instrument){
  }));
 }
 
-// Hold-Anker: exakter OB1-Retest, wenn er vor dem OB2-Retest bekannt ist, sonst die Near-Reaktion selbst.
+// Hold-Anker: exakter OB1-Retest, wenn er vor dem OB2-Retest bekannt ist, sonst die Reaktion ohne exakten Einstich selbst.
 // Ein OB1-Bruch vor dem OB2-Retest schwemmt immer auch diesen Anker aus; der Hold-Gate deckt ihn mit ab.
 export function firstRetestHoldAnchor(exactAnchor,secondRetestAt){
  return exactAnchor&&exactAnchor.fromTime<=secondRetestAt?'exact':'near';
@@ -56,7 +56,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
  const {nearTouch}={...DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,...options};
  const m5=closedChecklistCandles(m5Candles,'5m',evaluatedAt),m1=closedChecklistCandles(m1Candles,'1m',evaluatedAt);
  const result={version:DOUBLE_ORDER_BLOCK_VERSION,status:m1.length?'ready':'unknown',pairs:[],
-  policy:{reaction:'first touch (within 2 % of the OB height; near-touch via options), then first same-direction M1 FVG; M5 far edge reached within 2 % first = false',touchToleranceFraction:TOUCH_TOLERANCE_FRACTION,nearTouchFraction:NEAR_TOUCH_FRACTION,
+  policy:{reaction:`first touch (within ${TOUCH_TOLERANCE_FRACTION*100} % of the OB height; near-touch via options), then first same-direction M1 FVG; M5 far edge reached within ${TOUCH_TOLERANCE_FRACTION*100} % first = false`,touchToleranceFraction:TOUCH_TOLERANCE_FRACTION,nearTouchFraction:NEAR_TOUCH_FRACTION,
    entryBMaxOrderBlockDepth:ENTRY_B_MAX_ORDER_BLOCK_DEPTH,stop:'open internal M1 FVG at entry = M5 far edge, otherwise retest extreme (contact through entry candle, no buffer)',
    firstRetestHoldThrough:'secondReactionKnownAt',retestDay:'Europe/Berlin calendar date',maxPositiveZoneGap:instrumentConfig(instrument).dobMaxPositiveZoneGap,
    options:{nearTouch,bridgeClosures:roles.first.bridgeClosures}},

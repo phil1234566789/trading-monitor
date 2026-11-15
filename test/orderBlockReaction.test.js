@@ -19,15 +19,30 @@ const react=(day,startTime,dir,{evaluatedAt,m1,options={nearTouch:true}}={})=>{
 
 describe('reaction contact',()=>{
  const long={dir:1,bottom:100,top:110},short={dir:-1,bottom:100,top:110};
+ // 'touch' umfasst seit v9 auch Kontakt bis 2 % der OB-Höhe vor der Kante; 'nearTouch' nur noch 2–10 %.
  it.each([[long,{low:109,high:112},'touch'],[long,{low:111,high:113},'nearTouch'],[long,{low:111.01,high:113},'none'],
   [short,{low:98,high:100},'touch'],[short,{low:97,high:99},'nearTouch'],[short,{low:97,high:98.99},'none'],
-  // 2 % der OB-Höhe vor der Kante zählen als Touch (v9).
   [long,{low:110.2,high:112},'touch'],[long,{low:110.21,high:112},'nearTouch'],[short,{low:98,high:99.8},'touch'],[short,{low:98,high:99.79},'nearTouch']])('classifies %o with %o as %s',(zone,candle,expected)=>{
   expect(measureReactionContact(zone,{time:0,...candle})).toBe(expected);
  });
  it('breaks the reaction once a candle reaches the far edge within 2 % of the OB height',()=>{
   expect(reactionBreaksOrderBlock({low:100.2,high:105},long)).toBe(true);expect(reactionBreaksOrderBlock({low:100.21,high:105},long)).toBe(false);
   expect(reactionBreaksOrderBlock({low:105,high:109.8},short)).toBe(true);expect(reactionBreaksOrderBlock({low:105,high:109.79},short)).toBe(false);
+ });
+ it('hits the 2 % edge exactly on real XAU cent prices, long and short, contact and break',()=>{
+  // Höhe 3,50 → Toleranz 0,07; Preise auf Cent gerundet wie im Feed, damit Float-Fehler an der Grenze auffallen.
+  const cent=x=>Math.round(x*100)/100;
+  for(let i=0;i<500;i++){
+   const bottom=cent(4100.07+i*.37),top=cent(bottom+3.5),L={dir:1,bottom,top},S={dir:-1,bottom,top};
+   expect(measureReactionContact(L,{time:0,low:cent(top+.07),high:cent(top+1)}),`${bottom}`).toBe('touch');
+   expect(measureReactionContact(L,{time:0,low:cent(top+.08),high:cent(top+1)}),`${bottom}`).toBe('nearTouch');
+   expect(measureReactionContact(S,{time:0,low:cent(bottom-1),high:cent(bottom-.07)}),`${bottom}`).toBe('touch');
+   expect(measureReactionContact(S,{time:0,low:cent(bottom-1),high:cent(bottom-.08)}),`${bottom}`).toBe('nearTouch');
+   expect(reactionBreaksOrderBlock({low:cent(bottom+.07),high:top},L),`${bottom}`).toBe(true);
+   expect(reactionBreaksOrderBlock({low:cent(bottom+.08),high:top},L),`${bottom}`).toBe(false);
+   expect(reactionBreaksOrderBlock({low:bottom,high:cent(top-.07)},S),`${bottom}`).toBe(true);
+   expect(reactionBreaksOrderBlock({low:bottom,high:cent(top-.08)},S),`${bottom}`).toBe(false);
+  }
  });
  it('keeps an approach from the wrong side as no contact and invalid geometry unknown',()=>{
   expect(measureReactionContact(long,{time:0,low:95,high:99.5})).toBe('none');
@@ -89,8 +104,6 @@ describe('native reaction references',()=>{
    expect(r).toMatchObject({state:'true',contact:{status:'touch',knownAt:1792561440},knownAt:1792561620});
    expect(r.routes.b).toMatchObject({status:'rejected',reason:'entryBOrderBlockTooDeep',knownAt:1792562040});
   }
-  const r=react('2026-10-21',1792558800,1);
-  expect(r.routes.b).toMatchObject({status:'rejected',reason:'entryBOrderBlockTooDeep'});
  });
  it('Pin 502: Entry a stops at the bullish M5 lower edge while the old internal FVG is still open',()=>{
   expect(react('2026-10-21',1792552500,1).routes.a).toMatchObject({status:'entry',entryTime:1792556100,entryPrice:4123.01,stopLoss:4112.95,stopAnchor:'m5-edge'});

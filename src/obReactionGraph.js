@@ -1,6 +1,6 @@
 import {measureOrderBlockPenetration,orderBlockPenetration} from './orderBlockPenetration.js';
 import {candleInvalidatesOrderBlock} from './orderBlockDetection.js';
-import {internalFvgOpenAt,firstIndex,TOUCH_TOLERANCE_FRACTION} from './orderBlockReaction.js';
+import {internalFvgOpenAt,firstIndex,TOUCH_TOLERANCE_FRACTION,reactionBreaksOrderBlock} from './orderBlockReaction.js';
 import {formatBerlinTime} from './berlinTime.js';
 import {fmtPrice} from './format.js';
 const TOUCH_PCT=`${TOUCH_TOLERANCE_FRACTION*100} %`;
@@ -54,7 +54,8 @@ function orderBlockMeter(context,ob,dir){
  // Ohne Kerze seit Bekanntwerden ist der OB schlicht unberührt, nicht unbekannt.
  if(m.status!=='ready')return {...UNKNOWN_METER('Messung unbekannt'),state:rows.length?'Messung unbekannt':'noch nicht berührt'};
  if(m.maxPenetrationFraction<0)return {...UNKNOWN_METER('Messung unbekannt'),state:'noch nicht berührt'};
- const depth=Math.min(100,m.maxPenetrationFraction*100),broken=rows.some(c=>candleInvalidatesOrderBlock(c,ob));
+ // Gleiche Bruchregel wie die Reaktion, sonst zeigt Pin 501 „gehalten“ neben „Gegenkante gebrochen“.
+ const depth=Math.min(100,m.maxPenetrationFraction*100),broken=rows.some(c=>reactionBreaksOrderBlock(c,ob));
  return {...meterOf(100-depth,['intakt','eingestochen'],`OB intakt ${pct(100-depth)} · Einstich ${pct(depth)}${broken?' · gebrochen':''}`,!broken),
   state:broken?'gebrochen':'gehalten'};
 }

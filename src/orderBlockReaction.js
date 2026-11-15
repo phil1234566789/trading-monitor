@@ -23,15 +23,20 @@ export function measureReactionContact(zone,candle,threshold=NEAR_TOUCH_FRACTION
  const m=measureOrderBlockPenetration(zone,sideOf(zone?.dir),[candle]);
  if(![-1,1].includes(zone?.dir)||m.status!=='ready')return 'unknown';
  if(candleTouchesOrderBlock(candle,zone))return 'touch';
- const height=zone.top-zone.bottom,approach=zone.dir===1?candle.low>zone.top:candle.high<zone.bottom;
- const within=fraction=>approach&&-m.maxPenetrationFraction*height<=fraction*height+priceRoundingTolerance(zone);
- return within(TOUCH_TOLERANCE_FRACTION)?'touch':within(threshold)?'nearTouch':'none';
+ // Abstand > 0 = Annäherung von außen; eine Kerze, die die OB überspringt, ist kein Kontakt.
+ const distance=zone.dir===1?candle.low-zone.top:zone.bottom-candle.high;
+ if(!(distance>0))return 'none';
+ return withinTouchTolerance(distance,zone)?'touch':withinTouchTolerance(distance,zone,threshold)?'nearTouch':'none';
+}
+
+// Preisabstand zur OB-Kante; die Rundungstoleranz verhindert, dass XAU-Preise genau auf der Grenze per Float herausfallen.
+export function withinTouchTolerance(distance,zone,fraction=TOUCH_TOLERANCE_FRACTION) {
+ return distance<=fraction*(zone.top-zone.bottom)+priceRoundingTolerance(zone);
 }
 
 // Bruch der fernen M5-Kante für Reaktion und Route b, mit derselben Toleranz wie der Kontakt.
 export function reactionBreaksOrderBlock(candle,zone) {
- const tolerance=TOUCH_TOLERANCE_FRACTION*(zone.top-zone.bottom);
- return zone.dir===1?candle.low<=zone.bottom+tolerance:candle.high>=zone.top-tolerance;
+ return withinTouchTolerance(zone.dir===1?candle.low-zone.bottom:zone.top-candle.high,zone);
 }
 
 // m1Candles müssen bereits auf geschlossene Kerzen bis evaluatedAt gefiltert sein (closedChecklistCandles).
@@ -141,7 +146,7 @@ function evaluateRoutes(context,orderBlock,contact,fvg) {
  return routes;
 }
 
-// Nach einer Near-Touch-Reaktion ist erst der spätere exakte Retest das Extrem, an dem der DOB-Hold gemessen wird
+// Nach einer Reaktion ohne exakten Einstich (Near-Touch oder Touch in der 2-%-Toleranz) ist erst der spätere exakte Retest das Extrem, an dem der DOB-Hold gemessen wird
 // (sonst schwemmt dieser Retest den Near-Anker aus, siehe Referenzpaare P1/P3/P4/P11/P13/P16).
 export function exactRetestAnchor(context,orderBlock,reaction,{bridgeClosures=false}={}) {
  // Ein exakter Touch innerhalb des Reaktionsfensters ist bereits dieser Retest.
