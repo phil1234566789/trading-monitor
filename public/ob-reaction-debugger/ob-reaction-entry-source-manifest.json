@@ -2,52 +2,53 @@
   "sources": [
     {
       "path": "src/m1FvgEntryProjection.js",
-      "sha256": "b2ef819ce0cf770e17967af06fdc241234e5bf19de17f55252f2fc0d8f554d04"
+      "sha256": "23f43172bb602a80487e5b0958484adba8a83813a5e944e6236cf9483bf15b15"
     },
     {
       "path": "src/tradeSetupChecklistTimeBasis.js",
-      "sha256": "afbad4ebfe70d9efbff79d9ae72054b7967a14f0827828cb018d7a975ec3f4e1"
+      "sha256": "8f5d7fe1485f63b5550c68177dea8c2c1dd8fdfd7d7214147fa7ada51870c8eb"
     },
     {
       "path": "src/timeframes.js",
-      "sha256": "fe92c2eca49f4560609829820d4eece36b44513c7bf57bb1192b154548e91a22"
+      "sha256": "419484b02b41de6a18d9bc9e47745a4dd274521189a6a7f80ca9453dda4f6497"
     },
     {
       "path": "src/closedCandlePrefix.js",
-      "sha256": "39576f0e5accbcd0fe909c7e34d16eb6746841731ff6310359579d7ff0c94d4c"
+      "sha256": "497b5809824c9000915b30e152bef7e8498f6a0fee129c194b568d00943b138e"
     },
     {
       "path": "src/m1FvgEntrySelection.js",
-      "sha256": "3f2732162fbd8a39abcd137d51507fb166b95aaf9a9d5850b3e51f1217b80e8a"
+      "sha256": "9f94b815c1428a7e0aa559dbff9ed9c5f0e6694f0d26b9be52bfbba782f1886c"
     },
     {
       "path": "src/m1FairValueGap.js",
-      "sha256": "523ec0cc939b8bb07859c7301c4d73b422111b3b2ac5c8969d6923252d5ad3cb"
+      "sha256": "ecb8ec765848ab08073628ef4fdd7a06638efe35ca9895a801af51048938d25e"
     },
     {
       "path": "src/orderBlockDetection.js",
-      "sha256": "11d435e29e6c0b5f5b528491f37c880e6857fd3135840f758858943a3a75e984"
+      "sha256": "de7baeacb7c5bdff40436141c2b9bfc89b970964f844857001e0789569b90356"
     },
     {
       "path": "src/pipConfig.js",
-      "sha256": "5e10e427d01e3cd97b3a645ef1149072f43022e8e9a2fc38a0006991637eb884"
+      "sha256": "8f90de0c1430456e5212273b84f0cd10f03214dd9a64c5cf232c95d13f41645b"
     },
     {
       "path": "src/instrumentConfig.js",
-      "sha256": "c5905960b80e699cd97d3e4571ae13d2cb5f5abf9bb97983d09f24971d02fe00"
+      "sha256": "a99c4f44eaf5700ca608bb72dae0161fbfb55b49cad4a55f5884239686f84759"
     },
     {
       "path": "src/m1FvgEntrySequence.js",
-      "sha256": "565e75ec63d42b2aac09113f8cb886f029c42e4ce9c2820df9d7e7fa4316310b"
+      "sha256": "17cb6d75b662d392222d1b40f3d276242c63b7367329af400d0b7bda49de7213"
     },
     {
       "path": "src/fvgCandleTint.js",
-      "sha256": "77a1b42c3503e3539a1ddee19e747c34de480c46e3960b2195249e62fe7d9a44"
+      "sha256": "99b6bf8fb0c9f6dd27cbb2ee8474c0a82367c9376f557348b74df688eb659b3c"
     }
   ],
   "colors": {
     "fvgCandle": "#ffd54f",
     "tradeConnector": "#fd80ff"
   },
-  "colorSource": "PROD chart_colors read-only 2026-11-15; no preferences writes"
+  "colorSource": "PROD chart_colors read-only 2026-11-15; no preferences writes",
+  "sha256Format": "UTF-8 with LF line endings"
 }
