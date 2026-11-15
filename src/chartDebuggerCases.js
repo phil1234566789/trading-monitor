@@ -2,7 +2,7 @@ import {detectOrderBlocks} from './orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {obMinimum} from './instrumentConfig.js';
-import {createOrderBlockReactionContext,evaluateOrderBlockReaction,INTERNAL_FVG_LOOKBACK_SECONDS} from './orderBlockReaction.js';
+import {createOrderBlockReactionContext,evaluateOrderBlockReaction,internalOrderBlockFvgs} from './orderBlockReaction.js';
 import {detectDoubleOrderBlocks,reactionOptionsFor} from './doubleOrderBlocks.js';
 
 const INSTRUMENT='XAUUSD';
@@ -16,7 +16,7 @@ const FIXTURES={
 export const loadCaseFixture=async c=>(await FIXTURES[c.day]()).default;
 
 // OB-Startzeiten aus references.json (P14/P16), 2026-10-20-p17.json (P17) und test/orderBlockReaction.test.js (Pins).
-export const OB_REACTION_CASES=[
+export const CHART_DEBUGGER_CASES=[
  {id:'P14',label:'P14 · DOB Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792147500,1792150200]},
  {id:'P16',label:'P16 · DOB Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792545900,1792552500]},
  {id:'500',label:'Pin 500 · Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792150200]},
@@ -46,8 +46,7 @@ export function evaluateCase(c,fixture,evaluatedAt,options={}){
   const recognizedAt=recognition.get(startTime);
   if(!zone||!(recognizedAt<=evaluatedAt))return {role,startTime,orderBlock:null,reaction:null,internalFvgs:[]};
   const orderBlock={...zone,recognizedAt,timeframe:'5M'};
-  const internalFvgs=context.byDirection[c.dir===1?'long':'short'].filter(f=>f.candleTime>=startTime-INTERNAL_FVG_LOOKBACK_SECONDS
-   &&f.bottom<=orderBlock.top&&f.top>=orderBlock.bottom);
+  const internalFvgs=internalOrderBlockFvgs(context,orderBlock);
   return {role,startTime,orderBlock,internalFvgs,reaction:evaluateOrderBlockReaction(context,orderBlock,reactionOptionsFor(role,options))};
  });
  let pair=null;
@@ -55,5 +54,5 @@ export function evaluateCase(c,fixture,evaluatedAt,options={}){
   const id=`dob:${INSTRUMENT}:${c.dir}:${c.orderBlocks[0]}:${c.orderBlocks[1]}`;
   pair=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,instrument:INSTRUMENT,evaluatedAt,options}).pairs.find(p=>p.id===id)??null;
  }
- return {m1,orderBlocks,pair};
+ return {m1,m5,context,orderBlocks,pair};
 }

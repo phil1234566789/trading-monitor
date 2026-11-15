@@ -3,7 +3,7 @@ import { cssColor } from "./chartColors.js";
 import { pricePrecisionForInstrument } from "./format.js";
 import { berlinDateStrFor, formatBerlinTime } from "./berlinTime.js";
 
-// Geteilt von PriceChart.vue und dem OB-Reaktions-Debugger, damit beide Charts gleich aussehen.
+// Geteilt von PriceChart.vue und dem Chart-Debugger, damit beide Charts gleich aussehen.
 // lightweight-charts formatiert sonst in UTC; die Achse zeigt Europe/Berlin (CLAUDE.md, Zeitzonen).
 const WEEKDAYS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const berlin = (options) => new Intl.DateTimeFormat("de-DE", { ...options, timeZone: "Europe/Berlin" });

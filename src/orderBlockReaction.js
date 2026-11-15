@@ -178,3 +178,14 @@ export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=false,b
  },{bridgeClosures});
  return result??unknown(walk.status==='closed'?'marketClosed':walk.status==='gap'?'missingHistory':contact?'awaitingFvg':'noContact');
 }
+
+// Debugger-Sicht auf dieselbe Füllhistorie wie der SL: true offen, false gefüllt, null unbekannt (Lücke/verdeckte Kerze).
+export const internalFvgOpenAt=(context,fvg,at)=>openAt(fvgFill(context,fvg),at);
+// Interne FVGs einer OB wie in evaluateReactionStop: Lookback ab OB-Start, Preisüberlappung, bekannt bis knownBy.
+export function internalOrderBlockFvgs(context,orderBlock,knownBy=Infinity) {
+ const list=context.byDirection[sideOf(orderBlock.dir)],result=[];
+ for(let i=firstIndex(list,f=>f.candleTime>=orderBlock.startTime-INTERNAL_FVG_LOOKBACK_SECONDS);i<list.length&&list[i].recognizedAt<=knownBy;i++)
+  if(candleTouchesOrderBlock({low:list[i].bottom,high:list[i].top},orderBlock))result.push(list[i]);
+ return result;
+}
+export {firstIndex};

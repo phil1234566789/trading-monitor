@@ -71,7 +71,7 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/konten" exact-active-class="active">Konten</RouterLink>
         <RouterLink to="/milky-meta-trader" exact-active-class="active">MMT</RouterLink>
         <RouterLink to="/algo-watcher" exact-active-class="active" :title="watcherTooltip"><span class="watcher-dot" :class="[watcherHealth.state, { pulse: watcherHealth.pulse }]" aria-hidden="true"></span>Algo Watcher <span class="sr-only">{{ watcherHealth.label }}</span></RouterLink>
-        <RouterLink to="/ob-reaktion" exact-active-class="active">OB-Reaktion</RouterLink>
+        <RouterLink to="/chart-debugger" exact-active-class="active">Chart-Debugger</RouterLink>
       </nav>
       <!-- Verbindungsstatus mittig: page-nav und bar-right teilen sich den Rest je zur Hälfte
            (beide flex:1), damit die Mitte wirklich die Mitte ist und nicht bloß der Rest. -->
