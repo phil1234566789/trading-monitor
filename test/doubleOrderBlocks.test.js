@@ -4,36 +4,45 @@ import {detectDoubleOrderBlocks} from '../src/doubleOrderBlocks.js';
 
 const load=name=>JSON.parse(readFileSync(new URL(`./fixtures/dob-native/${name}.json`,import.meta.url),'utf8'));
 const manifest=load('references'),days=new Map(manifest.days.map(day=>[day,load(day)]));
-const policy=load('policy-v5-reference-expectations');
 const results=new Map();
 const run=day=>{
  if(!results.has(day)){const fixture=days.get(day);results.set(day,detectDoubleOrderBlocks({instrument:'XAUUSD',
   m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to}));}
  return results.get(day);
 };
+const find=(day,first,second)=>run(day).pairs.find(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
+const refs=pair=>pair.pins.map(pin=>manifest.references.find(ref=>ref.pin===pin));
 
 describe('double order blocks from native candles',()=>{
- it.each(manifest.pairs)('recognizes $id through OB detection and M1 mitigation, without pin IDs as algorithm input',pair=>{
-  const [first,second]=pair.pins.map(pin=>manifest.references.find(ref=>ref.pin===pin));
-  const dob=run(first.day).pairs.find(item=>item.firstOrderBlock.startTime===first.startTime
-   &&item.secondOrderBlock.startTime===second.startTime);
-  // Philips spätere 50%-Grenze für beide OBs ersetzt hier ausdrücklich die alte Positiv-Erwartung.
-  if(policy.references.find(r=>r.id===pair.id).expected==='rejected'){
-   expect(dob).toBeUndefined();
-   const fixture=days.get(first.day),historical=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,
-    m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to,maxRetestDepthFraction:1}).pairs
-    .find(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
-   expect(historical).toBeDefined();expect(historical.secondPenetration.maxPenetrationFraction).toBeGreaterThan(.5);
-   return;
-  }
+ // P14/P16 waren unter v6 wegen >50 % OB2-Tiefe abgelehnt; die tragfähige M1-Reaktion ersetzt dieses Gate.
+ it.each(manifest.pairs)('recognizes $id through OB detection and M1 reaction, without pin IDs as algorithm input',pair=>{
+  const [first,second]=refs(pair),dob=find(first.day,first,second);
   expect(dob).toBeDefined();expect(dob.direction).toBe(first.dir===1?'long':'short');
-  expect(dob.entries.a.status).toBe('ready');
-  expect(dob.entries.a.entryTime).toBeGreaterThan(dob.secondRetest.recognizedAt);
-  expect(dob.entries.a.stopPrice).toBe(first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top);
-  expect(dob.entries.a.targetPrice).toBeCloseTo(dob.entries.a.entryPrice
-   +first.dir*2*Math.abs(dob.entries.a.entryPrice-dob.entries.a.stopPrice),8);
+  expect(dob.firstReaction.recognizedAt).toBeLessThanOrEqual(dob.secondRetest.candleTime);
+  expect(dob.recognizedAt).toBe(dob.secondReaction.recognizedAt);
+  for(const entry of Object.values(dob.entries)){
+   expect(['ready','pending','invalid']).toContain(entry.status);
+   if(entry.status!=='ready')continue;
+   expect(entry.entryTime).toBeGreaterThan(dob.secondRetest.recognizedAt);
+   expect(entry.stopPrice).toBe(first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top);
+   expect(entry.targetPrice).toBeCloseTo(entry.entryPrice+first.dir*2*Math.abs(entry.entryPrice-entry.stopPrice),8);
+  }
  });
- it('does not reveal a reference DOB before its M1 entry is known',()=>{
+ it.each(manifest.pairs)('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
+  const [first,second]=refs(pair),fixture=days.get(first.day),full=find(first.day,first,second);
+  const input={instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1};
+  const prefix=detectDoubleOrderBlocks({...input,evaluatedAt:full.recognizedAt}).pairs.find(p=>p.id===full.id);
+  expect(prefix.firstReaction).toEqual(full.firstReaction);expect(prefix.firstRetestHold.status).toBe('passed');
+  expect(detectDoubleOrderBlocks({...input,evaluatedAt:full.recognizedAt-1}).pairs.some(p=>p.id===full.id)).toBe(false);
+ });
+ it('recognizes the additional positive reference P17 (Pins 505/506) with an M5-edge entry on OB2',()=>{
+  const fixture=load('2026-10-20-p17');
+  const dob=detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
+   evaluatedAt:fixture.candles.m1.at(-1).time+60}).pairs.find(p=>p.id===fixture.provenance.key);
+  expect(dob.entries.a).toMatchObject({status:'ready',entryTime:1792481460,entryPrice:4130.55,stopPrice:4136.58});
+  expect(dob.entries.b.status).toBe('pending');
+ });
+ it('does not reveal a reference DOB before its M1 reaction is known',()=>{
   const fixture=days.get('2026-10-08'),full=run('2026-10-08');
   const pair=manifest.pairs.find(p=>p.id==='P15'),refs=pair.pins.map(pin=>manifest.references.find(r=>r.pin===pin));
   const target=full.pairs.find(p=>p.firstOrderBlock.startTime===refs[0].startTime&&p.secondOrderBlock.startTime===refs[1].startTime);

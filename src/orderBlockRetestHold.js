@@ -1,5 +1,6 @@
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {candleInvalidatesOrderBlock} from './orderBlockDetection.js';
+import {closedCandleEnd} from './closedCandlePrefix.js';
 
 // Ein später gehaltener M5-Rand repariert kein bereits gesweeptes erstes Retestextrem.
 export function orderBlockRetestHoldHistory({candles,direction,anchorPrice,fromTime,evaluatedAt}) {
@@ -9,8 +10,9 @@ export function orderBlockRetestHoldHistory({candles,direction,anchorPrice,fromT
   return {...history,unavailableAt:fromTime,reason:'invalidInput'};
  const through=Math.floor(evaluatedAt/60)*60;
  const boundary={dir:direction==='long'?1:-1,top:anchorPrice,bottom:anchorPrice};
- for(const candle of closedChecklistCandles(candles,'1m',through)) {
-  if(candle.time<fromTime)continue;
+ const rows=closedChecklistCandles(candles,'1m',through);
+ for(let i=closedCandleEnd(rows,1,fromTime);i<rows.length;i++) {
+  const candle=rows[i];
   if(candle.time!==history.throughTime||candle.ignored||![candle.low,candle.high].every(Number.isFinite)||candle.low>candle.high)
    return {...history,unavailableAt:history.throughTime+60,reason:'missingHistory'};
   history.throughTime=candle.time+60;

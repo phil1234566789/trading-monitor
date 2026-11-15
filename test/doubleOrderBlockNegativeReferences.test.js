@@ -2,7 +2,6 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {expect,it} from 'vitest';
 import {measureOrderBlockPenetration} from '../src/orderBlockPenetration.js';
-import {evaluateDoubleOrderBlockDepth} from '../src/doubleOrderBlockDepth.js';
 import {evaluateDoubleOrderBlockRetestDay} from '../src/doubleOrderBlockRetestDay.js';
 import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from '../src/orderBlockRetestHold.js';
 import {detectDoubleOrderBlocks} from '../src/doubleOrderBlocks.js';
@@ -37,15 +36,14 @@ it.each(manifest.cases)('preserves native OHLC, source snapshot and exact reject
  expect(example.note.length).toBeGreaterThan(0);expect(example.sourceEngineVersion).toMatch(/v[25]$/);
  const first=measureOrderBlockPenetration(example.first,example.direction,example.first.nativeM1Window);
  const second=measureOrderBlockPenetration(example.second,example.direction,example.second.nativeM1Window);
- const depth=evaluateDoubleOrderBlockDepth(first,second);
  const day=evaluateDoubleOrderBlockRetestDay(example.first.touch,example.second.touch);
  const priceGap=evaluateDoubleOrderBlockPriceGap(example.first,example.second,example.direction==='long'?1:-1,'XAUUSD');
  const hold=orderBlockRetestHoldAt(orderBlockRetestHoldHistory({candles:nativeRows(example),direction:example.direction,
   anchorPrice:first.extremePrice,fromTime:example.first.knownAt,evaluatedAt:example.second.knownAt}),example.second.knownAt);
- const isolated=example.expectedRejectionReason==='secondRetestTooDeep'?depth
-  :example.expectedRejectionReason==='differentRetestDays'?day
+ // v7 kennt kein pauschales M5-Tiefengate mehr; Pin 472 bleibt über die verschiedenen Retest-Tage negativ.
+ const isolated=['secondRetestTooDeep','differentRetestDays'].includes(example.expectedRejectionReason)?day
   :example.expectedRejectionReason==='priceGapTooWide'?priceGap:hold;
- expect(isolated.reason).toBe(example.expectedRejectionReason);
+ expect(isolated.reason).toBe(example.expectedRejectionReason==='secondRetestTooDeep'?'differentRetestDays':example.expectedRejectionReason);
  expect(isolated.status).not.toBe('passed');
  if(example.pin===472){expect(first.maxPenetrationFraction).toBeCloseTo(.36166924265843176,10);expect(second.maxPenetrationFraction).toBeCloseTo(.9885057471263935,10);}
  if(example.pin===471)expect(hold.firstSweepTime).toBe(1794221520);
@@ -57,8 +55,9 @@ it.each(manifest.cases)('preserves native OHLC, source snapshot and exact reject
 it.each(['GBPUSD','EURUSD'])('keeps the price-gap policy unconfigured for %s in the actual detector',instrument=>{
  const example=manifest.cases.find(c=>c.pin===475);
  const result=detectDoubleOrderBlocks({instrument,m5Candles:nativeRows(example,'m5'),m1Candles:nativeRows(example),evaluatedAt:example.second.knownAt});
- expect(result.policy.maxPositiveZoneGap).toBeNull();
- expect(result.pairs.some(pair=>pair.firstOrderBlock.startTime===example.first.startTime&&pair.secondOrderBlock.startTime===example.second.startTime)).toBe(true);
+ expect(result.policy.maxPositiveZoneGap).toBeNull();expect(result.stats.priceGapRejected).toBe(0);
+ // Ohne XAU-Abstandsgrenze bekommt OB2 einen Partner; welcher, entscheidet die unveränderte Partnerwahl.
+ expect(result.pairs.some(pair=>pair.secondOrderBlock.startTime===example.second.startTime)).toBe(true);
 });
 
 it.each(manifest.cases)('does not confirm pin $pin through native M5 OB detection and M1 qualification',example=>{
@@ -71,10 +70,4 @@ it.each(manifest.cases)('does not confirm pin $pin through native M5 OB detectio
  }
  const result=detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles,m1Candles,evaluatedAt:example.second.knownAt});
  expect(result.pairs.some(pair=>pair.id===example.key)).toBe(false);
-});
-
-it.each(['first','second'])('keeps unknown %s depth unknown rather than confirming',role=>{
- const known={status:'ready',maxPenetrationFraction:.5},unknown={status:'unknown',maxPenetrationFraction:null};
- expect(evaluateDoubleOrderBlockDepth(role==='first'?unknown:known,role==='second'?unknown:known))
-  .toEqual({status:'unknown',reason:`${role}RetestDepthUnknown`});
 });
