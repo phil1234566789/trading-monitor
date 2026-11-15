@@ -1,10 +1,11 @@
 <script setup>
-import { computed } from "vue";
+import { computed, ref, nextTick, onUnmounted } from "vue";
 import {formatDatedTime} from '../berlinTime.js';
 import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulationPinPresentation.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import PinTypeChips from './PinTypeChips.vue';
 import {tradeSetupSourceDetails} from '../tradeSetupSourcePresentation.js';
+import {COPIED_FEEDBACK_MS} from '../priceChartConstants.js';
 
 // Pin-Kontext-Modal (Chat 2026-08-01) — "genau wie bei Metadaten" (Philip), daher derselbe
 // MetadataPanel.vue-Rahmen (Drag/Resize/Close) wie beim Debug-Metadaten-Panel. kind="trade_position"
@@ -27,6 +28,28 @@ const props = defineProps({
 const emit = defineEmits(["remove", "update-note", "update-type", "hover", "select"]);
 
 const OUTCOME_LABEL = { win: "Win", loss: "Loss", open: "Offen" };
+const copyStatus = ref(null);
+let copyTimer, copySequence = 0;
+onUnmounted(() => { clearTimeout(copyTimer); copySequence++; });
+
+async function copyPinId(id, event) {
+  const request = ++copySequence, card = event.currentTarget.closest('.pin-panel-entry');
+  clearTimeout(copyTimer);
+  copyStatus.value = { id, state: 'copying' };
+  try {
+    await navigator.clipboard.writeText(String(id));
+    if (request !== copySequence) return;
+    copyStatus.value = { id, state: 'copied' };
+    copyTimer = setTimeout(() => { copyStatus.value = null; }, COPIED_FEEDBACK_MS);
+  } catch {
+    if (request !== copySequence) return;
+    copyStatus.value = { id, state: 'failed' };
+    await nextTick();
+    if (request !== copySequence) return;
+    const input = card.querySelector('.pin-id-fallback');
+    input?.focus(); input?.select();
+  }
+}
 
 const rows = computed(() =>
   props.entries.map((entry) => ({
@@ -64,6 +87,17 @@ function onEntryClick(event, entry) {
       @mouseleave="emit('hover', null)"
       @click="onEntryClick($event, row.entry)"
     >
+      <div class="pin-panel-identity" @click.stop>
+        <span>Pin #{{ row.entry.id }}</span>
+        <button type="button" class="pin-id-copy" :aria-label="`Pin-ID ${row.entry.id} kopieren`"
+          title="Pin-ID kopieren" :disabled="copyStatus?.id === row.entry.id && copyStatus.state === 'copying'"
+          @click.stop="copyPinId(row.entry.id, $event)"><span aria-hidden="true">⧉</span></button>
+        <small v-if="copyStatus?.id === row.entry.id" role="status" aria-live="polite">
+          {{ copyStatus.state === 'copied' ? 'Pin-ID kopiert.' : copyStatus.state === 'failed' ? 'Kopieren nicht möglich. ID manuell kopieren.' : 'Kopiere…' }}
+        </small>
+        <input v-if="copyStatus?.id === row.entry.id && copyStatus.state === 'failed'" class="pin-id-fallback"
+          readonly :value="String(row.entry.id)" :aria-label="`Pin-ID ${row.entry.id} zum manuellen Kopieren`" />
+      </div>
       <template v-if="row.entry.kind?.startsWith('simulation_')">
         <div class="pin-panel-entry-header">⚑ {{ row.entry.kind === 'simulation_dr' ? 'Simulations-DR' : row.entry.kind === 'simulation_entry' ? 'Simulations-Entry' : 'Simulations-Checkpoint' }} · {{ row.entry.simulationContext?.instrument }}
           <button class="pin-panel-remove" aria-label="Simulations-Pin entfernen" @click="emit('remove',row.entry.id)">🗑</button>
@@ -243,6 +277,14 @@ function onEntryClick(event, entry) {
   font-size: 12px;
   margin-top: 4px;
 }
+
+.pin-panel-identity { display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:#a6adbb;font-size:12px;cursor:default; }
+.pin-id-copy { display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:28px;padding:2px 6px;background:transparent;border:1px solid #434b5d;border-radius:4px;color:#d1d4dc;cursor:pointer; }
+.pin-id-copy:hover { background:#2a2e39; }
+.pin-id-copy:focus-visible,.pin-id-fallback:focus-visible { outline:2px solid #91b8ff;outline-offset:2px; }
+.pin-id-copy:disabled { opacity:.5;cursor:wait; }
+.pin-id-fallback { width:7rem;max-width:100%;background:#131722;border:1px solid #626b7f;border-radius:4px;color:#d1d4dc;padding:4px 6px;font:inherit; }
+@media(max-width:540px),(pointer:coarse) { .pin-id-copy { min-width:44px;min-height:44px; } }
 
 .pin-panel-remove {
   margin-left: auto;
