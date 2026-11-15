@@ -1,5 +1,5 @@
 // Ablation der DOB-v7-Bausteine auf denselben gecachten Kerzen wie dobWinrate.mjs (0 Requests).
-// Aufruf: node scripts/dobAblation.mjs [--only V1,V3] ; Vergleichsbasis .debug/dob-winrate/report-v6-final.json.
+// Aufruf: node scripts/dobAblation.mjs [--only V1,V3] [--from YYYY-MM-DD] [--baseline <report>] ; Default-Basis report-v6-final.
 import fs from 'node:fs';import path from 'node:path';import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';import {createServer} from 'vite';
 const root=fileURLToPath(new URL('../',import.meta.url)).replace(/[\/]$/,''),dir=path.join(root,'.debug','dob-winrate');
@@ -8,6 +8,8 @@ const VARIANTS={
  V6:{stopRule:'m5Edge'},
  ...JSON.parse(process.argv.includes('--extra')?process.argv[process.argv.indexOf('--extra')+1]:'{}'),
 };
+const from=process.argv.includes('--from')?process.argv[process.argv.indexOf('--from')+1]:null;
+const baseline=process.argv.includes('--baseline')?process.argv[process.argv.indexOf('--baseline')+1]:'v6-final';
 const only=process.argv.includes('--only')?process.argv[process.argv.indexOf('--only')+1].split(','):Object.keys(VARIANTS);
 const read=name=>JSON.parse(fs.readFileSync(path.join(dir,`report-${name}.json`),'utf8'));
 const trades=(report,month)=>{
@@ -36,14 +38,14 @@ try{
   }).length;
   return {positives:positives.length,missing:manifest.pairs.map(p=>p.id).filter(id=>!positives.includes(id)),negativesRejected:rejected};
  };
- const v6=read('v6-final'),v6Keys=new Set(v6.pairs.flatMap(p=>['a','b'].filter(r=>['success','loss'].includes(p.entries[r]?.outcome)).map(r=>`${p.id}:${r}`)));
+ const v6=read(baseline),months=Object.keys(v6.months).sort(),v6Keys=new Set(v6.pairs.flatMap(p=>['a','b'].filter(r=>['success','loss'].includes(p.entries[r]?.outcome)).map(r=>`${p.id}:${r}`)));
  const v6SecondPartners=new Map(v6.pairs.map(p=>[p.id.split(':').at(-1),p.id]));
  const rows=[],diagnosis={};
  for(const name of only){
   const options=VARIANTS[name];
-  execFileSync(process.execPath,[path.join(root,'scripts','dobWinrate.mjs'),'--name',`abl-${name}`,'--options',JSON.stringify(options)],{cwd:root,stdio:'ignore'});
+  execFileSync(process.execPath,[path.join(root,'scripts','dobWinrate.mjs'),'--name',`abl-${name}`,'--options',JSON.stringify(options),...(from?['--from',from]:[])],{cwd:root,stdio:'ignore'});
   const report=read(`abl-${name}`),refs=references(options);
-  for(const scope of [null,'2026-10','2026-11'])for(const [route,t] of Object.entries(trades(report,scope)))
+  for(const scope of [null,...months])for(const [route,t] of Object.entries(trades(report,scope)))
    rows.push({variant:name,scope:scope??'gesamt',route,pairs:scope?report.months[scope]?.pairs:report.total.pairs,trades:t.n,
     winrate:t.winrate==null?'–':(t.winrate*100).toFixed(1)+'%',sumR:t.sumR,avgR:t.avgR==null?'–':t.avgR.toFixed(3),
     ...(scope?{}:{posRefs:`${refs.positives}/16${refs.missing.length?' −'+refs.missing.join(','):''}`,negRejected:`${refs.negativesRejected}/6`})});
@@ -61,9 +63,9 @@ try{
   }
   diagnosis[name]=Object.fromEntries(Object.entries(extra).map(([k,v])=>[k,{...v,winrate:(v.success/v.trades*100).toFixed(1)+'%'}]));
  }
- for(const [label,scope] of [['gesamt',null],['2026-10','2026-10'],['2026-11','2026-11']])for(const [route,t] of Object.entries(trades(v6,scope)))
+ for(const [label,scope] of [['gesamt',null],...months.map(m=>[m,m])])for(const [route,t] of Object.entries(trades(v6,scope)))
   rows.unshift({variant:'v6',scope:label,route,pairs:scope?v6.months[scope]?.pairs:v6.total.pairs,trades:t.n,
-   winrate:(t.winrate*100).toFixed(1)+'%',sumR:t.sumR,avgR:t.avgR.toFixed(3)});
- fs.writeFileSync(path.join(dir,'ablation.json'),JSON.stringify({variants:VARIANTS,rows,diagnosis},null,2));
+   winrate:t.winrate==null?'–':(t.winrate*100).toFixed(1)+'%',sumR:t.sumR,avgR:t.avgR==null?'–':t.avgR.toFixed(3)});
+ fs.writeFileSync(path.join(dir,`ablation${from?'-'+from:''}.json`),JSON.stringify({variants:VARIANTS,rows,diagnosis},null,2));
  console.table(rows);console.log(JSON.stringify(diagnosis,null,1));
 }finally{await server.close();}

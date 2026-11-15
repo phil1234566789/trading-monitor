@@ -1,6 +1,7 @@
 {
   "0": "Dashboard.vue",
   "1": "gbp_h1_uptrend_uptrend_break_of_structure_und_trendumkehr.ts",
+<<<<<<< HEAD
   "2": "tradeSetup.js",
   "3": "tradeSetup2Snapshot.js",
   "4": "PriceChart.vue",
@@ -12,14 +13,32 @@
   "10": "rsiDivergenceStats.ts",
   "11": "berlinOffsetMinutes",
   "12": "m1Checklist.js",
+=======
+  "2": "tradeSetupChecklistSweeps.js",
+  "3": "priceChartConstants.js",
+  "4": "PriceChart.vue",
+  "5": "gbp_h1_uptrend_mit_LQ_sweep_LONG_SETUP.ts",
+  "6": "gbp_h1_uptrend_mit_inner_structure.ts",
+  "7": "doubleOrderBlockRendering.js",
+  "8": "liveEvidenceRepository.test.js",
+  "9": "PLAN: M5-Trend algorithmisieren",
+  "10": "rsiDivergenceStats.ts",
+  "11": "tradeSetupChecklist.js",
+  "12": "countertrendScan.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "13": "DR-Reichweite — was taugen die erkannten Setups?",
   "14": "ScalePrimitive",
   "15": "TradeEditModal.vue",
   "16": "package.json",
   "17": "useTradePositionForm.js",
   "18": "tradeSetupSourceSnapshot.js",
+<<<<<<< HEAD
   "19": "snapToBarTime",
   "20": "ObReactionDebugger.vue",
+=======
+  "19": "newsMarkers.js",
+  "20": "dailyPivotMarkers.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "21": "positive",
   "22": "milkyMetaTraderStatistics.js",
   "23": "src/orderBlockDetection.js",
@@ -39,28 +58,39 @@
   "37": "sessions.js",
   "38": "DailyStopEngine",
   "39": "liveWatcherPins.test.js",
+<<<<<<< HEAD
   "40": "armChartClick",
   "41": "replayAsOf.ts",
   "42": "trading-monitor-mcp/mt5Journal.ts",
+=======
+  "40": "countertrendChecklist.js",
+  "41": "replayAsOf.ts",
+  "42": "mt5-control/index.ts",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "43": "tradeSetupSimulationRepository.js",
-  "44": "poi-watcher/index.ts",
-  "45": "tradeSetup.ts",
+  "44": "berlinTime.ts",
+  "45": "poi-watcher/index.ts",
   "46": "marketStructureAnalysis Rules Overview",
   "47": "Laniakea Persona Command (/l)",
-  "48": "SimulationRunQuality.vue",
+  "48": "simulationRunComparison.js",
   "49": "fachdoku-router/SKILL.md",
   "50": "tradeSetup2DealingRange.js",
   "51": "drMerkmale.py",
   "52": "MilkyMetaTraderEntrySearch.vue",
+<<<<<<< HEAD
   "53": "applySimulationCommission",
   "54": "tradeSetup2Review.js",
+=======
+  "53": "reviewGroups",
+  "54": "entryPattern1Conditions.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "55": "PLAN: DR-Statistik in der UI anzeigen",
   "56": "trades.js",
   "57": "MmtBatchEntrySearch.vue",
   "58": "TargetEngine",
   "59": "mt5Health.ts",
-  "60": "drQuoten.js",
-  "61": "findTargets.js",
+  "60": "priceChartHitTest.js",
+  "61": "armChartClick",
   "62": "MmtArchivedAccounts.vue",
   "63": "m1FvgEntrySelection.js",
   "64": "patternLocalSweepAgeFrozen.integration.mjs",
@@ -76,22 +106,37 @@
   "74": "Journal GBPUSD — Sicherung vor dem Quellenwechsel",
   "75": "executionContract.js",
   "76": "windows_account_launcher.py",
+<<<<<<< HEAD
   "77": "setup2OperationalHealth.test.js",
   "78": "cssColor",
+=======
+  "77": "healthReport",
+  "78": "snapToBarTime",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "79": "dataExport.ts",
   "80": "lade_setups",
   "81": "Dealing-Range-Loop Diagram",
   "82": "FXCM-Kerzenfeed",
-  "83": "candleCache.js",
+  "83": "sessions.js",
   "84": "AI Capabilities and Limitations Notes",
+<<<<<<< HEAD
   "85": "forexCandles.ts",
+=======
+  "85": "SimulationDrList.vue",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "86": "useDrawings.js",
-  "87": "mt5-control/index.ts",
+  "87": "dailyStopContract.js",
   "88": "Trade Setups 2.0: historische Positionen und Statistik",
   "89": "twelvedata/client.ts",
+<<<<<<< HEAD
   "90": "tradeSetupChecklist.js",
   "91": "DashboardMmt.vue",
   "92": "tradeSetupChecklistTime.js",
+=======
+  "90": "tradeSetup2Archive.mjs",
+  "91": "DashboardMmt.vue",
+  "92": "berlinTime.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "93": "Trade Setup 2.0 — Trade Setup Checklist",
   "94": "MCP-Server: Tiefere Referenz",
   "95": "Technische Machbarkeit — geprüft am 27.09.2026",
@@ -112,13 +157,17 @@
   "110": "ContextMenu.vue",
   "111": "ctraderCandles.js",
   "112": "src/marketStructureAnalysis.ts",
-  "113": "useStatusBar",
+  "113": "App.vue",
   "114": "AI Failure as Property Collision",
   "115": "MCP Advanced Topics Notes",
   "116": "applyMarketStructurePivot",
   "117": "vite.config.js",
   "118": "lana-git-pull.cjs",
+<<<<<<< HEAD
   "119": "useTradeSetup2History",
+=======
+  "119": "tradeSetup2SnapshotIndicators.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "120": ".mcp.json",
   "121": "fxcm-xauusd-h4-20260924/analyze.py",
   "122": "tdd_mit_claude.ts",
@@ -138,9 +187,13 @@
   "136": ".codex/hooks/lana-git-pull.cjs",
   "137": "source-command-l",
   "138": "biasCheck.ts",
+<<<<<<< HEAD
   "139": "closedChecklistCandles",
+=======
+  "139": "tradeSetup2Configuration.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "140": ".codex/hooks/claudemd-bloat-guard.js",
-  "141": "simulationRunComparison.js",
+  "141": "SimulationComparisonFilters.vue",
   "142": ".codex/hooks/handbuch-check-reminder.js",
   "143": "prepareSimulationStatistics.mjs",
   "144": "pinEntryVisible",
@@ -152,6 +205,7 @@
   "150": "leiterPipsVsR.py",
   "151": "saisonalitaet.py",
   "152": "pinContext.js",
+<<<<<<< HEAD
   "153": "marketStructureRendering.ts",
   "154": "mt5AccountManagement.ts",
   "155": "Entschiedene Design-Fragen",
@@ -159,12 +213,26 @@
   "157": "TradeSetupCockpit.vue",
   "158": "priceChartObZones.js",
   "159": "newsEvents.js",
+=======
+  "153": "useTradeSetup2History.js",
+  "154": "setup1AuditReport.mjs",
+  "155": "Entschiedene Design-Fragen",
+  "156": "validate.js",
+  "157": "TradeSetupCockpit.vue",
+  "158": "orderBlocks.js",
+  "159": "NewsModal.vue",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "160": "Phase 2: gespeicherte DR-Begriffe (zur Freigabe)",
   "161": "Fachdoku-Router Skill",
   "162": "vueComponentImportGuard.test.js",
   "163": "mt5TargetPlans.ts",
+<<<<<<< HEAD
   "164": "collectNestedChain",
   "165": "router.js",
+=======
+  "164": "targetPlanContract.js",
+  "165": "Alarme.vue",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "166": "Vegapunk Slimming Results (-86%)",
   "167": "test_saisonalitaet.py",
   "168": "tradeSetupSimulationStatistics.js",
@@ -183,55 +251,87 @@
   "181": "useJournalEntryFinder",
   "182": "Plan: Sehr Große Dateien Refactoren (PriceChart.vue)",
   "183": "MilkyMetaTraderEquityChart.vue",
+<<<<<<< HEAD
   "184": "orderBlocks.ts",
+=======
+  "184": "reads.ts",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "185": "findAntiConfluences.js",
   "186": "fxcm-xauusd-m5-20260924/analyze.py",
   "187": "compare.py",
   "188": "Milky Meta Trader (MMT)",
   "189": "compare-sides.py",
   "190": "dashboardHandlers.test.js",
+<<<<<<< HEAD
   "191": "SessionBandPrimitive",
   "192": "Engine",
   "193": "Plan: POI-Strategie-Findung, Backtesting & Trade-Notifications",
   "194": "detectLiquidityLevels",
+=======
+  "191": "closedChecklistCandles",
+  "192": "Engine",
+  "193": "mmtBrokerPositions.test.js",
+  "194": "tradeSetup11.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "195": "checkMt5JournalMigration.ts",
   "196": "gbp_h1_uptrend.ts",
   "197": "src/candleCloseWindow.ts",
   "198": "Entry Pattern 1",
   "199": "DynamicBrokerRiskTests",
+<<<<<<< HEAD
   "200": "SimulationComparisonFilters.vue",
+=======
+  "200": "newsEvents.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "201": "C / #3 — Reaktion aus Liquidity Sweep",
   "202": "Parallelisierungsplan",
   "203": "openBatchCheckpoint",
-  "204": "liveEvidenceView.js",
+  "204": "liveWatcherMonth.js",
   "205": "setup2PriceInputRevisionDbFixture.mjs",
-  "206": "chartColors.test.js",
+  "206": "SessionBandPrimitive",
   "207": "intent",
   "208": "setup2StageVersionCompare.mjs",
   "209": "setup2ConflictDetailDbFixture.mjs",
   "210": "MmtTradeExtremes.vue",
+<<<<<<< HEAD
   "211": "stopPlanContract.js",
   "212": "countertrendScan.js",
   "213": "prepareLivePinDb",
   "214": "usePriceChartTradeSetups.js",
   "215": "computeRangesPivots",
+=======
+  "211": "evidenceCheckpoint.js",
+  "212": "setupSourceIdeaIdentity.js",
+  "213": "prepareLivePinDb",
+  "214": "tradingSchedules.js",
+  "215": "collectNestedChain",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "216": "livePinMigrationContract.test.js",
   "217": "ToggleButton.vue",
   "218": "vue",
   "219": "setup1BuildSets.mjs",
   "220": "GoldPreview.vue",
+<<<<<<< HEAD
   "221": "compare-signals.mjs",
   "222": "tradingSchedules.js",
   "223": "SimulationResultsTable.vue",
   "224": "tradeSetup2ResumeGuard.test.js",
   "225": "imports",
   "226": "pivotMarkers.ts",
+=======
+  "221": "detectLiquidityLevels",
+  "222": "ob-reaction-debugger.test.cjs",
+  "223": "m1EntryRendering.js",
+  "224": "tradeSetup2ResumeGuard.test.js",
+  "225": "imports",
+  "226": "dobTradeDiff.mjs",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "227": "build.mjs",
   "228": "setup2PerformancePrimitives.mjs",
   "229": "PositionCosts",
   "230": "poi-watcher Alert-Cron Notes",
-  "231": "mt5StatisticsReadModel.integration.mjs",
-  "232": "trade_evidence Table (Dual-Level, Confirmation/Confluence)",
+  "231": "dobWinrate.mjs",
+  "232": "src/candleCloseWindow.ts",
   "233": "Versionierte Setup 1 Eingabesätze",
   "234": "useMmtTargetDrawing",
   "235": "PinAddPopup.vue",
@@ -240,8 +340,13 @@
   "238": "simulationRunInputs.js",
   "239": "mt5Database.integration.mjs",
   "240": "setup2-terminology-inventory.md",
+<<<<<<< HEAD
   "241": "obReactionDebuggerCases.js",
   "242": "findTargetCandidates.js",
+=======
+  "241": "SimulationRunStatus.vue",
+  "242": "backfillLiquidityLevels.ts",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "243": "worker.py",
   "244": "setup2LiveReadIndexDbFixture.mjs",
   "245": "mmtTargetDrafts.js",
@@ -250,25 +355,41 @@
   "248": "useMmtBatchEntrySearch.js",
   "249": "Dealing-Range-Anlegen Skill",
   "250": "simulationRangeCourseLookupDbFixture.mjs",
+<<<<<<< HEAD
   "251": "candleTouchesOrderBlock",
   "252": "relativeM5SweepRanges.test.js",
   "253": "marketPreview.ts",
   "254": "tradeSetupChecklistConfluences.js",
   "255": "afterBrowserPaint",
+=======
+  "251": "TradeStats.vue",
+  "252": "relativeM5SweepRanges.test.js",
+  "253": "marketPreview.ts",
+  "254": "SimulationFeatureChips.vue",
+  "255": "milkyMetaTraderClient.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "256": "entryPattern2FrozenObRegression.integration.mjs",
   "257": "start-account-workers.ps1",
   "258": "sweepRetestSources.js",
   "259": "supabaseClient.js",
+<<<<<<< HEAD
   "260": "StyleModal.vue",
   "261": "db.ts",
   "262": "SimulationRunStatus.vue",
   "263": "Plan: Forex-Chart-Objekte Datengrundlage",
+=======
+  "260": "Pip-/Pixel-Schwellwerte Übersicht",
+  "261": "db.ts",
+  "262": "SimulationPinMenu.vue",
+  "263": "ob-reaction-api.test.cjs",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "264": "Trading-Monitor Project Overview (CLAUDE.md)",
   "265": "mt5AccountSelection.integration.mjs",
   "266": "range.type.ts",
   "267": "importMmtCsv.py",
   "268": "doubleOrderBlocks.js",
   "269": "mt5HealthDatabase.integration.mjs",
+<<<<<<< HEAD
   "270": "reads.ts",
   "271": "mt5AccountRoles.integration.mjs",
   "272": "simulationReferenceIndex.integration.mjs",
@@ -277,6 +398,16 @@
   "275": "mt5Database",
   "276": "SimulationPinList.vue",
   "277": "setup2Repository.test.js",
+=======
+  "270": "trading-monitor-mcp/pretradeGates.ts",
+  "271": "mt5AccountRoles.integration.mjs",
+  "272": "simulationReferenceIndex.integration.mjs",
+  "273": "useMmtStatistics",
+  "274": "toggleIndicatorGroup",
+  "275": "mt5Credentials.ts",
+  "276": "build-ob-reaction-entry.cjs",
+  "277": "M1EntryPrimitive",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "278": "ImportTest",
   "279": "Invoke-MmtReleaseDeployment",
   "280": "usePriceChartChecklist",
@@ -284,41 +415,66 @@
   "282": "start-readers.ps1",
   "283": "mt5ReaderDatabase.integration.mjs",
   "284": "register-history-task.ps1",
+<<<<<<< HEAD
   "285": "forexCandles.js",
   "286": "doubleOrderBlocks.test.js",
+=======
+  "285": "barSecondsFor",
+  "286": "ob-reaction-counter.test.cjs",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "287": "marketStructureAnalysis.test.js",
   "288": "strategySetupMigration.integration.mjs",
   "289": "prefill.mjs",
   "290": "tradeSetup2Derive.mjs",
+<<<<<<< HEAD
   "291": "useMmtBatchEntrySearch",
   "292": "usePriceChartRsi",
+=======
+  "291": "fetchTradeSetups",
+  "292": "forbiddenSession.test.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "293": "tradeSetupSweepSources.rules.md",
   "294": "Die Filter",
-  "295": "runtimeCopySyncGuard.test.js",
-  "296": "setup2OperationalHealth.js",
+  "295": "evidenceIdentity.js",
+  "296": "TradeSetup2Loading.vue",
   "297": "useMmtStatistics.js",
   "298": "Statistik.vue",
   "299": "messeFxcmKontext.ts",
+<<<<<<< HEAD
   "300": "tradeSetup2Scan.js",
   "301": "SimulationPinFlag.vue",
   "302": "mt5Statistics.ts",
+=======
+  "300": "usePriceChartChecklist.js",
+  "301": "build-ob-reaction-rendering.cjs",
+  "302": "priceChartSourceMount.test.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "303": "MmtTargetChartControls.vue",
-  "304": "App.vue",
-  "305": "prefill-obs.mjs",
+  "304": "useM1FvgPreviewContext.js",
+  "305": "useReplayStructureDefaults.js",
   "306": "Gold: normaler Chart, Livefeed und Historie 2026",
   "307": "HttpErrorBanners.vue",
   "308": "Gold M5: Abruf erfolgreich, Feed-Gleichheit nicht bestätigt",
   "309": "marketStructureAnalysisInnerPivots.test.js",
+<<<<<<< HEAD
   "310": "useBrokerPositionDrawing",
   "311": "toggleIndicatorGroup",
   "312": "fetchTradeSetups",
+=======
+  "310": "ob-reaction-contact.test.cjs",
+  "311": "ob-reaction-graph.test.cjs",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "313": "tradeSetup11ReferenceDiagnostics.mjs",
-  "314": "mmtBatchEntrySearch.test.js",
   "315": "useJournalExecutionDraft",
   "316": "fault_details",
+<<<<<<< HEAD
   "317": "milkyMetaTraderEntrySearch.test.js",
   "318": "priceChartSourceMount.test.js",
   "319": "useM1FvgPreviewContext.js",
+=======
+  "317": "ob-reaction-rendering.js",
+  "318": "ob-reaction-sl.test.cjs",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "320": "build_release_manifest.py",
   "321": "useReplayStructureDefaults.js",
   "322": "useTabScopedRef",
@@ -328,13 +484,29 @@
   "326": "chartMeasure.js",
   "327": "m5StructureOlderCandles.test.js",
   "328": "dobReferenceDiagnostics.mjs",
+<<<<<<< HEAD
+=======
+  "329": "journalExecutionCards.component.test.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "332": "copyButtonReuse.test.js",
   "334": "orderBlockReaction.js",
   "335": "setup2OperationalDelivery.test.js",
+<<<<<<< HEAD
   "337": "setup2NotificationWatch.test.js",
+=======
+  "336": "ob-reaction-graph-ui.js",
+  "338": "ob-reaction-debugger-ui.js",
+  "339": "ob-reaction-debugger-cases.js",
+  "340": "ob-mitigation-native-data-503.js",
+  "341": "ob-reaction-content.js",
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
   "342": "mt5UiReadModel.integration.mjs",
   "345": "/task do Mode",
+<<<<<<< HEAD
   "348": "TradeSetupChecklist.vue",
   "349": "tradeSetup.test.js",
   "352": "mmtBalanceCache.test.js"
+=======
+  "349": "tradeSetup.js"
+>>>>>>> origin/claude/dob-v7-reaction-0e1479
 }

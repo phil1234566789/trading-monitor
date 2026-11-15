@@ -37,17 +37,17 @@ export function createOrderBlockReactionContext(m1Candles,evaluatedAt,instrument
 }
 
 // Gemeinsamer Vorwärtslauf ab from: Einstieg per Binärsuche, Abbruch bei Lücke oder wenn step true liefert.
-function walkM1(context,from,step) {
- const rows=context.rows;
+function walkM1(context,from,step,{bridgeClosures=true}={}) {
+ const rows=context.rows,instrument=bridgeClosures?context.instrument:null;
  let next=from;
  for(let i=firstIndex(rows,c=>c.time>=from);i<rows.length;i++){
   const c=rows[i];
-  if(!m1GapCovered(context.instrument,next,c.time))return {status:'gap',at:next};
+  if(!m1GapCovered(instrument,next,c.time))return {status:'gap',at:next};
   next=c.time+60;
   if(step(c,i))return {status:'stopped',at:c.time};
  }
  const through=Math.max(next,Math.floor(context.evaluatedAt/60)*60);
- return m1GapCovered(context.instrument,next,through)?{status:'end',at:next}:{status:'gap',at:next};
+ return m1GapCovered(instrument,next,through)?{status:'end',at:next}:{status:'gap',at:next};
 }
 
 // Erste volle Füllung; eine Lücke oder verdeckte (ignorierte) Kerze davor macht jeden späteren Zustand unbekannt.
@@ -141,7 +141,8 @@ export function exactRetestAnchor(context,orderBlock,reaction) {
 }
 
 // Reaktion true: erste gleichgerichtete M1-FVG nach dem ersten (Near-)Touch; false: M5-Gegenkante vorher gebrochen.
-export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=true}={}) {
+// bridgeClosures false: Die Reaktion muss in derselben Handelssitzung fallen, ein Marktschluss davor macht sie unknown.
+export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=true,bridgeClosures=true}={}) {
  let contact=null,contactIndex=-1,result=null;
  const unknown=reason=>({state:'unknown',reason,contact,fvg:null,knownAt:null,penetration:null,routes:null});
  if(![-1,1].includes(orderBlock?.dir)||!Number.isFinite(orderBlock.recognizedAt)||!(orderBlock.top>orderBlock.bottom))
@@ -164,6 +165,6 @@ export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=true}={
   result={state:'true',reason:null,contact,fvg,knownAt:fvg.recognizedAt,
    penetration:measureOrderBlockPenetration(orderBlock,direction,rows.slice(contactIndex,i+1)),routes:evaluateRoutes(context,orderBlock,contact,fvg)};
   return true;
- });
+ },{bridgeClosures});
  return result??unknown(walk.status==='gap'?'missingHistory':contact?'awaitingFvg':'noContact');
 }
