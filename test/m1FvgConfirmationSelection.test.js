@@ -41,3 +41,17 @@ it('resolves multiple origins for one confirmation deterministically without dup
  const shared=[...groups.entries()].filter(([,rows])=>rows.length>1);expect(shared.length).toBeGreaterThan(0);
  for(const [time,rows]of shared){expect(p.confirmationResults.get(time)).toBe(rows[0]);expect(new Set(rows.map(r=>`${r.entryTime}|${r.entryPrice}`)).size).toBe(1);}
 });
+it('bridges only XAU market closures between FVG and confirmation, open-session gaps stay unknown',()=>{
+ const ny=s=>Date.parse(`2026-11-10T${s}:00-05:00`)/1000;
+ const run=(times,instrument)=>{
+  const fvg={direction:'short',recognizedAt:times[0],candleTime:times[0]-120,top:110,bottom:102,orderBlock:{dir:-1,top:113,bottom:110}};
+  const s=m1FvgEntrySequence(fvg,'retestReaction',instrument);
+  for(const c of [{time:times[0],open:109,high:112,low:108,close:111},{time:times[1],open:111,high:112,low:109,close:110}])advanceM1FvgEntrySequence(s,c);
+  return m1FvgSequenceResult(s).status;
+ };
+ // Tagespause 17:00 New York; FXCM liefert die erste Kerze erst um 18:01.
+ expect(run([ny('16:59'),ny('18:01')],'XAUUSD')).toBe('ready');
+ expect(run([ny('16:59'),ny('18:01')])).toBe('unknown');
+ expect(run([ny('16:59'),ny('18:01')],'EURUSD')).toBe('unknown');
+ expect(run([ny('12:00'),ny('12:02')],'XAUUSD')).toBe('unknown');
+});

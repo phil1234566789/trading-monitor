@@ -19,7 +19,7 @@ function entriesFor(reaction,orderBlock,m1,candidates,evaluatedAt,instrument){
  const direction=orderBlock.dir===1?'long':'short',stopPrice=direction==='long'?orderBlock.bottom:orderBlock.top;
  return Object.fromEntries([['a','immediate'],['b','retestReaction']].map(([variant,mode])=>{
   if(!fvg)return [variant,{variant,status:'unknown',reason:'missingFvg'}];
-  const state=m1FvgEntrySequence(fvg,mode);
+  const state=m1FvgEntrySequence(fvg,mode,instrument);
   for(const candle of m1){advanceM1FvgEntrySequence(state,candle);if(state.result)break;}
   const entry={...m1FvgSequenceResult(state),variant,stopPrice};
   if(entry.status==='ready'){

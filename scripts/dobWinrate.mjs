@@ -28,7 +28,7 @@ let requests = 0;
 const realFetch = globalThis.fetch;
 globalThis.fetch = (...args) => { requests++; return realFetch(...args); };
 
-const server = await createServer({ root, envDir, server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
+const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { detectDoubleOrderBlocks }, { evaluateDoubleOrderBlockOutcome },

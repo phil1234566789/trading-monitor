@@ -1,4 +1,6 @@
 import {candleTouchesOrderBlock,candleInvalidatesOrderBlock} from './orderBlockDetection.js';
+import {isGoldInstrument} from './goldChartPolicy.js';
+import {goldM1ClosureCovered} from './goldWeekendGap.js';
 export const M1_FVG_MIN_RETEST_FRACTION=.5;
 
 function qualifiedFvgRetest(candle,fvg) {
@@ -14,8 +16,9 @@ function qualifiedFvgRetest(candle,fvg) {
   return half && (!full || candleTouchesOrderBlock(candle,fvg.orderBlock));
 }
 
-export function m1FvgEntrySequence(fvg,variant) {
-  const state={fvg,variant,next:fvg.recognizedAt,retest:null,result:null};
+// Ohne instrument bleibt jede Lücke unknown; nur XAU kennt seine Marktschlüsse (goldWeekendGap.js).
+export function m1FvgEntrySequence(fvg,variant,instrument) {
+  const state={fvg,variant,instrument,next:fvg.recognizedAt,retest:null,result:null};
   if(variant==='immediate')state.result=readyFvgEntry(state,{time:fvg.confirmationCandleTime,close:fvg.confirmationPrice});
   else if(variant!=='retestReaction')state.result={status:'unknown',reason:'Unbekannte Entry-Variante.'};
   return state;
@@ -27,8 +30,8 @@ function readyFvgEntry(state,candle) {
 }
 export function advanceM1FvgEntrySequence(state,candle) {
   if(state.result || candle.time<state.fvg.recognizedAt)return;
-  if(candle.time!==state.next){state.result={status:'unknown',reason:'M1-Historie zwischen FVG und Reaktion ist lückenhaft.'};return;}
-  state.next+=60;
+  if(candle.time!==state.next&&!(isGoldInstrument(state.instrument)&&goldM1ClosureCovered(state.next,candle.time))){state.result={status:'unknown',reason:'M1-Historie zwischen FVG und Reaktion ist lückenhaft.'};return;}
+  state.next=candle.time+60;
   if(candle.ignored)return;
   // Ein gebrochener Ursprungs-OB kann keine spätere Reaktionskerze mehr bestätigen.
   if(state.fvg.orderBlock && candleInvalidatesOrderBlock(candle,state.fvg.orderBlock)){
