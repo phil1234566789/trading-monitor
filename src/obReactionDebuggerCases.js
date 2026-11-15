@@ -55,5 +55,5 @@ export function evaluateCase(c,fixture,evaluatedAt,options={}){
   const id=`dob:${INSTRUMENT}:${c.dir}:${c.orderBlocks[0]}:${c.orderBlocks[1]}`;
   pair=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,instrument:INSTRUMENT,evaluatedAt,options}).pairs.find(p=>p.id===id)??null;
  }
- return {m1,orderBlocks,pair};
+ return {m1,m5,orderBlocks,pair};
 }

@@ -1,5 +1,6 @@
 import {measureOrderBlockPenetration} from './orderBlockPenetration.js';
 import {candleInvalidatesOrderBlock} from './orderBlockDetection.js';
+import {m1FvgFullyFilled} from './m1FvgEntrySequence.js';
 import {formatBerlinTime} from './berlinTime.js';
 import {fmtPrice} from './format.js';
 
@@ -22,12 +23,15 @@ const range=z=>`${price(z.bottom)}–${price(z.top)}`;
 const ROUTE_STATUS={entry:'visited',rejected:'rejected',unknown:'unknown',pending:'unknown'};
 
 // Füllgrad bzw. Einstich über denselben Messhelfer wie die Reaktion; ohne Kerze seit Bekanntwerden ehrlich unbekannt.
+export const fvgFillMeter=(fvg,m1)=>zoneMeter(fvg,fvg.direction==='long'?1:-1,m1,'fvg');
 function zoneMeter(zone,dir,m1,kind){
  const rows=m1.filter(c=>c.time>=zone.recognizedAt),m=measureOrderBlockPenetration(zone,dir===1?'long':'short',rows);
  if(m.status!=='ready')return {value:null,label:'Messung unbekannt',segments:[]};
- const depth=Math.max(0,Math.min(100,m.maxPenetrationFraction*100)),p=n=>Number(n.toFixed(2))+' %';
+ // Vollfüllung wie fvgFill im Produkt über m1FvgFullyFilled (mit Rundungstoleranz), nicht erst bei 100 % Einstich.
+ const full=kind==='fvg'&&rows.some(c=>!c.ignored&&m1FvgFullyFilled(c,zone));
+ const depth=full?100:Math.max(0,Math.min(100,m.maxPenetrationFraction*100)),p=n=>Number(n.toFixed(2))+' %';
  const broken=kind==='ob'&&rows.some(c=>!c.ignored&&candleInvalidatesOrderBlock(c,zone));
- const [value,words,label]=kind==='fvg'?[depth,['gefüllt','offen'],`${p(100-depth)} offen · ${p(depth)} gefüllt`]
+ const [value,words,label]=kind==='fvg'?[depth,['gefüllt','offen'],full?'gefüllt':`${m.maxPenetrationFraction>=0?'berührt':'unberührt'} · ${p(100-depth)} offen`]
   :[100-depth,['intakt','eingestochen'],`OB intakt ${p(100-depth)} · Einstich ${p(depth)}${broken?' · gebrochen':''}`];
  return {value,label,broken,touched:m.maxPenetrationFraction>=0,depth,
   segments:[{value,word:words[0],positive:!broken},{value:100-value,word:words[1],positive:false}].filter(s=>s.value>0)};

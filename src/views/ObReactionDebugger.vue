@@ -11,7 +11,7 @@ import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice} from '../format.js';
 import {OB_REACTION_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../obReactionDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS} from '../doubleOrderBlocks.js';
-import {obReactionGraph,reasonText} from '../obReactionGraph.js';
+import {obReactionGraph,reasonText,fvgFillMeter} from '../obReactionGraph.js';
 import ObReactionGraph from '../components/ObReactionGraph.vue';
 
 const route=useRoute(),router=useRouter();
@@ -27,6 +27,8 @@ watch(caseId,()=>{graphRole.value='second';});
 const graph=computed(()=>result.value&&obReactionGraph({dir:current.value.dir,m1:result.value.m1,evaluatedAt:evaluatedAt.value,
  entry:result.value.orderBlocks.find(o=>o.role===graphRole.value)}));
 
+// M5 kommt nativ aus derselben Fixture (closedChecklistCandles in evaluateCase); Reaktion und FVG-Füllung bleiben M1.
+const tf=ref('m1');
 const chartEl=ref(null);
 let chart=null,series=null,markers=null,fitPending=false,zonePrimitives=[],overlayPrimitives=[],priceLines=[];
 
@@ -62,21 +64,24 @@ function pairEntryText(e){
 
 function draw(){
  if(!series||!result.value)return;
- const {m1,orderBlocks,pair}=result.value,at=evaluatedAt.value;
- const reactionFvgs=orderBlocks.map(o=>o.reaction?.fvg).filter(Boolean);
- series.setData(tintM1FvgCandidates(m1,reactionFvgs,'1m',cssColor('fvgCandle')));
+ const {m1,orderBlocks,pair}=result.value,at=evaluatedAt.value,sec=tf.value==='m1'?60:300;
+ const reactionFvgs=orderBlocks.map(o=>o.reaction?.fvg).filter(Boolean),candles=tf.value==='m1'?m1:result.value.m5;
+ // M1-Zeitpunkte auf die M5-Kerze legen, sonst fehlen Marker zwischen zwei M5-Balken.
+ const snap=t=>Math.floor(t/sec)*sec;
+ series.setData(tintM1FvgCandidates(candles,reactionFvgs,tf.value==='m1'?'1m':'5m',cssColor('fvgCandle')));
  // Sichtbereich erst nach setData setzen, sonst wirft lightweight-charts 'Value is null'.
  if(fitPending){fitPending=false;chart.timeScale().setVisibleRange({from:steps.value.from-1800,to:steps.value.through});}
  overlayPrimitives.forEach(p=>series.detachPrimitive(p));overlayPrimitives=[];
  // Ein bestätigtes Paar bekommt die Dashboard-DOB-Boxen, vorher die normalen M5-OB-Boxen.
  const known=orderBlocks.filter(o=>o.orderBlock).map(o=>o.orderBlock);
- if(pair){renderPersistedZones(series,[],zonePrimitives,m1);overlayPrimitives=renderDoubleOrderBlocks(series,[pair],m1,at).map(i=>i.primitive);}
- else renderPersistedZones(series,known,zonePrimitives,m1);
- // Einziges neues Overlay: FVG-Zonen über dasselbe Box-Primitive, Reaktions-FVG kräftig, interne blass.
+ if(pair){renderPersistedZones(series,[],zonePrimitives,candles);overlayPrimitives=renderDoubleOrderBlocks(series,[pair],candles,at).map(i=>i.primitive);}
+ else renderPersistedZones(series,known,zonePrimitives,candles);
+ // Einziges neues Overlay: FVG-Zonen über dasselbe Box-Primitive, Reaktions-FVG kräftig, interne blass mit Füllstand.
  for(const {internalFvgs,reaction} of orderBlocks)for(const fvg of internalFvgs??[]){
   const strong=fvg===reaction?.fvg,key=strong?'fvgCandle':'obInactiveM5';
-  const primitive=new OrderBlockPrimitive({top:fvg.top,bottom:fvg.bottom,startTime:fvg.candleTime,endTime:at,touched:true},
-   {fillColor:cssColorScaled(key,strong?.25:.12),borderColor:cssColor(key),textColor:cssColor(key),borderWidth:1,label:strong?'Reaktions-FVG':'FVG'},m1);
+  const primitive=new OrderBlockPrimitive({top:fvg.top,bottom:fvg.bottom,startTime:snap(fvg.candleTime),endTime:at,touched:true},
+   {fillColor:cssColorScaled(key,strong?.25:.12),borderColor:cssColor(key),textColor:cssColor(key),borderWidth:1,
+    label:strong?'Reaktions-FVG':`FVG ${fvgFillMeter(fvg,m1).label}`},candles);
   series.attachPrimitive(primitive);overlayPrimitives.push(primitive);
  }
  const list=[];
@@ -85,11 +90,11 @@ function draw(){
   const routes=role==='second'?reaction?.routes:null;
   if(!reaction)continue;
   const tag=orderBlocks.length>1?(role==='first'?'OB1 ':'OB2 '):'';
-  if(reaction.contact)list.push({time:reaction.contact.candleTime,position:current.value.dir===1?'belowBar':'aboveBar',shape:'circle',color:cssColor('tradeConfirmation'),text:`${tag}${reaction.contact.status}`});
-  if(reaction.state==='true')list.push({time:bar(reaction.knownAt),position:'inBar',shape:'square',color:cssColor('tradeWin'),text:`${tag}Reaktion ✓`});
-  if(reaction.state==='false')list.push({time:bar(reaction.knownAt),position:'inBar',shape:'square',color:cssColor('tradeLoss'),text:`${tag}Reaktion ✗`});
+  if(reaction.contact)list.push({time:snap(reaction.contact.candleTime),position:current.value.dir===1?'belowBar':'aboveBar',shape:'circle',color:cssColor('tradeConfirmation'),text:`${tag}${reaction.contact.status}`});
+  if(reaction.state==='true')list.push({time:snap(bar(reaction.knownAt)),position:'inBar',shape:'square',color:cssColor('tradeWin'),text:`${tag}Reaktion ✓`});
+  if(reaction.state==='false')list.push({time:snap(bar(reaction.knownAt)),position:'inBar',shape:'square',color:cssColor('tradeLoss'),text:`${tag}Reaktion ✗`});
   for(const [name,r] of Object.entries(routes??{}))if(r.status==='entry')
-   list.push({time:bar(r.entryTime),position:current.value.dir===1?'belowBar':'aboveBar',shape:current.value.dir===1?'arrowUp':'arrowDown',color:cssColor('dobConfirmed'),text:`Entry ${name}`});
+   list.push({time:snap(bar(r.entryTime)),position:current.value.dir===1?'belowBar':'aboveBar',shape:current.value.dir===1?'arrowUp':'arrowDown',color:cssColor('dobConfirmed'),text:`Entry ${name}`});
  }
  list.sort((a,b)=>a.time-b.time);
  markers.setMarkers(list.filter(m=>m.time<at));
@@ -110,6 +115,7 @@ onMounted(()=>{
 });
 onBeforeUnmount(()=>{window.removeEventListener('keydown',onKey);chart?.remove();chart=series=null;});
 watch(result,draw);
+watch(tf,()=>{fitPending=true;draw();});
 </script>
 
 <template>
@@ -119,6 +125,7 @@ watch(result,draw);
    <button @click="step(-1)" title="Eine M1-Kerze zurück (←)">◀</button>
    <input type="range" :min="steps.from" :max="steps.through" step="60" :value="evaluatedAt" @input="evaluatedAt=Number($event.target.value)">
    <button @click="step(1)" title="Eine M1-Kerze vor (→)">▶</button>
+   <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
    <label>Near-Touch <select v-model="nearTouch"><option value="none">aus</option><option value="second">OB2</option><option value="both">OB1+OB2</option></select></label>
    <label><input type="checkbox" v-model="bridgeClosures"> Marktschluss überbrücken</label>
    <span class="at">evaluatedAt {{ evaluatedAt ? formatDatedTime(evaluatedAt) : '–' }}</span>
