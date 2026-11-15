@@ -1,6 +1,6 @@
 {
   "sha256Format": "UTF-8 with LF line endings (portable across Git checkouts)",
-  "scope": "Reviewed standalone debugger/status quo; Pin501 late reject is not early quality rejection; excludes WIP bulk/screenshots/handoff/secrets/browser state",
+  "scope": "Reviewed debugger/status quo, frozen diagnostic regression, explicit Brain task snapshot; no generalized quality/prod detector claim",
   "files": [
     {
       "path": "build-ob-reaction-entry.cjs",
@@ -24,13 +24,13 @@
     },
     {
       "path": "dob-status-quo.html",
-      "sha256": "3fa244faf3bdeca7309cb480d6ee8eee812616c93b21c5fb95880fbd97f5d1b1",
-      "bytes": 183595
+      "sha256": "738a7b35e0d0de0c662d8e53bd60c17ab5c4d189c3318d120d107ee038576d47",
+      "bytes": 202870
     },
     {
       "path": "index.html",
-      "sha256": "f09fe5ce265012a773fb02f9b25f4e48f6d7580fb352f2a502d6a7f570eb5b09",
-      "bytes": 637
+      "sha256": "65710d473bd0ed988f82e2506a5c5947f894e3a793d18ac808326e34e3f50774",
+      "bytes": 699
     },
     {
       "path": "ob-mitigation-native-data-502.js",
@@ -173,6 +173,16 @@
       "bytes": 1575
     },
     {
+      "path": "ob-reaction-native-adapter.js",
+      "sha256": "5a2b2110ea8ef7076afbfa079fa8351bc0106a3b9162901b1041483b9804472c",
+      "bytes": 4626
+    },
+    {
+      "path": "ob-reaction-native-adapter.test.cjs",
+      "sha256": "667cf6c8f083ee3b7f0b93d711a2e120060873bf9f15908118f72d1311b8405a",
+      "bytes": 2236
+    },
+    {
       "path": "ob-reaction-positive-dob.test.cjs",
       "sha256": "9262957c98965a7671e5fd5543c2ab80faa6d8c582a4cab8d3d34e728f7bde0d",
       "bytes": 2937
@@ -239,13 +249,28 @@
     },
     {
       "path": "package.test.cjs",
-      "sha256": "01c628264e0251ebb10ae7bdf29cb4cced38d77c44fc7eacaf3c8b41dc13bedd",
-      "bytes": 1284
+      "sha256": "35a2ab49964afb861b7a37d3f791331226bee3a74291025321013b584de1f616",
+      "bytes": 2391
     },
     {
       "path": "references/dob-positive-505-506.json",
       "sha256": "24f73d8a88e7e543b7ab8e923442ab541e6680186cb609b7f4c9b93de4b1164c",
       "bytes": 104336
+    },
+    {
+      "path": "regression/dob-reaction-regression.json",
+      "sha256": "8f19e0b201780b0307d5842b755a182eb793e22acf76fff653457bb6b5a7adfc",
+      "bytes": 434250
+    },
+    {
+      "path": "regression/dob-reaction-regression.mjs",
+      "sha256": "70228e5dccafad8a1c8ecc83e74a760994fdd206870f9763ae2414125ab3a07f",
+      "bytes": 11239
+    },
+    {
+      "path": "task-snapshot.json",
+      "sha256": "7633550b9d866516630e4cf9fee065b17e3b28ff512cc3ae56df082114b48f34",
+      "bytes": 3401
     },
     {
       "path": "ts11-pin480-sweep-extrem.html",
