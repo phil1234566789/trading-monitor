@@ -11,6 +11,8 @@ import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice} from '../format.js';
 import {OB_REACTION_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../obReactionDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS} from '../doubleOrderBlocks.js';
+import {obReactionGraph,reasonText} from '../obReactionGraph.js';
+import ObReactionGraph from '../components/ObReactionGraph.vue';
 
 const route=useRoute(),router=useRouter();
 const caseId=ref(OB_REACTION_CASES.some(c=>c.id===route.query.fall)?route.query.fall:OB_REACTION_CASES[0].id);
@@ -19,6 +21,11 @@ const fixture=shallowRef(null),steps=ref({from:0,through:0}),evaluatedAt=ref(0),
 // Ablations-Schalter wie scripts/dobAblation.mjs, damit der Effekt von Near-Touch/Marktschluss je Fall sichtbar wird.
 const nearTouch=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.nearTouch),bridgeClosures=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.bridgeClosures);
 const result=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,evaluatedAt.value,{nearTouch:nearTouch.value,bridgeClosures:bridgeClosures.value}));
+// Knotenplan zeigt standardmäßig den Entry-tragenden OB (OB2 bzw. Einzel-OB); bei DOBs ist OB1 umschaltbar.
+const graphRole=ref('second');
+watch(caseId,()=>{graphRole.value='second';});
+const graph=computed(()=>result.value&&obReactionGraph({dir:current.value.dir,m1:result.value.m1,evaluatedAt:evaluatedAt.value,
+ entry:result.value.orderBlocks.find(o=>o.role===graphRole.value)}));
 
 const chartEl=ref(null);
 let chart=null,series=null,markers=null,fitPending=false,zonePrimitives=[],overlayPrimitives=[],priceLines=[];
@@ -36,7 +43,6 @@ watch(caseId,async id=>{
 const step=delta=>{evaluatedAt.value=Math.min(steps.value.through,Math.max(steps.value.from,evaluatedAt.value+delta*60));};
 function onKey(e){if(e.target.tagName==='SELECT')return;if(e.key==='ArrowLeft')step(-1);if(e.key==='ArrowRight')step(1);}
 
-const REASON_TEXT={marketClosed:'Markt geschlossen, OB verfallen'};
 const sideText=dir=>dir===1?'Long':'Short';
 const price=p=>p==null?'–':fmtPrice(p,2);
 const time=t=>t==null?'–':formatBerlinTime(t);
@@ -119,6 +125,10 @@ watch(result,draw);
   </div>
   <div class="main">
    <div ref="chartEl" class="chart"></div>
+   <div class="graph">
+    <label v-if="current.orderBlocks.length===2">Knotenplan für <select v-model="graphRole"><option value="first">OB1</option><option value="second">OB2</option></select></label>
+    <ObReactionGraph v-if="graph" :graph="graph" :dir="current.dir" :scope="caseId+graphRole"/>
+   </div>
    <aside class="panel">
     <p v-if="error" class="err">{{ error }}</p>
     <p v-else-if="!result">Lade Fixture …</p>
@@ -136,7 +146,7 @@ watch(result,draw);
       <p v-if="!o.orderBlock" class="muted">Noch nicht bekannt.</p>
       <template v-else>
        <p>{{ price(o.orderBlock.bottom) }}–{{ price(o.orderBlock.top) }} · bekannt {{ time(o.orderBlock.recognizedAt) }}</p>
-       <p><b>Reaktion</b> {{ o.reaction.state }}{{ o.reaction.reason?' · '+(REASON_TEXT[o.reaction.reason]??o.reaction.reason):'' }}{{ o.reaction.knownAt?' · ab '+time(o.reaction.knownAt):'' }}</p>
+       <p><b>Reaktion</b> {{ o.reaction.state }}{{ o.reaction.reason?' · '+reasonText(o.reaction.reason):'' }}{{ o.reaction.knownAt?' · ab '+time(o.reaction.knownAt):'' }}</p>
        <p v-if="o.reaction.contact"><b>Kontakt</b> {{ o.reaction.contact.status }} · Kerze {{ time(o.reaction.contact.candleTime) }}</p>
        <p v-if="o.reaction.fvg"><b>FVG</b> {{ price(o.reaction.fvg.bottom) }}–{{ price(o.reaction.fvg.top) }} · bekannt {{ time(o.reaction.fvg.recognizedAt) }}</p>
        <p v-for="(r,name) in o.role==='second'?o.reaction.routes ?? {}:{}" :key="name"><b>{{ name }}</b> {{ routeText(r) }}</p>
@@ -156,6 +166,7 @@ watch(result,draw);
 .main{flex:1;display:flex;gap:8px;min-height:0}
 .chart{flex:1;min-width:0}
 .panel{width:380px;overflow:auto;font-size:13px}
+.graph{width:460px;flex:none;overflow:auto;padding-right:4px}
 .panel h3{margin:8px 0 4px;font-size:14px}
 .panel p{margin:2px 0}
 .muted{opacity:.6}
