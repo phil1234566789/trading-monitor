@@ -22,12 +22,13 @@ const EXPECTED={
  P4:{a:[1793908560,4112.9],b:'pending'},P5:{a:[1793769540,3953.11],b:'pending'},P6:{a:[1793694300,3908.58],b:[1793694420,3908.5]},
  P7:{a:[1793672220,3945.18],b:'invalid'},P8:null,P9:{a:[1793363880,3964.07],b:'pending'},P10:null,
  P11:{a:[1792691460,4045.14],b:'invalid'},P12:{a:[1792638060,4113.81],b:'pending'},P13:null,
- P14:{a:[1792151400,4176.29],b:[1792151580,4175.75]},P15:{a:[1791466380,4127.93],b:[1791466620,4125.29]},
- P16:{a:[1792556100,4123.01],b:'invalid'},
+ P14:null,P15:{a:[1791466380,4127.93],b:[1791466620,4125.29]},
+ P16:{a:[1792557120,4120.27],b:[1792557540,4117.62]},
 };
 
 describe('double order blocks from native candles',()=>{
- // P14/P16 waren unter v6 wegen >50 % OB2-Tiefe abgelehnt; die tragfähige M1-Reaktion ersetzt dieses Gate.
+ // P16 war unter v6 wegen >50 % OB2-Tiefe abgelehnt; Entry b trifft den Handoff-Fall Pin 502 (06:39, 4117,62, SL 4112,95).
+ // P14 (Pin 500) bleibt ohne Entry, weil sein SL das noch unspezifizierte Retest-Extrem bräuchte.
  it.each(manifest.pairs)('recognizes $id with its expected route statuses',pair=>{
   const [first,second]=refs(pair),dob=find(first.day,first,second),expected=EXPECTED[pair.id];
   if(!expected){expect(dob).toBeUndefined();expect(run(first.day).stats.pairsWithoutEntry).toBeGreaterThan(0);return;}
@@ -140,9 +141,9 @@ describe('double order blocks from native candles',()=>{
   const day=refs(manifest.pairs.find(p=>p.id==='P14'))[0].day,fixture=days.get(day);
   const at=options=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to,options});
   const [first,second]=refs(manifest.pairs.find(p=>p.id==='P14')),has=r=>r.pairs.some(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
-  expect(at({}).pairs).toEqual(run(day).pairs);expect(at({}).policy.options.nearTouch).toBe('second');expect(at({}).policy.options.bridgeClosures).toBe(false);
-  // P14 lebt vom Near-Touch auf OB2 und von über 50 % OB2-Tiefe.
-  expect(has(at({nearTouch:'none'}))).toBe(false);
+  expect(at({}).pairs).toEqual(run(day).pairs);expect(at({}).policy.options.nearTouch).toBe('none');expect(at({}).policy.options.bridgeClosures).toBe(false);
+  // P14 ist nur mit Near-Touch auf OB2 handelbar (dort SL an der M5-Kante).
+  expect(has(at({}))).toBe(false);expect(has(at({nearTouch:'second'}))).toBe(true);
   expect(has(at({maxRetestDepth:{first:null,second:.5}}))).toBe(has(at({})));
   expect(at({stopRule:'m5Edge'}).pairs.flatMap(p=>Object.values(p.entries)).every(e=>e.status!=='unknown'||e.reason!=='retestEpisodeUnresolved')).toBe(true);
  });

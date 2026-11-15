@@ -9264,9 +9264,9 @@
     "semantic_hash": ""
   },
   "analysis/dob/reference-diagnostics.json": {
-    "mtime": 1794765419.5918894,
-    "seen": 1794765518.0036519,
-    "ast_hash": "e19be734b8d370839885608a200ece65",
+    "mtime": 1794766318.972291,
+    "seen": 1794766382.0536807,
+    "ast_hash": "b5b43287db8cbb45c163467968ffd910",
     "semantic_hash": ""
   },
   "scripts/dobReferenceDiagnostics.mjs": {
@@ -9312,9 +9312,9 @@
     "semantic_hash": ""
   },
   "src/doubleOrderBlocks.js": {
-    "mtime": 1794765369.0936036,
-    "seen": 1794765518.0978885,
-    "ast_hash": "c67a407f5c93674b8e6ed7a7bb48e98d",
+    "mtime": 1794766222.8866892,
+    "seen": 1794766382.1523511,
+    "ast_hash": "97501d4ecf97c3019af2514476d4cda6",
     "semantic_hash": ""
   },
   "src/indicatorGroupToggle.js": {
@@ -9360,9 +9360,9 @@
     "semantic_hash": ""
   },
   "test/doubleOrderBlocks.test.js": {
-    "mtime": 1794765381.152387,
-    "seen": 1794765518.206993,
-    "ast_hash": "e4f55f35b301cc81929f71b7c6e57998",
+    "mtime": 1794766252.669378,
+    "seen": 1794766382.2628133,
+    "ast_hash": "5e66dde3080d54a873b43bfbabaa9f0e",
     "semantic_hash": ""
   },
   "test/indicatorGroupToggle.test.js": {
@@ -10176,9 +10176,9 @@
     "semantic_hash": ""
   },
   "src/orderBlockReaction.js": {
-    "mtime": 1794765183.5006776,
-    "seen": 1794765518.1208842,
-    "ast_hash": "4948f67a38969cc97970ea201acfded6",
+    "mtime": 1794765786.1829834,
+    "seen": 1794766382.1761675,
+    "ast_hash": "31576934a5c51df1a9f5b2f18403a930",
     "semantic_hash": ""
   },
   "test/fixtures/dob-native/2026-10-20-p17.json": {
@@ -10194,9 +10194,9 @@
     "semantic_hash": ""
   },
   "scripts/dobWinrate.mjs": {
-    "mtime": 1794765213.527598,
-    "seen": 1794765518.033215,
-    "ast_hash": "1d755038db68cae6144226b32213c1c3",
+    "mtime": 1794765886.6862953,
+    "seen": 1794766382.0856013,
+    "ast_hash": "ecbd002e1448aadb83ad2838180c5594",
     "semantic_hash": ""
   },
   "scripts/dobWinrateAggregate.mjs": {
@@ -10212,15 +10212,33 @@
     "semantic_hash": ""
   },
   "analysis/dob/ablation-v7.json": {
-    "mtime": 1794765465.2908678,
-    "seen": 1794765518.0036519,
-    "ast_hash": "6876c9f817bac2aad359aa299cb825cc",
+    "mtime": 1794766313.4982307,
+    "seen": 1794766382.0536807,
+    "ast_hash": "8c06ddc7ed11a5c0f3e106ac09e8e38e",
     "semantic_hash": ""
   },
   "scripts/dobAblation.mjs": {
-    "mtime": 1794765249.9784994,
-    "seen": 1794765518.0322149,
-    "ast_hash": "37b279ce43afefaab95aeed721d2ec3b",
+    "mtime": 1794765899.6531978,
+    "seen": 1794766382.084602,
+    "ast_hash": "d2353550a90da7b7d1ebb63251581ad4",
+    "semantic_hash": ""
+  },
+  "scripts/dobTradeDiff.mjs": {
+    "mtime": 1794765719.8192503,
+    "seen": 1794766382.0856013,
+    "ast_hash": "08787379152fee04305f3b730b81721b",
+    "semantic_hash": ""
+  },
+  "src/__v6doubleOrderBlockDepth.js": {
+    "mtime": 1794765602.3353524,
+    "seen": 1794766382.1056068,
+    "ast_hash": "76566ad0a3ba3c8bbb42c2c44c824b0f",
+    "semantic_hash": ""
+  },
+  "src/__v6doubleOrderBlocks.js": {
+    "mtime": 1794765651.0169406,
+    "seen": 1794766382.1056068,
+    "ast_hash": "625165d19ab72e417b857ed8476c59f2",
     "semantic_hash": ""
   }
 }

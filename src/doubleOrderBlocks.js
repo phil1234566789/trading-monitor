@@ -8,7 +8,7 @@ import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from './orderBlockRe
 import {evaluateDoubleOrderBlockRetestDay} from './doubleOrderBlockRetestDay.js';
 import {evaluateDoubleOrderBlockPriceGap} from './doubleOrderBlockPriceGap.js';
 
-export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-ob1-near10-ob2-session-entry-sl-hold-sameday-xau-gap2-v7';
+export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-v7';
 
 // Nur Routen mit vollständigem Entry-Tupel bekommen ein Outcome; die Statuswörter bleiben die des Renderings.
 function pairEntries(reaction,direction,m1,evaluatedAt,instrument){
@@ -36,10 +36,10 @@ function firstRetestHoldHistory(context,first,secondRetestAt,m1,evaluatedAt,brid
 }
 
 // Ablations-Schalter: Near-Touch je OB-Rolle, optionales M5-Tiefen-Gate je Rolle, SL-Regel (scripts/dobAblation.mjs).
-// Default nearTouch 'second': Near-Touch-Reaktionen auf OB1 waren in Okt und Nov die schwächsten Zusatz-Trades.
+// Default nearTouch 'none': über Feb–Nov kostete der Near-Touch Route a 53 R (analysis/dob/ablation-v7.json).
 // bridgeClosures false: Reaktionssuche und OB1-Hold enden an einem XAU-Marktschluss (Entry/Outcome überbrücken immer);
 // überbrückte Paare waren in Okt/Nov 39 Zusatz-Trades mit 25,6 % Winrate (analysis/dob/ablation-v7.json).
-export const DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS=Object.freeze({nearTouch:'second',maxRetestDepth:Object.freeze({first:null,second:null}),stopRule:'internalFvg',bridgeClosures:false});
+export const DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS=Object.freeze({nearTouch:'none',maxRetestDepth:Object.freeze({first:null,second:null}),stopRule:'internalFvg',bridgeClosures:false});
 const depthPasses=(reaction,maximum)=>maximum==null||reaction.penetration.status==='ready'&&reaction.penetration.maxPenetrationFraction<=maximum;
 
 // Sämtliche Partner werden geprüft: benachbarte/überlappende OBs dürfen sich nicht gegenseitig verdrängen.
@@ -49,7 +49,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
  const trace=options.trace?{orderBlocks:{},pairs:{}}:null;
  const m5=closedChecklistCandles(m5Candles,'5m',evaluatedAt),m1=closedChecklistCandles(m1Candles,'1m',evaluatedAt);
  const result={version:DOUBLE_ORDER_BLOCK_VERSION,status:m1.length?'ready':'unknown',pairs:[],
-  policy:{reaction:'first exact touch (OB1) / touch or near-touch (OB2), then first same-direction M1 FVG; M5 far edge broken first = false',nearTouchFraction:NEAR_TOUCH_FRACTION,
+  policy:{reaction:'first exact touch (near-touch via options), then first same-direction M1 FVG; M5 far edge broken first = false',nearTouchFraction:NEAR_TOUCH_FRACTION,
    entryBMaxOrderBlockDepth:ENTRY_B_MAX_ORDER_BLOCK_DEPTH,stop:'open internal M1 FVG at entry = M5 far edge, otherwise unknown',
    firstRetestHoldThrough:'secondReactionKnownAt',retestDay:'Europe/Berlin calendar date',maxPositiveZoneGap:instrumentConfig(instrument).dobMaxPositiveZoneGap,
    options:{nearTouch,maxRetestDepth,stopRule,bridgeClosures}},
