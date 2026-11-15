@@ -13,7 +13,7 @@ export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-near10-entry-sl-hold-sameda
 // Nur Routen mit vollständigem Entry-Tupel bekommen ein Outcome; die Statuswörter bleiben die des Renderings.
 function pairEntries(reaction,direction,m1,evaluatedAt,instrument){
  return Object.fromEntries(Object.entries(reaction.routes).map(([variant,route])=>{
-  if(route.status!=='entry')return [variant,{variant,status:route.status==='rejected'?'invalid':'pending',reason:route.reason}];
+  if(route.status!=='entry')return [variant,{variant,status:route.status==='rejected'?'invalid':route.status,reason:route.reason,knownAt:route.knownAt??null}];
   const entry={variant,status:'ready',entryTime:route.entryTime,entryPrice:route.entryPrice,stopPrice:route.stopLoss,
    stopAnchor:route.stopAnchor,confirmationCandleTime:route.confirmationCandleTime};
   const outcome=evaluateDoubleOrderBlockOutcome({direction,...entry,candles:m1,evaluatedAt,instrument});
@@ -23,13 +23,16 @@ function pairEntries(reaction,direction,m1,evaluatedAt,instrument){
 
 // Hold-Anker: exakter OB1-Retest, wenn er vor dem OB2-Retest bekannt ist, sonst die Near-Reaktion selbst.
 // Ein OB1-Bruch vor dem OB2-Retest schwemmt immer auch diesen Anker aus; der Hold-Gate deckt ihn mit ab.
+export function firstRetestHoldAnchor(exactAnchor,secondRetestAt){
+ return exactAnchor&&exactAnchor.fromTime<=secondRetestAt?'exact':'near';
+}
 function firstRetestHoldHistory(context,first,secondRetestAt,m1,evaluatedAt){
  first.exactAnchor??=exactRetestAnchor(context,first.orderBlock,first.reaction)??false;
- const anchor=first.exactAnchor&&first.exactAnchor.fromTime<=secondRetestAt?first.exactAnchor
-  :{fromTime:first.reaction.fvg.recognizedAt,price:first.reaction.penetration.extremePrice};
- if(!first.holds.has(anchor))first.holds.set(anchor,orderBlockRetestHoldHistory({candles:m1,direction:first.orderBlock.dir===1?'long':'short',
-  anchorPrice:anchor.price,fromTime:anchor.fromTime,evaluatedAt,instrument:context.instrument}));
- return first.holds.get(anchor);
+ const kind=firstRetestHoldAnchor(first.exactAnchor,secondRetestAt),key=`${kind}Hold`;
+ const anchor=kind==='exact'?first.exactAnchor:{fromTime:first.reaction.fvg.recognizedAt,price:first.reaction.penetration.extremePrice};
+ first[key]??=orderBlockRetestHoldHistory({candles:m1,direction:first.orderBlock.dir===1?'long':'short',
+  anchorPrice:anchor.price,fromTime:anchor.fromTime,evaluatedAt,instrument:context.instrument});
+ return first[key];
 }
 
 // Sämtliche Partner werden geprüft: benachbarte/überlappende OBs dürfen sich nicht gegenseitig verdrängen.
@@ -40,7 +43,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
    entryBMaxOrderBlockDepth:ENTRY_B_MAX_ORDER_BLOCK_DEPTH,stop:'open internal M1 FVG at entry = M5 far edge, otherwise unknown',
    firstRetestHoldThrough:'secondReactionKnownAt',retestDay:'Europe/Berlin calendar date',maxPositiveZoneGap:instrumentConfig(instrument).dobMaxPositiveZoneGap},
   stats:{m5Bars:m5.length,m1Bars:m1.length,orderBlocks:0,reactionTrue:0,reactionFalse:0,reactionUnknown:0,pairChecks:0,
-   firstHoldRejected:0,firstHoldUnknown:0,differentRetestDays:0,priceGapRejected:0}};
+   firstHoldRejected:0,firstHoldUnknown:0,differentRetestDays:0,priceGapRejected:0,pairsWithoutEntry:0}};
  if(!Number.isFinite(evaluatedAt)||!m5.length||!m1.length)return result;
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(instrument,'5m'));
  const context=createOrderBlockReactionContext(m1,evaluatedAt,instrument),qualified=[];
@@ -55,7 +58,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   // Ein späterer Bruch löscht den vorher bestätigten Vergleichsbeleg nicht aus dem Verlauf.
   const m5Confirmation=zone.touchedTime==null?null:zones.find(other=>other.dir===zone.dir&&other.startTime>zone.touchedTime
    &&recognition.get(other.startTime)<=(m5Invalidation?.time??Infinity));
-  qualified.push({orderBlock,reaction,holds:new Map(),m5ReactionKnownAt:m5Confirmation?recognition.get(m5Confirmation.startTime):null});
+  qualified.push({orderBlock,reaction,m5ReactionKnownAt:m5Confirmation?recognition.get(m5Confirmation.startTime):null});
  }
  for(let second=1;second<qualified.length;second++){
   const partners=[];let latestReaction=-Infinity;
@@ -88,7 +91,9 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
    firstM5ReactionKnownAt:a.m5ReactionKnownAt,firstReactionSource:'m1',recognizedAt:b.reaction.fvg.recognizedAt,entries:b.entries});
   }
   // Gleichzeitige Reaktionen überlappender Zonen sind getrennte belegte Partner, kein Zeit-Tiebreaker.
-  result.pairs.push(...partners);
+  // Ein Paar ohne möglichen Entry (beide Routen invalid/unknown) trägt keinen Trade und wird nur gezählt.
+  if(partners.length&&!Object.values(qualified[second].entries).some(e=>e.status==='ready'||e.status==='pending'))result.stats.pairsWithoutEntry+=partners.length;
+  else result.pairs.push(...partners);
  }
  return result;
 }
@@ -96,7 +101,8 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
 export function doubleOrderBlockDisplay(pair,evaluatedAt){
  if(!pair||pair.recognizedAt>evaluatedAt)return {visible:false,tone:'neutral',variants:{}};
  const variants=Object.fromEntries(Object.entries(pair.entries).map(([key,entry])=>{
-  if(entry.status!=='ready'||entry.entryTime>evaluatedAt)return [key,entry.status==='ready'?'pending':entry.status];
+  if(entry.status!=='ready')return [key,entry.knownAt!=null&&entry.knownAt>evaluatedAt?'pending':entry.status];
+  if(entry.entryTime>evaluatedAt)return [key,'pending'];
   const outcome=entry.outcome;
   return [key,outcome?.recognizedAt!=null&&outcome.recognizedAt<=evaluatedAt?outcome.status:
    outcome?.status==='unknown'&&outcome.unavailableAt<=evaluatedAt?'unknown':'open'];

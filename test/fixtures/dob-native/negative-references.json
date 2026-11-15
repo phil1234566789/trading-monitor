@@ -131,7 +131,7 @@
       "evaluatedAt": 1794217260,
       "capturedAt": 1794649494,
       "key": "dob:XAUUSD:-1:1793855100:1794192300",
-      "expectedRejectionReason": "secondRetestTooDeep",
+      "expectedRejectionReason": "differentRetestDays",
       "first": {
         "sourceFixture": "2026-11-05.json",
         "startTime": 1793855100,

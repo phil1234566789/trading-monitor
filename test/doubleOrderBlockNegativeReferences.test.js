@@ -40,10 +40,9 @@ it.each(manifest.cases)('preserves native OHLC, source snapshot and exact reject
  const priceGap=evaluateDoubleOrderBlockPriceGap(example.first,example.second,example.direction==='long'?1:-1,'XAUUSD');
  const hold=orderBlockRetestHoldAt(orderBlockRetestHoldHistory({candles:nativeRows(example),direction:example.direction,
   anchorPrice:first.extremePrice,fromTime:example.first.knownAt,evaluatedAt:example.second.knownAt}),example.second.knownAt);
- // v7 kennt kein pauschales M5-Tiefengate mehr; Pin 472 bleibt über die verschiedenen Retest-Tage negativ.
- const isolated=['secondRetestTooDeep','differentRetestDays'].includes(example.expectedRejectionReason)?day
+ const isolated=example.expectedRejectionReason==='differentRetestDays'?day
   :example.expectedRejectionReason==='priceGapTooWide'?priceGap:hold;
- expect(isolated.reason).toBe(example.expectedRejectionReason==='secondRetestTooDeep'?'differentRetestDays':example.expectedRejectionReason);
+ expect(isolated.reason).toBe(example.expectedRejectionReason);
  expect(isolated.status).not.toBe('passed');
  if(example.pin===472){expect(first.maxPenetrationFraction).toBeCloseTo(.36166924265843176,10);expect(second.maxPenetrationFraction).toBeCloseTo(.9885057471263935,10);}
  if(example.pin===471)expect(hold.firstSweepTime).toBe(1794221520);
@@ -56,8 +55,8 @@ it.each(['GBPUSD','EURUSD'])('keeps the price-gap policy unconfigured for %s in 
  const example=manifest.cases.find(c=>c.pin===475);
  const result=detectDoubleOrderBlocks({instrument,m5Candles:nativeRows(example,'m5'),m1Candles:nativeRows(example),evaluatedAt:example.second.knownAt});
  expect(result.policy.maxPositiveZoneGap).toBeNull();expect(result.stats.priceGapRejected).toBe(0);
- // Ohne XAU-Abstandsgrenze bekommt OB2 einen Partner; welcher, entscheidet die unveränderte Partnerwahl.
- expect(result.pairs.some(pair=>pair.secondOrderBlock.startTime===example.second.startTime)).toBe(true);
+ // Ohne XAU-Abstandsgrenze gewinnt die Partnerwahl den jüngeren OB1 1794184500 (letzte Reaktion vor dem OB2-Retest).
+ expect(result.pairs.map(pair=>pair.id)).toContain(`dob:${instrument}:1:1794184500:${example.second.startTime}`);
 });
 
 it.each(manifest.cases)('does not confirm pin $pin through native M5 OB detection and M1 qualification',example=>{

@@ -1,6 +1,9 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-import {detectDoubleOrderBlocks} from '../src/doubleOrderBlocks.js';
+import {detectDoubleOrderBlocks,firstRetestHoldAnchor} from '../src/doubleOrderBlocks.js';
+import {createOrderBlockReactionContext,evaluateOrderBlockReaction,exactRetestAnchor} from '../src/orderBlockReaction.js';
+import {detectOrderBlocks} from '../src/orderBlockDetection.js';
+import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
 
 const load=name=>JSON.parse(readFileSync(new URL(`./fixtures/dob-native/${name}.json`,import.meta.url),'utf8'));
 const manifest=load('references'),days=new Map(manifest.days.map(day=>[day,load(day)]));
@@ -13,22 +16,41 @@ const run=day=>{
 const find=(day,first,second)=>run(day).pairs.find(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
 const refs=pair=>pair.pins.map(pin=>manifest.references.find(ref=>ref.pin===pin));
 
+// Erwarteter Routenstatus je Referenz; ready-Werte = [entryTime, entryPrice]. null = Paar ohne möglichen Entry.
+const EXPECTED={
+ P1:{a:'unknown',b:'pending'},P2:{a:[1794217980,4097.82],b:[1794218520,4098.01]},P3:{a:[1793988960,4061.44],b:[1793997000,4063.99]},
+ P4:{a:[1793908560,4112.9],b:'pending'},P5:{a:[1793769540,3953.11],b:'pending'},P6:{a:[1793694300,3908.58],b:[1793694420,3908.5]},
+ P7:{a:[1793672220,3945.18],b:'invalid'},P8:null,P9:{a:[1793363880,3964.07],b:'pending'},P10:null,
+ P11:{a:[1792691460,4045.14],b:'invalid'},P12:{a:[1792638060,4113.81],b:'pending'},P13:null,
+ P14:{a:[1792151400,4176.29],b:[1792151580,4175.75]},P15:{a:[1791466380,4127.93],b:[1791466620,4125.29]},
+ P16:{a:[1792556100,4123.01],b:'invalid'},
+};
+
 describe('double order blocks from native candles',()=>{
  // P14/P16 waren unter v6 wegen >50 % OB2-Tiefe abgelehnt; die tragfähige M1-Reaktion ersetzt dieses Gate.
- it.each(manifest.pairs)('recognizes $id through OB detection and M1 reaction, without pin IDs as algorithm input',pair=>{
-  const [first,second]=refs(pair),dob=find(first.day,first,second);
-  expect(dob).toBeDefined();expect(dob.direction).toBe(first.dir===1?'long':'short');
+ it.each(manifest.pairs)('recognizes $id with its expected route statuses',pair=>{
+  const [first,second]=refs(pair),dob=find(first.day,first,second),expected=EXPECTED[pair.id];
+  if(!expected){expect(dob).toBeUndefined();expect(run(first.day).stats.pairsWithoutEntry).toBeGreaterThan(0);return;}
+  expect(dob.direction).toBe(first.dir===1?'long':'short');
   expect(dob.firstReaction.recognizedAt).toBeLessThanOrEqual(dob.secondRetest.candleTime);
   expect(dob.recognizedAt).toBe(dob.secondReaction.recognizedAt);
-  for(const entry of Object.values(dob.entries)){
-   expect(['ready','pending','invalid']).toContain(entry.status);
-   if(entry.status!=='ready')continue;
-   expect(entry.entryTime).toBeGreaterThan(dob.secondRetest.recognizedAt);
-   expect(entry.stopPrice).toBe(first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top);
+  for(const [route,want] of Object.entries(expected)){
+   const entry=dob.entries[route];
+   if(typeof want==='string'){expect(entry.status).toBe(want);continue;}
+   expect(entry).toMatchObject({status:'ready',entryTime:want[0],entryPrice:want[1],
+    stopPrice:first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top});
    expect(entry.targetPrice).toBeCloseTo(entry.entryPrice+first.dir*2*Math.abs(entry.entryPrice-entry.stopPrice),8);
   }
  });
- it.each(manifest.pairs)('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
+ it.each(['P8','P13'])('shows %s while Entry b is still possible and drops it once no route can trade',id=>{
+  const [first,second]=refs(manifest.pairs.find(p=>p.id===id)),fixture=days.get(first.day);
+  const key=`dob:XAUUSD:${first.dir}:${first.startTime}:${second.startTime}`;
+  const at=evaluatedAt=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt}).pairs.find(p=>p.id===key);
+  const early=[...Array(60)].map((_,i)=>at(first.knownAt+i*600)).find(Boolean);
+  expect(early.entries.a.status).toBe('unknown');expect(early.entries.b.status).toBe('pending');
+  expect(find(first.day,first,second)).toBeUndefined();
+ });
+ it.each(manifest.pairs.filter(p=>EXPECTED[p.id]))('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
   const [first,second]=refs(pair),fixture=days.get(first.day),full=find(first.day,first,second);
   const input={instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1};
   const prefix=detectDoubleOrderBlocks({...input,evaluatedAt:full.recognizedAt}).pairs.find(p=>p.id===full.id);
@@ -101,5 +123,17 @@ describe('double order blocks from native candles',()=>{
    }
    for(const reactions of bySecond.values())expect(reactions.size).toBe(1);
   }
+ });
+ it('anchors the OB1 hold on its exact retest only when that retest is known before the OB2 retest',()=>{
+  const fixture=days.get('2026-11-11'),[first]=refs(manifest.pairs.find(p=>p.id==='P1'));
+  const zone=detectOrderBlocks(fixture.candles.m5,'5m',true,0).find(z=>z.startTime===first.startTime&&z.dir===first.dir);
+  const ob={...zone,recognizedAt:orderBlockRecognitionTimes(fixture.candles.m5,'5m').get(first.startTime),timeframe:'5M'};
+  const context=createOrderBlockReactionContext(fixture.candles.m1,fixture.provenance.query.to,'XAUUSD');
+  const reaction=evaluateOrderBlockReaction(context,ob),exact=exactRetestAnchor(context,ob,reaction);
+  // Near-Reaktion 1794384120, exakter Retest erst mit seiner FVG 1794387000 belegt.
+  expect(reaction.contact.status).toBe('nearTouch');expect(exact).toEqual({fromTime:1794387000,price:4061.66});
+  expect(firstRetestHoldAnchor(exact,1794387600)).toBe('exact');
+  expect(firstRetestHoldAnchor(exact,1794386940)).toBe('near');
+  expect(firstRetestHoldAnchor(false,1794387600)).toBe('near');
  });
 });

@@ -3,6 +3,7 @@ import {describe,expect,it} from 'vitest';
 import {measureReactionContact,createOrderBlockReactionContext,evaluateOrderBlockReaction,evaluateReactionStop} from '../src/orderBlockReaction.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
+import {closedChecklistCandles} from '../src/tradeSetupChecklistTimeBasis.js';
 
 const days=new Map();
 const fixture=day=>{if(!days.has(day))days.set(day,JSON.parse(readFileSync(new URL(`./fixtures/dob-native/${day}.json`,import.meta.url),'utf8')));return days.get(day);};
@@ -11,8 +12,8 @@ const nativeOrderBlock=(day,startTime,dir)=>{
  return {...zone,recognizedAt:orderBlockRecognitionTimes(m5,'5m').get(startTime),timeframe:'5M'};
 };
 const react=(day,startTime,dir,{evaluatedAt,m1}={})=>{
- const rows=m1??fixture(day).candles.m1;
- return evaluateOrderBlockReaction(createOrderBlockReactionContext(rows,evaluatedAt??fixture(day).candles.m1.at(-1).time+60),nativeOrderBlock(day,startTime,dir));
+ const at=evaluatedAt??fixture(day).candles.m1.at(-1).time+60,rows=closedChecklistCandles(m1??fixture(day).candles.m1,'1m',at);
+ return evaluateOrderBlockReaction(createOrderBlockReactionContext(rows,at,'XAUUSD'),nativeOrderBlock(day,startTime,dir));
 };
 
 describe('reaction contact',()=>{
@@ -30,25 +31,35 @@ describe('reaction contact',()=>{
 
 describe('internal FVG stop at entry',()=>{
  const rows=[...Array(20)].map((_,i)=>({time:600+i*60,low:105,high:108}));
- const context=fvgs=>({rows,candidates:fvgs,fills:new Map()});
- const ob={dir:1,bottom:100,top:110},contact={candleTime:900},inside={direction:'long',recognizedAt:660,bottom:102,top:104};
+ const fvg=f=>({candleTime:f.recognizedAt-120,...f});
+ const context=(fvgs,candles=rows)=>({rows:candles,evaluatedAt:candles.at(-1).time+60,fills:new Map(),
+  byDirection:{long:fvgs.map(fvg).filter(f=>f.direction==='long'),short:fvgs.map(fvg).filter(f=>f.direction==='short')}});
+ const ob={dir:1,bottom:100,top:110,startTime:600},contact={candleTime:900},inside={direction:'long',recognizedAt:660,bottom:102,top:104};
  it('uses the far M5 edge while a pre-existing internal FVG is open',()=>{
   expect(evaluateReactionStop(context([inside]),ob,contact,1200)).toMatchObject({status:'ready',anchor:'m5-edge',price:100});
   const below=rows.map(c=>({...c,low:101,high:103}));
-  expect(evaluateReactionStop({rows:below,candidates:[{...inside,direction:'short',bottom:106,top:108}],fills:new Map()},{...ob,dir:-1},contact,1200).price).toBe(110);
+  expect(evaluateReactionStop(context([{...inside,direction:'short',bottom:106,top:108}],below),{...ob,dir:-1},contact,1200).price).toBe(110);
  });
  it('never invents a tighter stop: filled, only-overlapping or later FVGs leave it unknown',()=>{
   const filled=rows.map(c=>c.time===720?{...c,low:101}:c);
-  expect(evaluateReactionStop({rows:filled,candidates:[inside],fills:new Map()},ob,contact,1200))
-   .toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved'});
+  expect(evaluateReactionStop(context([inside],filled),ob,contact,1200)).toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved'});
   expect(evaluateReactionStop(context([{...inside,bottom:99,top:103}]),ob,contact,1200)).toMatchObject({status:'unknown',reason:'partialOverlapOpen'});
   expect(evaluateReactionStop(context([{...inside,recognizedAt:960}]),ob,contact,1200).status).toBe('unknown');
  });
- it('judges the stop at entry time; a later fill does not change it, a gap before entry does',()=>{
-  const laterFill=rows.map(c=>c.time===1500?{...c,low:101}:c);
-  expect(evaluateReactionStop({rows:laterFill,candidates:[inside],fills:new Map()},ob,contact,1200).price).toBe(100);
-  expect(evaluateReactionStop({rows:rows.filter(c=>c.time!==780),candidates:[inside],fills:new Map()},ob,contact,1200))
+ it('judges the stop at entry time; a later fill does not change it, a gap or hidden candle before entry does',()=>{
+  expect(evaluateReactionStop(context([inside],rows.map(c=>c.time===1500?{...c,low:101}:c)),ob,contact,1200).price).toBe(100);
+  expect(evaluateReactionStop(context([inside],rows.filter(c=>c.time!==780)),ob,contact,1200))
    .toMatchObject({status:'unknown',reason:'internalFvgHistoryMissing'});
+  // Eine ignorierte Kerze könnte die Füllung verdecken; sie darf keinen Kantenstop vortäuschen.
+  expect(evaluateReactionStop(context([inside],rows.map(c=>c.time===780?{...c,ignored:true}:c)),ob,contact,1200).status).toBe('unknown');
+ });
+ it('one open internal FVG settles the edge stop even if an unrelated one has missing history',()=>{
+  const old={direction:'long',recognizedAt:660,bottom:106,top:107};
+  expect(evaluateReactionStop(context([inside,old],rows.filter(c=>c.time!==720)),ob,contact,1200).status).toBe('unknown');
+  expect(evaluateReactionStop(context([{...inside,recognizedAt:780},{...old,recognizedAt:660}],rows.filter(c=>c.time!==720)),ob,contact,1200).price).toBe(100);
+ });
+ it('ignores FVGs formed long before the M5 order block, so a longer history cannot change the stop',()=>{
+  expect(evaluateReactionStop(context([inside]),{...ob,startTime:600+901+120},{candleTime:1700},1740).status).toBe('unknown');
  });
 });
 
@@ -75,12 +86,30 @@ describe('native reaction references',()=>{
  it('Pin 501: reaction true at 05:40 Berlin without inventing an entry SL',()=>{
   const r=react('2026-11-09',1794192300,-1,{evaluatedAt:1794199200+3600});
   expect(r).toMatchObject({state:'true',knownAt:1794199200});
-  expect(r.routes.a).toMatchObject({status:'pending',reason:'retestEpisodeUnresolved',entryCandidate:{entryTime:1794199200,entryPrice:4128.84}});
+  expect(r.routes.a).toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved',knownAt:1794199200,entryCandidate:{entryTime:1794199200,entryPrice:4128.84}});
  });
  it('stays unknown before contact, before the FVG and across a missing minute',()=>{
   expect(react('2026-10-21',1792552500,1,{evaluatedAt:1792555200}).reason).toBe('noContact');
   expect(react('2026-10-21',1792552500,1,{evaluatedAt:1792556040})).toMatchObject({state:'unknown',reason:'awaitingFvg'});
   const m1=fixture('2026-10-21').candles.m1.filter(c=>c.time!==1792555500);
   expect(react('2026-10-21',1792552500,1,{m1})).toMatchObject({state:'unknown',reason:'missingHistory'});
+ });
+ it('keeps an unknown Entry a unknown when the M5 order block breaks only later (P8 OB2)',()=>{
+  const r=react('2026-11-02',1793604600,-1);
+  expect(r.routes.a).toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved',knownAt:1793606700});
+  expect(r.routes.b).toMatchObject({status:'unknown',reason:'retestEpisodeUnresolved'});
+  const ob=nativeOrderBlock('2026-11-02',1793604600,-1);
+  // Der Bruch liegt nach beiden Entry-Zeitpunkten und darf keine der Routen nachträglich umetikettieren.
+  expect(fixture('2026-11-02').candles.m1.some(c=>c.time>r.routes.b.knownAt&&c.high>ob.top)).toBe(true);
+ });
+ it('decides every reaction of a day identically with the previous fixture day prepended',()=>{
+  const day=fixture('2026-10-21'),previous=fixture('2026-10-16'),at=day.candles.m1.at(-1).time+60;
+  const zones=detectOrderBlocks(day.candles.m5,'5m',true,0),known=orderBlockRecognitionTimes(day.candles.m5,'5m');
+  const alone=createOrderBlockReactionContext(day.candles.m1,at,'XAUUSD');
+  const joined=createOrderBlockReactionContext([...previous.candles.m1,...day.candles.m1],at,'XAUUSD');
+  for(const zone of zones){
+   const ob={...zone,recognizedAt:known.get(zone.startTime),timeframe:'5M'};
+   expect(evaluateOrderBlockReaction(joined,ob)).toEqual(evaluateOrderBlockReaction(alone,ob));
+  }
  });
 });

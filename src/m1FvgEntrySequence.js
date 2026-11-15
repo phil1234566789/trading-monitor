@@ -2,14 +2,22 @@ import {candleTouchesOrderBlock,candleInvalidatesOrderBlock} from './orderBlockD
 import {m1GapCovered} from './goldWeekendGap.js';
 export const M1_FVG_MIN_RETEST_FRACTION=.5;
 
+// Rundungsfehler großer Preise, kein fachlicher Preis-Puffer.
+export const priceRoundingTolerance=zone=>Number.EPSILON*Math.max(Math.abs(zone.top),Math.abs(zone.bottom),1)*8;
+// Volle Füllung bis zur fernen FVG-Kante (Long unten, Short oben).
+export function m1FvgFullyFilled(candle,fvg) {
+  const tolerance=priceRoundingTolerance(fvg);
+  return fvg.direction==='short'?candle.high+tolerance>=fvg.top:candle.low-tolerance<=fvg.bottom;
+}
+
 function qualifiedFvgRetest(candle,fvg) {
   if(!candleTouchesOrderBlock(candle,fvg))return false;
   const height=fvg.top-fvg.bottom;
   const level=fvg.direction==='short'?fvg.bottom+height*M1_FVG_MIN_RETEST_FRACTION
     :fvg.top-height*M1_FVG_MIN_RETEST_FRACTION;
-  const tolerance=Number.EPSILON*Math.max(Math.abs(fvg.top),Math.abs(fvg.bottom),1)*8;
+  const tolerance=priceRoundingTolerance(fvg);
   const half=fvg.direction==='short'?candle.high+tolerance>=level:candle.low-tolerance<=level;
-  const full=fvg.direction==='short'?candle.high+tolerance>=fvg.top:candle.low-tolerance<=fvg.bottom;
+  const full=m1FvgFullyFilled(candle,fvg);
   // Voll gefüllte FVGs brauchen den zugehörigen OB derselben Entstehung, keinen beliebigen Nachbarn.
   if(half && full && !fvg.orderBlock)return null;
   return half && (!full || candleTouchesOrderBlock(candle,fvg.orderBlock));
