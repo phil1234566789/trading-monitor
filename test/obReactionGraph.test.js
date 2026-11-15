@@ -1,13 +1,14 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../src/chartDebuggerCases.js';
-import {obReactionGraph} from '../src/obReactionGraph.js';
+import {obReactionGraph,graphChangeTimes} from '../src/obReactionGraph.js';
 import {createOrderBlockReactionContext,evaluateOrderBlockReaction,internalFvgOpenAt} from '../src/orderBlockReaction.js';
 import {reactionOptionsFor} from '../src/doubleOrderBlocks.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
 
 // Gleicher Aufruf wie ChartDebugger.vue: Rolle wählen, Partner und Paar mitgeben.
+const OB_CASES=CHART_DEBUGGER_CASES;
 const caseOf=id=>CHART_DEBUGGER_CASES.find(x=>x.id===id);
 const graphOf=(c,r,at,role='second')=>{const entry=r.orderBlocks.find(o=>o.role===role);
  return obReactionGraph({dir:c.dir,entry,context:r.context,evaluatedAt:at,pair:r.pair,partner:r.orderBlocks.find(o=>o!==entry)??null});};
@@ -24,6 +25,9 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(status(g)).toMatchObject({detect:'visited',touch:'visited',broken:'visited',reaction:'visited',stop:'visited',routeA:'visited',
    result:'visited',closed:'not-visited',false:'not-visited',hold:'not-visited'});
   expect(g.nodes.stop.sub).toContain('ferne M5-Kante');
+  // Ausgabe-Box: Reaktion groß zuerst, Routen klein darunter.
+  expect(g.nodes.result.headline).toBe('Reaktion: true');
+  expect(g.nodes.result.sub).toMatch(/^a: entry .*\nb: entry /);
   expect(g.edges).toMatchObject({reactionOb2:'visited',aResult:'visited',falseResult:'not-visited'});
  });
  it('P16 OB1: Hold-Gate hält, weil der DOB erkannt ist',async()=>{
@@ -64,7 +68,8 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   // Produktstatus unknown mit Grund, kein selbst erfundenes rejected.
   expect(g.head).toBe('Intern: unknown (Markt geschlossen, OB verfallen) · Routen: –');
   expect(status(g)).toMatchObject({touch:'unknown',closed:'unknown',broken:'not-visited',result:'unknown'});
-  expect(g.nodes.result.sub).toBe('Reaktion unknown\nMarkt geschlossen, OB verfallen');
+  expect(g.nodes.result).toMatchObject({headline:'Reaktion: pending',status:'unknown',
+   sub:'Produkt: unknown · Markt geschlossen, OB verfallen\nEntry-Routen: noch keine'});
  });
 
  it('Seitenspur übernimmt unknown aus der Produkt-Füllhistorie bei verdeckter Kerze und Lücke (Drift-Wächter)',async()=>{
@@ -91,4 +96,22 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
    expect(g.nodes.entryB.status,reason).toBe('not-visited');
   }
  });
+ it('P16: „nächste Änderung“ springt nacheinander zu Kontakt, Reaktion, Entry a, Entry b und verpasst keine Änderung',async()=>{
+  const c=caseOf('P16'),fixture=await loadCaseFixture(c),{from,through}=caseSteps(c,fixture),end=evaluateCase(c,fixture,through);
+  const entry=end.orderBlocks[1],times=graphChangeTimes({entry,context:end.context,pair:end.pair,partner:end.orderBlocks[0]});
+  const r=entry.reaction,key=[r.contact.knownAt,r.knownAt,r.routes.a.entryTime,r.routes.b.entryTime];
+  const jumps=[];for(let at=from,next;(next=times.find(t=>t>at))!=null&&next<=through;at=next)jumps.push(next);
+  expect(jumps.filter(t=>key.includes(t))).toEqual([...new Set(key)]);
+ },60000);
+ // Wächter in beide Richtungen: jede sichtbare Änderung ist ein Sprungziel und jedes Sprungziel eine Änderung.
+ it.each(OB_CASES.flatMap(c=>(c.orderBlocks.length===2?['first','second']:['second']).map(role=>[c.id,role])))('Sprungziele %s %s = sichtbare Änderungen',async(id,role)=>{
+  const c=caseOf(id),fixture=await loadCaseFixture(c),{from,through}=caseSteps(c,fixture),end=evaluateCase(c,fixture,through);
+  const entry=end.orderBlocks.find(o=>o.role===role);
+  const times=graphChangeTimes({entry,context:end.context,pair:end.pair,partner:end.orderBlocks.find(o=>o!==entry)??null});
+  const sign=at=>{const g=graphOf(c,evaluateCase(c,fixture,at),at,role);
+   return JSON.stringify([g.head,g.text,g.history,Object.values(g.nodes).map(n=>[n.status,n.sub,n.headline,(n.meters??[]).map(m=>m.label.replace(/[\d,.]+ %/g,''))])]);};
+  const changes=[];let previous=sign(from);
+  for(let at=from+60;at<=through;at+=60){const now=sign(at);if(now!==previous)changes.push(at);previous=now;}
+  expect(times.filter(t=>t>from&&t<=through)).toEqual(changes);
+ },120000);
 });

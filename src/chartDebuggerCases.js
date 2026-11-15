@@ -4,6 +4,8 @@ import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {obMinimum} from './instrumentConfig.js';
 import {createOrderBlockReactionContext,evaluateOrderBlockReaction,internalOrderBlockFvgs} from './orderBlockReaction.js';
 import {detectDoubleOrderBlocks,reactionOptionsFor} from './doubleOrderBlocks.js';
+import references from '../test/fixtures/dob-native/references.json';
+import EXPECTATIONS from '../test/fixtures/dob-native/chart-debugger-expectations.json';
 
 const INSTRUMENT='XAUUSD';
 // Statische Imports wären ~1 MB im Bundle; jeder Fixture-Tag wird erst bei Auswahl nachgeladen.
@@ -26,6 +28,26 @@ export const CHART_DEBUGGER_CASES=[
  {id:'504',label:'Pin 504 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792558800]},
  {id:'P17',label:'P17 · DOB Short · 20.10.',day:'2026-10-20-p17',dir:-1,orderBlocks:[1792473900,1792479900]},
 ];
+// Fachliches Soll (Philip), nicht das Produkt: Referenzpaare aus dem Manifest, übrige Fälle aus der kleinen Tabelle.
+const REFERENCE_PAIRS=new Set(references.pairs.map(p=>p.id));
+export const expectationOf=c=>EXPECTATIONS.cases[c.id]??(REFERENCE_PAIRS.has(c.id)?{verdict:'positive',dob:true,source:'references.json'}:null);
+export function expectedText(c){
+ const e=expectationOf(c);
+ if(!e)return 'kein Soll';
+ const routes=Object.entries(e.routes??{}),rejected=routes.filter(([,x])=>x==='rejected').map(([k])=>k);
+ const detail=e.dob?'DOB':e.reaction==='false'?'Reaktion false, kein Entry':rejected.length?`Entry ${rejected.join('+')} abgelehnt`:`Reaktion ${e.reaction}`;
+ return `${e.verdict==='positive'?'Positiv':'Negativ'} · ${detail}`;
+}
+// Vergleicht nur, was das Soll festlegt: DOB erkannt, Reaktionsstatus des entry-tragenden OB, einzelne Routenstatus.
+export function productMatches(c,result){
+ const e=expectationOf(c),r=result.orderBlocks.at(-1).reaction;
+ if(!e)return null;
+ if(e.dob&&!result.pair)return false;
+ if(e.reaction&&r?.state!==e.reaction)return false;
+ return Object.entries(e.routes??{}).every(([k,x])=>r?.routes?.[k]?.status===x);
+}
+export const CASE_GROUPS=[['Positiv',CHART_DEBUGGER_CASES.filter(c=>expectationOf(c)?.verdict==='positive')],
+ ['Negativ',CHART_DEBUGGER_CASES.filter(c=>expectationOf(c)?.verdict==='negative')]];
 
 // Replay-Fenster: ab Bildung von OB1 vier Stunden, damit Reaktion und beide Entry-Routen sicher drinliegen.
 export const CASE_WINDOW_SECONDS=4*3600;

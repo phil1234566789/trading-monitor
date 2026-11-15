@@ -1,4 +1,4 @@
-import {measureOrderBlockPenetration} from './orderBlockPenetration.js';
+import {measureOrderBlockPenetration,orderBlockPenetration} from './orderBlockPenetration.js';
 import {candleInvalidatesOrderBlock} from './orderBlockDetection.js';
 import {internalFvgOpenAt,firstIndex} from './orderBlockReaction.js';
 import {formatBerlinTime} from './berlinTime.js';
@@ -50,7 +50,8 @@ export function fvgFillMeter(context,fvg){
 
 function orderBlockMeter(context,ob,dir){
  const rows=rowsFrom(context,ob.recognizedAt),m=measureOrderBlockPenetration(ob,dir===1?'long':'short',rows);
- if(m.status!=='ready')return {...UNKNOWN_METER('Messung unbekannt'),state:'Messung unbekannt'};
+ // Ohne Kerze seit Bekanntwerden ist der OB schlicht unberührt, nicht unbekannt.
+ if(m.status!=='ready')return {...UNKNOWN_METER('Messung unbekannt'),state:rows.length?'Messung unbekannt':'noch nicht berührt'};
  if(m.maxPenetrationFraction<0)return {...UNKNOWN_METER('Messung unbekannt'),state:'noch nicht berührt'};
  const depth=Math.min(100,m.maxPenetrationFraction*100),broken=rows.some(c=>candleInvalidatesOrderBlock(c,ob));
  return {...meterOf(100-depth,['intakt','eingestochen'],`OB intakt ${pct(100-depth)} · Einstich ${pct(depth)}${broken?' · gebrochen':''}`,!broken),
@@ -76,13 +77,15 @@ function sideTrack(dir,entry,context){
 
 // Kein eigenes Gesamturteil: Kopf und Ausgabe zeigen nur Reaktionsstatus und Routenstatus des Produkts.
 const routeText=(name,x)=>`${name}: ${x.status}${x.status==='entry'?` ${price(x.entryPrice)} · ${time(x.entryTime)} · SL ${price(x.stopLoss)}`:x.reason?' · '+reasonText(x.reason):''}`;
-function resultNode(r,first){
- const routes=Object.entries(r?.routes??{});
- if(first)return {label:'Ausgabe',status:'not-visited',sub:'OB1 trägt keinen Entry',detail:['Entry-Routen gehören zu OB2.']};
- if(!routes.length)return {label:'Ausgabe',status:'unknown',sub:`Reaktion ${r?.state??'unknown'}${r?.reason?'\n'+reasonText(r.reason):''}`,
-  detail:['Noch keine Entry-Routen: das Produkt bewertet sie erst mit dem Reaktionsergebnis.']};
- const status=routes.some(([,x])=>x.status==='entry')?'visited':routes.every(([,x])=>x.status==='rejected')?'rejected':'unknown';
- return {label:'Ausgabe',status,sub:routes.map(([k,x])=>routeText(k,x)).join('\n'),detail:routes.map(([k,x])=>'Route '+routeText(k,x))};
+// Ausgabe-Box: zuerst die Reaktion (das Ergebnis von evaluateOrderBlockReaction), darunter klein die Entry-Routen.
+// Produkt-unknown heißt aus Philips Sicht „pending“; der Produktwert steht klein darunter, nichts wird neu aggregiert.
+function resultNode(r,first,resultRoutes){
+ const state=r?.state??'unknown',routes=Object.entries(resultRoutes);
+ const lines=[state==='unknown'?`Produkt: unknown${r?.reason?' · '+reasonText(r.reason):''}`:null,
+  first?'OB1 trägt keinen Entry':routes.length?null:'Entry-Routen: noch keine',...routes.map(([k,x])=>routeText(k,x))].filter(Boolean);
+ return {label:'Ausgabe',headline:`Reaktion: ${state==='unknown'?'pending':state}`,
+  status:state==='true'?'visited':state==='false'?'rejected':'unknown',sub:lines.join('\n'),
+  detail:[`evaluateOrderBlockReaction: ${state}${r?.reason?' · '+reasonText(r.reason):''}.`,...routes.map(([k,x])=>'Route '+routeText(k,x))]};
 }
 
 function routeEntry(x,unvisited){
@@ -103,11 +106,16 @@ function bCheckNode(b){
  return node('unknown',b.status==='pending'?'◇ offen':`unknown · ${reasonText(b.reason)}`);
 }
 
-// role/pair/partner: OB1 eines DOB endet im Hold-Gate, OB2 bzw. Einzel-OB in SL und Entry-Routen.
-export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,bridgeClosures=false,pair=null,partner=null}){
- const {orderBlock:ob,reaction:r,role='second'}=entry,adj=adjective(dir);
- const contact=r?.contact,fvg=r?.fvg,rejected=r?.state==='false',closed=r?.reason==='marketClosed',live=r?.state==='true';
- const first=role==='first',routes=live&&!first?r.routes:{},open=s=>s?'unknown':'not-visited';
+// Rollen-Weiche für Graph und Sprungziele: OB1 eines DOB endet im Hold-Gate (nur dort zählen Paar und Partner),
+// OB2 bzw. Einzel-OB in SL und Entry-Routen (Routen-Knoten erst mit Reaktion true, Ausgabe zeigt alle Produktrouten).
+function roleView({entry,pair=null,partner=null}){
+ const r=entry.reaction,first=(entry.role??'second')==='first',live=r?.state==='true';
+ return {first,live,routes:live&&!first?r.routes:{},resultRoutes:first?{}:r?.routes??{},pair:first?pair:null,partner:first?partner:null};
+}
+
+export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,bridgeClosures=false,...links}){
+ const {orderBlock:ob,reaction:r}=entry,adj=adjective(dir),{first,live,routes,resultRoutes,pair,partner}=roleView({entry,...links});
+ const contact=r?.contact,fvg=r?.fvg,rejected=r?.state==='false',closed=r?.reason==='marketClosed',open=s=>s?'unknown':'not-visited';
  const n={};
  n.detect={label:`${dir===1?'Bullische':'Bärische'} M5-OB erkannt`,status:ob?'visited':'unknown',sub:ob?`${range(ob)} · ${time(ob.recognizedAt)}`:'noch nicht bekannt',
   detail:[ob?`M5-OB ${range(ob)}, bekannt ${time(ob.recognizedAt)}.`:'Die M5-OB ist zu diesem Stand noch nicht bekannt.']};
@@ -149,7 +157,7 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
  n.routeA={label:'Route a: Entry bei FVG-Bestätigung',...routeEntry(a,'Erst mit Reaktion true.')};
  n.bCheck=bCheckNode(b);
  n.entryB={label:'Entry b',...(n.bCheck.status==='visited'?routeEntry(b):routeEntry(null,b?'Route b hat das Entry-Gate nicht erreicht.':'Erst mit Reaktion true.'))};
- n.result=resultNode(r,first);
+ n.result=resultNode(r,first,resultRoutes);
  Object.assign(n,sideTrack(dir,entry,context));
 
  const v=s=>s==='visited'||s==='rejected'?s:'not-visited';
@@ -177,4 +185,42 @@ function history(ob,r,routes,evaluatedAt){
   if(at!=null)list.push({at,text:`Route ${name} ${x.status}${x.reason?' · '+reasonText(x.reason):''}`});
  }
  return list.filter(h=>h.at<=evaluatedAt).sort((a,b)=>a.at-b.at).map(h=>({...h,time:time(h.at)}));
+}
+
+// Sprungziele für „vorige/nächste Änderung“: alle Zeitpunkte, an denen sich der Plan ändert, aus den knownAt-Zeiten
+// des Endergebnisses. Das Produkt ist zeitpunkttreu, darum gelten sie auch für frühere Slider-Stände.
+export function graphChangeTimes({entry,context,...links}){
+ const {orderBlock:ob,reaction:r}=entry,{resultRoutes,pair,partner}=roleView({entry,...links});
+ if(!ob)return [];
+ // Hold-Knoten zeigt Paar/Partner erst ab der eigenen Reaktion true; vorher wäre der Sprung leer.
+ const holdFrom=r?.state==='true'?r.knownAt:Infinity,fromHold=t=>t>=holdFrom?t:null;
+ const times=[ob.recognizedAt,r?.contact?.knownAt,r?.knownAt,fromHold(pair?.recognizedAt),fromHold(partner?.reaction?.knownAt)];
+ for(const x of Object.values(resultRoutes))times.push(x.status==='entry'?x.entryTime:x.knownAt);
+ const fvgs=(entry.internalFvgs??[]).filter(f=>f!==r?.fvg);
+ fvgs.forEach((f,i)=>{
+  // Die Seitenspur zeigt nur den M1-OB der jeweils jüngsten internen FVG, also nur in deren Zeitfenster.
+  const until=fvgs[i+1]?.recognizedAt??Infinity;
+  times.push(f.recognizedAt,...fillChangeTimes(context,f),...orderBlockChangeTimes(context,f.orderBlock).filter(t=>t<until));
+ });
+ // Vor dem Bekanntwerden der OB zeigt der Plan nur „noch nicht bekannt“; frühere Zeiten wären leere Sprünge.
+ return [...new Set(times.filter(t=>Number.isFinite(t)&&t>=ob.recognizedAt))].sort((a,b)=>a-b);
+}
+
+// Seitenspur wechselt bei erster Berührung (Label „berührt“) und beim Ende von „offen“ (gefüllt oder unbekannt).
+function fillChangeTimes(context,fvg){
+ const touch=rowsFrom(context,fvg.recognizedAt).find(c=>orderBlockPenetration(fvg,fvg.direction,c)>0);
+ const times=[touch&&touch.time+60];
+ // offen → nicht offen ist monoton: Binärsuche über Minuten auf der einmal berechneten Produkt-Füllhistorie.
+ let lo=fvg.recognizedAt,hi=Math.floor(context.evaluatedAt/60)*60;
+ if(internalFvgOpenAt(context,fvg,hi)===true)return times;
+ while(hi-lo>60){const mid=lo+Math.floor((hi-lo)/120)*60;if(internalFvgOpenAt(context,fvg,mid)===true)lo=mid;else hi=mid;}
+ return [...times,hi];
+}
+
+// Interner M1-OB: Label wechselt bei erster Berührung und beim Bruch (gehalten → gebrochen).
+function orderBlockChangeTimes(context,ob){
+ if(!ob)return [];
+ const rows=rowsFrom(context,ob.recognizedAt),dir=ob.dir===1?'long':'short';
+ const touch=rows.find(c=>orderBlockPenetration(ob,dir,c)>=0),broken=rows.find(c=>candleInvalidatesOrderBlock(c,ob));
+ return [touch&&touch.time+60,broken&&broken.time+60];
 }

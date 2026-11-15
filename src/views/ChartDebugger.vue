@@ -9,9 +9,9 @@ import {tintM1FvgCandidates} from '../fvgCandleTint.js';
 import {cssColor,cssColorScaled} from '../chartColors.js';
 import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice} from '../format.js';
-import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../chartDebuggerCases.js';
+import {CHART_DEBUGGER_CASES,CASE_GROUPS,expectedText,productMatches,loadCaseFixture,evaluateCase,caseSteps} from '../chartDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOrderBlocks.js';
-import {obReactionGraph,reasonText,fvgFillMeter} from '../obReactionGraph.js';
+import {obReactionGraph,graphChangeTimes,fvgFillMeter} from '../obReactionGraph.js';
 import ObReactionGraph from '../components/ObReactionGraph.vue';
 
 const route=useRoute(),router=useRouter();
@@ -20,16 +20,32 @@ const current=computed(()=>CHART_DEBUGGER_CASES.find(c=>c.id===caseId.value));
 const fixture=shallowRef(null),steps=ref({from:0,through:0}),evaluatedAt=ref(0),error=ref('');
 // Ablations-Schalter wie scripts/dobAblation.mjs, damit der Effekt von Near-Touch/Marktschluss je Fall sichtbar wird.
 const nearTouch=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.nearTouch),bridgeClosures=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.bridgeClosures);
-const result=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,evaluatedAt.value,{nearTouch:nearTouch.value,bridgeClosures:bridgeClosures.value}));
+const options=computed(()=>({nearTouch:nearTouch.value,bridgeClosures:bridgeClosures.value}));
+const result=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,evaluatedAt.value,options.value));
 // Knotenplan zeigt standardmäßig den Entry-tragenden OB (OB2 bzw. Einzel-OB); bei DOBs ist OB1 umschaltbar.
 const graphRole=ref('second');
 watch(caseId,()=>{graphRole.value='second';});
-const graph=computed(()=>{
- if(!result.value)return null;
- const {orderBlocks,context,pair}=result.value,entry=orderBlocks.find(o=>o.role===graphRole.value);
- return obReactionGraph({dir:current.value.dir,context,evaluatedAt:evaluatedAt.value,bridgeClosures:bridgeClosures.value,entry,pair,partner:orderBlocks.find(o=>o!==entry)??null,
-  nearTouch:reactionOptionsFor(graphRole.value,{nearTouch:nearTouch.value}).nearTouch});
-});
+const graphInput=({orderBlocks,context,pair})=>{const entry=orderBlocks.find(o=>o.role===graphRole.value);
+ return {entry,context,pair,partner:orderBlocks.find(o=>o!==entry)??null};};
+const graph=computed(()=>result.value&&obReactionGraph({...graphInput(result.value),dir:current.value.dir,evaluatedAt:evaluatedAt.value,
+ bridgeClosures:bridgeClosures.value,nearTouch:reactionOptionsFor(graphRole.value,{nearTouch:nearTouch.value}).nearTouch}));
+// Einmal je Fall/Schalter/Rolle am Fensterende ausgewertet; die Sprünge selbst rechnen nichts mehr.
+const endResult=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,steps.value.through,options.value));
+const changeTimes=computed(()=>endResult.value?graphChangeTimes(graphInput(endResult.value))
+ .filter(t=>t>=steps.value.from&&t<=steps.value.through):[]);
+const jumpTarget=delta=>{const at=evaluatedAt.value;return delta>0?changeTimes.value.find(t=>t>at):changeTimes.value.findLast(t=>t<at);};
+const jump=delta=>{const target=jumpTarget(delta);if(target!=null)evaluatedAt.value=target;};
+
+// ✓/✗ im Dropdown: Produktergebnis unter W1 am Fensterende gegen Philips Soll; im Hintergrund, Fall für Fall.
+const productCheck=ref({});
+async function checkAllCases(){
+ for(const c of CHART_DEBUGGER_CASES){
+  const loaded=await loadCaseFixture(c);
+  productCheck.value={...productCheck.value,[c.id]:productMatches(c,evaluateCase(c,loaded,caseSteps(c,loaded).through))};
+  await new Promise(resolve=>setTimeout(resolve));
+ }
+}
+const checkMark=id=>({true:' ✓',false:' ✗'})[productCheck.value[id]]??' …';
 
 // M5 kommt nativ aus derselben Fixture (closedChecklistCandles in evaluateCase); Reaktion und FVG-Füllung bleiben M1.
 const tf=ref('m1');
@@ -47,7 +63,12 @@ watch(caseId,async id=>{
 },{immediate:true});
 
 const step=delta=>{evaluatedAt.value=Math.min(steps.value.through,Math.max(steps.value.from,evaluatedAt.value+delta*60));};
-function onKey(e){if(e.target.tagName==='SELECT')return;if(e.key==='ArrowLeft')step(-1);if(e.key==='ArrowRight')step(1);}
+function onKey(e){
+ if(e.target.tagName==='SELECT'||!['ArrowLeft','ArrowRight'].includes(e.key))return;
+ // Sonst bewegt ein fokussierter Slider sich zusätzlich selbst.
+ e.preventDefault();
+ (e.shiftKey?jump:step)(e.key==='ArrowLeft'?-1:1);
+}
 
 const sideText=dir=>dir===1?'Long':'Short';
 const price=p=>p==null?'–':fmtPrice(p,2);
@@ -55,12 +76,6 @@ const time=t=>t==null?'–':formatBerlinTime(t);
 // Marker sitzen auf der Kerze, deren Schluss das Wissen liefert (knownAt = Kerzenzeit + 60).
 const bar=knownAt=>knownAt-60;
 
-function routeText(r){
- if(!r)return '–';
- if(r.status==='entry')return `entry ${time(r.entryTime)} @ ${price(r.entryPrice)} · SL ${price(r.stopLoss)} (${r.stopAnchor})`;
- const candidate=r.entryCandidate?` · Kandidat ${time(r.entryCandidate.entryTime)} @ ${price(r.entryCandidate.entryPrice)}`:'';
- return `${r.status}${r.reason?' · '+r.reason:''}${r.knownAt!=null?' · ab '+time(r.knownAt):''}${candidate}`;
-}
 function pairEntryText(e){
  if(e.status!=='ready')return `${e.status}${e.reason?' · '+e.reason:''}`;
  return `ready ${time(e.entryTime)} @ ${price(e.entryPrice)} · SL ${price(e.stopPrice)} · TP ${price(e.targetPrice)} · ${e.outcome?.status??'–'}`;
@@ -117,6 +132,7 @@ onMounted(()=>{
  chart.applyOptions({autoSize:true});
  markers=createSeriesMarkers(series,[]);
  window.addEventListener('keydown',onKey);
+ checkAllCases();
  draw();
 });
 onBeforeUnmount(()=>{window.removeEventListener('keydown',onKey);chart?.remove();chart=series=null;});
@@ -127,10 +143,13 @@ watch(tf,()=>{fitPending=true;draw();});
 <template>
  <div class="chart-debugger">
   <div class="bar">
-   <select v-model="caseId"><option v-for="c in CHART_DEBUGGER_CASES" :key="c.id" :value="c.id">{{ c.label }}</option></select>
+   <select v-model="caseId"><optgroup v-for="[group,cases] in CASE_GROUPS" :key="group" :label="group">
+    <option v-for="c in cases" :key="c.id" :value="c.id">{{ c.label }} · erwartet: {{ expectedText(c) }}{{ checkMark(c.id) }}</option></optgroup></select>
+   <button @click="jump(-1)" :disabled="jumpTarget(-1)==null" title="Zur vorigen Änderung im Knotenplan (Shift+←)">◀ vorige Änderung</button>
    <button @click="step(-1)" title="Eine M1-Kerze zurück (←)">◀</button>
    <input type="range" :min="steps.from" :max="steps.through" step="60" :value="evaluatedAt" @input="evaluatedAt=Number($event.target.value)">
    <button @click="step(1)" title="Eine M1-Kerze vor (→)">▶</button>
+   <button @click="jump(1)" :disabled="jumpTarget(1)==null" title="Zur nächsten Änderung im Knotenplan (Shift+→)">nächste Änderung ▶</button>
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
    <label>Near-Touch <select v-model="nearTouch"><option value="none">aus</option><option value="second">OB2</option><option value="both">OB1+OB2</option></select></label>
    <label><input type="checkbox" v-model="bridgeClosures"> Marktschluss überbrücken</label>
@@ -159,10 +178,6 @@ watch(tf,()=>{fitPending=true;draw();});
       <p v-if="!o.orderBlock" class="muted">Noch nicht bekannt.</p>
       <template v-else>
        <p>{{ price(o.orderBlock.bottom) }}–{{ price(o.orderBlock.top) }} · bekannt {{ time(o.orderBlock.recognizedAt) }}</p>
-       <p><b>Reaktion</b> {{ o.reaction.state }}{{ o.reaction.reason?' · '+reasonText(o.reaction.reason):'' }}{{ o.reaction.knownAt?' · ab '+time(o.reaction.knownAt):'' }}</p>
-       <p v-if="o.reaction.contact"><b>Kontakt</b> {{ o.reaction.contact.status }} · Kerze {{ time(o.reaction.contact.candleTime) }}</p>
-       <p v-if="o.reaction.fvg"><b>FVG</b> {{ price(o.reaction.fvg.bottom) }}–{{ price(o.reaction.fvg.top) }} · bekannt {{ time(o.reaction.fvg.recognizedAt) }}</p>
-       <p v-for="(r,name) in o.role==='second'?o.reaction.routes ?? {}:{}" :key="name"><b>{{ name }}</b> {{ routeText(r) }}</p>
       </template>
      </section>
     </template>
