@@ -1,1 +1,3 @@
 graphify-out/graph.json merge=graphify
+# Fixtures sind Hash-geprüfte Rohdaten: byte-genau auschecken, sonst macht core.autocrlf CRLF daraus.
+test/fixtures/** -text

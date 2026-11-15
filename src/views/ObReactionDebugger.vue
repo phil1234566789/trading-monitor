@@ -10,12 +10,15 @@ import {cssColor,cssColorScaled} from '../chartColors.js';
 import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice} from '../format.js';
 import {OB_REACTION_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../obReactionDebuggerCases.js';
+import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS} from '../doubleOrderBlocks.js';
 
 const route=useRoute(),router=useRouter();
 const caseId=ref(OB_REACTION_CASES.some(c=>c.id===route.query.fall)?route.query.fall:OB_REACTION_CASES[0].id);
 const current=computed(()=>OB_REACTION_CASES.find(c=>c.id===caseId.value));
 const fixture=shallowRef(null),steps=ref({from:0,through:0}),evaluatedAt=ref(0),error=ref('');
-const result=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,evaluatedAt.value));
+// Ablations-Schalter wie scripts/dobAblation.mjs, damit der Effekt von Near-Touch/Marktschluss je Fall sichtbar wird.
+const nearTouch=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.nearTouch),bridgeClosures=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.bridgeClosures);
+const result=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,evaluatedAt.value,{nearTouch:nearTouch.value,bridgeClosures:bridgeClosures.value}));
 
 const chartEl=ref(null);
 let chart=null,series=null,markers=null,fitPending=false,zonePrimitives=[],overlayPrimitives=[],priceLines=[];
@@ -109,6 +112,8 @@ watch(result,draw);
    <button @click="step(-1)" title="Eine M1-Kerze zurück (←)">◀</button>
    <input type="range" :min="steps.from" :max="steps.through" step="60" :value="evaluatedAt" @input="evaluatedAt=Number($event.target.value)">
    <button @click="step(1)" title="Eine M1-Kerze vor (→)">▶</button>
+   <label>Near-Touch <select v-model="nearTouch"><option value="none">aus</option><option value="second">OB2</option><option value="both">OB1+OB2</option></select></label>
+   <label><input type="checkbox" v-model="bridgeClosures"> Marktschluss überbrücken</label>
    <span class="at">evaluatedAt {{ evaluatedAt ? formatDatedTime(evaluatedAt) : '–' }}</span>
   </div>
   <div class="main">
@@ -144,7 +149,7 @@ watch(result,draw);
 
 <style scoped>
 .obr{display:flex;flex-direction:column;height:calc(100vh - 60px);padding:8px;gap:8px}
-.bar{display:flex;align-items:center;gap:8px}
+.bar{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .bar input[type=range]{flex:1}
 .at{font-variant-numeric:tabular-nums;white-space:nowrap}
 .main{flex:1;display:flex;gap:8px;min-height:0}

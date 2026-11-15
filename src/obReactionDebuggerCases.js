@@ -35,13 +35,12 @@ export function caseSteps(c,fixture){
 }
 
 // Ein Einzel-OB wird wie OB2 bewertet: nur dort trägt die Reaktion Entry-Routen (Pins 500/502 = OB2 von P14/P16).
-function nearTouchFor(role){
- const mode=DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.nearTouch;
- return mode==='both'||mode==='second'&&role==='second';
-}
+// Dieselbe Rollen-Zuordnung wie reactionFor in detectDoubleOrderBlocks.
+const nearTouchFor=(role,mode)=>role==='first'?mode==='both':mode!=='none';
 
 // Alles nur aus Kerzen, die zu evaluatedAt geschlossen sind; dieselben Produktmodule wie Chart und Messung.
-export function evaluateCase(c,fixture,evaluatedAt){
+export function evaluateCase(c,fixture,evaluatedAt,options={}){
+ const {nearTouch,bridgeClosures}={...DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,...options};
  const m5=closedChecklistCandles(fixture.candles.m5,'5m',evaluatedAt),m1=closedChecklistCandles(fixture.candles.m1,'1m',evaluatedAt);
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(INSTRUMENT,'5m'));
  const context=createOrderBlockReactionContext(m1,evaluatedAt,INSTRUMENT);
@@ -52,12 +51,12 @@ export function evaluateCase(c,fixture,evaluatedAt){
   const orderBlock={...zone,recognizedAt,timeframe:'5M'};
   const internalFvgs=context.byDirection[c.dir===1?'long':'short'].filter(f=>f.candleTime>=startTime-INTERNAL_FVG_LOOKBACK_SECONDS
    &&f.bottom<=orderBlock.top&&f.top>=orderBlock.bottom);
-  return {role,startTime,orderBlock,internalFvgs,reaction:evaluateOrderBlockReaction(context,orderBlock,{nearTouch:nearTouchFor(role)})};
+  return {role,startTime,orderBlock,internalFvgs,reaction:evaluateOrderBlockReaction(context,orderBlock,{nearTouch:nearTouchFor(role,nearTouch),bridgeClosures})};
  });
  let pair=null;
  if(c.orderBlocks.length===2){
   const id=`dob:${INSTRUMENT}:${c.dir}:${c.orderBlocks[0]}:${c.orderBlocks[1]}`;
-  pair=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,instrument:INSTRUMENT,evaluatedAt}).pairs.find(p=>p.id===id)??null;
+  pair=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,instrument:INSTRUMENT,evaluatedAt,options:{nearTouch,bridgeClosures}}).pairs.find(p=>p.id===id)??null;
  }
  return {m1,orderBlocks,pair};
 }
