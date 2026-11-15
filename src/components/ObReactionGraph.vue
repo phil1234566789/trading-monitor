@@ -2,20 +2,20 @@
 import {computed,ref,watch} from 'vue';
 import {cssColor} from '../chartColors.js';
 
-// Rendert nur das Graphmodell aus obReactionGraph.js; Layout und Kanten 1:1 aus dem alten Prototyp-Knotenplan.
+// Rendert nur das Graphmodell aus obReactionGraph.js; Knoten = v7-Baum, Optik = alter Codex-Knotenplan.
 const props=defineProps({graph:{type:Object,required:true},dir:{type:Number,required:true},scope:{type:String,default:''}});
 
-const LAYOUT=[['start',50,8],['touch',50,73],['oldFvg',16,8],['internalOb',16,165],['fvg',50,150],['wait',16,350],
- ['reaction',83,235],['counter',83,315],['entryA',50,420],['entryB',83,420],['closed',16,515],['stop',50,515],['result',50,625]];
-const PATHS={startTouch:'M200 52V73',touchFvg:'M200 127V150',touchOld:'M140 95H132V50H124',oldInner:'M64 140V165',
- fvgWait:'M200 212V320H64V350',fvgReaction:'M200 212V224H332V235',reactionCounter:'M332 292V315',reactionA:'M332 395V407H200V420',
- reactionB:'M332 395V420',bStop:'M332 475V500H200V515',touchReject:'M140 95H130V62H1V654H110',aStop:'M200 475V515',
- stopResult:'M200 595V625',bReject:'M332 475V654H290',waitClosed:'M64 405V515',closedResult:'M64 575V640H110'};
-const SUPPORT=new Set(['touchOld','oldInner','reactionCounter']);
+// [id, x-Mitte %, top px, Breite %]; Kanten im viewBox 400×790 (x = 4 × Prozent).
+const LAYOUT=[['detect',50,8,30],['touch',50,80,36],['closed',16,86,28],['broken',50,170,38],['false',16,186,28],
+ ['reaction',50,280,36],['hold',16,370,28],['stop',62,370,52],['noDob',16,490,28],['routeA',46,490,30],['bCheck',81,490,34],
+ ['entryB',81,600,30],['result',46,690,44]];
+const SIDE=['fvgList','internalOb'];
+const PATHS={detectTouch:'M200 66V80',touchClosed:'M128 109H120',touchBroken:'M200 138V170',brokenFalse:'M124 205H120',
+ brokenReaction:'M200 242V280',reactionOb1:'M200 338V355H64V370',reactionOb2:'M200 338V355H248V370',holdNoDob:'M64 440V490',
+ stopA:'M248 425V470H184V490',stopB:'M248 425V470H324V490',bEntry:'M324 562V600',aResult:'M184 548V690',bResult:'M324 644V720H272',
+ closedResult:'M8 114H4V760H96',falseResult:'M8 209H4V760H96',side:'M260 30H276'};
 const STATUS_TEXT={visited:'● durchlaufen',unknown:'◇ offen / unbekannt','not-visited':'○ nicht besucht',alternative:'○ überholte Alternative',
  rejected:'× abgelehnt',info:'i Zusatzinfo · kein Gate'};
-// Gegner-Knoten zeigt die Gegenrichtung, alles andere die Fallrichtung.
-const nodeDir=id=>id==='counter'?-props.dir:props.dir;
 
 const colors=computed(()=>({'--long':cssColor('candleUp'),'--short':cssColor('candleDown'),'--rejected':cssColor('tradeLoss'),
  '--fill':cssColor('tradeWin')}));
@@ -24,35 +24,40 @@ const selected=ref(null);
 watch(()=>props.scope,()=>{selected.value=null;});
 const detail=computed(()=>selected.value&&props.graph.nodes[selected.value]);
 const toggle=id=>{selected.value=selected.value===id?null:id;};
+const nodeText=node=>node.sub??STATUS_TEXT[node.status];
 </script>
 
 <template>
  <section class="obg" :style="colors" @keydown.esc="selected=null">
   <h2>OB Reaktion · Knotenplan</h2>
-  <p class="goal">M5-Retest auch über 50 %: Trägt die interne M1-Struktur die Verteidigung? <strong>true / false / unknown</strong>, Entry separat. Bestehende Produktregeln bleiben unverändert.</p>
+  <p class="goal">Entscheidungsbaum v7 (Default W1): <strong>true / false / unknown</strong>, Entry separat. Zustände aus dem Produktergebnis zum Slider-Stand.</p>
   <p class="muted">Knoten anklicken → Details (Enter / Leertaste).</p>
   <div class="current"><strong>{{ graph.head }}</strong><span>{{ graph.text }}</span></div>
-  <div class="plan" aria-label="Kausaler Algorithmuspfad">
-   <svg viewBox="0 0 400 710" preserveAspectRatio="none" aria-hidden="true">
+  <div class="plan" aria-label="Kausaler Algorithmuspfad" :data-direction="dir===1?'long':'short'">
+   <svg viewBox="0 0 400 790" preserveAspectRatio="none" aria-hidden="true">
     <defs><marker id="obg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
-    <path v-for="(d,id) in PATHS" :key="id" class="edge" :d="d" marker-end="url(#obg-arrow)" :data-status="graph.edges[id]" :data-kind="SUPPORT.has(id)?'support':null"/>
+    <path v-for="(d,id) in PATHS" :key="id" class="edge" :d="d" marker-end="url(#obg-arrow)" :data-status="graph.edges[id]" :data-kind="id==='side'?'support':null"/>
    </svg>
-   <button v-for="[id,x,y] in LAYOUT" :key="id" type="button" class="node" :class="'n-'+id" :style="{left:x+'%',top:y+'px'}"
-    :data-status="graph.nodes[id].status" :data-info="graph.nodes[id].info||null" :data-direction="nodeDir(id)===1?'long':'short'"
-    :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+(graph.nodes[id].sub??STATUS_TEXT[graph.nodes[id].status])"
+   <button v-for="[id,x,y,w] in LAYOUT" :key="id" type="button" class="node" :style="{left:x+'%',top:y+'px',width:w+'%'}"
+    :data-status="graph.nodes[id].status" :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+nodeText(graph.nodes[id])"
     @click="toggle(id)">
     <span>{{ graph.nodes[id].label }}</span>
-    <small>{{ graph.nodes[id].sub ?? STATUS_TEXT[graph.nodes[id].status] }}</small>
-    <span v-if="graph.nodes[id].info&&id!=='counter'" class="meter" :data-tone="graph.nodes[id].meter?.value==null?'unknown':null"
-     role="img" :aria-label="graph.nodes[id].meter?.label??'Messung unbekannt'" :title="graph.nodes[id].meter?.label??'Messung unbekannt'">
-     <template v-if="graph.nodes[id].meter?.value==null">{{ graph.nodes[id].meter?.label??'Messung unbekannt' }}</template>
-     <template v-else><span v-for="s in graph.nodes[id].meter.segments" :key="s.word" class="seg" :style="{width:s.value+'%'}" :data-positive="s.positive"
-      :title="Number(s.value.toFixed(2))+' % '+s.word">
-      <span v-if="s.value>=25" class="seg-label"><b>{{ Number(s.value.toFixed(2)) }} %</b><span>{{ s.word }}</span></span>
-     </span></template>
-    </span>
-    <span v-if="id==='counter'" class="meter" data-tone="unknown">Messung unbekannt</span>
+    <small>{{ nodeText(graph.nodes[id]) }}</small>
    </button>
+   <div class="side">
+    <button v-for="id in SIDE" :key="id" type="button" class="node" data-info="true" :data-status="graph.nodes[id].status"
+     :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+nodeText(graph.nodes[id])+' · Zusatzinformation, kein Pflicht-Gate'"
+     @click="toggle(id)">
+     <span>{{ graph.nodes[id].label }}</span>
+     <small>{{ nodeText(graph.nodes[id]) }}</small>
+     <span v-for="(m,i) in graph.nodes[id].meters" :key="i" class="meter" :data-tone="m.value==null?'unknown':null" role="img" :aria-label="m.label" :title="(m.range?m.range+' · ':'')+m.label">
+      <template v-if="m.value==null">{{ m.label }}</template>
+      <template v-else><span v-for="s in m.segments" :key="s.word" class="seg" :style="{width:s.value+'%'}" :data-positive="s.positive">
+       <span v-if="s.value>=25" class="seg-label"><b>{{ Number(s.value.toFixed(2)) }} %</b><span>{{ s.word }}</span></span>
+      </span></template>
+     </span>
+    </button>
+   </div>
   </div>
   <p class="legend">● durchlaufen · ◇ offen / unbekannt · ○ nicht besucht · × abgelehnt · gestrichelte Seitenspur: Zusatzinfos, keine Gates</p>
   <section v-if="detail" class="details" aria-label="Knotendetails">
@@ -70,14 +75,14 @@ const toggle=id=>{selected.value=selected.value===id?null:id;};
 h2{font-size:17px;margin:4px 0}
 .goal{font-size:12px;margin:8px 0}.muted{color:var(--muted);margin:8px 0}
 .current{font-size:12px;display:grid;gap:4px;padding:8px;background:var(--surface)}
-.plan{position:relative;width:100%;height:710px;margin-top:8px}
+.plan{position:relative;width:100%;height:790px;margin-top:8px}
 .plan>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .edge{fill:none;stroke:#65747e;stroke-width:1.5;opacity:.35;stroke-dasharray:4 4}
 .edge[data-status="visited"]{stroke:var(--accent);stroke-width:3;opacity:1;stroke-dasharray:none}
 .edge[data-status="unknown"]{opacity:.8}
 .edge[data-status="rejected"]{stroke:var(--rejected);stroke-width:3;opacity:1;stroke-dasharray:none}
 .edge[data-kind="support"]{stroke-dasharray:3 4;stroke-width:1.5;opacity:.8}
-.node{position:absolute;transform:translateX(-50%);width:30%;padding:5px 3px;min-height:44px;font:12px/1.2 system-ui,sans-serif;
+.node{position:absolute;transform:translateX(-50%);padding:5px 3px;min-height:44px;font:12px/1.2 system-ui,sans-serif;
  color:#eff3f4;border:1px solid #65747e;border-radius:4px;background:var(--surface);z-index:1;cursor:pointer}
 .node small{display:block;margin-top:3px;font-size:10px;color:var(--muted);white-space:pre-line}
 .node:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -86,13 +91,13 @@ h2{font-size:17px;margin:4px 0}
 .node[data-status="not-visited"],.node[data-status="alternative"]{opacity:.45;background:#191e22}
 .node[data-status="rejected"]{border-color:var(--rejected);background:#50262c;color:#ffd9d7}
 .node[aria-expanded="true"]{outline:2px solid #ffd54f;outline-offset:2px}
-.node[data-direction="long"]>span:first-child{color:var(--long)}
-.node[data-direction="short"]>span:first-child{color:var(--short)}
-.node[data-info]{font-size:11px;min-height:66px}
-.node[data-info] small{color:#eff3f4}
-.n-fvg{width:36%;min-height:54px}.n-counter{width:34%;min-height:80px;font-size:11px}
-.n-stop{width:40%;min-height:80px}.n-result{width:45%;min-height:80px}
-.meter{display:flex;min-height:28px;margin:4px 0 0;overflow:hidden;border-radius:2px;color:#fff;border-top:1px dashed #88949c}
+.plan[data-direction="long"] .node>span:first-child{color:var(--long)}
+.plan[data-direction="short"] .node>span:first-child{color:var(--short)}
+.side{position:absolute;left:68%;top:8px;width:30%;max-height:350px;overflow:auto;display:flex;flex-direction:column;gap:10px;z-index:1;
+ border-left:1px dashed #65747e;padding-left:4px}
+.side .node{position:static;transform:none;width:100%;font-size:11px;min-height:66px;border-style:dashed}
+.side .node small{color:#eff3f4}
+.meter{display:flex;min-height:24px;margin:4px 0 0;overflow:hidden;border-radius:2px;color:#fff}
 .meter[data-tone="unknown"]{align-items:center;justify-content:center;font-size:10px;background:#303239}
 .seg{display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden;background:#574738}
 .seg[data-positive="true"]{background:color-mix(in srgb,var(--fill) 45%,#000)}

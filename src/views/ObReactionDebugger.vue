@@ -10,7 +10,7 @@ import {cssColor,cssColorScaled} from '../chartColors.js';
 import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice} from '../format.js';
 import {OB_REACTION_CASES,loadCaseFixture,evaluateCase,caseSteps} from '../obReactionDebuggerCases.js';
-import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS} from '../doubleOrderBlocks.js';
+import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOrderBlocks.js';
 import {obReactionGraph,reasonText,fvgFillMeter} from '../obReactionGraph.js';
 import ObReactionGraph from '../components/ObReactionGraph.vue';
 
@@ -24,8 +24,12 @@ const result=computed(()=>fixture.value&&evaluateCase(current.value,fixture.valu
 // Knotenplan zeigt standardmäßig den Entry-tragenden OB (OB2 bzw. Einzel-OB); bei DOBs ist OB1 umschaltbar.
 const graphRole=ref('second');
 watch(caseId,()=>{graphRole.value='second';});
-const graph=computed(()=>result.value&&obReactionGraph({dir:current.value.dir,m1:result.value.m1,evaluatedAt:evaluatedAt.value,
- entry:result.value.orderBlocks.find(o=>o.role===graphRole.value)}));
+const graph=computed(()=>{
+ if(!result.value)return null;
+ const {orderBlocks,m1,pair}=result.value,entry=orderBlocks.find(o=>o.role===graphRole.value);
+ return obReactionGraph({dir:current.value.dir,m1,evaluatedAt:evaluatedAt.value,entry,pair,partner:orderBlocks.find(o=>o!==entry)??null,
+  nearTouch:reactionOptionsFor(graphRole.value,{nearTouch:nearTouch.value}).nearTouch});
+});
 
 // M5 kommt nativ aus derselben Fixture (closedChecklistCandles in evaluateCase); Reaktion und FVG-Füllung bleiben M1.
 const tf=ref('m1');

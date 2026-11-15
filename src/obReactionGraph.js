@@ -4,23 +4,25 @@ import {m1FvgFullyFilled} from './m1FvgEntrySequence.js';
 import {formatBerlinTime} from './berlinTime.js';
 import {fmtPrice} from './format.js';
 
-// Knotenplan des OB-Reaktions-Debuggers: leitet jeden Knotenzustand nur aus dem v7-Produktergebnis
-// (evaluateCase → evaluateOrderBlockReaction) zum Slider-Stand ab; die Komponente rendert nur.
+// Knotenplan des OB-Reaktions-Debuggers: Knoten = v7-Entscheidungsbaum (Default W1), Zustände nur aus dem
+// Produktergebnis (evaluateCase → evaluateOrderBlockReaction/detectDoubleOrderBlocks) zum Slider-Stand.
 export const REASON_TEXT={
  noContact:'noch kein Retest',awaitingFvg:'Retest da, noch keine neue FVG',marketClosed:'Markt geschlossen, OB verfallen',
  missingHistory:'M1-Historie lückenhaft',m5OrderBlockBroken:'M5-Gegenkante gebrochen',invalidOrderBlock:'OB ungültig',
  entryUnavailable:'kein Entry aus der FVG',entryBPending:'wartet auf Entry-b-Bestätigung',entryBUnknown:'Entry b unbekannt',
  entryBOrderBlockBroken:'M1-OB der FVG gebrochen',entryBOrderBlockTooDeep:'M1-OB über 50 % eingestochen',
- retestEpisodeUnresolved:'Retest-Extrem-SL nicht spezifiziert',partialOverlapOpen:'interne FVG nur teilweise im OB',
+ retestEpisodeUnresolved:'Retest-Extrem-SL nicht spezifiziert',partialOverlapOpen:'interne FVG nur teilweise in der OB',
  internalFvgHistoryMissing:'Füllhistorie interner FVG fehlt',stopNotBeyondEntry:'SL liegt nicht hinter dem Entry',
 };
-const STOP_REASONS=new Set(['retestEpisodeUnresolved','partialOverlapOpen','internalFvgHistoryMissing','stopNotBeyondEntry']);
 export const reasonText=reason=>REASON_TEXT[reason]??reason;
 
 const adjective=dir=>dir===1?'bullische':'bärische';
 const price=p=>fmtPrice(p,2),time=t=>formatBerlinTime(t);
 const range=z=>`${price(z.bottom)}–${price(z.top)}`;
 const ROUTE_STATUS={entry:'visited',rejected:'rejected',unknown:'unknown',pending:'unknown'};
+const STOP_BRANCH={'m5-edge':'interne FVG offen → ferne M5-Kante',retestExtreme:'keine offen → Retest-Extrem',
+ partialOverlapOpen:'nur teilweise überlappend → unknown',retestEpisodeUnresolved:'keine offen → Retest-Extrem (T6) → unknown',
+ internalFvgHistoryMissing:'Füllhistorie fehlt → unknown',stopNotBeyondEntry:'SL nicht hinter dem Entry → unknown'};
 
 // Füllgrad bzw. Einstich über denselben Messhelfer wie die Reaktion; ohne Kerze seit Bekanntwerden ehrlich unbekannt.
 export const fvgFillMeter=(fvg,m1)=>zoneMeter(fvg,fvg.direction==='long'?1:-1,m1,'fvg');
@@ -37,108 +39,107 @@ function zoneMeter(zone,dir,m1,kind){
   segments:[{value,word:words[0],positive:!broken},{value:100-value,word:words[1],positive:false}].filter(s=>s.value>0)};
 }
 
+// Seitenspur: Zusatzinfos ohne Gate-Wirkung (interne FVGs mit Füllgrad, M1-OB der jüngsten internen FVG).
 function sideTrack(dir,entry,m1){
- const {reaction:r}=entry,cut=r?.contact?.candleTime;
- // Nur vor dem Retest bekannte interne FVGs zählen für den SL (evaluateReactionStop); die Reaktions-FVG ist keine davon.
- const fvgs=(entry.internalFvgs??[]).filter(f=>f!==r?.fvg&&(cut==null||f.recognizedAt<=cut)),fvg=fvgs.at(-1),ob=fvg?.orderBlock;
- const oldFvg={label:`Interne ${adjective(dir)} M1-FVG?`,info:true,status:fvg?'visited':'info',
-  sub:fvg?range(fvg):'kein Beleg',meter:fvg?zoneMeter(fvg,dir,m1,'fvg'):null,
-  detail:fvg?[`${fvgs.length} interne FVG bis zum Retest bekannt; gezeigt die jüngste, bekannt ${time(fvg.recognizedAt)}.`,
-   'Offen und komplett im OB → SL an der M5-Kante; nur teilweise drin → SL unknown.']
-   :['Keine interne gleichgerichtete M1-FVG im OB bekannt. Das ist kein false.']};
+ const r=entry.reaction,fvgs=(entry.internalFvgs??[]).filter(f=>f!==r?.fvg),ob=fvgs.at(-1)?.orderBlock;
+ const fvgList={label:`Interne ${adjective(dir)} M1-FVGs`,info:true,status:fvgs.length?'visited':'info',
+  sub:fvgs.length?`${fvgs.length} in der M5-OB`:'keine bekannt',meters:fvgs.map(f=>({...zoneMeter(f,dir,m1,'fvg'),range:range(f)})),
+  detail:fvgs.length?[...fvgs.map(f=>`${range(f)} · bekannt ${time(f.recognizedAt)} · ${zoneMeter(f,dir,m1,'fvg').label}`),
+   'Für den SL zählen nur vor dem Retest bekannte; offen und komplett in der OB → ferne M5-Kante.']
+   :['Keine interne gleichgerichtete M1-FVG in der M5-OB bekannt.']};
  const meter=ob?zoneMeter(ob,dir,m1,'ob'):null;
- const internalOb={label:`Interner ${dir===1?'bullischer':'bärischer'} M1-OB?`,info:true,status:ob?'visited':'info',
+ const internalOb={label:`Interner ${dir===1?'bullischer':'bärischer'} M1-OB`,info:true,status:ob?'visited':'info',
   sub:ob?`${range(ob)}\n${meter.value===null?'Messung unbekannt':!meter.touched?'noch nicht berührt':meter.broken?'gebrochen':'gehalten'}`:'kein Beleg',
-  meter:ob?(meter.touched?meter:{value:null,label:'Messung unbekannt',segments:[]}):null,
+  meters:ob?[meter.touched?meter:{value:null,label:'Messung unbekannt',segments:[]}]:[],
   detail:ob?[`M1-OB der jüngsten internen FVG, ${range(ob)}.`,meter.label,'Zusatzbeleg, kein Gate in v7.']
-   :['Kein interner M1-OB zugeordnet. Der M1-OB der Reaktions-FVG gehört zu Entry b.']};
- return {oldFvg,internalOb};
+   :['Kein interner M1-OB zugeordnet. Der M1-OB der Reaktions-FVG gehört zu Route b.']};
+ return {fvgList,internalOb};
 }
 
-// Ausgabe = früheste Entry-Route; sonst der offene bzw. abgelehnte Zustand.
-function output(r,routeMap){
- if(!r)return {status:'pending',route:null};
- if(r.state==='false')return {status:'rejected',route:null};
- if(r.reason==='marketClosed')return {status:'unknown',route:null};
+// Ausgabe = früheste Entry-Route; sonst offen bzw. abgelehnt. unknown bleibt sichtbar, solange das Produkt es meldet.
+function output(r,routeMap,first){
+ if(first)return {status:'kein Entry',route:null};
+ if(!r||r.state==='unknown'&&r.reason!=='marketClosed')return {status:'pending',route:null};
+ if(r.state==='false'||r.reason==='marketClosed')return {status:'rejected',route:null};
  const routes=Object.entries(routeMap);
  const entry=routes.filter(([,x])=>x.status==='entry').sort(([,x],[,y])=>x.entryTime-y.entryTime)[0];
  if(entry)return {status:'entry',route:entry[0],...entry[1]};
- if(routes.length&&routes.every(([,x])=>x.status==='rejected'))return {status:'rejected',route:null};
- const open=routes.find(([,x])=>x.status==='unknown')??routes.find(([,x])=>x.status==='pending');
- return open?{status:open[1].status,route:open[0]}:{status:'pending',route:null};
+ if(routes.every(([,x])=>x.status==='rejected'))return {status:'rejected',route:null};
+ const open=routes.find(([,x])=>x.status==='pending')??routes.find(([,x])=>x.status==='unknown');
+ return {status:open[1].status,route:open[0]};
 }
 
-function routeNode(name,route,live){
- const status=live?ROUTE_STATUS[route.status]:'not-visited';
- const sub=!live?'○ nicht besucht':route.status==='entry'?`${price(route.entryPrice)} · ${time(route.entryTime)}`
-  :`${route.status} · ${reasonText(route.reason)}`;
- const detail=!live?['Route wird erst mit einer Reaktion true geprüft.']:[
-  route.status==='entry'?`Entry ${price(route.entryPrice)} um ${time(route.entryTime)}, SL ${price(route.stopLoss)}.`
-   :`${route.status}: ${reasonText(route.reason)}${route.knownAt!=null?' · ab '+time(route.knownAt):''}.`,
-  route.entryCandidate?`Kandidat ${price(route.entryCandidate.entryPrice)} um ${time(route.entryCandidate.entryTime)}; ohne belegten SL kein Entry.`:null,
-  name==='a'?'Route a: Entry am Schluss der Reaktions-FVG.':'Route b: Retest der FVG; nach Vollfüllung darf ihr M1-OB höchstens 50 % eingestochen werden.',
- ].filter(Boolean);
- return {label:`Entry ${name}`,status,sub,detail};
+function routeEntry(x,unvisited){
+ if(!x)return {status:'not-visited',sub:'○ nicht besucht',detail:[unvisited]};
+ return {status:ROUTE_STATUS[x.status],sub:x.status==='entry'?`${price(x.entryPrice)} · ${time(x.entryTime)}`:`${x.status} · ${reasonText(x.reason)}`,
+  detail:[x.status==='entry'?`Entry ${price(x.entryPrice)} um ${time(x.entryTime)}, SL ${price(x.stopLoss)}.`:`${x.status}: ${reasonText(x.reason)}.`,
+   x.entryCandidate?`Kandidat ${price(x.entryCandidate.entryPrice)} um ${time(x.entryCandidate.entryTime)}; ohne belegten SL kein Entry.`:null].filter(Boolean)};
 }
 
-export function obReactionGraph({dir,entry,m1,evaluatedAt}){
- const {orderBlock:ob,reaction:r}=entry,adj=adjective(dir),enemy=adjective(-dir);
+// role/pair/partner: OB1 eines DOB endet im Hold-Gate, OB2 bzw. Einzel-OB in SL und Entry-Routen.
+export function obReactionGraph({dir,entry,m1,evaluatedAt,nearTouch=false,pair=null,partner=null}){
+ const {orderBlock:ob,reaction:r,role='second'}=entry,adj=adjective(dir);
  const contact=r?.contact,fvg=r?.fvg,rejected=r?.state==='false',closed=r?.reason==='marketClosed',live=r?.state==='true';
- // OB1 eines DOB trägt keinen Entry (pairEntries nimmt nur OB2), also auch keine Routen im Plan.
- const routes=live&&entry.role!=='first'?r.routes:{},out=output(r,routes);
- const nodes={
-  start:{label:`${dir===1?'Long':'Short'} prüfen`,status:'visited',sub:'● durchlaufen',
-   detail:[ob?`M5-OB ${range(ob)}, bekannt ${time(ob.recognizedAt)}.`:'M5-OB noch nicht bekannt.']},
-  touch:{label:`${dir===1?'Bullischer':'Bärischer'} M5-OB-${contact?.status==='nearTouch'?'Near-Touch':'Touch'}`,
-   status:contact?'visited':rejected?'rejected':closed?'not-visited':'unknown',
-   sub:contact?`Kerze ${time(contact.candleTime)}`:!ob?'OB noch nicht bekannt':rejected?'gebrochen ohne Touch':'◇ offen / unbekannt',
-   detail:[contact?`${contact.status} mit der M1-Kerze ${time(contact.candleTime)}, bekannt ${time(contact.knownAt)}.`:'Noch kein (Near-)Touch einer geschlossenen M1-Kerze.',
-    'Near-Touch zählt nur mit eingeschaltetem Schalter (Produkt-Default W1: nur exakter Touch).']},
-  fvg:{label:`Neue ${adj} M1-FVG?`,status:fvg?'visited':rejected&&contact?'rejected':contact&&!closed&&!rejected?'unknown':'not-visited',
-   sub:fvg?`bekannt ${time(fvg.recognizedAt)}`:contact&&!closed&&!rejected?'◇ offen / unbekannt':'○ nicht besucht',
-   detail:['Erste gleichgerichtete M1-FVG nach dem Touch macht die Reaktion true; bricht vorher die M5-Gegenkante, false.']},
-  wait:{label:`Noch keine neue ${adj} M1-FVG`,status:fvg?'alternative':contact&&r.state==='unknown'&&!closed?'unknown':'not-visited',
-   sub:fvg?'überholt':r?.state==='unknown'&&contact&&!closed?'Reaktion unknown':'○ nicht besucht',
-   detail:['Reaktion unknown: spätere Bestätigung nicht ausgeschlossen.']},
-  reaction:{label:`${adj[0].toUpperCase()+adj.slice(1)} M1-FVG bekannt`,status:fvg?'visited':'not-visited',
-   sub:fvg?range(fvg):'○ nicht besucht',
-   detail:fvg?[`Reaktions-FVG ${range(fvg)}, bekannt ${time(fvg.recognizedAt)} → Reaktion true.`,
-    r.penetration?.status==='ready'?`Retest bis ${Number((r.penetration.maxPenetrationFraction*100).toFixed(2))} % in den M5-OB.`:null].filter(Boolean):['Noch keine Reaktions-FVG.']},
-  counter:{label:`☠️ ${enemy} M1-FVG im Weg?`,info:true,status:'info',sub:'nicht in v7 · kein Gate',
-   detail:['v7 prüft keine gegnerische FVG zwischen Reaktion und Entry. Info-Knoten aus dem alten Prototyp, ohne Messung.']},
-  entryA:routeNode('a',routes.a,live&&!!routes.a),
-  entryB:routeNode('b',routes.b,live&&!!routes.b),
-  closed:{label:'Markt geschlossen',status:closed?'rejected':'not-visited',sub:closed?'OB verfallen · unknown':'○ nicht besucht',
-   detail:['Ohne bridgeClosures verfällt ein OB, der bis zum ersten XAU-Marktschluss nach seiner Erkennung nicht reagiert hat.']},
- };
- const entries=Object.values(routes).filter(x=>x.status==='entry'),stopUnknown=Object.values(routes).find(x=>x.status==='unknown'&&STOP_REASONS.has(x.reason));
- const noEntry=rejected||closed||out.status==='rejected';
- nodes.stop={label:'SL-Wahl',status:entries.length?'visited':noEntry?'not-visited':'unknown',
-  sub:entries.length?`${price(entries[0].stopLoss)}\nM5-Kante`:stopUnknown?`SL unknown\n${reasonText(stopUnknown.reason)}`
-   :noEntry?'kein Entry / kein SL':'SL pending / unknown',
-  detail:['SL an der M5-Kante nur mit offener interner FVG komplett im OB; das Retest-Extrem ist in v7 nicht spezifiziert → unknown.',
-   ...Object.entries(routes).map(([n,x])=>`Route ${n}: ${x.status==='entry'?'SL '+price(x.stopLoss)+' ('+x.stopAnchor+')':reasonText(x.reason)}`)]};
- nodes.result={label:out.status==='entry'?'Entry':out.status,
-  status:out.status==='entry'?'visited':out.status==='rejected'?'rejected':'unknown',
-  sub:out.status==='entry'?`Preis ${price(out.entryPrice)}\nZeit ${time(out.entryTime)}\nSL ${price(out.stopLoss)}`
-   :closed?'OB verfallen':rejected?'Reaktion false':out.route?`Route ${out.route} · ${out.status}`:'warte · noch kein Tupel',
-  detail:[`Reaktion ${r?.state??'–'}${r?.reason?' · '+reasonText(r.reason):''}.`,'Kein Trade-Outcome, kein Target: nur Reaktion und Entry-Routen.']};
- Object.assign(nodes,sideTrack(dir,entry,m1));
+ const first=role==='first',routes=live&&!first?r.routes:{},out=output(r,routes,first),open=s=>s?'unknown':'not-visited';
+ const n={};
+ n.detect={label:`${dir===1?'Bullische':'Bärische'} M5-OB erkannt`,status:ob?'visited':'unknown',sub:ob?`${range(ob)} · ${time(ob.recognizedAt)}`:'noch nicht bekannt',
+  detail:[ob?`M5-OB ${range(ob)}, bekannt ${time(ob.recognizedAt)}.`:'Die M5-OB ist zu diesem Stand noch nicht bekannt.']};
+ n.touch={label:nearTouch?'Exakt oder Near ≤10 % vor dem nächsten Marktschluss?':'Exakter Touch vor dem nächsten Marktschluss?',
+  status:contact?'visited':closed?'rejected':open(ob&&!rejected),
+  sub:contact?`${contact.status==='nearTouch'?'Near-Touch':'Touch'} ${time(contact.candleTime)}`:closed?'nein':ob&&!rejected?'◇ offen':'○ nicht besucht',
+  detail:[contact?`${contact.status} mit der M1-Kerze ${time(contact.candleTime)}, bekannt ${time(contact.knownAt)}.`:'Noch kein Touch einer geschlossenen M1-Kerze.',
+   nearTouch?'Near-Touch-Schalter an: ≤10 % der OB-Höhe vor der Kante zählt.':'Produkt-Default W1: nur exakter Touch.']};
+ n.closed={label:'Markt geschlossen, OB verfallen',status:closed?'rejected':'not-visited',sub:closed?'Reaktion unknown':'○ nicht besucht',
+  detail:['Ohne bridgeClosures verfällt eine OB, die bis zum ersten XAU-Marktschluss nach ihrer Erkennung nicht reagiert hat.']};
+ n.broken={label:`Gegenkante auf M1 gebrochen, bevor eine neue ${adj} M1-FVG bekannt ist?`,
+  status:rejected?'rejected':fvg?'visited':open(contact&&!closed),
+  sub:rejected?`ja · ${time(r.knownAt)}`:fvg?'nein':contact&&!closed?'◇ offen':'○ nicht besucht',
+  detail:['Bricht eine M1-Kerze die ferne M5-Kante, bevor eine neue gleichgerichtete M1-FVG bekannt ist, ist die Reaktion false.',
+   'Ein Bruch in derselben Kerze wie der erste Touch zählt ebenfalls als false.']};
+ n.false={label:'Reaktion false',status:rejected?'rejected':'not-visited',sub:rejected?reasonText(r.reason):'○ nicht besucht',
+  detail:[rejected?`M5-Gegenkante gebrochen, bekannt ${time(r.knownAt)}.`:'Kein Bruch vor der Reaktions-FVG.']};
+ n.reaction={label:`Reaktion true (neue ${adj} M1-FVG)`,status:live?'visited':'not-visited',sub:live?`${range(fvg)} · ${time(fvg.recognizedAt)}`:'○ nicht besucht',
+  detail:live?[`Reaktions-FVG ${range(fvg)}, bekannt ${time(fvg.recognizedAt)}.`,
+   r.penetration?.status==='ready'?`Retest bis ${Number((r.penetration.maxPenetrationFraction*100).toFixed(2))} % in die M5-OB.`:null].filter(Boolean):['Noch keine Reaktions-FVG.']};
+ // Das Produkt zählt ein gescheitertes Hold-Gate nur in stats, nicht je Paar: ohne Paar bleibt der Grund offen.
+ const holdLive=first&&live,partnerLive=partner?.reaction?.state==='true',noDob=holdLive&&!pair&&partnerLive;
+ n.hold={label:'OB1: Retest-Extrem hält bis OB2-Reaktion?',status:!holdLive?'not-visited':pair?'visited':'unknown',
+  sub:!holdLive?'○ nicht besucht':pair?`ja · ${pair.firstRetestHold.status}`:noDob?'kein DOB · Grund offen':'wartet auf OB2-Reaktion',
+  detail:[pair?`DOB erkannt um ${time(pair.recognizedAt)}; Hold ${pair.firstRetestHold.status}.`
+   :noDob?'OB2 hat reagiert, aber kein DOB: Hold gescheitert oder anderes Gate (Retest-Tag, Preislücke, kein Entry). Das Produkt nennt den Grund nicht je Paar.'
+   :'Hold wird bis zur OB2-Reaktion gemessen.']};
+ n.noDob={label:'kein DOB',status:open(noDob),sub:noDob?'◇ Grund offen':'○ nicht besucht',detail:n.hold.detail};
+ const list=Object.values(routes),entries=list.filter(x=>x.status==='entry');
+ const stopKey=list.map(x=>x.status==='entry'?x.stopAnchor:x.reason).find(k=>STOP_BRANCH[k]),slLive=live&&!first;
+ n.stop={label:'OB2: SL beim Entry',status:!slLive?'not-visited':entries.length?'visited':'unknown',
+  sub:!slLive?'○ nicht besucht':entries.length?`${price(entries[0].stopLoss)}\n${STOP_BRANCH[entries[0].stopAnchor]??entries[0].stopAnchor}`
+   :stopKey?`SL unknown\n${STOP_BRANCH[stopKey]}`:'noch kein Entry-Zeitpunkt',
+  detail:['Interne FVG offen und komplett in der OB → ferne M5-Kante; nur teilweise überlappend → unknown; keine offen → Retest-Extrem vom Kontakt bis zum Entry (kommt mit T6, bis dahin unknown).',
+   ...Object.entries(routes).map(([k,x])=>`Route ${k}: ${x.status==='entry'?'SL '+price(x.stopLoss)+' · '+(STOP_BRANCH[x.stopAnchor]??x.stopAnchor):reasonText(x.reason)}`)]};
+ const a=routes.a,b=routes.b,bRejected=b?.status==='rejected';
+ n.routeA={label:'Route a: Entry bei FVG-Bestätigung',...routeEntry(a,'Erst mit Reaktion true.')};
+ // b rejected kommt aus dem 50-%-Gate oder einem M1-OB-Bruch; sonst ist das Gate (noch) nicht ausgelöst.
+ n.bCheck={label:'Route b: M1-OB der FVG nach voller Füllung >50 % durchstochen?',status:!b?'not-visited':bRejected?'rejected':b.status==='pending'?'unknown':'visited',
+  sub:!b?'○ nicht besucht':bRejected?`ja · ${reasonText(b.reason)}`:b.status==='pending'?'◇ offen':'nein',
+  detail:[b?`Route b: ${b.status}${b.reason?' · '+reasonText(b.reason):''}${b.knownAt!=null?' · ab '+time(b.knownAt):''}.`:'Erst mit Reaktion true.',
+   'Die 50 % betreffen den M1-OB der Reaktions-FVG nach ihrer vollen Füllung, nicht den M5-Retest.']};
+ n.entryB={label:'Entry b',...(bRejected?routeEntry(null,'Route b abgelehnt.'):routeEntry(b,'Erst mit Reaktion true.'))};
+ n.result={label:out.status==='entry'?'Entry':out.status,status:out.status==='entry'?'visited':out.status==='rejected'?'rejected':first?'not-visited':'unknown',
+  sub:out.status==='entry'?`Route ${out.route} · ${price(out.entryPrice)}\n${time(out.entryTime)} · SL ${price(out.stopLoss)}`
+   :first?'OB1 trägt keinen Entry':closed?'OB verfallen':rejected?'Reaktion false':out.route?`Route ${out.route} · ${out.status}`:'warte · noch kein Tupel',
+  detail:[`Reaktion ${r?.state??'–'}${r?.reason?' · '+reasonText(r.reason):''}.`,'Ausgabe pending / entry / rejected; unknown, solange der SL nicht belegt ist.']};
+ Object.assign(n,sideTrack(dir,entry,m1));
 
- const e=s=>s==='visited'||s==='rejected'?s:'not-visited';
- const edges={
-  startTouch:contact?'visited':'unknown',touchFvg:contact?'visited':'not-visited',fvgWait:nodes.wait.status,
-  fvgReaction:e(nodes.reaction.status),reactionCounter:'info',touchOld:'info',oldInner:'info',
-  reactionA:nodes.entryA.status,reactionB:nodes.entryB.status,
-  aStop:e(nodes.entryA.status==='visited'?'visited':''),bStop:e(nodes.entryB.status==='visited'?'visited':''),
-  stopResult:e(nodes.stop.status),bReject:nodes.entryB.status==='rejected'?'rejected':'not-visited',
-  touchReject:rejected?'rejected':'not-visited',waitClosed:closed?'rejected':'not-visited',closedResult:closed?'rejected':'not-visited',
- };
+ const v=s=>s==='visited'||s==='rejected'?s:'not-visited';
+ const edges={detectTouch:ob?'visited':'unknown',touchClosed:v(n.closed.status),touchBroken:contact?'visited':'not-visited',
+  brokenFalse:v(n.false.status),brokenReaction:v(n.reaction.status),reactionOb1:holdLive?'visited':'not-visited',
+  reactionOb2:slLive?'visited':'not-visited',holdNoDob:n.noDob.status,stopA:n.routeA.status,stopB:n.bCheck.status==='rejected'?'visited':n.bCheck.status,
+  bEntry:n.entryB.status,aResult:v(n.routeA.status),bResult:v(n.entryB.status),closedResult:v(n.closed.status),falseResult:v(n.false.status),side:'info'};
  const head=`Intern: ${r?.state??'unknown'} · Ausgabe: ${out.status}${out.route?` (Route ${out.route})`:''}`;
  const text=!ob?'M5-OB noch nicht bekannt.':!r||r.reason==='noContact'?'M5-OB bekannt; noch kein Retest.'
-  :live?`Reaktion bestätigt um ${time(r.knownAt)}; Entry-Routen separat.`:rejected?`Reaktion false um ${time(r.knownAt)}: ${reasonText(r.reason)}.`
-  :`Reaktion unknown: ${reasonText(r.reason)}.`;
- return {head,text,nodes,edges,history:history(ob,r,routes,evaluatedAt)};
+  :live?`Reaktion bestätigt um ${time(r.knownAt)}; ${first?'OB1 geht in das Hold-Gate.':'Entry-Routen separat.'}`
+  :rejected?`Reaktion false um ${time(r.knownAt)}: ${reasonText(r.reason)}.`:`Reaktion unknown: ${reasonText(r.reason)}.`;
+ return {head,text,nodes:n,edges,history:history(ob,r,routes,evaluatedAt)};
 }
 
 // Damalige Beurteilungen aus den knownAt-Zeitpunkten des aktuellen Ergebnisses; das Produkt ist zeitpunkttreu.
