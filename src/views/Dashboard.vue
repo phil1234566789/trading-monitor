@@ -1,5 +1,6 @@
 <script setup>
 import {watchM1FvgPreviewContext} from '../composables/useM1FvgPreviewContext.js';
+import {useJournalTpFinder} from '../composables/useJournalTpFinder.js';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { liveMonthViewId } from "../liveWatcherMonth.js";
@@ -373,6 +374,7 @@ const entryFvgMessage=ref('');
 const entryFvgPreview=ref(null);
 let entryFvgToken=0;
 function onPositionDraftStarted() {
+  tpFinder.clear();
   disarmChartClick();
   entryFvgMessage.value='';
   entryFvgPreview.value=null;
@@ -404,6 +406,7 @@ function onEditRequest(t) {
 // entfernt) — hoveredModalEvidenceItem/-TargetItem blieben sonst für immer auf dem letzten Stand
 // hängen, ein Phantom-Highlight im Chart, das sich nie mehr von selbst löst.
 function closeTradeEditModal() {
+  tpFinder.clear();
   entryFvgPreview.value=null;
   if(entryFvgSelection.value)disarmChartClick();
   editingTradeId.value = null;
@@ -470,6 +473,7 @@ const tscBootstrapArmed = ref(false);
 // Stellen geworden) — ein Objekt aus Name -> Ref, statt jede Ref einzeln in jeder Funktion zu
 // nennen, hält das wartbar, wenn ein achter Arm-Zustand dazukommt.
 const ARM_STATES = {
+  journalTp:ref(null),
   entryFvgImmediate:ref(null),
   entryFvgRetestReaction:ref(null),
   target: targetAddTrade,
@@ -491,6 +495,7 @@ function clearArmStatesExcept(keep) {
 // wird er in der Kopfleiste (App.vue), weil der Modus-Umschalter dort sitzt; clearArmStatesExcept
 // lässt immer höchstens einen scharf, deshalb reicht der erste Treffer.
 const ARM_HINTS = {
+  journalTp:t=>`TP suchen · pinke M1-Trefferkerze wählen · DR #${t.dealingRangeId}`,
   entryFvgImmediate:t=>`M1-FVG-Impulskerze wählen · neue Position zu DR #${t.dealingRangeId} · a: FVG-Schluss`,
   entryFvgRetestReaction:t=>`M1-FVG-Impulskerze wählen · neue Position zu DR #${t.dealingRangeId} · b: Retest + Richtungskerze`,
   target: (t) => `🎯 nächster Klick auf Pivot/OB fügt Trade #${t.id} ein Target hinzu`,
@@ -1586,6 +1591,9 @@ onUnmounted(() => window.removeEventListener("click", closeMenusOutside));
 // refreshTrades()-Aufrufe unten), kein eigenes intervalMs also kein Hintergrund-Poll (siehe
 // usePolledFetch.js). Externe Änderungen lädt der Button „Daten aktualisieren“ gezielt nach.
 const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrades(currentSymbol.value, selectedTradingAccountId.value), dashboardDataOptions);
+const tpFinder=useJournalTpFinder({modal:tradeEditModalRef,bar:currentBar,symbol:currentSymbol,editing:editingTrade,
+  replay:replayUntil,armed:armedAction,arm:armChartClick,disarm:disarmChartClick});
+const {selection:tpSelection,message:tpMessage,choices:tpChoices}=tpFinder;
 useJournalRoute(()=>route.query,{trades,currentSymbol,selectedTradingAccountId,showTrades,replayActive,replayTime,open:onEditRequest,select:onSelectTrade});
 // "Isolieren"-Modus (Task trade-journal-dr-im-chart-isolieren-zeilen-button, 2026-08-28): Philip
 // tat sich schwer, Journal-Zeilen den richtigen Chart-Objekten zuzuordnen, wenn mehrere Trades im
@@ -2269,6 +2277,8 @@ watch(selectedTradingAccountId, () => {
     :armed-position-id="armedAction?.payload?.id"
     :armed-action="armedTradeAction"
     :entry-fvg-message="entryFvgMessage"
+    :current-bar="currentBar" :tp-message="tpMessage" :tp-choices="tpChoices"
+    @request-tp="tpFinder.request" @choose-tp="tpFinder.choose"
     :current-symbol="currentSymbol"
     @close="closeTradeEditModal"
     @saved="refreshTrades"
@@ -2384,6 +2394,7 @@ watch(selectedTradingAccountId, () => {
     :measure-mode-active="chartMode === 'measure'"
     :target-mode-active="anyArmStateActive"
     :entry-fvg-selection="entryFvgSelection"
+    :journal-tp-selection="tpSelection"
     :entry-fvg-preview="entryFvgPreview"
     :confirmation-mode-active="confirmationAddTrade != null || rangeConfirmationAddTrade != null || tscBootstrapArmed"
     :confluence-mode-active="confluenceAddTrade != null || rangeConfluenceAddTrade != null"
@@ -2399,6 +2410,7 @@ watch(selectedTradingAccountId, () => {
     @close-rsi-divergence-stats="showRsiDivergenceStats = false"
     @select-target="onSelectTarget"
     @select-entry-fvg="onSelectEntryFvg"
+    @select-journal-tp="tpFinder.select"
     @select-setup-confirmations="onSelectSetupConfirmations"
     @select-double-order-block="onSelectDoubleOrderBlock"
     @measure-done="onMeasureDone"

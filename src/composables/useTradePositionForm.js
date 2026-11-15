@@ -37,6 +37,16 @@ export function useTradePositionForm(trade, { saved, created }) {
     if(prefill.entryTime!=null)fields.entryTimeInput.value=berlinDatetimeInput(prefill.entryTime);
     return true;
   }
+  function entryValues() {
+    return {entryPrice:fields.entryPrice.value===''?null:Number(fields.entryPrice.value),
+      entryTime:fields.entryTimeInput.value?parseBerlinDatetimeInput(fields.entryTimeInput.value,trade().entryTime):null};
+  }
+  function applyExitPrefill(prefill) {
+    if(saving.value||createdPositionId.value!=null||!Number.isFinite(prefill?.exitPrice)||!Number.isFinite(prefill?.exitTime))return false;
+    fields.exitPrice.value=prefill.exitPrice;
+    fields.exitTimeInput.value=berlinDatetimeInput(prefill.exitTime);
+    return true;
+  }
   function beginPositionDraft(prefill = {}) {
     if (saving.value || trade().dealingRangeId == null) return;
     if (!addingPosition.value) {
@@ -82,5 +92,5 @@ export function useTradePositionForm(trade, { saved, created }) {
     } catch { saveError.value = 'Speichern fehlgeschlagen. Eingaben bleiben erhalten.'; }
     finally { saving.value = false; }
   }
-  return { ...fields, ...exitDate, addingPosition, saving, saveError, createdPositionId, applyEntryPrefill, beginPositionDraft, cancelPositionDraft, save };
+  return { ...fields, ...exitDate, addingPosition, saving, saveError, createdPositionId, entryValues, applyExitPrefill, applyEntryPrefill, beginPositionDraft, cancelPositionDraft, save };
 }

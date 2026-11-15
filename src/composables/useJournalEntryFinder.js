@@ -2,7 +2,7 @@ import {ref} from 'vue';
 
 export const journalExecutionCardKey=(trade,draftKey=null)=>draftKey!=null?`draft:${draftKey}`:`position:${trade.id}`;
 export function journalCardArmedAction(arm,armedPositionId,activeKey,trade,draftKey=null){
- if(arm?.startsWith('entryFvg'))return activeKey===journalExecutionCardKey(trade,draftKey)?arm:null;
+ if(arm?.startsWith('entryFvg')||arm==='journalTp')return activeKey===journalExecutionCardKey(trade,draftKey)?arm:null;
  return draftKey==null&&armedPositionId===trade.id?arm:null;
 }
 export function useJournalEntryFinder(changed) {

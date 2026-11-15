@@ -36,6 +36,7 @@ const props = defineProps({
   // armedTradeAction, z.B. "rangeConfirmation"/"target"), sonst null — nur fürs Highlight.
   armedAction: { type: String, default: null },
   entryFvgMessage: {type:String,default:''},
+  currentBar:String,tpMessage:String,tpChoices:Array,
 });
 // Zwei getrennte "Bestätigung hinzufügen"-Anfragen (Chat 2026-07-31: "wir haben die gesamte Basis
 // um alles per Klick übernehmen zu können" — kurz zuvor per Formular ausprobiert, dann wieder
@@ -53,6 +54,7 @@ const emit = defineEmits([
   "position-draft-started",
   'position-draft-cancelled',
   'request-entry-fvg',
+  'request-tp','choose-tp',
   'entry-finder-changed',
   "deleted",
   "request-add-target",
@@ -362,13 +364,15 @@ function confirmationLabel(confirmation) {
       <p v-if="loadingExecutions" role="status" class="tem-muted">Ausführungen werden geladen …</p>
       <p v-if="executionsError" role="alert" class="tem-lesson-error">{{executionsError}} <button type="button" @click="refreshExecutions">Erneut laden</button></p>
       <TradeExecutionCard v-for="(position,index) in visibleExecutions" :key="position.id" :ref="entryFinder.refFor(journalExecutionCardKey(position))" :trade="position" :number="index+1"
-        :selected="position.id===trade.id" :current-symbol="currentSymbol" :armed-action="journalCardArmedAction(armedAction,armedPositionId,activeEntryCardKey,position)"
+        :selected="position.id===trade.id" :current-symbol="currentSymbol" :current-bar="currentBar" :range-trade="trade" :tp-message="activeEntryCardKey===journalExecutionCardKey(position)?tpMessage:''" :tp-choices="activeEntryCardKey===journalExecutionCardKey(position)?tpChoices:[]" :armed-action="journalCardArmedAction(armedAction,armedPositionId,activeEntryCardKey,position)"
+        @request-tp="payload=>emit('request-tp',payload)" @choose-tp="key=>emit('choose-tp',key)"
         :entry-fvg-message="activeEntryCardKey===journalExecutionCardKey(position)?entryFvgMessage:''"
         @finder-opened="entryFinder.open" @finder-closed="entryFinder.close" @request-entry-fvg="payload=>emit('request-entry-fvg',payload)"
         :draft-active="draftKey!=null" :can-delete="draftKey==null" @saved="onExecutionSaved" @created="onExecutionCreated" @deleted="id=>emit('deleted',id)"
         @add-evidence="addEntryEvidence" @remove-evidence="onRemoveConfirmation" @hover-evidence="item=>emit('hover-evidence',item)" />
       <TradeExecutionCard v-if="draftKey!=null" :ref="entryFinder.refFor(journalExecutionCardKey(draftBase,draftKey))" :key="'draft:'+draftKey" :trade="draftBase" :number="visibleExecutions.length+1"
-        draft :draft-key="draftKey" :current-symbol="currentSymbol" :armed-action="journalCardArmedAction(armedAction,armedPositionId,activeEntryCardKey,draftBase,draftKey)" :entry-fvg-message="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?entryFvgMessage:''"
+        draft :draft-key="draftKey" :current-symbol="currentSymbol" :current-bar="currentBar" :range-trade="trade" :tp-message="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?tpMessage:''" :tp-choices="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?tpChoices:[]" :armed-action="journalCardArmedAction(armedAction,armedPositionId,activeEntryCardKey,draftBase,draftKey)" :entry-fvg-message="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?entryFvgMessage:''"
+        @request-tp="payload=>emit('request-tp',payload)" @choose-tp="key=>emit('choose-tp',key)"
         @saved="onExecutionSaved" @created="onExecutionCreated" @cancel="cancelDraft" @finder-opened="entryFinder.open" @finder-closed="entryFinder.close"
         @request-entry-fvg="payload=>emit('request-entry-fvg',payload)" />
     </section>

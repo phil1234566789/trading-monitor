@@ -61,6 +61,7 @@ import { usePriceChartCockpit } from "../composables/usePriceChartCockpit.js";
 import { chartColors, cssColor, cssColorScaled } from "../chartColors.js";
 import { tintFvgCandles, tintM1FvgCandle } from "../fvgCandleTint.js";
 import {createM1FvgChartSelection} from '../m1FvgChartSelection.js';
+import {createJournalTpChartSelection} from '../journalTpSelection.js';
 import { chartLineWidths, lineWidth } from "../chartLineWidths.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import {
@@ -339,6 +340,7 @@ const props = defineProps({
   tradeModeActive: { type: Boolean, default: false },
   entryFvgPreview: { type: Object, default: null },
   entryFvgSelection: { type: Object, default: null },
+  journalTpSelection: {type:Object,default:null},
   // Ziel-Modus (Chat 2026-07-27: "einem Trade ein Target hinzufügen ... die Linien klickbar
   // machen") — nur innerhalb von tradeModeActive relevant, schaltet den Klick-Handler von
   // "Trade-Setup-OB anklicken" auf "Pivot/OB als Target anklicken" um (siehe Dashboard.vue: targetAddTrade).
@@ -381,6 +383,7 @@ const emit = defineEmits([
   "close-rsi-divergence-stats",
   "select-target",
   'select-entry-fvg',
+  'select-journal-tp',
   "select-setup-confirmations",
   'select-double-order-block',
   "pin-context-menu",
@@ -1924,13 +1927,17 @@ function applyCandleData() {
   const candles = tintFvgCandles(clipReplay(allCandles), snapshot ? [] : tradeSetupsMetadata.value, props.currentBar, color);
   lastCandleTime.value=candles[candles.length-1]?.time??null;
   const tinted=tintM1FvgCandle(candles, snapshot ? (props.showM1Structure ? snapshot.m1Check?.fvg : null) : m1Structure.check.value.fvg, props.currentBar, color);
-  candleSeries.setData(entryFvgPicker.paint(tinted,color,cssColor('tradeConnector')));
+  candleSeries.setData(journalTpPicker.paint(entryFvgPicker.paint(tinted,color,cssColor('tradeConnector')),cssColor('tradeConnector')));
 }
 
 const entryFvgPicker=createM1FvgChartSelection(()=>({candles:markIgnored(clipReplay(allCandles),props.symbol),
   bar:props.currentBar,replayUntil:props.replayUntil,nowSec:Math.floor(Date.now()/1000),
   selection:(props.tradeModeActive?props.entryFvgSelection:null) ?? props.entryFvgPreview?.target}));
 watch(()=>[props.entryFvgSelection,props.entryFvgPreview],()=>{if(chart&&candleSeries)applyCandleData();});
+const journalTpPicker=createJournalTpChartSelection(()=>({candles:markIgnored(clipReplay(allCandles),props.symbol),
+  bar:props.currentBar,replayUntil:props.replayUntil,nowSec:Math.floor(Date.now()/1000),
+  selection:props.tradeModeActive?props.journalTpSelection:null}));
+watch(()=>props.journalTpSelection,()=>{if(chart&&candleSeries)applyCandleData();});
 
 function closeTradeSetup2Selection() {
   void setup2.select(null);
@@ -2179,6 +2186,11 @@ onMounted(() => {
       return;
     }
     if (!props.tradeModeActive) return;
+    if(props.journalTpSelection){
+      const result=journalTpPicker.select(param.time,candleSeries.coordinateToPrice(param.point.y));
+      if(result)emit('select-journal-tp',result);
+      return;
+    }
     if(props.entryFvgSelection){
       const result=entryFvgPicker.select(param.time,candleSeries.coordinateToPrice(param.point.y));
       if(result)emit('select-entry-fvg',result);
@@ -2286,8 +2298,9 @@ onMounted(() => {
       }
       return;
     }
-    if(props.entryFvgSelection){
-      const hit=entryFvgPicker.select(chart.timeScale().coordinateToTime(x),candleSeries.coordinateToPrice(y));
+    if(props.entryFvgSelection||props.journalTpSelection){
+      const picker=props.journalTpSelection?journalTpPicker:entryFvgPicker;
+      const hit=picker.select(chart.timeScale().coordinateToTime(x),candleSeries.coordinateToPrice(y));
       chartContainerRef.value.style.cursor=hit?'pointer':'';return;
     }
     if (props.targetModeActive) {

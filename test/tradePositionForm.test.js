@@ -57,3 +57,14 @@ it('maps only execution columns and preserves null-date update semantics', () =>
   expect(tradePositionPayload({entryTime:1793908800,exitTime:1793912400,tradingAccountId:5}))
     .toEqual({triggered_at:'2026-11-05T20:00:00.000Z',exit_time:'2026-11-05T21:00:00.000Z',trading_account_id:5});
 });
+it('uses current unsaved entry values and proposes only exit fields until explicit save', async()=>{
+ const {form}=setup();form.beginPositionDraft({entryPrice:4112,entryTime:1793908800});
+ expect(form.entryValues()).toEqual({entryPrice:4112,entryTime:1793908800});
+ form.entryPrice.value=4113;expect(form.entryValues().entryPrice).toBe(4113);
+ expect(form.applyExitPrefill({exitPrice:4125,exitTime:1793912400})).toBe(true);
+ expect(form.exitPrice.value).toBe(4125);expect(form.exitTimeInput.value).toBe('2026-11-05T22:00');
+ expect(form.outcome.value).toBe('');expect(api.addPositionToDealingRange).not.toHaveBeenCalled();expect(api.updateTrade).not.toHaveBeenCalled();
+ api.addPositionToDealingRange.mockResolvedValue({id:152});await form.save();
+ expect(api.addPositionToDealingRange).toHaveBeenCalledWith(128,{fields:expect.objectContaining({entryPrice:4113,exitPrice:4125,exitTime:1793912400,outcome:null})});
+ expect(form.applyExitPrefill({exitPrice:1,exitTime:1793912400})).toBe(false);
+});

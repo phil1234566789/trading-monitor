@@ -10,15 +10,19 @@ import {accounts} from '../tradingAccounts.js';
 import ActionButton from './ui/ActionButton.vue';
 import CrudListSection from './CrudListSection.vue';
 import M1FvgEntryControls from './M1FvgEntryControls.vue';
+import JournalTpControls from './JournalTpControls.vue';
 import TradeJournalComments from './TradeJournalComments.vue';
 
 const props=defineProps({trade:{type:Object,required:true},number:Number,draft:Boolean,draftActive:Boolean,draftKey:Number,selected:Boolean,
- currentSymbol:String,armedAction:String,entryFvgMessage:String,canDelete:{type:Boolean,default:true}});
-const emit=defineEmits(['saved','created','cancel','deleted','request-entry-fvg','finder-opened','finder-closed','add-evidence','remove-evidence','hover-evidence']);
+ currentSymbol:String,currentBar:String,armedAction:String,entryFvgMessage:String,tpMessage:String,tpChoices:Array,rangeTrade:Object,canDelete:{type:Boolean,default:true}});
+const emit=defineEmits(['saved','created','cancel','deleted','request-entry-fvg','request-tp','choose-tp','finder-opened','finder-closed','add-evidence','remove-evidence','hover-evidence']);
 const finderOpen=ref(false);
+const tpOpen=ref(false);
 const cardKey=computed(()=>journalExecutionCardKey(props.trade,props.draft?props.draftKey:null));
-function closeFinder(){if(finderOpen.value){finderOpen.value=false;emit('finder-closed',cardKey.value);}}
-function toggleFinder(){if(finderOpen.value)closeFinder();else{finderOpen.value=true;emit('finder-opened',cardKey.value);}}
+const tpUnavailableReason=computed(()=>props.currentBar!=='1m'?'Nur im M1 verfügbar.':props.currentSymbol!==props.trade.instrument?`Erst zu ${props.trade.instrument} wechseln.`:'');
+function closeFinder(){if(finderOpen.value||tpOpen.value){finderOpen.value=false;tpOpen.value=false;emit('finder-closed',cardKey.value);}}
+function toggleFinder(){if(finderOpen.value)closeFinder();else{closeFinder();finderOpen.value=true;emit('finder-opened',cardKey.value);}}
+function toggleTp(){if(tpOpen.value)closeFinder();else{closeFinder();tpOpen.value=true;emit('finder-opened',cardKey.value);emit('request-tp',{cardKey:cardKey.value});}}
 const form=useTradePositionForm(()=>props.trade,{saved:()=>{closeFinder();emit('saved');},created:(id,account)=>{closeFinder();emit('created',id,account,props.draftKey);}});
 const {entryPrice,entryTimeInput,stopLoss,exitPrice,exitDateInput,exitClockInput,outcome,reasoning,tradingAccountId,
  size,netPl,commission,saving,saveError,createdPositionId,save}=form;
@@ -42,9 +46,10 @@ const evidence=category=>(props.trade.confirmations??[]).filter(item=>item.level
 const evidenceLabel=item=>formatEvidenceLabel(item,props.trade.instrument,Math.floor(Date.now()/1000));
 function cancel(){if(saving.value)return;closeFinder();if(props.draft)emit('cancel');else form.cancelPositionDraft();}
 function entryTarget(){
- return finderOpen.value&&opened.value&&!saving.value&&createdPositionId.value==null?{...props.trade,cardKey:cardKey.value}:null;
+ return (finderOpen.value||tpOpen.value)&&opened.value&&!saving.value&&createdPositionId.value==null?
+  {...props.trade,...(props.rangeTrade?{targets:props.rangeTrade.targets,invalidation:props.rangeTrade.invalidation}:{}),...form.entryValues(),cardKey:cardKey.value}:null;
 }
-function applyPrefill(prefill){return entryTarget()?form.applyEntryPrefill(prefill):false;}
+function applyPrefill(prefill){return entryTarget()?(prefill?.exitPrice!=null?form.applyExitPrefill(prefill):form.applyEntryPrefill(prefill)):false;}
 async function remove(){
  if(!props.canDelete||!confirm(`Position #${props.trade.id} wirklich löschen?`))return;
  if(await deleteTrade(props.trade.id))emit('deleted',props.trade.id);
@@ -56,7 +61,13 @@ defineExpose({applyPrefill,entryTarget,closeFinder});
   <details :open="opened" @toggle="opened=$event.target.open">
    <summary><strong>{{heading}}</strong><span>{{summary}}</span></summary>
    <div v-if="opened" class="execution-body">
-    <ActionButton type="button" :aria-expanded="finderOpen" :disabled="saving||createdPositionId!=null" @click="toggleFinder">Entry finden</ActionButton>
+    <div class="execution-finders">
+     <ActionButton type="button" :aria-expanded="finderOpen" :disabled="saving||createdPositionId!=null" @click="toggleFinder">Entry finden</ActionButton>
+     <ActionButton type="button" :aria-expanded="tpOpen" :disabled="saving||createdPositionId!=null||!!tpUnavailableReason" :aria-describedby="tpUnavailableReason?'tp-hint-'+cardKey:undefined" @click="toggleTp">TP suchen</ActionButton>
+     <span v-if="tpUnavailableReason" :id="'tp-hint-'+cardKey" class="execution-timezone" tabindex="0">{{tpUnavailableReason}}</span>
+    </div>
+    <JournalTpControls v-if="tpOpen" :trade="trade" :number="number" :position-id="positionId" :draft="draft" :message="tpMessage" :choices="tpChoices"
+     @choose="key=>emit('choose-tp',key)" @cancel="closeFinder" />
     <M1FvgEntryControls v-if="finderOpen" :range-id="trade.dealingRangeId" :instrument="trade.instrument" :direction="trade.direction" :execution-number="number" :position-id="positionId" :draft="draft"
      :armed-action="armedAction" :message="entryFvgMessage" :disabled="saving||currentSymbol!==trade.instrument||createdPositionId!=null"
      @request="variant=>emit('request-entry-fvg',{variant,cardKey})" />
@@ -100,4 +111,5 @@ summary{padding:10px;cursor:pointer;font-size:13px}summary strong{color:#d5dce8}
 .execution-body{padding:0 10px 12px}.execution-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px}
 label{display:flex;flex-direction:column;gap:4px;font-size:11px;min-width:0}input,select,textarea{box-sizing:border-box;width:100%;min-width:0;padding:7px;background:#131722;border:1px solid #343b4a;border-radius:4px;color:inherit;font:inherit}
 .execution-wide{grid-column:1/-1}.execution-actions{display:flex;flex-wrap:wrap;gap:8px}.execution-timezone,small{font-size:11px;color:#929bac}.execution-error{color:#ff8a87}
+.execution-finders{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 </style>
