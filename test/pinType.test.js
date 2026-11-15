@@ -14,9 +14,25 @@ vi.mock('../src/supabaseClient.js',()=>({supabase:{from:()=>{
   return query;
 }}}));
 vi.mock('../src/tradeIntake.js',()=>({findOrCreateObZoneId:vi.fn(async()=>7),findOrCreateTradeSetupId:vi.fn(async()=>8)}));
-import {addPinEntry,addPinM5ObEntry,addPinM5LiquidityEntry,addPinRsiDivergenceEntry,addPinTscSetupEntry,addSimulationPin,updatePinNote,fetchSimulationPins} from '../src/pinContext.js';
+import {addPinEntry,addPinChartObEntry,addPinM5LiquidityEntry,addPinRsiDivergenceEntry,addPinTscSetupEntry,addSimulationPin,updatePinNote,fetchSimulationPins} from '../src/pinContext.js';
+import {findOrCreateObZoneId} from '../src/tradeIntake.js';
 beforeEach(()=>{db.row=null;db.writes=[];});
 describe('pin classification persistence',()=>{
+  it('persists the exact M1 OB identity instead of silently creating an M5 zone',async()=>{
+    vi.mocked(findOrCreateObZoneId).mockClear();
+    await addPinChartObEntry({instrument:'XAUUSD',timeframe:'1M',dirNum:-1,top:4181.98,bottom:4180.48,startTime:1792150140},'M1 native','observation');
+    expect(findOrCreateObZoneId).toHaveBeenCalledExactlyOnceWith({instrument:'XAUUSD',timeframe:'1M',direction:'short',top:4181.98,bottom:4180.48,startTimeSec:1792150140});
+    expect(db.row).toMatchObject({kind:'ob_zone',ob_zone_id:7,note:'M1 native',pin_type:'observation'});
+  });
+  it('keeps M5 persistence and rejects missing or HTF identity instead of silently defaulting to M5',async()=>{
+    const zone={instrument:'XAUUSD',timeframe:'5M',dirNum:1,top:4181.98,bottom:4180.48,startTime:1792150140};
+    vi.mocked(findOrCreateObZoneId).mockClear();
+    await addPinChartObEntry(zone,'M5','bug');
+    expect(findOrCreateObZoneId).toHaveBeenCalledExactlyOnceWith({instrument:'XAUUSD',timeframe:'5M',direction:'long',top:4181.98,bottom:4180.48,startTimeSec:1792150140});
+    vi.mocked(findOrCreateObZoneId).mockClear();
+    for(const timeframe of [undefined,'1H','invalid'])await expect(addPinChartObEntry({...zone,timeframe},'bad')).rejects.toThrow('Timeframe');
+    expect(findOrCreateObZoneId).not.toHaveBeenCalled();
+  });
   it('accepts both explicit types and null, and leaves omitted types untouched in both runtimes',()=>{
     for(const fields of [pinTypeFields,serverFields]) {
       expect(fields(undefined)).toEqual({});expect(fields(null)).toEqual({pin_type:null});
@@ -38,7 +54,7 @@ describe('pin classification persistence',()=>{
   it('stores classification for every supported create path without replacing existing types on comment-only calls',async()=>{
     const creators=[type=>addPinEntry('trade_position',9,'Text',type),type=>addPinEntry('trade_confirmation',9,'Text',type),
       type=>addPinEntry('ob_zone',9,'Text',type),type=>addPinEntry('trade_setup',9,'Text',type),type=>addPinEntry('liquidity_level',9,'Text',type),
-      type=>addPinM5ObEntry({instrument:'GBPUSD',dirNum:1,top:1.3,bottom:1.2,startTime:100},'Text',type),
+      type=>addPinChartObEntry({instrument:'GBPUSD',timeframe:'5M',dirNum:1,top:1.3,bottom:1.2,startTime:100},'Text',type),
       type=>addPinTscSetupEntry({instrument:'GBPUSD',direction:'long',setup:{}},'Text',type),
       type=>addPinM5LiquidityEntry({instrument:'GBPUSD',dirNum:1,pivotTime:100},'Text',type),
       type=>addPinRsiDivergenceEntry('GBPUSD',{type:'bearish',fromTime:100,toTime:200},'Text',type),

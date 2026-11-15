@@ -15,8 +15,9 @@
 // für die paar Anzeige-Felder ist hier einfacher als eine. Seit Task "Chart-Objekte: OBs auf
 // kanonische ob_zones-ID konsolidieren", Punkt 6 (Migration 20260823120000) läuft ein M5-OB-Pin
 // über dasselbe kind="ob_zone" wie 1H/4H (find-or-create in ob_zones beim Pinnen, siehe
-// addPinM5ObEntry unten) — kein eigener "m5_ob"-Kind mehr.
+// addPinChartObEntry unten) — kein eigener "m5_ob"-Kind mehr.
 import { supabase } from "./supabaseClient.js";
+import {isChartOrderBlockTimeframe} from './chartOrderBlockPin.js';
 import { findOrCreateObZoneId, findOrCreateTradeSetupId } from "./tradeIntake.js";
 import { fetchAllRows } from './dbReadPaging.js';
 import {scopePinSource} from './simulationPinSource.js';
@@ -26,7 +27,7 @@ import {captureCurrentTradeSetupSources,ensureTradeSetupSourceSnapshot} from './
 import {assertTradeSetupSourceSnapshot,restoreTradeSetupSourceSnapshot} from '../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
 
 // kind -> DB-Spalte, gemeinsam für Upsert-onConflict UND das Zusammensetzen der Insert-Zeile.
-// addPinM5ObEntry (unten) löst erst per find-or-create einen ob_zone_id auf und ruft dann ganz
+// addPinChartObEntry (unten) löst erst per find-or-create einen ob_zone_id auf und ruft dann ganz
 // normal addPinEntry("ob_zone", ...) auf, statt hier eine eigene Zeile zu brauchen.
 const REF_COLUMN = {
   trade_position: "trade_position_id",
@@ -239,16 +240,13 @@ export async function addPinEntry(kind, refId, note, pinType, sourceSnapshotId =
   return toEntry(data);
 }
 
-// Seit Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 6 (2026-08-23):
-// M5-OBs werden beim Pinnen per find-or-create in ob_zones geschrieben (dieselbe Funktion, die
-// tradeIntake.js für trade_setups/trade_evidence nutzt) und landen danach als ganz normaler
-// kind="ob_zone"-Eintrag — kein eigener "m5_ob"-Snapshot-Kind mehr. Name/Signatur bleiben
-// unverändert (zone: { instrument, dirNum: 1|-1, top, bottom, startTime (Unix-Sekunden) }), damit
-// Dashboard.vue/die MCP-Tools nicht angepasst werden müssen.
-export async function addPinM5ObEntry(zone, note, pinType) {
+// M1 fiel früher in den HTF-SELECT-only-Pfad und hatte dort keine persistierte ID.
+// Lokale M-OBs nutzen deshalb gemeinsam den kanonischen Find-or-create-Pfad mit ihrem echten TF.
+export async function addPinChartObEntry(zone, note, pinType) {
+  if(!isChartOrderBlockTimeframe(zone.timeframe))throw new Error('Ungültiger Chart-OB-Timeframe');
   const obZoneId = await findOrCreateObZoneId({
     instrument: zone.instrument,
-    timeframe: "5M",
+    timeframe: zone.timeframe.toUpperCase(),
     direction: zone.dirNum === 1 ? "long" : "short",
     top: zone.top,
     bottom: zone.bottom,
@@ -265,7 +263,7 @@ export async function addPinDoubleOrderBlock(snapshot,note,pinType) {
   return toEntry(row);
 }
 
-// Analog zu addPinM5ObEntry, für ein Liquiditäts-Level auf einem Nicht-1h-Chart-Timeframe
+// Analog zu addPinChartObEntry, für ein Liquiditäts-Level auf einem Nicht-1h-Chart-Timeframe
 // (siehe 20260802130000_laniakea_context_m5_liquidity.sql — der 1h-Fall läuft weiter über
 // kind='liquidity_level' + resolveLiquidityLevelId, echte FK). level: { instrument, timeframe
 // (props.currentBar, z.B. "5m"), dirNum: 1 (high) | -1 (low), price, pivotTime (Unix-Sekunden) }.
@@ -299,7 +297,7 @@ export async function addPinM5LiquidityEntry(level, note, pinType) {
   return toEntry(data);
 }
 
-// Analog zu addPinM5ObEntry/addPinM5LiquidityEntry, für einen RSI-Divergenz-Konnektor
+// Analog zu addPinChartObEntry/addPinM5LiquidityEntry, für einen RSI-Divergenz-Konnektor
 // (Chat 2026-08-11, siehe 20260811170000_laniakea_context_rsi_divergence.sql) — Divergenzen werden
 // nie persistiert (detectRsiDivergence()/detectRsiDivergenceHistory() rechnen live), also wieder
 // ein Rohdaten-Snapshot statt einer FK. divergence: das Objekt, wie es rsi.js zurückgibt
@@ -338,7 +336,7 @@ export async function addPinRsiDivergenceEntry(instrument, divergence, note, pin
   return toEntry(data);
 }
 
-// Analog zu addPinM5ObEntry, für ein noch nicht von poi-watcher persistiertes Trade-Setup (Task
+// Analog zu addPinChartObEntry, für ein noch nicht von poi-watcher persistiertes Trade-Setup (Task
 // "Pin-Kontext: live erkannte Trade-Setup-Box pinnen können") — die vom TSC live erkannten Setup-
 // Boxen (tradeSetupsMetadata) haben, solange kein Trade daraus geloggt wurde, meist noch keine
 // eigene trade_setups-Zeile; findOrCreateTradeSetupId legt sie bei Bedarf per Natural-Key

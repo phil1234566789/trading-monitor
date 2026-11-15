@@ -38,6 +38,12 @@ it.each(['trade_setup','ob_zone','m5_liquidity_level','rsi_divergence'])('shows 
  expect(all(root).some(n=>n.text==='Pin #472')).toBe(true);
  expect(copyButton(root)).toBeTruthy();
 });
+
+it('shows M1 pins as snapshots without claiming the untracked DB default is an active live zone',()=>{
+ const {root}=mount([{id:500,kind:'ob_zone',obZoneId:7,obZone:{instrument:'XAUUSD',timeframe:'1M',direction:'short',top:4181.98,bottom:4180.48,startTime:'2026-10-16T11:29:00Z',touched:false,invalidated:false}}]);
+ expect(all(root).some(n=>n.text?.includes('Snapshot, kein Live-Status'))).toBe(true);
+ expect(all(root).some(n=>n.text?.includes('1M-OB'))).toBe(true);
+});
 it('uses the entire visible pin label as the single native copy control without a normal-state input or icon',()=>{
  const {root}=mount(),button=copyButton(root);
  expect(button.text).toBe('Pin #472');

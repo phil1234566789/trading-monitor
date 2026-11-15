@@ -107,7 +107,7 @@ export async function findOrCreateTradeSetupId({ instrument, direction, setup })
 // Upsert (kein ignoreDuplicates), damit .select() bei einem bereits vorhandenen Konflikt trotzdem
 // die id liefert — touched/invalidated bleiben auf Default false, dieses Objekt wird nicht live
 // nachverfolgt (das übernimmt weiterhin die Indikator-Overlay-Live-Erkennung im Chart). Exportiert,
-// weil pinContext.js (addPinM5ObEntry, Punkt 6) dieselbe find-or-create-Logik braucht, statt sie
+// weil pinContext.js (addPinChartObEntry, Punkt 6) dieselbe find-or-create-Logik braucht, statt sie
 // ein zweites Mal zu bauen.
 export async function findOrCreateObZoneId({ instrument, timeframe, direction, top, bottom, startTimeSec }) {
   const { data, error } = await supabase

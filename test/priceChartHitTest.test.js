@@ -185,6 +185,17 @@ function emptyPrimitives(overrides = {}) {
 describe("findNearbyPinCandidates", () => {
   const opts = { symbol: "GBPUSD", currentBar: "5m" };
 
+  it('pins the native internal M1 OB through the chart find-or-create path with its own timeframe',()=>{
+    const zone={timeframe:'1M',dir:-1,startTime:1792150140,top:4181.98,bottom:4180.48};
+    const result=findNearbyPinCandidates(0,0,emptyPrimitives({orderBlockPrimitives:[{...primitiveAt(5),zone}]}),{symbol:'XAUUSD',currentBar:'1m'});
+    expect(result).toEqual([{kind:'chart_ob',zone:{instrument:'XAUUSD',timeframe:'1M',dirNum:-1,startTime:1792150140,top:4181.98,bottom:4180.48},distance:5}]);
+  });
+
+  it('does not collapse M1 and M5 OB identities sharing start and price geometry',()=>{
+    const zones=['1M','5M'].map(timeframe=>({...primitiveAt(5),zone:{timeframe,dir:-1,startTime:1792150140,top:4181.98,bottom:4180.48}}));
+    expect(findNearbyPinCandidates(0,0,emptyPrimitives({orderBlockPrimitives:zones}),{symbol:'XAUUSD',currentBar:'1m'})).toHaveLength(2);
+  });
+
   it("findet eine trade_position innerhalb des Radius", () => {
     const trade = { id: 42 };
     const primitives = emptyPrimitives({ tradePrimitives: [{ ...primitiveAt(10), trade }] });
@@ -197,7 +208,7 @@ describe("findNearbyPinCandidates", () => {
     expect(findNearbyPinCandidates(0, 0, primitives, opts)).toEqual([]);
   });
 
-  it("unterscheidet ob_zone (1H/4H) von m5_ob (M5) anhand zone.timeframe", () => {
+  it("unterscheidet ob_zone (1H/4H) von chart_ob (M5) anhand zone.timeframe", () => {
     const primitives = emptyPrimitives({
       orderBlockPrimitives: [
         { ...primitiveAt(5), zone: { timeframe: "1H", dir: 1, startTime: 100, top: 1.2, bottom: 1.1 } },
@@ -205,7 +216,7 @@ describe("findNearbyPinCandidates", () => {
       ],
     });
     const result = findNearbyPinCandidates(0, 0, primitives, opts);
-    expect(result.map((c) => c.kind).sort()).toEqual(["m5_ob", "ob_zone"]);
+    expect(result.map((c) => c.kind).sort()).toEqual(["chart_ob", "ob_zone"]);
   });
 
   // Bug-Report Philip 2026-08-26: "wenn ich rechtsklick mache, zum anpinnen, dann sind nur die M5

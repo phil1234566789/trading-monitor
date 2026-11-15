@@ -7,6 +7,7 @@
 // Variablen kamen.
 import { detectOrderBlocks, obZoneNaturalKey, orderBlockEndTime } from "./orderBlocks.js";
 import { PIP_SIZE } from "./pipConfig.js";
+import {isChartOrderBlockTimeframe} from './chartOrderBlockPin.js';
 import { obMinimum, strategyDistance } from './instrumentConfig.js';
 
 // Historische Gold-Boxen enden beim ersten Touch, auch wenn eine spätere Invalidierung endTime ersetzt.
@@ -137,7 +138,8 @@ export function collectObsZones({ showObsM1, m1Candles = [], showObs4h, showObs1
 // statt collectObsZones. 1H/4H seit Punkt 7 (DB-Read) dieselbe Quelle wie die gezeichneten Zonen
 // selbst — sonst könnte eine Target-/Confirmation-Box einen anderen touched/endTime-Stand zeigen
 // als die daneben gezeichnete Indikator-Zone.
-export function liveObZonesForTimeframe(timeframe, { m5Candles, dbObZones, symbol, replayUntil, price }) {
+export function liveObZonesForTimeframe(timeframe, { m1Candles=[], m5Candles, dbObZones, symbol, replayUntil, price }) {
+  if(timeframe==='1M')return collectObsZones({showObsM1:true,m1Candles});
   if (timeframe === "5M") return detectOrderBlocks(m5Candles, "5m", true, obMinimum(symbol, '5m'));
   return filterDbObZones(dbObZones, symbol, replayUntil, timeframe, price);
 }
@@ -190,7 +192,7 @@ export function mergePinnedZones(zones, pinnedZones, candles, ctx = null) {
       const original = sources.get(pin.timeframe).find(row =>
         obZoneNaturalKey(pin.timeframe, row.dir, row.startTime)
           === obZoneNaturalKey(pin.timeframe, pin.dir, pin.startTime));
-      if (!original && pin.timeframe !== "5M") continue;
+      if (!original && !isChartOrderBlockTimeframe(pin.timeframe)) continue;
       if (original) z = { ...original, timeframe: pin.timeframe };
     }
     const key = obZoneNaturalKey(z.timeframe, z.dir, z.startTime);

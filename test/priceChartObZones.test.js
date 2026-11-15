@@ -153,6 +153,15 @@ describe("liveObZonesForTimeframe / liveObZoneState", () => {
     expect(liveObZonesForTimeframe("5M", ctx)).toEqual([]);
   });
 
+  it('keeps a pinned M1 zone visible with the indicator disabled and uses the native M1 source',()=>{
+    const rows=[{time:0,open:4,high:5,low:3,close:4},{time:60,open:4,high:5,low:3,close:4},{time:120,open:4,high:4,low:1,close:2},{time:180,open:2,high:2,low:1,close:1.5}];
+    const m1ctx={...ctx,m1Candles:rows},native=collectObsZones({showObsM1:true,m1Candles:rows});
+    expect(native).toHaveLength(1);
+    expect(liveObZonesForTimeframe('1M',m1ctx)).toEqual(native);
+    const pin={...native[0],touched:null};
+    expect(mergePinnedZones([], [pin], rows,m1ctx)).toHaveLength(1);
+  });
+
   it("liveObZonesForTimeframe für 1H/4H liest aus dbObZones", () => {
     expect(liveObZonesForTimeframe("1H", ctx)).toEqual(ctx.dbObZones);
   });

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, nextTick, onUnmounted } from "vue";
+import {isChartOrderBlockTimeframe} from '../chartOrderBlockPin.js';
 import {formatDatedTime} from '../berlinTime.js';
 import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulationPinPresentation.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
@@ -125,11 +126,8 @@ function onEntryClick(event, entry) {
           – {{ fmtPrice(row.entry.obZone.top, pricePrecisionForInstrument(row.entry.obZone.instrument)) }}
           ·
           {{
-            // M5-ob_zones-Zeilen werden nie live nachverfolgt (Punkt 6, siehe Dashboard.vue:
-            // pinnedObZones-Kommentar) — touched/invalidated bleiben für immer auf ihrem
-            // Insert-Default stehen, deshalb hier derselbe ehrliche Hinweis wie vorher beim eigenen
-            // kind='m5_ob'-Snapshot statt eines irreführenden "Aktiv".
-            row.entry.obZone.timeframe === "5M"
+            // Lokale M-OBs behalten DB-Insertdefaults; diese sind kein laufender Marktstatus.
+            isChartOrderBlockTimeframe(row.entry.obZone.timeframe)
               ? "Snapshot, kein Live-Status"
               : row.entry.obZone.invalidated
                 ? "Invalidiert"

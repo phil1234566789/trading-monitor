@@ -10,6 +10,7 @@
 // ruft dann diese Funktionen auf — siehe findClickedSetup/-LiquidityLevel/-OBZone/-FibLevel/
 // -Divergence dort.
 import { OrderBlockPrimitive, orderBlockEndTime } from "./orderBlocks.js";
+import {isChartOrderBlockTimeframe} from './chartOrderBlockPin.js';
 
 // Trade-Modus-Klick-Hittest (Chat 2026-07-27) — testet gegen genau die Box, die
 // renderTradeSetupsInternal (PriceChart.vue) tatsächlich zeichnet (obTop/obBottom +
@@ -192,21 +193,15 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
     const distance = p.distanceTo(x, y);
     if (distance <= radius) candidates.push({ kind: "trade_position", trade: p.trade, distance });
   }
-  // OB-Zonen — 1H/4H lösen sich gegen die bereits persistierte ob_zones-Zeile auf (kind="ob_zone",
-  // resolveObZoneId, SELECT-only). M5-Boxen existieren dort meist NOCH NICHT (nur die referenzierte
-  // Teilmenge wird persistiert, siehe PLAN-chart-objekte-forex.md Abschnitt 5) — bekommen deshalb
-  // weiterhin einen eigenen Kandidaten-Kind (kind="m5_ob", Chat 2026-08-02: "Rohdaten-Snapshot",
-  // JEDE M5-Box soll klickbar sein, nicht nur bereits zu einem Trade-Setup gehörende), der beim
-  // tatsächlichen Pinnen die ob_zones-Zeile per find-or-create nachzieht (siehe pinContext.js:
-  // addPinM5ObEntry, Punkt 6) statt weiter einen reinen Snapshot zu schreiben.
+  // HTF-Zonen sind persistiert; lokale M-OBs brauchen Find-or-create statt eines erfolglosen SELECT.
   for (const p of orderBlockPrimitives) {
     const distance = p.distanceTo(x, y);
     if (distance > radius) continue;
     const zone=p.pinZone ?? p.zone;
-    if (zone.timeframe === "5M") {
+    if (isChartOrderBlockTimeframe(zone.timeframe)) {
       candidates.push({
-        kind: "m5_ob",
-        zone: { instrument: symbol, dirNum: zone.dir, top: zone.top, bottom: zone.bottom, startTime: zone.startTime },
+        kind: "chart_ob",
+        zone: { instrument: symbol, timeframe:zone.timeframe.toUpperCase(), dirNum: zone.dir, top: zone.top, bottom: zone.bottom, startTime: zone.startTime },
         distance,
       });
     } else {
@@ -221,7 +216,7 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
   // persistiert seit 2026-08-23 beide, siehe supabase/functions/poi-watcher/index.ts), löst sich
   // also per Natural-Key auf (kind="liquidity_level"). Auf jedem anderen Timeframe (Bug-Report
   // Philip 2026-08-02: "ich will eine M5 LQ-Linie anklicken") gibt es dafür keine DB-Zeile, deshalb
-  // Rohdaten-Snapshot (kind="m5_liquidity_level", analog zu m5_ob oben).
+  // Rohdaten-Snapshot (kind="m5_liquidity_level", unabhängig vom kanonischen OB-Pinpfad).
   // Entscheidend ist das Level-EIGENE timeframe-Feld, NICHT der aktuell gewählte Chart-Timeframe
   // (currentBar) — seit derselben 2026-08-23-Änderung werden 1H/4H-Level unabhängig vom
   // Chart-Timeframe gezeichnet (siehe computeHtfLiquidityLevels), ein `currentBar === "1h"`-Check
@@ -314,7 +309,7 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
     if(c.kind==='double_order_block')return `double_order_block:${c.dobContext.pair.id}`;
     if (c.kind === "trade_position") return `trade_position:${c.trade.id}`;
     if (c.kind === "ob_zone") return `ob_zone:${c.zone.timeframe}|${c.zone.dir}|${c.zone.startTime}`;
-    if (c.kind === "m5_ob") return `m5_ob:${c.zone.dirNum}|${c.zone.top}|${c.zone.bottom}|${c.zone.startTime}`;
+    if (c.kind === "chart_ob") return `chart_ob:${c.zone.timeframe}|${c.zone.dirNum}|${c.zone.top}|${c.zone.bottom}|${c.zone.startTime}`;
     if (c.kind === "trade_setup") return `trade_setup:${c.tradeSetupId}`;
     if (c.kind === "tsc_setup") return `tsc_setup:${c.direction}|${c.setup.fractal.pivotTime}`;
     if (c.kind === "liquidity_level") return `liquidity_level:${c.level.dirNum}|${c.level.pivotTime}`;

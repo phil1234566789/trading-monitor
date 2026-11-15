@@ -905,6 +905,7 @@ function refreshTradeSetupLinksInternal() {
 // gebündelt für refreshTradeTargetLinksInternal/-TradeConfirmationLinksInternal.
 function obZoneCtx() {
   return {
+    m1Candles: props.currentBar==='1m' ? markIgnored(clipReplay(allCandles),props.symbol).filter(c=>c.time+60<=closedReplayEvaluationTime(props.replayUntil,Math.floor(Date.now()/1000),allCandles,'1m')) : [],
     // Markiert, damit die M5-OB-Erkennung in priceChartObZones.js die Spread-Hour-Fenster
     // ueberspringt (siehe markIgnoredCandles) — die Markierung sitzt hier statt dort, weil
     // priceChartObZones.js von Tests ohne Browser-Umgebung importiert wird.
@@ -1245,7 +1246,6 @@ function refreshPoiZonesInternal() {
     showObs4h: props.showObs4h,
     showObs1h: props.showObs1h,
     showObsM1: props.showObsM1,
-    m1Candles: props.currentBar==='1m' ? markIgnored(clipReplay(allCandles),props.symbol).filter(c=>c.time+60<=closedReplayEvaluationTime(props.replayUntil,Math.floor(Date.now()/1000),allCandles,'1m')) : [],
     showObsM5: props.showObsM5,
     ...obZoneCtx(),
   });

@@ -1,4 +1,5 @@
 <script setup>
+import {isChartOrderBlockTimeframe} from '../chartOrderBlockPin.js';
 import {watchM1FvgPreviewContext} from '../composables/useM1FvgPreviewContext.js';
 import {useJournalTpFinder} from '../composables/useJournalTpFinder.js';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, watchEffect } from "vue";
@@ -66,7 +67,7 @@ import { QUOTEN_HERKUNFT } from "../drQuoten.js";
 import {
   fetchPinContext,
   addPinEntry,
-  addPinM5ObEntry,
+  addPinChartObEntry,
   addPinDoubleOrderBlock,
   addPinTscSetupEntry,
   addPinM5LiquidityEntry,
@@ -961,7 +962,7 @@ const pinAddPopupError = ref(null);
 function pinCandidateLabel(c) {
   if(c.kind==='double_order_block')return `${doubleOrderBlockPinLabel(c.dobContext)} · OB1 ${formatDatedTime(c.dobContext.pair.firstOrderBlock.startTime)} → OB2 ${formatDatedTime(c.dobContext.pair.secondOrderBlock.startTime)}`;
   if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
-  if (c.kind === "m5_ob") return `M5 ${c.zone.dirNum === 1 ? "Bull" : "Bear"}-OB`;
+  if (c.kind === "chart_ob") return `${c.zone.timeframe.replace(/^(\d+)M$/, 'M$1')} ${c.zone.dirNum === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
   if (c.kind === "tsc_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup (live, ${c.instrument})`;
   if (c.kind === "trade_confirmation") return `✔ Bestätigung #${c.confirmationId} (${c.instrument})`;
@@ -1012,7 +1013,7 @@ async function onPinAddConfirm(note, pinType) {
   } else if (target.kind === "tsc_setup") {
     // Live erkannte Setup-Box OHNE bekannte trade_setups.id (siehe priceChartHitTest.js:
     // findNearbyPinCandidates) — addPinTscSetupEntry legt die Zeile bei Bedarf per find-or-create
-    // an (analog zu addPinM5ObEntry), landet danach als ganz normaler kind="trade_setup"-Pin.
+    // an (analog zu addPinChartObEntry), landet danach als ganz normaler kind="trade_setup"-Pin.
     await addPinTscSetupEntry({ instrument: target.instrument, direction: target.direction, setup: target.setup }, note, pinType);
   } else if (target.kind === "trade_confirmation") {
     // Kein Resolve nötig — trade_evidence.id ist schon direkt bekannt, analog zu trade_setup.
@@ -1027,12 +1028,12 @@ async function onPinAddConfirm(note, pinType) {
       return;
     }
     await addPinEntry("liquidity_level", liquidityLevelId, note, pinType);
-  } else if (target.kind === "m5_ob") {
-    // "m5_ob" bleibt hier ein rein clientseitiger Kandidaten-Kind (siehe PriceChart.vue:
+  } else if (target.kind === "chart_ob") {
+    // "chart_ob" bleibt hier ein rein clientseitiger Kandidaten-Kind (siehe PriceChart.vue:
     // findNearbyPinCandidates) — anders als resolveObZoneId oben (SELECT-only, wartet auf
-    // poi-watcher) legt addPinM5ObEntry die ob_zones-Zeile bei Bedarf per find-or-create gleich mit
+    // poi-watcher) legt addPinChartObEntry die ob_zones-Zeile bei Bedarf per find-or-create gleich mit
     // an (Punkt 6), landet danach aber als ganz normaler kind='ob_zone'-Pin.
-    await addPinM5ObEntry(target.zone, note, pinType);
+    await addPinChartObEntry(target.zone, note, pinType);
   } else if (target.kind === "m5_liquidity_level") {
     // Kein Resolve nötig — Liquiditäts-Level auf einem Nicht-1h-Timeframe werden nie persistiert,
     // Rohdaten-Snapshot direkt (siehe addPinM5LiquidityEntry).
@@ -1211,12 +1212,8 @@ const pinnedObZones = computed(() => {
       startTime: toUnixSec(e.obZone.startTime),
       dir: e.obZone.direction === "long" ? 1 : -1,
       timeframe: e.obZone.timeframe,
-      // M5-ob_zones-Zeilen werden nie live nachverfolgt (nur die referenzierte Teilmenge wird beim
-      // Pinnen einmalig persistiert, siehe PLAN-chart-objekte-forex.md Abschnitt 5/Punkt 6) —
-      // touched bleibt in der DB für immer auf ihrem Insert-Default (false) stehen. touched: null
-      // löst hier denselben Self-Heal-gegen-geladene-Kerzen-Pfad in PriceChart.vue aus wie vorher
-      // beim eigenen kind='m5_ob'-Snapshot, statt den nie aktualisierten DB-Wert zu glauben.
-      touched: e.obZone.timeframe === "5M" ? null : e.obZone.touched,
+      // Lokale M-OBs haben nur DB-Insertdefaults; der Chart übernimmt ihren nativen Kerzenstatus.
+      touched: isChartOrderBlockTimeframe(e.obZone.timeframe) ? null : e.obZone.touched,
       invalidated: e.obZone.invalidated,
       endTime: toUnixSec(e.obZone.endTime),
     }));

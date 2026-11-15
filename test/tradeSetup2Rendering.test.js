@@ -20,7 +20,7 @@ it('pins the original saved M5 OB even when its drawing starts at the loaded can
   const bag={orderBlockPrimitives:blocks,tradePrimitives:[],liquidityPrimitives:[],tradeSetupLinkPrimitives:[],tradeConfirmationLinkPrimitives:[],divergencePrimitives:[],tscSetupPrimitives:[]};
   expect(hasNearbyPinCandidate(0,0,bag)).toBe(true);
   expect(findNearbyPinCandidates(0,0,bag,{symbol:'GBPUSD',currentBar:'5m'})).toEqual([
-    {kind:'m5_ob',distance:0,zone:{instrument:'GBPUSD',dirNum:-1,startTime:120,top:2,bottom:1}}]);
+    {kind:'chart_ob',distance:0,zone:{instrument:'GBPUSD',timeframe:'5M',dirNum:-1,startTime:120,top:2,bottom:1}}]);
   renderSetup2Detail(series,null,primitives,[],[{time:300}],'5m',600,{snapshotView:true});
   expect(primitives).toHaveLength(0);
 });
