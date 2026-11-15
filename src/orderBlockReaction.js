@@ -85,6 +85,7 @@ export function evaluateReactionStop(context,orderBlock,contact,entryAt) {
 
 // Extrem von der Kontaktkerze bis einschließlich Entry-Kerze (entryAt = deren Schluss), ohne Puffer. Ignorierte Kerzen
 // zählen nicht, wie bei Kontakt und M5-Bruch; jenseits der fernen M5-Kante kann es nicht liegen, sonst wäre die Reaktion false.
+// Puffer- und Kantenvarianten sind gemessen (analysis/dob/stop-variants.json); der DOB bleibt Indikator, die SL-Wahl beim Trade.
 function retestExtreme(rows,direction,from,entryAt) {
  let price=direction==='long'?Infinity:-Infinity;
  for(let i=firstIndex(rows,c=>c.time>=from);i<rows.length&&rows[i].time<entryAt;i++)

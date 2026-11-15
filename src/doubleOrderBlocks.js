@@ -57,7 +57,7 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
  const m5=closedChecklistCandles(m5Candles,'5m',evaluatedAt),m1=closedChecklistCandles(m1Candles,'1m',evaluatedAt);
  const result={version:DOUBLE_ORDER_BLOCK_VERSION,status:m1.length?'ready':'unknown',pairs:[],
   policy:{reaction:'first exact touch (near-touch via options), then first same-direction M1 FVG; M5 far edge broken first = false',nearTouchFraction:NEAR_TOUCH_FRACTION,
-   entryBMaxOrderBlockDepth:ENTRY_B_MAX_ORDER_BLOCK_DEPTH,stop:'open internal M1 FVG at entry = M5 far edge, otherwise unknown',
+   entryBMaxOrderBlockDepth:ENTRY_B_MAX_ORDER_BLOCK_DEPTH,stop:'open internal M1 FVG at entry = M5 far edge, otherwise retest extreme (contact through entry candle, no buffer)',
    firstRetestHoldThrough:'secondReactionKnownAt',retestDay:'Europe/Berlin calendar date',maxPositiveZoneGap:instrumentConfig(instrument).dobMaxPositiveZoneGap,
    options:{nearTouch,bridgeClosures:roles.first.bridgeClosures}},
   stats:{m5Bars:m5.length,m1Bars:m1.length,orderBlocks:0,reactions:{first:{true:0,false:0,unknown:0},second:{true:0,false:0,unknown:0}},pairChecks:0,
