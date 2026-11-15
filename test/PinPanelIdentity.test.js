@@ -38,6 +38,14 @@ it.each(['trade_setup','ob_zone','m5_liquidity_level','rsi_divergence'])('shows 
  expect(all(root).some(n=>n.text==='Pin #472')).toBe(true);
  expect(copyButton(root)).toBeTruthy();
 });
+it('uses the entire visible pin label as the single native copy control without a normal-state input or icon',()=>{
+ const {root}=mount(),button=copyButton(root);
+ expect(button.text).toBe('Pin #472');
+ expect(button.props.type).toBe('button');
+ expect(all(button).some(n=>n.props?.['aria-hidden']==='true')).toBe(false);
+ expect(all(root).some(n=>n.type==='input'&&n.props.class==='pin-id-fallback')).toBe(false);
+ expect(all(root).filter(n=>n.text==='Pin #472')).toHaveLength(1);
+});
 it('copies only pin.id and leaves row navigation, source labels, note and removal intact',async()=>{
  vi.useFakeTimers();const writeText=vi.fn().mockResolvedValue();vi.stubGlobal('navigator',{clipboard:{writeText}});
  const {root,events}=mount(),button=copyButton(root),{event,stopPropagation}=click(root,button);

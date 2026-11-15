@@ -88,10 +88,9 @@ function onEntryClick(event, entry) {
       @click="onEntryClick($event, row.entry)"
     >
       <div class="pin-panel-identity" @click.stop>
-        <span>Pin #{{ row.entry.id }}</span>
         <button type="button" class="pin-id-copy" :aria-label="`Pin-ID ${row.entry.id} kopieren`"
           title="Pin-ID kopieren" :disabled="copyStatus?.id === row.entry.id && copyStatus.state === 'copying'"
-          @click.stop="copyPinId(row.entry.id, $event)"><span aria-hidden="true">⧉</span></button>
+          @click.stop="copyPinId(row.entry.id, $event)">Pin #{{ row.entry.id }}</button>
         <small v-if="copyStatus?.id === row.entry.id" role="status" aria-live="polite">
           {{ copyStatus.state === 'copied' ? 'Pin-ID kopiert.' : copyStatus.state === 'failed' ? 'Kopieren nicht möglich. ID manuell kopieren.' : 'Kopiere…' }}
         </small>
@@ -279,7 +278,7 @@ function onEntryClick(event, entry) {
 }
 
 .pin-panel-identity { display:flex;align-items:center;gap:6px;flex-wrap:wrap;color:#a6adbb;font-size:12px;cursor:default; }
-.pin-id-copy { display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:28px;padding:2px 6px;background:transparent;border:1px solid #434b5d;border-radius:4px;color:#d1d4dc;cursor:pointer; }
+.pin-id-copy { display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:2px 0;background:transparent;border:0;border-radius:2px;color:inherit;font:inherit;cursor:pointer; }
 .pin-id-copy:hover { background:#2a2e39; }
 .pin-id-copy:focus-visible,.pin-id-fallback:focus-visible { outline:2px solid #91b8ff;outline-offset:2px; }
 .pin-id-copy:disabled { opacity:.5;cursor:wait; }
