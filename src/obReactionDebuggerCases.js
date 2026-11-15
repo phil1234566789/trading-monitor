@@ -3,7 +3,7 @@ import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {obMinimum} from './instrumentConfig.js';
 import {createOrderBlockReactionContext,evaluateOrderBlockReaction,INTERNAL_FVG_LOOKBACK_SECONDS} from './orderBlockReaction.js';
-import {detectDoubleOrderBlocks,DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS} from './doubleOrderBlocks.js';
+import {detectDoubleOrderBlocks,reactionOptionsFor} from './doubleOrderBlocks.js';
 
 const INSTRUMENT='XAUUSD';
 // Statische Imports wären ~1 MB im Bundle; jeder Fixture-Tag wird erst bei Auswahl nachgeladen.
@@ -34,29 +34,26 @@ export function caseSteps(c,fixture){
  return {from,through:Math.min(last,from+CASE_WINDOW_SECONDS)};
 }
 
-// Ein Einzel-OB wird wie OB2 bewertet: nur dort trägt die Reaktion Entry-Routen (Pins 500/502 = OB2 von P14/P16).
-// Dieselbe Rollen-Zuordnung wie reactionFor in detectDoubleOrderBlocks.
-const nearTouchFor=(role,mode)=>role==='first'?mode==='both':mode!=='none';
 
 // Alles nur aus Kerzen, die zu evaluatedAt geschlossen sind; dieselben Produktmodule wie Chart und Messung.
 export function evaluateCase(c,fixture,evaluatedAt,options={}){
- const {nearTouch,bridgeClosures}={...DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,...options};
  const m5=closedChecklistCandles(fixture.candles.m5,'5m',evaluatedAt),m1=closedChecklistCandles(fixture.candles.m1,'1m',evaluatedAt);
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(INSTRUMENT,'5m'));
  const context=createOrderBlockReactionContext(m1,evaluatedAt,INSTRUMENT);
  const orderBlocks=c.orderBlocks.map((startTime,index)=>{
+  // Ein Einzel-OB wird wie OB2 bewertet: nur dort trägt die Reaktion Entry-Routen (Pins 500/502 = OB2 von P14/P16).
   const role=c.orderBlocks.length===1||index===1?'second':'first',zone=zones.find(z=>z.startTime===startTime&&z.dir===c.dir);
   const recognizedAt=recognition.get(startTime);
   if(!zone||!(recognizedAt<=evaluatedAt))return {role,startTime,orderBlock:null,reaction:null,internalFvgs:[]};
   const orderBlock={...zone,recognizedAt,timeframe:'5M'};
   const internalFvgs=context.byDirection[c.dir===1?'long':'short'].filter(f=>f.candleTime>=startTime-INTERNAL_FVG_LOOKBACK_SECONDS
    &&f.bottom<=orderBlock.top&&f.top>=orderBlock.bottom);
-  return {role,startTime,orderBlock,internalFvgs,reaction:evaluateOrderBlockReaction(context,orderBlock,{nearTouch:nearTouchFor(role,nearTouch),bridgeClosures})};
+  return {role,startTime,orderBlock,internalFvgs,reaction:evaluateOrderBlockReaction(context,orderBlock,reactionOptionsFor(role,options))};
  });
  let pair=null;
  if(c.orderBlocks.length===2){
   const id=`dob:${INSTRUMENT}:${c.dir}:${c.orderBlocks[0]}:${c.orderBlocks[1]}`;
-  pair=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,instrument:INSTRUMENT,evaluatedAt,options:{nearTouch,bridgeClosures}}).pairs.find(p=>p.id===id)??null;
+  pair=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,instrument:INSTRUMENT,evaluatedAt,options}).pairs.find(p=>p.id===id)??null;
  }
  return {m1,orderBlocks,pair};
 }

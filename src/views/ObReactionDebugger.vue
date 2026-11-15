@@ -36,6 +36,7 @@ watch(caseId,async id=>{
 const step=delta=>{evaluatedAt.value=Math.min(steps.value.through,Math.max(steps.value.from,evaluatedAt.value+delta*60));};
 function onKey(e){if(e.target.tagName==='SELECT')return;if(e.key==='ArrowLeft')step(-1);if(e.key==='ArrowRight')step(1);}
 
+const REASON_TEXT={marketClosed:'Markt geschlossen, OB verfallen'};
 const sideText=dir=>dir===1?'Long':'Short';
 const price=p=>p==null?'–':fmtPrice(p,2);
 const time=t=>t==null?'–':formatBerlinTime(t);
@@ -135,7 +136,7 @@ watch(result,draw);
       <p v-if="!o.orderBlock" class="muted">Noch nicht bekannt.</p>
       <template v-else>
        <p>{{ price(o.orderBlock.bottom) }}–{{ price(o.orderBlock.top) }} · bekannt {{ time(o.orderBlock.recognizedAt) }}</p>
-       <p><b>Reaktion</b> {{ o.reaction.state }}{{ o.reaction.reason?' · '+o.reaction.reason:'' }}{{ o.reaction.knownAt?' · ab '+time(o.reaction.knownAt):'' }}</p>
+       <p><b>Reaktion</b> {{ o.reaction.state }}{{ o.reaction.reason?' · '+(REASON_TEXT[o.reaction.reason]??o.reaction.reason):'' }}{{ o.reaction.knownAt?' · ab '+time(o.reaction.knownAt):'' }}</p>
        <p v-if="o.reaction.contact"><b>Kontakt</b> {{ o.reaction.contact.status }} · Kerze {{ time(o.reaction.contact.candleTime) }}</p>
        <p v-if="o.reaction.fvg"><b>FVG</b> {{ price(o.reaction.fvg.bottom) }}–{{ price(o.reaction.fvg.top) }} · bekannt {{ time(o.reaction.fvg.recognizedAt) }}</p>
        <p v-for="(r,name) in o.role==='second'?o.reaction.routes ?? {}:{}" :key="name"><b>{{ name }}</b> {{ routeText(r) }}</p>
