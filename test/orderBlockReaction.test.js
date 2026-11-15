@@ -11,9 +11,10 @@ const nativeOrderBlock=(day,startTime,dir)=>{
  const m5=fixture(day).candles.m5,zone=detectOrderBlocks(m5,'5m',true,0).find(z=>z.startTime===startTime&&z.dir===dir);
  return {...zone,recognizedAt:orderBlockRecognitionTimes(m5,'5m').get(startTime),timeframe:'5M'};
 };
-const react=(day,startTime,dir,{evaluatedAt,m1}={})=>{
+// Die Pin-Referenzen dokumentieren die Prototyp-Semantik mit Near-Touch; das Produkt nutzt reactionOptionsFor.
+const react=(day,startTime,dir,{evaluatedAt,m1,options={nearTouch:true}}={})=>{
  const at=evaluatedAt??fixture(day).candles.m1.at(-1).time+60,rows=closedChecklistCandles(m1??fixture(day).candles.m1,'1m',at);
- return evaluateOrderBlockReaction(createOrderBlockReactionContext(rows,at,'XAUUSD'),nativeOrderBlock(day,startTime,dir));
+ return evaluateOrderBlockReaction(createOrderBlockReactionContext(rows,at,'XAUUSD'),nativeOrderBlock(day,startTime,dir),options);
 };
 
 describe('reaction contact',()=>{
@@ -109,7 +110,7 @@ describe('native reaction references',()=>{
   const joined=createOrderBlockReactionContext([...previous.candles.m1,...day.candles.m1],at,'XAUUSD');
   for(const zone of zones){
    const ob={...zone,recognizedAt:known.get(zone.startTime),timeframe:'5M'};
-   expect(evaluateOrderBlockReaction(joined,ob)).toEqual(evaluateOrderBlockReaction(alone,ob));
+   expect(evaluateOrderBlockReaction(joined,ob,{nearTouch:true})).toEqual(evaluateOrderBlockReaction(alone,ob,{nearTouch:true}));
   }
  });
 });

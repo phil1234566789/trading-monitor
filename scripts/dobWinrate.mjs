@@ -1,8 +1,7 @@
 // DOB-Winrate XAUUSD ab 01.10.2026 (Berlin) als Vorher/Nachher-Messung gegen den jeweiligen Checkout-src.
 // Methodik steht in report.methodology. Flags: --refresh (Kerzen neu holen), --name <x> (Reportname,
 // Default version-gitHash), --from YYYY-MM-DD (Default 2026-10-01), --crosscheck (eine Woche je M5-Schluss),
-// --options <json> (Ablations-Schalter von detectDoubleOrderBlocks, siehe DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS),
-// --detector <vite-pfad> (anderes Modul mit detectDoubleOrderBlocks, z. B. eine lokale v6-Kopie für dobTradeDiff.mjs).
+// --options <json> (nearTouch/bridgeClosures von detectDoubleOrderBlocks, siehe DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS).
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -31,7 +30,7 @@ try {
   const [{ fetchInitialCandles }, { supabase }, { detectDoubleOrderBlocks }, { evaluateDoubleOrderBlockOutcome },
     { closedChecklistCandles }, { markIgnoredCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { TRADE_SETUP_M5_CANDLE_COUNT }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js',
-    flag('--detector') ?? '/src/doubleOrderBlocks.js', '/src/doubleOrderBlockOutcome.js', '/src/tradeSetupChecklistTimeBasis.js',
+    '/src/doubleOrderBlocks.js', '/src/doubleOrderBlockOutcome.js', '/src/tradeSetupChecklistTimeBasis.js',
     '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/priceChartConstants.js'].map(load));
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
@@ -49,6 +48,8 @@ try {
     const file = path.join(outDir, `candles-${SYMBOL}-${bar === '1m' ? 'm1' : 'm5'}.json`);
     let cache = !process.argv.includes('--refresh') && existsSync(file) ? JSON.parse(await fs.readFile(file, 'utf8')) : null;
     if (Array.isArray(cache)) cache = { coveredFrom: berlinDayRangeUtcMs(DEFAULT_START).startUtcMs / 1000, rows: cache };
+    // Ein leerer oder unvollständiger Cache wird neu geholt statt an rows[0] zu scheitern.
+    if (!Number.isFinite(cache?.coveredFrom) || !Array.isArray(cache?.rows) || !cache.rows.length) cache = null;
     if (cache && cache.coveredFrom <= startSec) return cache.rows;
     const toSec = cache ? cache.rows[0].time : Math.floor(Date.now() / 1000);
     const rows = await fetchInitialCandles(SYMBOL, bar, Math.ceil((toSec - startSec) / seconds) + window, toSec * 1000 - 1);

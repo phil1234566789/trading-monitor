@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-import {detectDoubleOrderBlocks,firstRetestHoldAnchor} from '../src/doubleOrderBlocks.js';
+import {detectDoubleOrderBlocks,firstRetestHoldAnchor,reactionOptionsFor} from '../src/doubleOrderBlocks.js';
+import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from '../src/orderBlockRetestHold.js';
 import {createOrderBlockReactionContext,evaluateOrderBlockReaction,exactRetestAnchor} from '../src/orderBlockReaction.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
@@ -130,21 +131,56 @@ describe('double order blocks from native candles',()=>{
   const zone=detectOrderBlocks(fixture.candles.m5,'5m',true,0).find(z=>z.startTime===first.startTime&&z.dir===first.dir);
   const ob={...zone,recognizedAt:orderBlockRecognitionTimes(fixture.candles.m5,'5m').get(first.startTime),timeframe:'5M'};
   const context=createOrderBlockReactionContext(fixture.candles.m1,fixture.provenance.query.to,'XAUUSD');
-  const reaction=evaluateOrderBlockReaction(context,ob),exact=exactRetestAnchor(context,ob,reaction);
+  const reaction=evaluateOrderBlockReaction(context,ob,{nearTouch:true}),exact=exactRetestAnchor(context,ob,reaction);
   // Near-Reaktion 1794384120, exakter Retest erst mit seiner FVG 1794387000 belegt.
   expect(reaction.contact.status).toBe('nearTouch');expect(exact).toEqual({fromTime:1794387000,price:4061.66});
   expect(firstRetestHoldAnchor(exact,1794387600)).toBe('exact');
   expect(firstRetestHoldAnchor(exact,1794386940)).toBe('near');
   expect(firstRetestHoldAnchor(false,1794387600)).toBe('near');
  });
- it('exposes the ablation switches without changing the default result',()=>{
-  const day=refs(manifest.pairs.find(p=>p.id==='P14'))[0].day,fixture=days.get(day);
-  const at=options=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to,options});
-  const [first,second]=refs(manifest.pairs.find(p=>p.id==='P14')),has=r=>r.pairs.some(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
-  expect(at({}).pairs).toEqual(run(day).pairs);expect(at({}).policy.options.nearTouch).toBe('none');expect(at({}).policy.options.bridgeClosures).toBe(false);
+ it('derives the reaction options of both roles from one validated source',()=>{
+  expect(reactionOptionsFor('first')).toEqual({nearTouch:false,bridgeClosures:false});
+  expect(reactionOptionsFor('second')).toEqual({nearTouch:false,bridgeClosures:false});
+  expect(reactionOptionsFor('first',{nearTouch:'second'}).nearTouch).toBe(false);
+  expect(reactionOptionsFor('second',{nearTouch:'second',bridgeClosures:true})).toEqual({nearTouch:true,bridgeClosures:true});
+  expect(()=>reactionOptionsFor('first',{nearTouch:'sometimes'})).toThrow(RangeError);
+  expect(()=>reactionOptionsFor('third')).toThrow(RangeError);
+  expect(()=>detectDoubleOrderBlocks({evaluatedAt:1,options:{nearTouch:true}})).toThrow(RangeError);
   // P14 ist nur mit Near-Touch auf OB2 handelbar (dort SL an der M5-Kante).
-  expect(has(at({}))).toBe(false);expect(has(at({nearTouch:'second'}))).toBe(true);
-  expect(has(at({maxRetestDepth:{first:null,second:.5}}))).toBe(has(at({})));
-  expect(at({stopRule:'m5Edge'}).pairs.flatMap(p=>Object.values(p.entries)).every(e=>e.status!=='unknown'||e.reason!=='retestEpisodeUnresolved')).toBe(true);
+  const [first,second]=refs(manifest.pairs.find(p=>p.id==='P14')),fixture=days.get(first.day);
+  const has=options=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
+   evaluatedAt:fixture.provenance.query.to,options}).pairs.some(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
+  expect(has({})).toBe(false);expect(has({nearTouch:'second'})).toBe(true);
+ });
+});
+
+describe('XAU daily market closure (W1: bridgeClosures false)',()=>{
+ // 05./06.11.: OB1 vom 05.11. reagiert erst nach der Tagespause 23:00–00:01 Berlin.
+ const [d1,d2]=['2026-11-05','2026-11-06'].map(load);
+ const m5=[...d1.candles.m5,...d2.candles.m5],m1=[...d1.candles.m1,...d2.candles.m1],evaluatedAt=d2.provenance.query.to;
+ const key='dob:XAUUSD:1:1793838000:1793921100',pauseFrom=1793916060,pauseTo=1793919660;
+ const detect=(at,options)=>detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:m5,m1Candles:m1,evaluatedAt:at,options});
+ const ob1=()=>{const zone=detectOrderBlocks(m5,'5m',true,0).find(z=>z.startTime===1793838000);
+  return {...zone,recognizedAt:orderBlockRecognitionTimes(m5,'5m').get(1793838000),timeframe:'5M'};};
+ it('keeps the pair only when the reaction may bridge the closure',()=>{
+  expect(m1.filter(c=>c.time>=pauseFrom&&c.time<pauseTo).length).toBeLessThan(10);
+  expect(detect(evaluatedAt,{bridgeClosures:true}).pairs.map(p=>p.id)).toContain(key);
+  expect(detect(evaluatedAt).pairs.map(p=>p.id)).not.toContain(key);
+ });
+ it('lets the open OB expire as marketClosed, during the pause and afterwards, instead of missingHistory',()=>{
+  for(const at of [pauseFrom+1800,evaluatedAt]){
+   const context=createOrderBlockReactionContext(m1.filter(c=>c.time+60<=at),at,'XAUUSD');
+   expect(evaluateOrderBlockReaction(context,ob1(),reactionOptionsFor('first'))).toMatchObject({state:'unknown',reason:'marketClosed'});
+   expect(evaluateOrderBlockReaction(context,ob1(),{bridgeClosures:true}).reason).not.toBe('marketClosed');
+  }
+  const bridged=createOrderBlockReactionContext(m1,evaluatedAt,'XAUUSD');
+  expect(evaluateOrderBlockReaction(bridged,ob1(),{bridgeClosures:true})).toMatchObject({state:'true',knownAt:1793920920});
+ });
+ it('treats a first-retest hold across the closure as unknown (counted as firstHoldUnknown)',()=>{
+  // Das Retest-Tag-Gate fängt solche Paare im Detektor meist vorher ab; der Hold selbst darf die Pause nicht bestätigen.
+  const hold=instrument=>orderBlockRetestHoldAt(orderBlockRetestHoldHistory({candles:m1,direction:'long',anchorPrice:1,
+   fromTime:pauseFrom-600,evaluatedAt:pauseTo+600,instrument}),pauseTo+600);
+  expect(hold(null)).toMatchObject({status:'unknown',reason:'missingHistory'});
+  expect(hold('XAUUSD').status).toBe('passed');
  });
 });
