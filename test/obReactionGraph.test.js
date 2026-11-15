@@ -38,12 +38,12 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(g.edges.falseResult).toBe('rejected');
   expect(g.history.at(-1).text).toBe('Reaktion false · M5-Gegenkante gebrochen');
  });
- it('504 und P14: Reaktion true, SL ohne offene interne FVG → Retest-Extrem (T6) → unknown',async()=>{
-  for(const id of ['504','P14']){
+ it('504 und P14: Reaktion true, SL ohne offene interne FVG → Retest-Extrem',async()=>{
+  for(const [id,sl] of [['504','4.114,07'],['P14','4.181,45']]){
    const g=await graphAt(id);
-   expect(g.head,id).toBe('Intern: true · Routen: a unknown, b unknown');
-   expect(status(g),id).toMatchObject({reaction:'visited',stop:'unknown',routeA:'unknown',bCheck:'visited',entryB:'unknown',result:'unknown'});
-   expect(g.nodes.stop.sub,id).toBe('SL unknown\nkeine offen → Retest-Extrem (T6) → unknown');
+   expect(g.head,id).toBe('Intern: true · Routen: a entry, b entry');
+   expect(status(g),id).toMatchObject({reaction:'visited',stop:'visited',routeA:'visited',bCheck:'visited',entryB:'visited',result:'visited'});
+   expect(g.nodes.stop.sub,id).toBe(`${sl}\nkeine offen → Retest-Extrem`);
   }
  });
  it('folgt dem Slider: vor der OB unbekannt, vor der FVG offen',async()=>{
@@ -84,7 +84,7 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   const orderBlock={dir:1,top:2,bottom:1,startTime:0,recognizedAt:300},fvg={top:2.5,bottom:2.2,recognizedAt:900,candleTime:780};
   for(const reason of ['missingHistory','entryBUnknown']){
    const reaction={state:'true',reason:null,contact:{status:'touch',candleTime:600,knownAt:660},fvg,knownAt:900,penetration:null,
-    routes:{a:{status:'unknown',reason:'retestEpisodeUnresolved',knownAt:900},b:{status:'unknown',reason,knownAt:1200}}};
+    routes:{a:{status:'unknown',reason:'partialOverlapOpen',knownAt:900},b:{status:'unknown',reason,knownAt:1200}}};
    const g=obReactionGraph({dir:1,entry:{role:'second',orderBlock,reaction,internalFvgs:[]},context:{rows:[],evaluatedAt:1800},evaluatedAt:1800});
    expect(g.nodes.bCheck.status,reason).toBe('unknown');
    expect(g.nodes.bCheck.sub,reason).toContain(reason==='missingHistory'?'M1-Historie lückenhaft':'Entry b unbekannt');

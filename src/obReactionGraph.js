@@ -11,7 +11,7 @@ export const REASON_TEXT={
  missingHistory:'M1-Historie lückenhaft',m5OrderBlockBroken:'M5-Gegenkante gebrochen',invalidOrderBlock:'OB ungültig',
  reactionFalse:'Reaktion false',entryUnavailable:'kein Entry aus der FVG',entryBPending:'wartet auf Entry-b-Bestätigung',
  entryBUnknown:'Entry b unbekannt',entryBOrderBlockBroken:'M1-OB der FVG gebrochen',entryBOrderBlockTooDeep:'M1-OB über 50 % eingestochen',
- retestEpisodeUnresolved:'Retest-Extrem-SL nicht spezifiziert',partialOverlapOpen:'interne FVG nur teilweise in der OB',
+ partialOverlapOpen:'interne FVG nur teilweise in der OB',
  internalFvgHistoryMissing:'Füllhistorie interner FVG fehlt',stopNotBeyondEntry:'SL liegt nicht hinter dem Entry',
 };
 export const reasonText=reason=>REASON_TEXT[reason]??reason;
@@ -23,7 +23,7 @@ const pct=n=>Number(n.toFixed(2))+' %';
 const ROUTE_STATUS={entry:'visited',rejected:'rejected',unknown:'unknown',pending:'unknown'};
 // SL-Gründe bzw. -Anker der Produktrouten; ein unknown aus diesen Gründen hat das 50-%-Gate von Route b bereits passiert.
 const STOP_BRANCH={'m5-edge':'interne FVG offen → ferne M5-Kante',retestExtreme:'keine offen → Retest-Extrem',
- partialOverlapOpen:'nur teilweise überlappend → unknown',retestEpisodeUnresolved:'keine offen → Retest-Extrem (T6) → unknown',
+ partialOverlapOpen:'nur teilweise überlappend → unknown',
  internalFvgHistoryMissing:'Füllhistorie fehlt → unknown',stopNotBeyondEntry:'SL nicht hinter dem Entry → unknown'};
 const UNKNOWN_METER=label=>({value:null,label,segments:[]});
 const meterOf=(value,words,label,positive=true)=>({value,label,
@@ -143,7 +143,7 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
  n.stop={label:'OB2: SL beim Entry',status:!slLive?'not-visited':entries.length?'visited':'unknown',
   sub:!slLive?'○ nicht besucht':entries.length?`${price(entries[0].stopLoss)}\n${STOP_BRANCH[entries[0].stopAnchor]??entries[0].stopAnchor}`
    :stopKey?`SL unknown\n${STOP_BRANCH[stopKey]}`:'noch kein Entry-Zeitpunkt',
-  detail:['Interne FVG offen und komplett in der OB → ferne M5-Kante; nur teilweise überlappend → unknown; keine offen → Retest-Extrem vom Kontakt bis zum Entry (kommt mit T6, bis dahin unknown).',
+  detail:['Interne FVG offen und komplett in der OB → ferne M5-Kante; nur teilweise überlappend → unknown; keine offen → Retest-Extrem: Short höchstes High, Long tiefstes Low von der Kontakt- bis einschließlich Entry-Kerze, ohne Puffer.',
    ...Object.entries(routes).map(([k,x])=>`Route ${k}: ${x.status==='entry'?'SL '+price(x.stopLoss)+' · '+(STOP_BRANCH[x.stopAnchor]??x.stopAnchor):reasonText(x.reason)}`)]};
  const a=routes.a,b=routes.b;
  n.routeA={label:'Route a: Entry bei FVG-Bestätigung',...routeEntry(a,'Erst mit Reaktion true.')};
