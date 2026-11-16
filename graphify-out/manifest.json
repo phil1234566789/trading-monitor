@@ -10176,27 +10176,27 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/source-measurement-xau-2026.json": {
-    "mtime": 1794863886.1308084,
-    "seen": 1794863951.9948745,
-    "ast_hash": "6b8e8ff4b7a7a61f4ddf110a9180e8c7",
+    "mtime": 1794864458.1825223,
+    "seen": 1794864523.6379557,
+    "ast_hash": "fe5e0a22bc343040c40a5630378b953d",
     "semantic_hash": ""
   },
   "scripts/dobSourceMeasurement.mjs": {
-    "mtime": 1794863886.0152857,
-    "seen": 1794863951.9948745,
-    "ast_hash": "505a8db40269dacb118483483659429d",
+    "mtime": 1794864420.2736297,
+    "seen": 1794864523.6589816,
+    "ast_hash": "5b4214cd90c2e2449c6cb1e5b9fa3a44",
     "semantic_hash": ""
   },
   "analysis/dob-setup/source-combos-xau-2026.json": {
-    "mtime": 1794863886.1268084,
-    "seen": 1794863951.9948745,
-    "ast_hash": "5b3e1e903b6056e36433a43b84b6dbab",
+    "mtime": 1794864458.3228354,
+    "seen": 1794864523.6379557,
+    "ast_hash": "701557653367b3fb4512b8a5e604d5e8",
     "semantic_hash": ""
   },
   "analysis/dob-setup/source-g-xau-2026.json": {
-    "mtime": 1794863886.1298084,
-    "seen": 1794863951.9948745,
-    "ast_hash": "6fec7fcaf28b02a1178878af32fe53a3",
+    "mtime": 1794864460.909829,
+    "seen": 1794864523.6379557,
+    "ast_hash": "af940c84fc8a766c30cc93390c0a84fb",
     "semantic_hash": ""
   },
   "scripts/dobTradeSetupsFill.mjs": {
@@ -10236,9 +10236,9 @@
     "semantic_hash": ""
   },
   "src/dobSourceOfStrength.js": {
-    "mtime": 1794863886.0152857,
-    "seen": 1794863951.9948745,
-    "ast_hash": "4683f27009aa6a090d14b8ac72657bc4",
+    "mtime": 1794864336.0106976,
+    "seen": 1794864523.72502,
+    "ast_hash": "a357e9a6e5d86fddbc7aa8db174706d4",
     "semantic_hash": ""
   },
   "test/fixtures/dob-native/2026-10-26.json": {
