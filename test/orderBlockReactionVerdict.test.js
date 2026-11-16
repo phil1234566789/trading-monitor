@@ -28,3 +28,10 @@ it('does not disguise an unresolved stop or multiple-FVG policy as a negative re
  expect(reactionVerdict({structuralState:'true',routes:{a:{status:'unknown',reason:'opposingFvgSelectionUnresolved',knownAt:120},b:{status:'rejected',knownAt:180}}}))
   .toMatchObject({state:'unknown',reason:'opposingFvgSelectionUnresolved'});
 });
+
+it('reports unknown only once no route is pending: the latest route knownAt, null without any',()=>{
+ const routes={a:{status:'unknown',reason:'partialOverlapOpen',knownAt:120},b:{status:'unknown',reason:'partialOverlapOpen',knownAt:300}};
+ expect(reactionVerdict({structuralState:'true',routes})).toMatchObject({state:'unknown',reason:'partialOverlapOpen',knownAt:300});
+ expect(reactionVerdict({structuralState:'true',routes:{a:{status:'unknown',reason:'missingHistory'},b:{status:'rejected'}}}))
+  .toMatchObject({state:'unknown',knownAt:null});
+});
