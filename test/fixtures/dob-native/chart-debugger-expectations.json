@@ -9,8 +9,8 @@
     "504": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Philip: kein Entry; Gegen-FVG sperrt A, M1-OB-Tiefe verwirft B um 07:54"},
     "507": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"},
     "508": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"},
-    "offen-gegen-fvgs": {"verdict": "offen", "state": "unknown", "reason": "opposingFvgSelectionUnresolved", "note": "Regel fehlt: welche Gegen-FVG zählt", "source": "Philip klärt"},
-    "offen-teilueberlappung": {"verdict": "offen", "state": "unknown", "reason": "partialOverlapOpen", "note": "Regel fehlt: SL bei teilweiser Überlappung", "source": "Philip klärt"},
-    "offen-marktschluss": {"verdict": "offen", "state": "true", "note": "Marktschluss 23:00, Entry b 00:17", "source": "Philip klärt"}
+    "U1": {"verdict": "offen", "state": "unknown", "reason": "opposingFvgSelectionUnresolved", "note": "Regel fehlt: welche Gegen-FVG zählt", "source": "Philip klärt"},
+    "U2": {"verdict": "offen", "state": "unknown", "reason": "partialOverlapOpen", "note": "Regel fehlt: SL bei teilweiser Überlappung", "source": "Philip klärt"},
+    "U3": {"verdict": "offen", "state": "true", "note": "Marktschluss 23:00, Entry b 00:17", "source": "Philip klärt"}
   }
 }
