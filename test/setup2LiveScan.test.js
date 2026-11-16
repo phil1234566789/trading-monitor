@@ -49,4 +49,5 @@ it('T68 minute hook observes closed pre-FVG minutes without changing batch entri
  const resumed=[];
  await scanTradeSetup2Window({...input,fromTime:before.knownAt,toTime:before.knownAt,onMinuteCheck:m=>resumed.push(m)});
  expect(resumed.map(m=>m.knownAt)).toEqual([before.knownAt]);
-},30000);
+// Allein ~14 s, im parallelen Gesamtlauf bis ~29 s gemessen: 30 s war zu knapp (flaky).
+},90000);
