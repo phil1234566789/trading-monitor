@@ -77,9 +77,9 @@ export default defineConfig({
       SUPABASE_ANON_KEY: "vitest-dummy-anon-key",
     },
     setupFiles: ["test/setup/denoStub.js"],
-    // Mehrere Replay-/Mount-Tests brauchen allein 1,5-14 s; im parallelen Gesamtlauf rissen sie
-    // das 5-s-Default reihum (flaky). Einzeltests mit eigenem, höherem Timeout bleiben unberührt.
-    testTimeout: 30000,
+    // Replay-/Mount-Tests rissen im parallelen Gesamtlauf das 5-s-Default reihum (flaky); unter
+    // Last bis ~14 s gemessen, deshalb 60 s. Tests mit eigenem Timeout überschreiben diesen Wert.
+    testTimeout: 60000,
     // Deno-Specifier "npm:paket@version/pfad" auf das gleichnamige node_modules-Paket abbilden.
     // Versionen stimmen nur, solange package.json dieselben Pins führt (zod exakt 3.24.1).
     alias: [{ find: /^npm:((?:@[^/@]+\/)?[^/@]+)(?:@[^/]+)?(\/.*)?$/, replacement: "$1$2" }],

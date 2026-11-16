@@ -46,4 +46,5 @@ it('T68 restart catches a newly recognized source after persisted watermark with
   expect(checkpoints[0].p_state.evaluatedThrough).toBe(iso(closed));
   expect(error).not.toHaveBeenCalled();
  }finally{clock.mockRestore();log.mockRestore();error.mockRestore();vi.unstubAllEnvs();vi.unstubAllGlobals();}
-},30000);
+// Im parallelen Gesamtlauf bis ~16 s gemessen; 30 s ließ zu wenig Puffer.
+},90000);
