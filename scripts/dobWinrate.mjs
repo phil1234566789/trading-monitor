@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { createServer } from 'vite';
 import { aggregateDobByMonth } from './dobWinrateAggregate.mjs';
+import { dobCandleCache } from './dobCandleCache.mjs';
 
 const flag = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const options = JSON.parse(flag('--options') ?? '{}');
@@ -34,39 +35,12 @@ try {
     '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/priceChartConstants.js'].map(load));
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
-  const cached = async (name, fetcher) => {
-    const file = path.join(outDir, name);
-    if (!process.argv.includes('--refresh') && existsSync(file)) return JSON.parse(await fs.readFile(file, 'utf8'));
-    const data = await fetcher();
-    await fs.mkdir(outDir, { recursive: true });
-    await fs.writeFile(file, JSON.stringify(data));
-    return data;
-  };
-  // Kalenderbars bis Start plus Fenster: Wochenenden machen das zur sicheren Obergrenze für den Vorlauf.
-  // coveredFrom = frühester Start, dessen Fenster der Cache trägt; ein früheres --from lädt nur das Ältere nach.
-  const candles = async (bar, seconds, window) => {
-    const file = path.join(outDir, `candles-${SYMBOL}-${bar === '1m' ? 'm1' : 'm5'}.json`);
-    let cache = !process.argv.includes('--refresh') && existsSync(file) ? JSON.parse(await fs.readFile(file, 'utf8')) : null;
-    if (Array.isArray(cache)) cache = { coveredFrom: berlinDayRangeUtcMs(DEFAULT_START).startUtcMs / 1000, rows: cache };
-    // Ein leerer oder unvollständiger Cache wird neu geholt statt an rows[0] zu scheitern.
-    if (!Number.isFinite(cache?.coveredFrom) || !Array.isArray(cache?.rows) || !cache.rows.length) cache = null;
-    if (cache && cache.coveredFrom <= startSec) return cache.rows;
-    const toSec = cache ? cache.rows[0].time : Math.floor(Date.now() / 1000);
-    const rows = await fetchInitialCandles(SYMBOL, bar, Math.ceil((toSec - startSec) / seconds) + window, toSec * 1000 - 1);
-    cache = { coveredFrom: startSec, rows: [...rows.filter(c => c.time < toSec), ...(cache?.rows ?? [])] };
-    await fs.mkdir(outDir, { recursive: true });
-    await fs.writeFile(file, JSON.stringify(cache));
-    return cache.rows;
-  };
-  const m5All = await candles('5m', 300, TRADE_SETUP_M5_CANDLE_COUNT);
-  const m1All = await candles('1m', 60, TRADE_SETUP_M5_CANDLE_COUNT * 5 + 5);
-  // Gleiche Ignore-Fenster wie markIgnored() im Dashboard; Philips Browser läuft in Berlin.
-  const sessions = await cached(`sessions-${SYMBOL}.json`, async () => {
-    const { data, error } = await supabase.from('sessions').select('from_minutes,to_minutes,days,ignore_liquidity')
-      .eq('instrument', SYMBOL).limit(200);
-    if (error) throw error;
-    return data.map(r => ({ fromMinutes: r.from_minutes, toMinutes: r.to_minutes, days: r.days, ignoreLiquidity: r.ignore_liquidity ?? false }));
-  });
+  const cache = dobCandleCache({ outDir, symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
+    defaultStartSec: berlinDayRangeUtcMs(DEFAULT_START).startUtcMs / 1000, startSec, fetchInitialCandles, supabase });
+  const m5All = await cache.candles('5m', 300, TRADE_SETUP_M5_CANDLE_COUNT);
+  const m1All = await cache.candles('1m', 60, TRADE_SETUP_M5_CANDLE_COUNT * 5 + 5);
+  // Philips Browser läuft in Berlin.
+  const sessions = await cache.sessions();
   const mark = rows => markIgnoredCandles(rows, sessions, sec => berlinOffsetMinutes(sec * 1000));
   const window = (rows, bar, count, at) => {
     const end = rows.findLastIndex(c => c.time <= at) + 1;
