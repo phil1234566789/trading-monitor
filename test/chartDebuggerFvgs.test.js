@@ -62,7 +62,7 @@ describe('interne FVG-Zonen im Chart-Debugger',()=>{
 });
 
 
-describe('native P7: ausgewählte OB2-Quellen und Entry-b-Wiederholung',()=>{
+describe('native P7: ausgewählte OB2-Quellen und Entry a',()=>{
  const fixture=JSON.parse(readFileSync(new URL('./fixtures/dob-native/2026-11-03.json',import.meta.url),'utf8'));
  const at=hm=>Date.parse(`2026-11-03T${hm}:00+01:00`)/1000;
  function snapshot(hm){
@@ -79,46 +79,29 @@ describe('native P7: ausgewählte OB2-Quellen und Entry-b-Wiederholung',()=>{
   expect(zones.map(z=>z.zone.endTime)).toEqual([at('03:00'),at('03:51')]);
   expect(zones.map(z=>z.label)).toEqual(['Int. M1-FVG 02:56 · gefüllt','Int. M1-FVG 03:00 · gefüllt']);
  });
- it('Verlauf behält Ablehnung03:26, neue Quelle03:32 und Entry03:35; Box markiert FVG03:30',()=>{
-  const x=snapshot('04:10'),g=obReactionGraph(x),times=graphChangeTimes(x);
-  for(const hm of ['03:26','03:32','03:35'])expect(times).toContain(at(hm));
-  expect(g.history).toEqual(expect.arrayContaining([
-   expect.objectContaining({at:at('03:26'),text:expect.stringContaining('Versuch 1 rejected')}),
-   expect.objectContaining({at:at('03:32'),text:expect.stringContaining('Versuch 2 FVG bekannt')}),
-   expect.objectContaining({at:at('03:35'),text:expect.stringContaining('Versuch 2 entry')})]));
+ // Philip 16.11.: die nächste Gegen-FVG vor der Entry-Nase (03:13) ist bei der Reaktion gefüllt, A beendet die Reaktion um 03:17;
+ // die Entry-b-Wiederholung deckt orderBlockReactionRetry.test.js ab.
+ it('Entry a 03:17 beendet die Reaktion; nur die Reaktions-FVG wird gezeichnet',()=>{
+  const x=snapshot('04:10');
+  expect(x.entry.reaction.routes.a).toMatchObject({status:'entry',entryTime:at('03:17'),entryPrice:3945.18});
+  expect(x.entry.reaction.routes.b.status).toBe('skipped');
   const sources=chartDebuggerReactionZones(x.entry,x.context,x.evaluatedAt);
-  expect(sources).toHaveLength(2);
-  expect(sources[1].fvg.candleTime).toBe(at('03:30'));
-  expect(sources[1].label).toContain('Entry-b-FVG');
-  expect(obReactionGraph(snapshot('03:26')).nodes.result.headline).toBe('Reaktion: false');
-  expect(obReactionGraph(snapshot('03:32')).nodes.result.headline).toBe('Reaktion: pending');
-  expect(obReactionGraph(snapshot('03:35')).nodes.result.headline).toBe('Reaktion: true');
+  expect(sources.map(z=>z.label.split(' ')[0])).toEqual(['Reaktions-FVG']);
+  expect(obReactionGraph(snapshot('03:17')).nodes.result.headline).toBe('Reaktion: true');
  });
 });
 
-describe('markierte Gegen-FVG (U4)',()=>{
- it('zeichnet die bullische FVG 10:20 vor der Nase, obwohl das Produkt sie nicht listet; Entry a kommt zustande',async()=>{
-  const {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps,productMatches}=await import('../src/chartDebuggerCases.js');
-  const {chartDebuggerMarkedFvgZones}=await import('../src/chartDebuggerFvgs.js');
-  const c=CHART_DEBUGGER_CASES.find(x=>x.id==='U4'),f=await loadCaseFixture(c),at=caseSteps(c,f).through,r=evaluateCase(c,f,at);
-  const reaction=r.orderBlocks[0].reaction;
-  expect(reaction.opponentFvgs.some(x=>x.fvg.candleTime===1792138800)).toBe(false);
-  expect(reaction.routes.a.status).toBe('entry');
-  expect(productMatches(c,r)).toBe(true);
-  const [z]=chartDebuggerMarkedFvgZones(c,r.context,at);
-  expect(z.zone).toMatchObject({bottom:4179.64,top:4181.41,startTime:1792138800});
-  expect(z.label).toMatch(/^Gegen-FVG \(nicht im Preisweg\) 10:20 · /);
- });
-});
-
-describe('markierte Gegen-FVGs P11/P13',()=>{
- it.each([['P11',[[1792690680,4043.03,4043.63]]],['P13',[[1792561860,4119.5,4120.42],[1792576620,4118.98,4120.17]]]])(
-  '%s: zeichnet die Blocker der Variante „Entry-Nase ab 0,5“, die das Produkt heute nicht listet',async(id,want)=>{
+describe('maßgebliche Gegen-FVG vor der Entry-Nase',()=>{
+ // Tupel: Fall, Gegen-FVG (Mittelkerze, Unter-/Oberkante), offen bei Reaktion, Entry a.
+ it.each([['U4',[1792138800,4179.64,4181.41],true,'rejected'],['P11',[1792691040,4045.12,4046.44],false,'entry'],['P13',[1792577580,4115.5,4115.68],false,'entry']])(
+  '%s: zeichnet die nächste Gegen-FVG vor der Nase; nur offen bei Reaktion lehnt sie Entry a ab',async(id,[time,bottom,top],open,a)=>{
   const {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps}=await import('../src/chartDebuggerCases.js');
-  const {chartDebuggerMarkedFvgZones}=await import('../src/chartDebuggerFvgs.js');
-  const c=CHART_DEBUGGER_CASES.find(x=>x.id===id),f=await loadCaseFixture(c),at=caseSteps(c,f).through,r=evaluateCase(c,f,at);
-  expect(r.pair.entries.a.status).toBe('ready');
-  expect(chartDebuggerMarkedFvgZones(c,r.context,at).map(z=>[z.zone.startTime,z.zone.bottom,z.zone.top])).toEqual(want);
-  for(const o of r.orderBlocks)expect(o.reaction.opponentFvgs.some(x=>want.some(([t])=>t===x.fvg.candleTime))).toBe(false);
+  const {chartDebuggerOpponentZones}=await import('../src/chartDebuggerFvgs.js');
+  const c=CHART_DEBUGGER_CASES.find(x=>x.id===id),f=await loadCaseFixture(c),at=caseSteps(c,f).through,r=evaluateCase(c,f,at),entry=r.orderBlocks.at(-1);
+  expect(entry.reaction.opponentFvgs.find(x=>x.nearest)).toMatchObject({openAtReaction:open,blocksEntryA:open});
+  expect(entry.reaction.routes.a.status).toBe(a);
+  const [z]=chartDebuggerOpponentZones(entry,r.context,at);
+  expect(z.zone).toMatchObject({bottom,top,startTime:time});
+  expect(z.label).toMatch(/^Gegen-FVG vor Nase /);
  });
 });

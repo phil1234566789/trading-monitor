@@ -108,12 +108,12 @@ function opponentNode(r,dir,live){
  const sources=live?r.opponentFvgs??[]:[],blocked=r?.routes?.a?.status==='rejected'&&r.routes.a.reason==='opposingFvgOpen',unknownNow=sources.some(x=>x.openNow==null),unknownThen=sources.some(x=>x.openAtReaction==null);
  const now=unknownNow?'Füllstand unbekannt':sources.some(x=>x.openNow)?'offen':'gefüllt';
  return {label:`💀 Gegen-FVG: ${adjective(-dir)} M1-FVG im Weg?`,status:!live?'not-visited':unknownNow||unknownThen?'unknown':'visited',
-  sub:!live?'○ nicht besucht':sources.length?`${sources.length} Gegen-FVG · jetzt ${now}${unknownThen?' · damaliger Füllstand unbekannt':''}${blocked?' · a historisch abgelehnt':''}`:'keine Gegen-FVG seit M5-OB im Retest-Weg',
+  sub:!live?'○ nicht besucht':sources.length?`${sources.length} Gegen-FVG · jetzt ${now}${unknownThen?' · damaliger Füllstand unbekannt':''}${blocked?' · a historisch abgelehnt':''}`:'keine Gegen-FVG seit M5-OB vor der Entry-Nase',
   detail:!live?['Erst nach Bekanntwerden der Reaktions-FVG.']:[
-   ...sources.map(({fvg,openAtReaction,openNow,blocksEntryA,nearest})=>`Quelle: ${range(fvg)} · M1-FVG ${time(fvg.candleTime)} · erste Kerze ${time(fvg.candleTime-60)} · bekannt ${time(fvg.recognizedAt)} · bei Reaktion ${fillState(openAtReaction)} · jetzt ${fillState(openNow)} · ${blocksEntryA?'als Entry-a-Blocker markiert':nearest?'nächste in Trade-Richtung, kein belegter Entry-a-Blocker':'nicht die nächste in Trade-Richtung, blockiert nicht'}.`),
-   sources.length?'Spätere Füllung beschreibt die Quelle; sie schreibt die historische Entry-a-Entscheidung nicht um.':'Keine gegnerische FVG im vom Produkt geprüften Reaktionsweg.',
-   'Zählt nur FVGs, die seit der M5-OB entstanden sind (M1-FVG-Zeit ≥ OB-Start), bis zur Reaktion.',
-   r?.routes?.b?.status==='skipped'?`Entry b: ${SKIPPED_ENTRY_TEXT}.`:'Entry b wird geprüft, wenn a keinen Entry liefert. Quellen und Blocker stammen aus dem Produkt; nur die preislich nächste Gegen-FVG in Trade-Richtung ab dem Bestätigungspreis lehnt a ab, wenn sie offen ist.']};
+   ...sources.map(({fvg,openAtReaction,openNow,blocksEntryA,nearest})=>`Quelle: ${range(fvg)} · M1-FVG ${time(fvg.candleTime)} · erste Kerze ${time(fvg.candleTime-60)} · bekannt ${time(fvg.recognizedAt)} · bei Reaktion ${fillState(openAtReaction)} · jetzt ${fillState(openNow)} · ${blocksEntryA?'als Entry-a-Blocker markiert':nearest?'nächste vor der Entry-Nase, bei Reaktion nicht offen':'nicht die nächste vor der Entry-Nase, blockiert nicht'}.`),
+   sources.length?'Spätere Füllung beschreibt die Quelle; sie schreibt die historische Entry-a-Entscheidung nicht um.':'Keine gegnerische FVG seit der M5-OB bis zur Reaktion.',
+   'Regel: nächste Gegen-FVG vor der Entry-Nase (seit M5-OB); offen bei Reaktion → Entry a abgelehnt.',
+   r?.routes?.b?.status==='skipped'?`Entry b: ${SKIPPED_ENTRY_TEXT}.`:'Entry b wird geprüft, wenn a keinen Entry liefert. Quellen und Blocker stammen aus dem Produkt.']};
 }
 
 const hasEntryCandidate=x=>x?.status==='entry'||Boolean(x?.status==='unknown'&&x.entryCandidate);

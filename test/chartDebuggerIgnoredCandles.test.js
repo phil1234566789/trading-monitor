@@ -27,7 +27,9 @@ it('Debugger und Dashboard-Worker bekommen dieselben ignorierten Kerzen',async()
 
 it('ignorierte Spread-Hour-Kerzen ändern das Debugger-Ergebnis wie im Dashboard',async()=>{
  const fixture=await loadCaseFixture(c),at=fixture.candles.m1.at(-1).time+60,reaction=()=>evaluateCase(c,fixture,at).orderBlocks[0].reaction;
- expect(reaction().verdict).toMatchObject({state:'false',reason:'entryRoutesRejected'});
+ // Ohne Spread-Hour-Markierung liefert die Gegen-FVG-Regel Entry-Nase (16.11.) hier Entry a.
+ expect(reaction().verdict).toMatchObject({state:'true'});
+ expect(reaction().routes.a.status).toBe('entry');
  sessions.splice(0,0,SPREAD_HOUR);
  expect(reaction().verdict).toMatchObject({state:'false',reason:'marketClosed'});
 });

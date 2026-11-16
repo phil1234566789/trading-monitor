@@ -111,26 +111,18 @@ function reactionFvg(context,direction,contact,knownAt) {
  return context.byKnownAt[direction].get(knownAt)?.find(f=>f.candleTime>=contact.candleTime&&knownAt>contact.knownAt)??null;
 }
 
-// Gegen-FVG im tatsächlich durchlaufenen Preisweg: spätere Füllung hebt eine damalige A-Ablehnung nicht auf (502).
-function opposingFvgs(context,orderBlock,contact,reactionAt,nose) {
- const rows=context.rows;
- let low=Infinity,high=-Infinity;
- for(let i=firstIndex(rows,c=>c.time>=contact.candleTime);i<rows.length&&rows[i].time+60<=reactionAt;i++){
-  if(rows[i].ignored)continue;
-  low=Math.min(low,rows[i].low);high=Math.max(high,rows[i].high);
- }
+// Gegen-FVGs seit der M5-OB bis zur Reaktion, auch gefüllte: spätere Füllung hebt eine damalige A-Ablehnung nicht auf (502).
+function opposingFvgs(context,orderBlock,reactionAt,nose) {
  const list=context.byDirection[sideOf(-orderBlock.dir)],result=[];
  // Philip: Gegen-FVGs sind die, die sich seit der M5-OB gebildet haben; ältere (über Spread Hour/Marktschluss) zählen nicht.
  for(let i=firstIndex(list,f=>f.candleTime>=orderBlock.startTime);i<list.length;i++){
   const fvg=list[i];
   if(fvg.recognizedAt>reactionAt)break;
-  if(fvg.top<low||fvg.bottom>high)continue;
   const fill=fvgFill(context,fvg),openAtReaction=openAt(fill,reactionAt);
-  if(openAtReaction===false)continue;
   result.push({fvg,openAtReaction,openNow:openAt(fill,context.evaluatedAt),filledAt:fill.filledAt,nearest:false,blocksEntryA:false});
  }
- // Philip: maßgeblich ist nur die preislich nächste Gegen-FVG in Trade-Richtung vor der Nase des Retest (Bestätigungspreis);
- // „jede offene lehnt ab“ ließe Entry a praktisch nie zu. Eine FVG, die den Preis umschließt, liegt direkt davor.
+ // Philip: maßgeblich ist nur die preislich nächste Gegen-FVG vor der Entry-Nase (Bestätigungspreis), auch wenn sie schon
+ // gefüllt ist (P11/P13/P7: zerstörte FVG gibt a frei). Kein Preisweg-Filter: U4s FVG 10:20 liegt davor, ohne berührt zu sein.
  const ahead=result.filter(x=>orderBlock.dir===1?x.fvg.top>nose:x.fvg.bottom<nose);
  const nearest=ahead.reduce((best,x)=>!best||(orderBlock.dir===1?x.fvg.bottom<best.fvg.bottom:x.fvg.top>best.fvg.top)?x:best,null);
  if(nearest){nearest.nearest=true;nearest.blocksEntryA=nearest.openAtReaction===true;}
@@ -258,7 +250,7 @@ export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=false,b
   }
   const fvg=reactionFvg(context,direction,contact,c.time+60);
   if(!fvg)return false;
-  const opponents=opposingFvgs(context,orderBlock,contact,fvg.recognizedAt,fvg.confirmationPrice);
+  const opponents=opposingFvgs(context,orderBlock,fvg.recognizedAt,fvg.confirmationPrice);
   result={state:'true',reason:null,contact,fvg,knownAt:fvg.recognizedAt,opponentFvgs:opponents,
    penetration:measureOrderBlockPenetration(orderBlock,direction,rows.slice(contactIndex,i+1)),routes:evaluateRoutes(context,orderBlock,contact,fvg,opponents)};
   return true;

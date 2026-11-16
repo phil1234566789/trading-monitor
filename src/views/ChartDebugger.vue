@@ -11,7 +11,7 @@ import {formatDatedTime} from '../berlinTime.js';
 import {CHART_DEBUGGER_CASES,CASE_GROUPS,expectedText,productMatches,loadCaseFixture,evaluateCase,caseSteps} from '../chartDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOrderBlocks.js';
 import {obReactionGraph,graphChangeTimes,structuralState} from '../obReactionGraph.js';
-import {chartDebuggerFvgZones,chartDebuggerReactionZones,chartDebuggerMarkedFvgZones} from '../chartDebuggerFvgs.js';
+import {chartDebuggerFvgZones,chartDebuggerReactionZones,chartDebuggerOpponentZones} from '../chartDebuggerFvgs.js';
 import ObReactionGraph from '../components/ObReactionGraph.vue';
 
 const route=useRoute(),router=useRouter();
@@ -91,7 +91,7 @@ function draw(){
  // Boxen folgen derselben OB-Rolle und demselben Inventar wie die Seitenspur, auch nach Rollenwechsel.
  const selected=orderBlocks.find(o=>o.role===graphRole.value);
  const fvgZones=[...chartDebuggerFvgZones(selected,result.value.context,at),...chartDebuggerReactionZones(selected,result.value.context,at),
-  ...chartDebuggerMarkedFvgZones(current.value,result.value.context,at)];
+  ...chartDebuggerOpponentZones(selected,result.value.context,at)];
  for(const {zone,label} of fvgZones){
   // Im M5-Modus fehlt die laufende M5-Kerze; eine FVG danach hätte keinen Balken zum Andocken.
   if(snap(zone.startTime)>last)continue;

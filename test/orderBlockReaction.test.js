@@ -130,9 +130,10 @@ describe('native reaction references',()=>{
   expect(r.routes.a).toMatchObject({status:'entry',entryTime,entryPrice});
  });
  // U1: zwei offene bullische Gegen-FVGs; nur die 10:36 liegt direkt vor dem Bestätigungspreis 3907,33 und blockiert A.
- it('U1: only the nearest opposing FVG in trade direction blocks Entry a, the other stays visible',()=>{
+ it('U1: only the nearest opposing FVG before the entry nose blocks Entry a, the others stay visible',()=>{
   const r=react('2026-11-03',1793694900,-1,{options:{}});
-  expect(r.opponentFvgs.map(x=>[x.fvg.candleTime,x.openAtReaction,x.blocksEntryA])).toEqual([[1793698500,true,false],[1793698560,true,true]]);
+  expect(r.opponentFvgs.filter(x=>x.blocksEntryA).map(x=>[x.fvg.candleTime,x.openAtReaction])).toEqual([[1793698560,true]]);
+  expect(r.opponentFvgs.some(x=>x.fvg.candleTime===1793698500&&!x.blocksEntryA)).toBe(true);
   expect(r.routes.a).toMatchObject({status:'rejected',reason:'opposingFvgOpen'});
  });
  it('stays unknown before contact, before the FVG and across a missing minute',()=>{

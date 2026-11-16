@@ -34,11 +34,11 @@ const PRE_OPPONENT_CANDIDATES={
 // Native Einzelbelege: Mittelkerze, knownAt, Unter-/Oberkante, erste Vollfüllung bekannt (null = nicht im Archiv).
 // Diese Tabelle begründet die A-Ablehnungen, keine Rangfolge oder Stärke mehrerer Gegner.
 // P5/P10/P15 fehlen: ihre Quelle liegt vor OB2-Start, und Gegen-FVGs zählen erst ab der M5-OB (Philip); A gilt dort wieder.
+// P7 fehlt: die nächste Gegen-FVG vor der Entry-Nase (03:13) ist bei der Reaktion gefüllt, A gilt (Philip 16.11.).
 const OPPOSING_SOURCES={
  P1:[1794387420,1794387540,4055.95,4056.89,1794387900],
  P4:[1793907840,1793907960,4112.13,4113.52,1793908620],
  P6:[1793693460,1793693580,3907.28,3908.22,1793695200],
- P7:[1793671920,1793672040,3944,3944.67,1793672280],
  P12:[1792637520,1792637640,4113.07,4113.65,1792638120],
  P16:[1792556820,1792556940,4119.06,4121.59,1792557180],
  P17:[1792480620,1792480740,4129.16,4130.27,null],
@@ -78,8 +78,6 @@ describe('double order blocks from native candles',()=>{
    expected.b='skipped';
    expect(dob.entries.b).toEqual({variant:'b',status:'skipped',reason:'entryAlreadyFound',knownAt:historical.a[0]});
   }
-  // Retry bleibt bei blockiertem A aktiv; P7 trägt den bestätigten Nachfolger um 03:35.
-  if(pair.id==='P7')expected.b=[1793673300,3943.16];
   expect(dob.direction).toBe(first.dir===1?'long':'short');
   expect(dob.firstReaction.recognizedAt).toBeLessThanOrEqual(dob.secondRetest.candleTime);
   expect(dob.recognizedAt).toBe(dob.secondReaction.recognizedAt);
@@ -89,13 +87,6 @@ describe('double order blocks from native candles',()=>{
    expect(entry).toMatchObject({status:'ready',entryTime:want[0],entryPrice:want[1],stopAnchor:want[2]?'retestExtreme':'m5-edge',
     stopPrice:want[2]??(first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top)});
    expect(entry.targetPrice).toBeCloseTo(entry.entryPrice+first.dir*2*Math.abs(entry.entryPrice-entry.stopPrice),8);
-  }
-  if(pair.id==='P7'){
-   const fixture=days.get(first.day),at=fixture.candles.m1.at(-1).time+60;
-   const r=evaluateOrderBlockReaction(createOrderBlockReactionContext(fixture.candles.m1,at,'XAUUSD'),dob.secondOrderBlock);
-   expect(r.routes.b.attempts).toHaveLength(2);
-   expect(r.routes.b.attempts[0]).toMatchObject({status:'rejected',knownAt:1793672760});
-   expect(r.routes.b.attempts[1]).toMatchObject({status:'entry',fvg:{candleTime:1793673000,recognizedAt:1793673120}});
   }
  });
  it.each(manifest.pairs)('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
