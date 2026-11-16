@@ -2,7 +2,7 @@ import {detectOrderBlocks,candleInvalidatesOrderBlock} from './orderBlockDetecti
 import {obMinimum,instrumentConfig} from './instrumentConfig.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
-import {createOrderBlockReactionContext,evaluateOrderBlockReaction,exactRetestAnchor,NEAR_TOUCH_FRACTION,TOUCH_TOLERANCE_FRACTION,ENTRY_B_MAX_ORDER_BLOCK_DEPTH} from './orderBlockReaction.js';
+import {createOrderBlockReactionContext,reactionOrSkip,exactRetestAnchor,NEAR_TOUCH_FRACTION,TOUCH_TOLERANCE_FRACTION,ENTRY_B_MAX_ORDER_BLOCK_DEPTH} from './orderBlockReaction.js';
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from './orderBlockRetestHold.js';
 import {evaluateDoubleOrderBlockRetestDay} from './doubleOrderBlockRetestDay.js';
@@ -70,8 +70,9 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
  for(const zone of zones){
   const orderBlock={...zone,recognizedAt:recognition.get(zone.startTime),timeframe:'5M'};
   // Gleiche Optionen beider Rollen teilen sich eine Auswertung.
-  const firstReaction=evaluateOrderBlockReaction(context,orderBlock,roles.first);
-  const secondReaction=roles.second.nearTouch===roles.first.nearTouch?firstReaction:evaluateOrderBlockReaction(context,orderBlock,roles.second);
+  const firstReaction=reactionOrSkip(context,orderBlock,roles.first);
+  const secondReaction=roles.second.nearTouch===roles.first.nearTouch?firstReaction:reactionOrSkip(context,orderBlock,roles.second);
+  if(!firstReaction||!secondReaction)continue;
   result.stats.reactions.first[firstReaction.state]++;result.stats.reactions.second[secondReaction.state]++;
   // OB1 braucht die Strukturreaktion, keinen eigenen Entry; OB2 behält während offener Route seinen Kandidaten.
   const asFirst=firstReaction.structuralState==='true'?{orderBlock,reaction:firstReaction}:null;

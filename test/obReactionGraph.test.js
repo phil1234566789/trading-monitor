@@ -92,7 +92,9 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   for(const edit of [m1=>m1.map(x=>x.time===fvg.recognizedAt?{...x,ignored:true}:x),m1=>m1.filter(x=>x.time!==fvg.recognizedAt)]){
    const r=evaluateCase(c,{...fixture,candles:{...fixture.candles,m1:edit(fixture.candles.m1)}},at),same=r.orderBlocks[1].internalFvgs.find(f=>f.candleTime===fvg.candleTime);
    expect(internalFvgOpenAt(r.context,same,at)).toBeNull();
-   const g=graphOf(c,r,at),index=r.orderBlocks[1].internalFvgs.filter(f=>f!==r.orderBlocks[1].reaction.fvg).indexOf(same);
+   // Q11: unbelegte Füllhistorie beim Entry ist ein Datenfehler; das Produkt überspringt die Reaktion, die Seitenspur bleibt.
+   expect(r.orderBlocks[1].reaction).toBeNull();
+   const g=graphOf(c,r,at),index=r.orderBlocks[1].internalFvgs.filter(f=>f!==r.orderBlocks[1].reaction?.fvg).indexOf(same);
    expect(g.nodes.fvgList.meters[index]).toMatchObject({value:null,label:'Füllstand unbekannt'});
   }
  });

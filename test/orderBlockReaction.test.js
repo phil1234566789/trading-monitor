@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-import {measureReactionContact,reactionBreaksOrderBlock,createOrderBlockReactionContext,evaluateOrderBlockReaction,evaluateReactionStop} from '../src/orderBlockReaction.js';
+import {measureReactionContact,reactionBreaksOrderBlock,createOrderBlockReactionContext,evaluateOrderBlockReaction,evaluateReactionStop,ReactionDataError} from '../src/orderBlockReaction.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
 import {closedChecklistCandles} from '../src/tradeSetupChecklistTimeBasis.js';
@@ -78,14 +78,14 @@ describe('internal FVG stop at entry',()=>{
  });
  it('judges the stop at entry time; a later fill does not change it, a gap or hidden candle before entry does',()=>{
   expect(evaluateReactionStop(context([inside],rows.map(c=>c.time===1500?{...c,low:101}:c)),ob,contact,1200).price).toBe(100);
-  expect(evaluateReactionStop(context([inside],rows.filter(c=>c.time!==780)),ob,contact,1200))
-   .toMatchObject({status:'unknown',reason:'internalFvgHistoryMissing'});
+  // Q11: unbelegte Füllhistorie ist ein Datenfehler (Error mit Grund), kein fachliches unknown.
+  expect(()=>evaluateReactionStop(context([inside],rows.filter(c=>c.time!==780)),ob,contact,1200)).toThrow(/internalFvgHistoryMissing/);
   // Eine ignorierte Kerze könnte die Füllung verdecken; sie darf keinen Kantenstop vortäuschen.
-  expect(evaluateReactionStop(context([inside],rows.map(c=>c.time===780?{...c,ignored:true}:c)),ob,contact,1200).status).toBe('unknown');
+  expect(()=>evaluateReactionStop(context([inside],rows.map(c=>c.time===780?{...c,ignored:true}:c)),ob,contact,1200)).toThrow(ReactionDataError);
  });
  it('one open internal FVG settles the edge stop even if an unrelated one has missing history',()=>{
   const old={direction:'long',recognizedAt:660,bottom:106,top:107};
-  expect(evaluateReactionStop(context([inside,old],rows.filter(c=>c.time!==720)),ob,contact,1200).status).toBe('unknown');
+  expect(()=>evaluateReactionStop(context([inside,old],rows.filter(c=>c.time!==720)),ob,contact,1200)).toThrow(ReactionDataError);
   expect(evaluateReactionStop(context([{...inside,recognizedAt:780},{...old,recognizedAt:660}],rows.filter(c=>c.time!==720)),ob,contact,1200).price).toBe(100);
  });
  it('ignores FVGs formed long before the M5 order block, so a longer history cannot change the stop',()=>{
@@ -161,5 +161,22 @@ describe('native reaction references',()=>{
    const ob={...zone,recognizedAt:known.get(zone.startTime),timeframe:'5M'};
    expect(evaluateOrderBlockReaction(joined,ob,{nearTouch:true})).toEqual(evaluateOrderBlockReaction(alone,ob,{nearTouch:true}));
   }
+ });
+});
+
+describe('Datenfehler statt unknown (Q11)',()=>{
+ it('reactionOrSkip loggt den Fehler mit Grund, OB-Start und Zeit und überspringt nur dieses OB',async()=>{
+  const {vi}=await import('vitest'),{CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps}=await import('../src/chartDebuggerCases.js');
+  const c=CHART_DEBUGGER_CASES.find(x=>x.id==='P16'),fixture=await loadCaseFixture(c),at=caseSteps(c,fixture).through;
+  const fvg=evaluateCase(c,fixture,at).orderBlocks[1].internalFvgs[0];
+  // Verdeckte Kerze in der Füllhistorie einer offenen internen FVG: SL beim Entry nicht belegbar.
+  const m1=fixture.candles.m1.filter(x=>x.time!==fvg.recognizedAt);
+  const log=vi.spyOn(console,'error').mockImplementation(()=>{});
+  const r=evaluateCase(c,{...fixture,candles:{...fixture.candles,m1}},at);
+  expect(r.orderBlocks[1].reaction).toBeNull();
+  expect(r.orderBlocks[0].reaction).not.toBeNull();
+  expect(log).toHaveBeenCalledWith(expect.stringMatching(/^OB-Reaktion internalFvgHistoryMissing · M5-OB 2026-10-21 05:15 · 2026-10-21 /));
+  log.mockRestore();
+  expect(new ReactionDataError('entryUnavailable',{startTime:600},900).message).toBe('OB-Reaktion entryUnavailable · M5-OB 1970-01-01 01:10 · 1970-01-01 01:15');
  });
 });

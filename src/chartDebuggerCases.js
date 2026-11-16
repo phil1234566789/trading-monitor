@@ -2,7 +2,7 @@ import {detectOrderBlocks} from './orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {doubleOrderBlockInput} from './doubleOrderBlockInput.js';
 import {obMinimum} from './instrumentConfig.js';
-import {createOrderBlockReactionContext,evaluateOrderBlockReaction,internalOrderBlockFvgs} from './orderBlockReaction.js';
+import {createOrderBlockReactionContext,reactionOrSkip,internalOrderBlockFvgs} from './orderBlockReaction.js';
 import {detectDoubleOrderBlocks,reactionOptionsFor} from './doubleOrderBlocks.js';
 import references from '../test/fixtures/dob-native/references.json';
 import EXPECTATIONS from '../test/fixtures/dob-native/chart-debugger-expectations.json';
@@ -87,7 +87,7 @@ export function evaluateCase(c,fixture,evaluatedAt,options={}){
   if(!zone||!(recognizedAt<=evaluatedAt))return {role,startTime,orderBlock:null,reaction:null,internalFvgs:[]};
   const orderBlock={...zone,recognizedAt,timeframe:'5M'};
   const internalFvgs=internalOrderBlockFvgs(context,orderBlock);
-  return {role,startTime,orderBlock,internalFvgs,reaction:evaluateOrderBlockReaction(context,orderBlock,reactionOptionsFor(role,options))};
+  return {role,startTime,orderBlock,internalFvgs,reaction:reactionOrSkip(context,orderBlock,reactionOptionsFor(role,options))};
  });
  let pair=null;
  if(c.orderBlocks.length===2){

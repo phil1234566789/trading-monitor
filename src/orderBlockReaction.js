@@ -5,7 +5,7 @@ import {m1FvgEntrySequence,advanceM1FvgEntrySequence,m1FvgSequenceResult,m1FvgFu
 import {m1GapCovered} from './goldWeekendGap.js';
 import {reactionVerdict} from './orderBlockReactionVerdict.js';
 import {barSecondsFor} from './timeframes.js';
-import {berlinOffsetMinutes} from './berlinTime.js';
+import {berlinOffsetMinutes,formatDatedTime} from './berlinTime.js';
 
 export const NEAR_TOUCH_FRACTION=.1;
 // Philip wertet ≤ 2 % der OB-Höhe an beiden Kanten als Berührung (Pin 504 Kontakt, Pin 501 Gegenkante); kein Referenzpaar
@@ -22,6 +22,15 @@ export function insideEntryWindow(sec) {
  const minute=((Math.floor(sec/60)+berlinOffsetMinutes(sec*1000))%1440+1440)%1440;
  return minute>=ENTRY_WINDOW_MINUTES[0]&&minute<=ENTRY_WINDOW_MINUTES[1];
 }
+// Philip (Q11): Gründe, die nur bei Datenfehlern oder Gleichstand entstehen, sind kein fachliches unknown, sondern ein Fehler.
+// missingHistory (echte Kerzenlücke) bleibt unknown.
+export class ReactionDataError extends Error {
+ constructor(reason,orderBlock,at) {
+  super(`OB-Reaktion ${reason} · M5-OB ${formatDatedTime(orderBlock.startTime)} · ${formatDatedTime(at)}`);
+  this.name='ReactionDataError';this.reason=reason;
+ }
+}
+const fail=(reason,orderBlock,at)=>{throw new ReactionDataError(reason,orderBlock,at);};
 function firstIndex(items,predicate) {
  let lower=0,upper=items.length;
  while(lower<upper){const mid=(lower+upper)>>>1;if(predicate(items[mid]))upper=mid;else lower=mid+1;}
@@ -99,7 +108,7 @@ export function evaluateReactionStop(context,orderBlock,contact,entryAt) {
   if(state===null)missing=true;else if(state)open=true;
  }
  if(open)return {status:'ready',anchor:'m5-edge',price:direction==='long'?orderBlock.bottom:orderBlock.top,reason:null};
- if(missing)return {status:'unknown',price:null,reason:'internalFvgHistoryMissing'};
+ if(missing)fail('internalFvgHistoryMissing',orderBlock,entryAt);
  return {status:'ready',anchor:'retestExtreme',price:retestExtreme(context.rows,direction,contact.candleTime,entryAt),reason:null};
 }
 
@@ -141,16 +150,14 @@ function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
  const settle=(route,entry)=>{
   if(!insideEntryWindow(entry.entryTime)){routes[route]={status:'rejected',reason:'outsideEntryWindow',knownAt:entry.entryTime};return;}
   const stop=evaluateReactionStop(context,orderBlock,contact,entry.entryTime);
-  routes[route]=stop.status==='ready'&&(direction==='long'?stop.price<entry.entryPrice:stop.price>entry.entryPrice)
-   ?{status:'entry',entryTime:entry.entryTime,entryPrice:entry.entryPrice,stopLoss:stop.price,stopAnchor:stop.anchor,confirmationCandleTime:entry.confirmationCandleTime}
-   // Ohne belegten SL gibt es keinen Entry; spätere Kerzen machen daraus weder warte noch einen M5-Bruch.
-   :{status:'unknown',reason:stop.reason??'stopNotBeyondEntry',knownAt:entry.entryTime,entryCandidate:{entryTime:entry.entryTime,entryPrice:entry.entryPrice}};
+  if(!(direction==='long'?stop.price<entry.entryPrice:stop.price>entry.entryPrice))fail('stopNotBeyondEntry',orderBlock,entry.entryTime);
+  routes[route]={status:'entry',entryTime:entry.entryTime,entryPrice:entry.entryPrice,stopLoss:stop.price,stopAnchor:stop.anchor,confirmationCandleTime:entry.confirmationCandleTime};
  };
  const immediate=m1FvgSequenceResult(m1FvgEntrySequence(fvg,'immediate',context.instrument));
  const nearest=opponents.find(x=>x.nearest);
  if(nearest?.openAtReaction===true)routes.a={status:'rejected',reason:'opposingFvgOpen',knownAt:fvg.recognizedAt};
- else if(nearest&&nearest.openAtReaction===null)routes.a={status:'unknown',reason:'opposingFvgHistoryMissing',knownAt:fvg.recognizedAt};
- else if(immediate.status==='ready')settle('a',immediate);else routes.a={status:'unknown',reason:'entryUnavailable',knownAt:fvg.recognizedAt};
+ else if(nearest&&nearest.openAtReaction===null)fail('opposingFvgHistoryMissing',orderBlock,fvg.recognizedAt);
+ else if(immediate.status==='ready')settle('a',immediate);else fail('entryUnavailable',orderBlock,fvg.recognizedAt);
  // Ein vollständiger Entry beendet die Reaktion (Philip/P14); spätere B-Ereignisse wären ein zweiter Einstieg.
  if(routes.a.status==='entry'){
   routes.b={status:'skipped',reason:'entryAlreadyFound',knownAt:routes.a.entryTime};
@@ -196,7 +203,7 @@ function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
    routes.b.entryFvg=entryFvg;
   }
   else if(sequence.result.status==='invalid'){finish('rejected','entryBOrderBlockBroken',c);return false;}
-  else finish('unknown','entryBUnknown',c);
+  else fail('entryBUnknown',orderBlock,c.time+60);
   return true;
  },{bridgeClosures:false});
  if(walk.status==='closed'&&(!routes.b||routes.b.status==='pending')){
@@ -284,3 +291,9 @@ export function internalOrderBlockFvgs(context,orderBlock,knownBy=Infinity) {
  return result;
 }
 export {firstIndex};
+
+// Zentrale Stelle für Detektor und Debugger: ein Datenfehler überspringt nur dieses OB, statt die Auswertung abzubrechen.
+export function reactionOrSkip(context,orderBlock,options) {
+ try{return evaluateOrderBlockReaction(context,orderBlock,options);}
+ catch(error){if(!(error instanceof ReactionDataError))throw error;console.error(error.message);return null;}
+}
