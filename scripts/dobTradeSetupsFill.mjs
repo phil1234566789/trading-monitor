@@ -31,8 +31,8 @@ try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
-    { dobSourceContext }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
-      '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js'].map(load));
+    { dobSourceContext }, { dobMaxR }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+      '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js', '/src/dobMaxR.js'].map(load));
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
   const cache = dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
@@ -62,7 +62,9 @@ try {
     direction: t.direction, route: t.route, setup_id: t.id, carrying_setups: carrying.get(dobTradeKey(t)), recognized_at: t.recognizedAt,
     entry_time: t.entryTime, entry_price: t.entryPrice, stop_price: t.stopPrice, target_price: t.outcome.targetPrice,
     outcome: t.outcome.status, outcome_reason: t.outcome.reason ?? null, exit_time: t.outcome.recognizedAt ?? null,
-    exit_price: t.outcome.exitPrice ?? null, first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
+    exit_price: t.outcome.exitPrice ?? null,
+    ...(({ maxR, slHit, ambiguousR }) => ({ max_r: maxR, sl_hit: slHit, ambiguous_r: ambiguousR }))(dobMaxR(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
+    first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
     ...(RUN_ID === 'dob-setup-v0' ? {} : { source_kind: `ob_${t.sourceOfStrength.timeframe.toLowerCase()}`, source_distance_usd: t.sourceOfStrength.distanceUsd,
       source_atr: t.sourceOfStrength.atr, source_distance_atr: t.sourceOfStrength.distanceAtr,
       source_gap_seconds: t.chart.firstOrderBlockStart - t.sourceOfStrength.zoneRecognizedAt,
@@ -73,6 +75,10 @@ try {
   console.log(`${RUNS[RUN_ID].version} · ${START_DAY} → ${berlinDateStrFor(dataEnd)} · ${trades.length} Trades mit Entry · ${rows.length} einmalig`);
   console.table(Object.entries(total.routes).map(([route, c]) => ({ route, success: c.success, loss: c.loss, ambiguous: c.ambiguous,
     open: c.open, unknown: c.unknown, winrate: c.winrate == null ? '–' : `${(c.winrate * 100).toFixed(1)}%`, sumR: c.sumR })));
+  console.log('max_r:', JSON.stringify(Object.fromEntries([...Map.groupBy(rows, r => r.max_r)].sort((x, y) => x[0] - y[0]).map(([k, v]) => [k, v.length]))));
+  // Abgleich: Ziel 2R aus max_r/sl_hit muss dem gespeicherten Ausgang entsprechen (gleicher Verfolgungszeitraum).
+  console.log('2R aus max_r:', JSON.stringify({ win: rows.filter(r => r.max_r >= 2).length, loss: rows.filter(r => r.max_r < 2 && r.sl_hit && !(r.ambiguous_r >= 2)).length,
+    open: rows.filter(r => r.max_r < 2 && !r.sl_hit).length, outcomeWin: rows.filter(r => r.outcome === 'success').length, outcomeLoss: rows.filter(r => r.outcome === 'loss').length }));
   if (DRY) process.exit(0);
   const { data, error } = await supabase.rpc('replace_dob_trade_setups', { p_run: { id: RUN_ID, label: RUNS[RUN_ID].label, description: RUNS[RUN_ID].description, sort: RUNS[RUN_ID].sort, setup_version: RUNS[RUN_ID].version, data_end: dataEnd },
     p_instrument: SYMBOL, p_rows: rows });

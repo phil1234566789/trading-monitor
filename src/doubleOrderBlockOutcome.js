@@ -4,9 +4,10 @@ import {candleTouchesPrice} from './structurePivotTime.ts';
 import {m1GapCovered} from './goldWeekendGap.js';
 
 // Preisbeobachtung des Indikators: keine Lots, Teilverkäufe, Commission oder Handelsfreigabe.
-export function evaluateDoubleOrderBlockOutcome({direction,entryTime,entryPrice,stopPrice,candles,evaluatedAt,instrument='XAUUSD'}) {
+// rMultiple: Ziel in R (Default 2R = DOB-Setup); dobMaxR fragt damit höhere Stufen mit derselben Ausgangslogik ab.
+export function evaluateDoubleOrderBlockOutcome({direction,entryTime,entryPrice,stopPrice,candles,evaluatedAt,instrument='XAUUSD',rMultiple=2}) {
  const scale=entryRiskScale(entryPrice,stopPrice,[],instrument,direction);
- const targetPrice=scale.status==='ready'?entryPrice+(direction==='long'?1:-1)*2*scale.risk:null;
+ const targetPrice=scale.status==='ready'?entryPrice+(direction==='long'?1:-1)*rMultiple*scale.risk:null;
  const result={status:'open',recognizedAt:null,exitPrice:null,targetPrice,checkedThrough:entryTime,reason:null};
  if(scale.status!=='ready'||!Number.isFinite(entryTime)||!Number.isFinite(evaluatedAt)||entryTime>evaluatedAt)
   return {...result,status:'unknown',reason:'invalidRisk'};

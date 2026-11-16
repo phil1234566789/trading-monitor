@@ -4,9 +4,22 @@ import {berlinDateStrFor,berlinOffsetMinutes} from './berlinTime.js';
 import {narrowByEntryPrice} from './simulationPinMatching.js';
 
 // Gleiche Zählung wie die Messung (dobWinrateAggregate): je Route Win/Loss/offen, Winrate nur aus Win+Loss, R = 2·Win − Loss.
-const asPairs=rows=>rows.map(r=>({entries:{[r.route]:{status:'ready',outcome:{status:r.outcome}}}}));
-export const dobRouteStats=rows=>aggregateDobRoutes(asPairs(rows)).routes;
-export const DOB_BREAK_EVEN_WINRATE=1/3;
+// R-Ziel k aus max_r/sl_hit: Win, wenn k vor dem SL erreicht wurde; Loss, wenn der SL vorher kam; sonst offen bzw. unbekannt. Ohne max_r (Lauf noch nicht neu befüllt) gilt nur der gespeicherte 2R-Ausgang.
+export const DOB_R_TARGETS=[2,2.5,3,3.5,4,4.5,5];
+export function dobTargetOutcome(row,k=2){
+ if(row.max_r==null)return k===2?row.outcome:'unknown';
+ if(row.max_r>=k)return 'success';
+ if(k<=(row.ambiguous_r??-1))return 'ambiguous';
+ // Fehlende Kerzen (Ausgang unknown) bleiben unbekannt statt offen.
+ return row.sl_hit?'loss':row.outcome==='unknown'?'unknown':'open';
+}
+const asPairs=(rows,k)=>rows.map(r=>({entries:{[r.route]:{status:'ready',outcome:{status:dobTargetOutcome(r,k)}}}}));
+export function dobRouteStats(rows,k=2){
+ const routes=aggregateDobRoutes(asPairs(rows,k)).routes;
+ for(const c of Object.values(routes))c.sumR=k*c.success-c.loss;
+ return routes;
+}
+export const dobBreakEven=k=>1/(1+k);
 
 // Jahr und Monat nach Erkennung des Paars (Berlin), wie die Messung zählt; die Session nach Entry-Zeit.
 export const dobTradeMonth=row=>berlinDateStrFor(row.recognized_at).slice(0,7);
@@ -19,7 +32,7 @@ export function dobTradeSessions(row,sessions){
 export function dobGroups(rows,keysOf){
  const groups=new Map();
  for(const row of rows)for(const key of keysOf(row)){if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
- return [...groups].map(([key,list])=>({key,count:list.length,routes:dobRouteStats(list)}));
+ return [...groups].map(([key,list])=>({key,count:list.length,rows:list}));
 }
 
 // Sprung ins Dashboard: XAU-Chart mit DOB-Ebene, Replay am Ausgang (offen: am Entry), damit Paar, Entry und Ausgang sichtbar sind.
@@ -40,7 +53,18 @@ export function matchDobTradePins(pins,rows){
  }
  return matched;
 }
+// Max R: höchste Stufe vor dem SL (dobMaxR, vom Fill-Skript gespeichert). Filter wählt genaue Stufen, mehrere = ODER;
+// „≥“-Stufen wären bei Mehrfachauswahl immer nur die kleinste gewählte. Alles unter 2R ist ein Loss und eine Stufe.
+export const DOB_MAX_R_FILTERS=['<2','2','2.5','3','3.5','4','4.5','5'];
+export const dobMaxRBucket=row=>row.max_r==null?null:row.max_r<2?'<2':String(row.max_r);
+export const dobMaxRLabel=value=>value==null?'–':`${value.toLocaleString('de-DE')}R`;
+// Anteile je Schwelle unter den entschiedenen Trades mit Max R (Win/Loss), für die Kachel.
+export function dobMaxRShares(rows){
+ const decided=rows.filter(r=>r.max_r!=null&&(r.outcome==='success'||r.outcome==='loss'));
+ const share=min=>decided.length?decided.filter(r=>r.max_r>=min).length/decided.length:null;
+ return {n:decided.length,r3:share(3),r4:share(4),r5:share(5)};
+}
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
 // Eigenes Modul, damit der DOB-Watcher (Deno) das Label ohne die Pin-Abgleich-Kette dieser Datei importieren kann.
 export {dobSourceLabel} from './dobSourceLabel.js';
-export const dobTradeR=row=>row.outcome==='success'?2:row.outcome==='loss'?-1:null;
+export const dobTradeR=(row,k=2)=>({success:k,loss:-1})[dobTargetOutcome(row,k)]??null;

@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -41,5 +41,21 @@ describe('dobTradeStatistics',()=>{
   expect(m.get('v2:b')).toBeTruthy();
   expect(m.get('v2:c')).toBeTruthy();
   expect(matchDobTradePins([pin({entry_price:99})],rows).size).toBe(0);
+ });
+ it('Max R: Stufen-Bucket und Anteile der entschiedenen Trades',()=>{
+  expect([1.5,2,3.5,null].map(max_r=>dobMaxRBucket({max_r}))).toEqual(['<2','2','3.5',null]);
+  const shares=dobMaxRShares([{outcome:'loss',max_r:1},{outcome:'success',max_r:3},{outcome:'success',max_r:5},{outcome:'success',max_r:2},{outcome:'unknown',max_r:5}]);
+  expect(shares).toEqual({n:4,r3:0.5,r4:0.25,r5:0.25});
+ });
+ it('R-Ziel aus max_r und sl_hit: Win, Loss, offen; ΣR mit +k',()=>{
+  const rows=[{route:'a',outcome:'success',max_r:3.5,sl_hit:true},{route:'a',outcome:'success',max_r:2,sl_hit:false},{route:'a',outcome:'loss',max_r:1,sl_hit:true}];
+  expect(rows.map(r=>dobTargetOutcome(r,3))).toEqual(['success','open','loss']);
+  expect(dobRouteStats(rows,3).a).toMatchObject({success:1,loss:1,open:1,sumR:2});
+  expect(dobRouteStats(rows,2).a).toMatchObject({success:2,loss:1,sumR:3});
+  expect(dobTargetOutcome({outcome:'loss',max_r:null},2)).toBe('loss');
+  expect(dobTargetOutcome({outcome:'loss',max_r:null},3)).toBe('unknown');
+  expect(dobTradeR(rows[0],3)).toBe(3);
+  expect(dobTargetOutcome({outcome:'unknown',max_r:0.5,sl_hit:false},3)).toBe('unknown');
+  expect([2,3].map(k=>dobTargetOutcome({max_r:1.5,sl_hit:true,ambiguous_r:2.5},k))).toEqual(['ambiguous','loss']);
  });
 });
