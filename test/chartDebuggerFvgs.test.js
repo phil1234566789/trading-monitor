@@ -95,3 +95,18 @@ describe('native P7: ausgewählte OB2-Quellen und Entry-b-Wiederholung',()=>{
   expect(obReactionGraph(snapshot('03:35')).nodes.result.headline).toBe('Reaktion: true');
  });
 });
+
+describe('markierte Gegen-FVG (U4)',()=>{
+ it('zeichnet die bullische FVG 10:20 vor der Nase, obwohl das Produkt sie nicht listet; Entry a kommt zustande',async()=>{
+  const {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps,productMatches}=await import('../src/chartDebuggerCases.js');
+  const {chartDebuggerMarkedFvgZones}=await import('../src/chartDebuggerFvgs.js');
+  const c=CHART_DEBUGGER_CASES.find(x=>x.id==='U4'),f=await loadCaseFixture(c),at=caseSteps(c,f).through,r=evaluateCase(c,f,at);
+  const reaction=r.orderBlocks[0].reaction;
+  expect(reaction.opponentFvgs.some(x=>x.fvg.candleTime===1792138800)).toBe(false);
+  expect(reaction.routes.a.status).toBe('entry');
+  expect(productMatches(c,r)).toBe(true);
+  const [z]=chartDebuggerMarkedFvgZones(c,r.context,at);
+  expect(z.zone).toMatchObject({bottom:4179.64,top:4181.41,startTime:1792138800});
+  expect(z.label).toMatch(/^Gegen-FVG \(nicht im Preisweg\) 10:20 · /);
+ });
+});

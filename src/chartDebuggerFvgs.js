@@ -15,6 +15,13 @@ function fvgZone(fvg,context,evaluatedAt,source){
   label:`${source} ${formatBerlinTime(fvg.candleTime)} · ${status}`};
 }
 
+// Vom Fall vorgegebene Gegen-FVGs (U4): das Produkt ignoriert sie außerhalb des Preiswegs, der Debugger soll sie zeigen.
+export function chartDebuggerMarkedFvgZones(c,context,evaluatedAt){
+ const list=context.byDirection[c.dir===1?'short':'long'];
+ return (c.markedFvgs??[]).map(t=>list.find(f=>f.candleTime===t)).filter(f=>f&&f.recognizedAt<=evaluatedAt)
+  .map(fvg=>fvgZone(fvg,context,evaluatedAt,'Gegen-FVG (nicht im Preisweg)'));
+}
+
 // Strukturquelle und spätere Entryquelle sind getrennt; beide kommen aus dem Produkt, nicht aus einer UI-Auswahl.
 export function chartDebuggerReactionZones(entry,context,evaluatedAt){
  if(!entry?.orderBlock)return [];
