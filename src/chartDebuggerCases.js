@@ -41,9 +41,9 @@ export const CHART_DEBUGGER_CASES=[
  {id:'507',label:'Pin 507 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794204000,1794205800]},
  {id:'508',label:'Pin 508 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794205800,1794207000]},
  // 497/498: beide reagieren true, das Paar scheitert am OB1-Hold (M1 08:00 sticht über das OB1-Retest-Hoch 4192,19).
- // graphRole: Startansicht des Knotenplans; 497 zeigt den Hold-Knoten von OB1, 498 seine eigene Reaktion als OB2.
- {id:'497',label:'Pin 497 · OB1 · Short · 12.10. · Paar mit 498',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800],graphRole:'first'},
- {id:'498',label:'Pin 498 · OB2 · Short · 12.10. · Paar mit 497',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800]},
+ // graphRole/level: Startansicht; beide öffnen die DOB-Ebene, in der Reaktions-Ebene 497 mit OB1 (Hold), 498 mit OB2.
+ {id:'497',label:'Pin 497 · OB1 · Short · 12.10. · Paar mit 498',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800],graphRole:'first',level:'dob'},
+ {id:'498',label:'Pin 498 · OB2 · Short · 12.10. · Paar mit 497',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800],level:'dob'},
  {id:'U1',label:'U1 · Short · 03.11. · Gegen-FVG offen, OB bricht vor Entry b',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
  {id:'U2',label:'U2 · Short · 09.11. · FVG ragt unten raus, SL M5-Kante',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
  {id:'U3',label:'U3 · Short · 04.11. · Reaktion nach 22:00, kein Entry',day:'2026-11-04',dir:-1,orderBlocks:[1793824800]},

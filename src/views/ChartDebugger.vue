@@ -13,6 +13,8 @@ import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOr
 import {obReactionGraph,graphChangeTimes,structuralState} from '../obReactionGraph.js';
 import {chartDebuggerFvgZones,chartDebuggerReactionZones,chartDebuggerOpponentZones} from '../chartDebuggerFvgs.js';
 import ObReactionGraph from '../components/ObReactionGraph.vue';
+import DobPairGraph from '../components/DobPairGraph.vue';
+import {dobPairGraph,dobChangeTimes} from '../dobPairGraph.js';
 
 const route=useRoute(),router=useRouter();
 const caseId=ref(CHART_DEBUGGER_CASES.some(c=>c.id===route.query.fall)?route.query.fall:CHART_DEBUGGER_CASES[0].id);
@@ -25,13 +27,22 @@ const result=computed(()=>fixture.value&&evaluateCase(current.value,fixture.valu
 // Knotenplan zeigt standardmäßig den Entry-tragenden OB (OB2 bzw. Einzel-OB); bei DOBs ist OB1 umschaltbar.
 const graphRole=ref(current.value.graphRole??'second');
 watch(caseId,()=>{graphRole.value=current.value.graphRole??'second';});
+// Ebene: OB-Reaktion (ein OB) oder DOB (Paar-Gates); DOB nur bei Zwei-OB-Fällen, per ?ebene=dob verlinkbar.
+const isPair=computed(()=>current.value.orderBlocks.length===2);
+const levelOf=c=>c.orderBlocks.length===2?(route.query.ebene??c.level??'reaction'):'reaction';
+const level=ref(levelOf(current.value));
+watch(caseId,()=>{level.value=current.value.orderBlocks.length===2?current.value.level??'reaction':'reaction';});
+// fall mitschreiben: beim Fallwechsel ersetzt der Fixture-Watcher die Query im selben Tick, route.query ist dann noch alt.
+watch(level,l=>{if(route.query.ebene!==l)router.replace({query:{...route.query,fall:caseId.value,ebene:l}});});
+const openReaction=role=>{graphRole.value=role;level.value='reaction';};
+const dobGraph=computed(()=>result.value&&isPair.value&&level.value==='dob'&&dobPairGraph({dir:current.value.dir,...result.value,evaluatedAt:evaluatedAt.value}));
 const graphInput=({orderBlocks,context,pair,hold})=>{const entry=orderBlocks.find(o=>o.role===graphRole.value);
  return {entry,context,pair,hold,partner:orderBlocks.find(o=>o!==entry)??null};};
 const graph=computed(()=>result.value&&obReactionGraph({...graphInput(result.value),dir:current.value.dir,evaluatedAt:evaluatedAt.value,
  bridgeClosures:bridgeClosures.value,nearTouch:reactionOptionsFor(graphRole.value,{nearTouch:nearTouch.value}).nearTouch}));
 // Einmal je Fall/Schalter/Rolle am Fensterende ausgewertet; die Sprünge selbst rechnen nichts mehr.
 const endResult=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,steps.value.through,options.value));
-const changeTimes=computed(()=>endResult.value?graphChangeTimes(graphInput(endResult.value))
+const changeTimes=computed(()=>endResult.value?(level.value==='dob'&&isPair.value?dobChangeTimes(endResult.value):graphChangeTimes(graphInput(endResult.value)))
  .filter(t=>t>=steps.value.from&&t<=steps.value.through):[]);
 const jumpTarget=delta=>{const at=evaluatedAt.value;return delta>0?changeTimes.value.find(t=>t>at):changeTimes.value.findLast(t=>t<at);};
 const jump=delta=>{const target=jumpTarget(delta);if(target!=null)evaluatedAt.value=target;};
@@ -154,9 +165,11 @@ watch(tf,()=>{fitPending=true;draw();});
   <div class="main">
    <div ref="chartEl" class="chart"></div>
    <div class="graph">
-    <label v-if="current.orderBlocks.length===2">Knotenplan für <select v-model="graphRole"><option value="first">OB1</option><option value="second">OB2</option></select></label>
+    <label v-if="isPair">Ebene <select v-model="level"><option value="reaction">OB-Reaktion</option><option value="dob">DOB</option></select></label>
+    <label v-if="isPair&&level==='reaction'">Knotenplan für <select v-model="graphRole"><option value="first">OB1</option><option value="second">OB2</option></select></label>
     <p v-if="error" class="err" role="alert">{{ error }}</p>
     <p v-else-if="!result" role="status">Lade Fixture …</p>
+    <DobPairGraph v-else-if="dobGraph" :graph="dobGraph" :expected="expectedText(current)" :matches="productMatches(current,endResult)" :scope="caseId" @reaction="openReaction"/>
     <ObReactionGraph v-else-if="graph" :graph="graph" :dir="current.dir" :scope="caseId+graphRole"/>
    </div>
 

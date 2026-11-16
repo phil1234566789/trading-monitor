@@ -25,8 +25,8 @@ export const reasonText=reason=>REASON_TEXT[reason]??reason;
 
 export const structuralState=r=>r?.structuralState??r?.state??'unknown';
 const adjective=dir=>dir===1?'bullische':'bärische';
-const price=p=>fmtPrice(p,2),time=t=>formatBerlinTime(t);
-const range=z=>`${price(z.bottom)}–${price(z.top)}`;
+export const price=p=>fmtPrice(p,2),time=t=>formatBerlinTime(t);
+export const range=z=>`${price(z.bottom)}–${price(z.top)}`;
 const pct=n=>Number(n.toFixed(2))+' %';
 const ROUTE_STATUS={entry:'visited',rejected:'rejected',unknown:'unknown',pending:'unknown'};
 // SL-Gründe bzw. -Anker der Produktrouten; ein unknown aus diesen Gründen hat das 50-%-Gate von Route b bereits passiert.
