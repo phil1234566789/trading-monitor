@@ -3,9 +3,12 @@ import {computed,ref,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,DOB_BREAK_EVEN_WINRATE} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,DOB_OUTCOME_LABELS,DOB_BREAK_EVEN_WINRATE} from '../dobTradeStatistics.js';
+import {fetchDobTradePins,addDobTradePin,removePinEntry,updatePinNote} from '../pinContext.js';
+import SimulationPinMenu from '../components/SimulationPinMenu.vue';
+import SimulationPinFlag from '../components/SimulationPinFlag.vue';
 import {formatDatedTime} from '../berlinTime.js';
-import {fmtPrice,fmtR,pnlClass} from '../format.js';
+import {fmtR,pnlClass} from '../format.js';
 import {cssColor} from '../chartColors.js';
 
 // Die Seite rechnet nichts nach, sie liest nur die vorberechneten Trades (scripts/dobTradeSetupsFill.mjs) und zählt sie.
@@ -40,10 +43,32 @@ async function load(){
 async function refresh(){const before=run.value;if(await loadRuns()&&run.value===before)await load();}
 refresh();
 watch([instrument,run],load);
+
+// Pins je Trade wie auf /statistik (pin_context, Pin-Typ + Notiz); Schlüssel = Zeilen-ID aus Lauf + Setup.
+const pins=ref([]),pinTarget=ref(null),pinSaving=ref(false),pinError=ref(''),onlyPinned=ref(false);
+const pinOf=row=>pins.value.find(p=>p.dobTradeKey===row.id);
+async function loadPins(){
+ pinError.value='';
+ try{pins.value=run.value?await fetchDobTradePins(run.value):[];}catch(e){pinError.value=e.message||'Pins konnten nicht geladen werden.';}
+}
+watch(run,loadPins,{immediate:true});
+function openPin(row){const pin=pinOf(row);pinError.value='';pinTarget.value={row,title:'DOB-Trade anpinnen',note:pin?.note??'',pinType:pin?.pinType??null,existingId:pin?.id};}
+async function pinAction(action){
+ if(pinSaving.value)return;
+ pinSaving.value=true;pinError.value='';
+ try{await action();await loadPins();pinTarget.value=null;}
+ catch(e){pinError.value=e.message||'Pin konnte nicht gespeichert werden.';}
+ finally{pinSaving.value=false;}
+}
+const savePin=(note,pinType)=>pinAction(async()=>{const t=pinTarget.value;
+ if(t.existingId){if(!await updatePinNote(t.existingId,note,pinType))throw new Error('Pin-Notiz konnte nicht gespeichert werden.');}
+ else await addDobTradePin(t.row,note,pinType);});
+const removePin=()=>pinAction(async()=>{if(!await removePinEntry(pinTarget.value.existingId))throw new Error('Pin konnte nicht entfernt werden.');});
 watch([instrument,year,run],([i,y,r])=>{shown.value=PAGE;router.replace({query:{run:r,instrument:i,year:y}});});
 
 const years=computed(()=>[...new Set([year.value,...rows.value.map(r=>dobTradeMonth(r).slice(0,4))])].sort().reverse());
 const inYear=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(year.value)));
+const listed=computed(()=>onlyPinned.value?inYear.value.filter(pinOf):inYear.value);
 const total=computed(()=>dobRouteStats(inYear.value));
 const sessionsOf=r=>{const s=dobTradeSessions(r,sessions.value);return s.length?s:['ohne Session'];};
 const sessionOrder=computed(()=>[...sessions.value.map(s=>s.label),'ohne Session']);
@@ -53,7 +78,6 @@ const computedAt=computed(()=>selectedRun.value?.computed_at);
 
 const pct=v=>v==null?'–':`${(v*100).toFixed(1)} %`;
 const winTone=v=>v==null?'':v>DOB_BREAK_EVEN_WINRATE?'positive':v<DOB_BREAK_EVEN_WINRATE?'negative':'';
-const OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
 const MONTHS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
 </script>
@@ -94,22 +118,25 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
       </section>
 
       <section>
-        <h2>Trades ({{ inYear.length }})</h2>
+        <h2>Trades ({{ listed.length }})</h2>
+        <p class="note">Rechtsklick oder ⚑-Knopf pinnt einen Trade mit Kommentar. <label><input v-model="onlyPinned" type="checkbox"> nur gepinnte ({{ pins.length }})</label></p>
+        <p v-if="pinError&&!pinTarget" role="alert" class="error">{{ pinError }}</p>
         <div class="scroll"><table>
-          <thead><tr><th scope="col">Entry</th><th scope="col">Richtung</th><th scope="col">Route</th><th scope="col">Entry</th><th scope="col">SL</th><th scope="col">TP 2R</th><th scope="col">Ausgang</th><th scope="col">R</th><th scope="col">Session</th><th scope="col">Chart</th></tr></thead>
-          <tbody><tr v-for="t in inYear.slice(0,shown)" :key="t.id">
-            <td>{{ formatDatedTime(t.entry_time) }}</td><td>{{ t.direction==='long'?'Long':'Short' }}</td><td>{{ t.route }}</td>
-            <td>{{ fmtPrice(t.entry_price) }}</td><td>{{ fmtPrice(t.stop_price) }}</td><td>{{ fmtPrice(t.target_price) }}</td>
-            <td>{{ OUTCOME_LABELS[t.outcome]??t.outcome }}<template v-if="t.exit_time"> · {{ formatDatedTime(t.exit_time) }}</template></td>
-            <td :class="pnlClass(dobTradeR(t))">{{ dobTradeR(t)==null?'–':fmtR(dobTradeR(t)) }}</td><td>{{ sessionsOf(t).join(', ') }}</td>
+          <thead><tr><th scope="col">Entry</th><th scope="col">Richtung</th><th scope="col">Route</th><th scope="col">Ausgang</th><th scope="col">R</th><th scope="col">Session</th><th scope="col">Kraftquelle</th><th scope="col">Chart</th><th scope="col">Pin</th></tr></thead>
+          <tbody><tr v-for="t in listed.slice(0,shown)" :key="t.id" @contextmenu.prevent="openPin(t)">
+            <td><SimulationPinFlag v-if="pinOf(t)" :note="pinOf(t).note||undefined" />{{ formatDatedTime(t.entry_time) }}</td><td>{{ t.direction==='long'?'Long':'Short' }}</td><td>{{ t.route }}</td>
+            <td>{{ DOB_OUTCOME_LABELS[t.outcome]??t.outcome }}<template v-if="t.exit_time"> · {{ formatDatedTime(t.exit_time) }}</template></td>
+            <td :class="pnlClass(dobTradeR(t))">{{ dobTradeR(t)==null?'–':fmtR(dobTradeR(t)) }}</td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobSourceLabel(t) }}</td>
             <td><RouterLink :to="dobChartLink(t)" target="_blank" rel="noopener noreferrer" :aria-label="`DOB ${formatDatedTime(t.entry_time)} im Chart öffnen`">Im Chart</RouterLink></td>
+            <td><button type="button" class="pin" :aria-label="`DOB ${formatDatedTime(t.entry_time)} ${pinOf(t)?'Pin bearbeiten':'anpinnen'}`" @click="openPin(t)">{{ pinOf(t)?'⚑ bearbeiten':'⚑' }}</button></td>
           </tr></tbody>
         </table></div>
-        <button v-if="shown<inYear.length" type="button" class="more" @click="shown+=PAGE">Weitere {{ Math.min(PAGE,inYear.length-shown) }} anzeigen</button>
+        <button v-if="shown<listed.length" type="button" class="more" @click="shown+=PAGE">Weitere {{ Math.min(PAGE,listed.length-shown) }} anzeigen</button>
       </section>
     </template>
+    <SimulationPinMenu :target="pinTarget" :saving="pinSaving" :error="pinError" @close="pinTarget=null" @save="savePin" @remove="removePin" @show-pins="onlyPinned=true;pinTarget=null" />
   </main>
 </template>
 <style scoped>
-.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
+.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
 </style>

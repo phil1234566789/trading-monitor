@@ -38,7 +38,7 @@ const REF_COLUMN = {
 };
 
 const ROW_COLUMNS =
-  "id, kind, dob_pin_key, dob_context, trade_setup_source_snapshot_id, trade_setup_source_snapshots(payload), trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
+  "id, kind, dob_pin_key, dob_context, dob_trade_key, dob_trade_context, trade_setup_source_snapshot_id, trade_setup_source_snapshots(payload), trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
@@ -64,6 +64,8 @@ function toEntry(row) {
     kind: row.kind,
     dobContext:row.dob_context??null,
     dobPinKey:row.dob_pin_key??null,
+    dobTradeKey:row.dob_trade_key??null,
+    dobTradeContext:row.dob_trade_context??null,
     pinType: row.pin_type ?? null,
     simulationRunId: row.simulation_run_id,
     liveEventId: row.live_event_id,
@@ -182,6 +184,29 @@ export async function fetchSimulationPins(runId) {
   });
   if(error) throw error;
   return data.map(toEntry);
+}
+
+export async function fetchDobTradePins(runId) {
+  const {data,error}=await fetchAllRows((from,to)=>supabase.from('pin_context').select(ROW_COLUMNS).eq('kind','dob_trade')
+    .eq('dob_trade_context->>run_id',runId).order('id').range(from,to));
+  if(error) throw error;
+  return data.map(toEntry);
+}
+
+// Ein Pin je Trade (dob_trade_key = Lauf + Setup-ID); erneutes Pinnen ändert nur Notiz/Typ, der Kontext bleibt eingefroren.
+export async function addDobTradePin(row,note,pinType) {
+  const context={id:row.id,run_id:row.run_id,setup_id:row.setup_id,instrument:row.instrument,direction:row.direction,route:row.route,
+    entry_time:row.entry_time,entry_price:row.entry_price,stop_price:row.stop_price,target_price:row.target_price,
+    outcome:row.outcome,exit_time:row.exit_time,exit_price:row.exit_price};
+  const {data:existing,error:readError}=await supabase.from('pin_context').select('id').eq('dob_trade_key',row.id).maybeSingle();
+  if(readError) throw readError;
+  if(existing) {
+    if(!await updatePinNote(existing.id,note,pinType)) throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
+    return existing.id;
+  }
+  const {error}=await supabase.from('pin_context').insert({kind:'dob_trade',dob_trade_key:row.id,dob_trade_context:context,
+    note:note || null,...pinTypeFields(pinType)});
+  if(error) throw error;
 }
 
 export async function removeSimulationPins(runId, ids) {

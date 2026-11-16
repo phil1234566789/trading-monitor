@@ -11,7 +11,7 @@ watch(()=>props.target,async target=>{
 </script>
 <template>
   <dialog ref="dialog" class="pin-menu" aria-labelledby="simulation-pin-title" @cancel="emit('close')" @close="emit('close')">
-    <h2 id="simulation-pin-title">{{ target?.existingId?'Pin bearbeiten':target?.kind==='simulation_checkpoint'?`${target.feature.label} anpinnen`:target?.kind==='simulation_entry'?'Entry anpinnen':'DR anpinnen' }}</h2>
+    <h2 id="simulation-pin-title">{{ target?.existingId?'Pin bearbeiten':target?.title??(target?.kind==='simulation_checkpoint'?`${target.feature.label} anpinnen`:target?.kind==='simulation_entry'?'Entry anpinnen':'DR anpinnen') }}</h2>
     <PinTypeChips v-model="pinType" :disabled="saving" />
     <label>Kommentar (optional)<textarea v-model="note" rows="3" :disabled="saving" /></label>
     <button type="button" :disabled="saving" @click="emit('save',note,pinType)">Pin speichern</button>

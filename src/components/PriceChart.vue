@@ -17,6 +17,7 @@ import { isGoldInstrument } from '../goldChartPolicy.js';
 import { goldWeekendClosed } from '../fxcmGoldCalendar.js';
 import { useGoldChartHistory } from '../composables/useGoldChartHistory.js';
 import {useDoubleOrderBlockChart} from '../composables/useDoubleOrderBlockChart.js';
+import {renderDobTrade} from '../dobTradeRendering.js';
 import DoubleOrderBlockStatus from './DoubleOrderBlockStatus.vue';
 import TradeSetup11Status from './TradeSetup11Status.vue';
 import {tradeSetupSourceDetails,tradeSetupInteractionRows} from '../tradeSetupSourcePresentation.js';
@@ -227,6 +228,7 @@ const props = defineProps({
   showObsM5: { type: Boolean, default: false },
   showDoubleOrderBlocks: {type:Boolean,default:false},
   pinnedDoubleOrderBlocks:{type:Array,default:()=>[]},
+  dobTrade:{type:Object,default:null},
   hoveredDoubleOrderBlockPin:{type:Object,default:null},
   showObs1h: { type: Boolean, default: true },
   showObs4h: { type: Boolean, default: true },
@@ -611,6 +613,18 @@ const doubleOrderBlocks=useDoubleOrderBlockChart(()=>({series:candleSeries,candl
   replayUntil:props.replayUntil,
   evaluatedAt:closedReplayEvaluationTime(props.replayUntil,Math.floor(Date.now()/1000),allCandles,props.currentBar)}));
 const dobStatus=doubleOrderBlocks.status;
+// Trade aus /dob-statistik (useDobChartRoute): Position + R-Skala, nur auf seinem Instrument.
+const dobTradePrimitives=[];
+// Einmal je Trade auf Entry→Exit rahmen, sobald die Kerzen des Ziel-Instruments/-TFs geladen sind (Sprung kommt vor dem Laden an).
+let dobTradeFramed=null;
+function renderDobTradeOverlay(){
+  if(!candleSeries)return;
+  const trade=props.dobTrade?.instrument===props.symbol?props.dobTrade:null;
+  renderDobTrade(candleSeries,trade,dobTradePrimitives,clipReplay(allCandles),props.currentBar);
+  if(trade&&dobTradeFramed!==trade.id&&candlesReady&&loadedCandleKey===`${props.symbol}:${props.currentBar}`){
+    dobTradeFramed=trade.id;void jumpToTimeRange(trade.entry_time,trade.exit_time??trade.entry_time);
+  }
+}
 const dobDetails=doubleOrderBlocks.details;
 let candlesReady = false;
 let loadedCandleKey = null;
@@ -1931,6 +1945,7 @@ function refreshChart({ structure = true } = {}) {
   // ist dann bereits disposed, ohne Guard wirft lightweight-charts "Object is disposed".
   if (!chart) return;
   doubleOrderBlocks.refresh();
+  renderDobTradeOverlay();
   checklist.setChartCandles(allCandles, candlesReady ? loadedCandleKey : null);
   applyCandleData();
   if (snapshotView.value) {
@@ -2391,6 +2406,7 @@ watch(() => props.showObs4h, refreshPoiZonesInternal);
 watch(() => props.showObsM1, refreshPoiZonesInternal);
 watch(() => props.showObsM5, refreshPoiZonesInternal);
 watch(()=>props.showDoubleOrderBlocks,()=>doubleOrderBlocks.refresh());
+watch(()=>props.dobTrade,renderDobTradeOverlay);
 watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);

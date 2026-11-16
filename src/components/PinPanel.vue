@@ -3,6 +3,7 @@ import CopyButton from "./ui/CopyButton.vue";
 import { computed, ref, nextTick, onUnmounted } from "vue";
 import {isChartOrderBlockTimeframe} from '../chartOrderBlockPin.js';
 import {formatDatedTime} from '../berlinTime.js';
+import {dobChartLink,DOB_OUTCOME_LABELS} from '../dobTradeStatistics.js';
 import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulationPinPresentation.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import PinTypeChips from './PinTypeChips.vue';
@@ -105,6 +106,13 @@ function onEntryClick(event, entry) {
         </div>
         <div class="pin-panel-entry-prices">Lauf {{ row.entry.simulationRunId }} · {{ simulationPinStageLabel(row.entry.simulationContext) }} · {{ simulationPinOutcomeLabel(row.entry.simulationContext) }}<br />{{ row.entry.simulationContext?.checkpoint?.label }} · {{ row.entry.simulationContext?.snapshotAt?.berlin }}</div>
         <RouterLink v-if="row.entry.simulationContext?.chartLink" :to="row.entry.simulationContext.chartLink" @click.stop>Simulationsstand im Chart</RouterLink>
+      </template>
+      <template v-else-if="row.entry.kind === 'dob_trade'">
+        <div class="pin-panel-entry-header">DOB-Trade {{row.entry.dobTradeContext?.direction==='long'?'Long':'Short'}} · {{row.entry.dobTradeContext?.instrument}} · Route {{row.entry.dobTradeContext?.route}}
+          <button class="pin-panel-remove" aria-label="DOB-Trade-Pin entfernen" @click="emit('remove',row.entry.id)">🗑</button>
+        </div>
+        <div class="pin-panel-entry-prices" v-if="row.entry.dobTradeContext">Lauf {{row.entry.dobTradeContext.run_id}} · Entry {{formatDatedTime(row.entry.dobTradeContext.entry_time)}} · {{DOB_OUTCOME_LABELS[row.entry.dobTradeContext.outcome]??row.entry.dobTradeContext.outcome}}</div>
+        <RouterLink v-if="row.entry.dobTradeContext" :to="dobChartLink(row.entry.dobTradeContext)" @click.stop>Trade im Chart</RouterLink>
       </template>
       <template v-else-if="row.entry.kind === 'double_order_block'">
         <div class="pin-panel-entry-header">DOB {{row.entry.dobContext?.pair.direction==='long'?'Long':'Short'}} · {{row.entry.dobContext?.pair.instrument}}

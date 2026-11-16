@@ -1,9 +1,9 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
-const row=(route,outcome,extra={})=>({route,outcome,recognized_at:at,entry_time:at,instrument:'XAUUSD',setup_id:'x:a',exit_time:null,...extra});
+const row=(route,outcome,extra={})=>({route,outcome,recognized_at:at,entry_time:at,instrument:'XAUUSD',id:'run:x:a',setup_id:'x:a',exit_time:null,...extra});
 
 describe('dobTradeStatistics',()=>{
  it('zählt je Route wie die Messung, offene außerhalb der Winrate',()=>{
@@ -20,7 +20,12 @@ describe('dobTradeStatistics',()=>{
  });
  it('Monat nach Berliner Erkennung, Chart-Link am Ausgang',()=>{
   expect(dobTradeMonth({recognized_at:Date.UTC(2026,0,31,23,30)/1000})).toBe('2026-02');
-  expect(dobChartLink(row('a','success',{exit_time:at+600})).query).toEqual({dob:'x:a',instrument:'XAUUSD',bar:'1m',replay:String(at+600)});
+  expect(dobChartLink(row('a','success',{exit_time:at+600})).query).toEqual({dob:'run:x:a',instrument:'XAUUSD',bar:'1m',replay:String(at+600)});
   expect(dobChartLink(row('a','open')).query.replay).toBe(String(at+300));
+ });
+ it('Kraftquelle aus den v1-Feldern, v0 ohne',()=>{
+  expect(dobSourceLabel({source_kind:null})).toBe('–');
+  expect(dobSourceLabel({source_kind:'ob_h1',source_distance_atr:0.84,source_distance_usd:12})).toBe('H1-OB · 0,8 ATR');
+  expect(dobSourceLabel({source_kind:'ob_h4',source_distance_atr:null,source_distance_usd:12.5})).toBe('H4-OB · 12,5 USD');
  });
 });

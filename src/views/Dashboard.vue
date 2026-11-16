@@ -23,6 +23,7 @@ import {useJournalDobEntryFinder} from '../composables/useJournalDobEntryFinder.
 import {formatDatedTime} from '../berlinTime.js';
 import {useJournalRoute} from '../composables/useJournalRoute.js';
 import {useDobChartRoute} from '../composables/useDobChartRoute.js';
+import {dobChartLink} from '../dobTradeStatistics.js';
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
 import MetadataPanel from "../components/MetadataPanel.vue";
 import ContextMenu from "../components/ContextMenu.vue";
@@ -1364,6 +1365,7 @@ const pinnedRsiDivergences = computed(() => {
 // dieselbe "kann gerade nicht springen"-Semantik.
 function pinJumpMismatch(entry) {
   if (!entry || entry.kind === "trade_position") return null;
+  if(entry.kind==='dob_trade')return null;
   if(entry.kind==='double_order_block')return entry.dobContext?.pair.instrument===currentSymbol.value?null:`Erst zu ${entry.dobContext?.pair.instrument} wechseln.`;
   // Kaskaden-Regel wie pinVisibleOnCurrentTf/pinEntryVisible (Bug 2026-08-21, Nachbesserung
   // 2026-08-26: siehe pinJumpMismatchForField oben) — für ob_zone kollabiert das bei 5M (feinster
@@ -1396,6 +1398,7 @@ const pinJumpHint = computed(() => {
 
 function onSelectPin(entry) {
   if (!entry || pinJumpMismatch(entry)) return;
+  if(entry.kind==='dob_trade'){void router.push(dobChartLink(entry.dobTradeContext));return;}
   if(entry.kind==='double_order_block'){priceChartRef.value?.jumpToPin(entry.dobContext.pair.firstOrderBlock.startTime,entry.dobContext.pair.secondOrderBlock.startTime);return;}
   if (entry.kind === "trade_position") {
     const t = trades.value.find((x) => x.id === entry.tradePositionId);
@@ -1465,7 +1468,7 @@ useTradeSetup2Route(() => route.query, {
   showTradeSetup2, showTradeSetupChecklist, tradeSetup2Variant,
   currentSymbol, currentBar, replayTime, replayActive,
 }, SYMBOLS);
-useDobChartRoute(() => route.query, {currentSymbol, currentBar, showDoubleOrderBlocks, replayTime, replayActive}, SYMBOLS);
+const dobTrade = useDobChartRoute(() => route.query, {currentSymbol, currentBar, showDoubleOrderBlocks, replayTime, replayActive}, SYMBOLS);
 function toDatetimeLocal(unixSeconds) {
   const d = new Date(unixSeconds * 1000);
   const pad = (n) => String(n).padStart(2, "0");
@@ -2347,6 +2350,7 @@ watch(selectedTradingAccountId, () => {
     :show-obs-m5="showObsM5"
     :show-double-order-blocks="showDoubleOrderBlocks"
     :pinned-double-order-blocks="pinnedDoubleOrderBlocks"
+    :dob-trade="dobTrade"
     :hovered-double-order-block-pin="hoveredDoubleOrderBlockPin"
     :show-obs-m1="showObsM1"
     :show-obs-1h="showObs1h"
