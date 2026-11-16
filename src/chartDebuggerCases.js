@@ -12,6 +12,7 @@ const INSTRUMENT='XAUUSD';
 const FIXTURES={
  '2026-10-16':()=>import('../test/fixtures/dob-native/2026-10-16.json'),
  '2026-10-21':()=>import('../test/fixtures/dob-native/2026-10-21.json'),
+ '2026-10-22':()=>import('../test/fixtures/dob-native/2026-10-22.json'),
  '2026-11-03':()=>import('../test/fixtures/dob-native/2026-11-03.json'),
  '2026-11-04':()=>import('../test/fixtures/dob-native/2026-11-04.json'),
  '2026-11-09':()=>import('../test/fixtures/dob-native/2026-11-09.json'),
@@ -19,6 +20,7 @@ const FIXTURES={
 };
 export const loadCaseFixture=async c=>(await FIXTURES[c.day]()).default;
 
+// markedFvgs: Gegen-FVGs außerhalb des Preiswegs Kontakt→Reaktion (Variante „Entry-Nase ab 0,5 Punkte“); das Produkt listet sie nicht, der Chart zeichnet sie.
 // OB-Startzeiten aus references.json (P14/P16), 2026-10-20-p17.json (P17) und test/orderBlockReaction.test.js (Pins); 507/508 aus get_pin_context.
 export const CHART_DEBUGGER_CASES=[
  {id:'P14',label:'P14 · DOB Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792147500,1792150200]},
@@ -29,13 +31,15 @@ export const CHART_DEBUGGER_CASES=[
  {id:'502',label:'Pin 502 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792552500]},
  {id:'503',label:'Pin 503 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792555800]},
  {id:'504',label:'Pin 504 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792558800]},
+ {id:'P11',label:'P11 · DOB Short · 22.10.',day:'2026-10-22',dir:-1,orderBlocks:[1792684800,1792686600],markedFvgs:[1792690680]},
+ // P13: OB2 kommt erst 5:40 h nach OB1, die Reaktion um 12:20; das Standardfenster von 4 h endet davor.
+ {id:'P13',label:'P13 · DOB Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792545600,1792566000],windowSeconds:10*3600,markedFvgs:[1792561860,1792576620]},
  {id:'P17',label:'P17 · DOB Short · 20.10.',day:'2026-10-20-p17',dir:-1,orderBlocks:[1792473900,1792479900]},
  {id:'507',label:'Pin 507 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794204000,1794205800]},
  {id:'508',label:'Pin 508 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794205800,1794207000]},
  {id:'U1',label:'U1 · Short · 03.11. · Gegen-FVG offen, OB bricht vor Entry b',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
  {id:'U2',label:'U2 · Offen · Short · 09.11. · FVG ragt teilweise in OB',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
  {id:'U3',label:'U3 · Offen · Short · 04.11. · Entry b nach Marktschluss',day:'2026-11-04',dir:-1,orderBlocks:[1793824800]},
- // markedFvgs: Gegen-FVG außerhalb des Preiswegs Kontakt→Reaktion; das Produkt listet sie nicht, der Chart zeichnet sie trotzdem.
  {id:'U4',label:'U4 · Offen · Short · 16.10. · Gegen-FVG vor der Nase, nicht erreicht',day:'2026-10-16',dir:-1,orderBlocks:[1792137600],markedFvgs:[1792138800]},
 ];
 // Fachliches Soll (Philip), nicht das Produkt: Referenzpaare aus dem Manifest, übrige Fälle aus der kleinen Tabelle.
@@ -68,7 +72,7 @@ export const CASE_GROUPS=[['Positiv',CHART_DEBUGGER_CASES.filter(c=>expectationO
 export const CASE_WINDOW_SECONDS=4*3600;
 export function caseSteps(c,fixture){
  const last=fixture.candles.m1.at(-1).time+60,from=c.orderBlocks[0]+300;
- return {from,through:Math.min(last,from+CASE_WINDOW_SECONDS)};
+ return {from,through:Math.min(last,from+(c.windowSeconds??CASE_WINDOW_SECONDS))};
 }
 
 

@@ -110,3 +110,15 @@ describe('markierte Gegen-FVG (U4)',()=>{
   expect(z.label).toMatch(/^Gegen-FVG \(nicht im Preisweg\) 10:20 · /);
  });
 });
+
+describe('markierte Gegen-FVGs P11/P13',()=>{
+ it.each([['P11',[[1792690680,4043.03,4043.63]]],['P13',[[1792561860,4119.5,4120.42],[1792576620,4118.98,4120.17]]]])(
+  '%s: zeichnet die Blocker der Variante „Entry-Nase ab 0,5“, die das Produkt heute nicht listet',async(id,want)=>{
+  const {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps}=await import('../src/chartDebuggerCases.js');
+  const {chartDebuggerMarkedFvgZones}=await import('../src/chartDebuggerFvgs.js');
+  const c=CHART_DEBUGGER_CASES.find(x=>x.id===id),f=await loadCaseFixture(c),at=caseSteps(c,f).through,r=evaluateCase(c,f,at);
+  expect(r.pair.entries.a.status).toBe('ready');
+  expect(chartDebuggerMarkedFvgZones(c,r.context,at).map(z=>[z.zone.startTime,z.zone.bottom,z.zone.top])).toEqual(want);
+  for(const o of r.orderBlocks)expect(o.reaction.opponentFvgs.some(x=>want.some(([t])=>t===x.fvg.candleTime))).toBe(false);
+ });
+});
