@@ -5790,9 +5790,9 @@
     "semantic_hash": ""
   },
   "src/simulationPinMatching.js": {
-    "mtime": 1794859887.115699,
-    "seen": 1794865546.3780951,
-    "ast_hash": "0c7479506ae88c60e65bd9c1c2cd942c",
+    "mtime": 1794865906.0775504,
+    "seen": 1794866028.7239714,
+    "ast_hash": "1502f46443495a683a23b373149396bd",
     "semantic_hash": ""
   },
   "test/simulationPinMatching.test.js": {
@@ -10212,21 +10212,21 @@
     "semantic_hash": ""
   },
   "src/dobTradeStatistics.js": {
-    "mtime": 1794865488.645815,
-    "seen": 1794865546.3780951,
-    "ast_hash": "9fa550ea51633a07ccf80427cad81d5d",
+    "mtime": 1794865906.0775504,
+    "seen": 1794866028.684133,
+    "ast_hash": "155e7f61a038af7c67d21c2ea1b65f67",
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
-    "mtime": 1794865488.647816,
-    "seen": 1794865546.3780951,
-    "ast_hash": "c215aae9fdaab2b9b8421870617ca998",
+    "mtime": 1794865906.0785496,
+    "seen": 1794866028.7488642,
+    "ast_hash": "6ca883dd94aa2325c7b55ea0d5b27958",
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
-    "mtime": 1794865488.6498144,
-    "seen": 1794865546.3780951,
-    "ast_hash": "5224445e10945c87d2b9be81e2928f79",
+    "mtime": 1794865906.0785496,
+    "seen": 1794866028.8030155,
+    "ast_hash": "50c19f4f90f8e4eb84d270bfd1080b97",
     "semantic_hash": ""
   },
   "scripts/dobSetupGrid.mjs": {
