@@ -32,9 +32,9 @@ export const CHART_DEBUGGER_CASES=[
  {id:'P17',label:'P17 · DOB Short · 20.10.',day:'2026-10-20-p17',dir:-1,orderBlocks:[1792473900,1792479900]},
  {id:'507',label:'Pin 507 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794204000,1794205800]},
  {id:'508',label:'Pin 508 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794205800,1794207000]},
- {id:'U1',label:'unknown · opposingFvgSelectionUnresolved · 03.11.',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
- {id:'U2',label:'unknown · partialOverlapOpen · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
- {id:'U3',label:'Marktschluss nach Reaktion · Entry b danach · 04.11.',day:'2026-11-04',dir:-1,orderBlocks:[1793824800]},
+ {id:'offen-gegen-fvgs',label:'Offen · Short · 03.11. · mehrere Gegen-FVGs offen',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
+ {id:'offen-teilueberlappung',label:'Offen · Short · 09.11. · FVG ragt teilweise in OB',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
+ {id:'offen-marktschluss',label:'Offen · Short · 04.11. · Entry b nach Marktschluss',day:'2026-11-04',dir:-1,orderBlocks:[1793824800]},
 ];
 // Fachliches Soll (Philip), nicht das Produkt: Referenzpaare aus dem Manifest, übrige Fälle aus der kleinen Tabelle.
 const REFERENCE_PAIRS=new Set(references.pairs.map(p=>p.id));
@@ -42,7 +42,7 @@ export const expectationOf=c=>EXPECTATIONS.cases[c.id]??(REFERENCE_PAIRS.has(c.i
 export function expectedText(c){
  const e=expectationOf(c);
  if(!e)return 'kein Soll';
- if(e.verdict==='offen')return `Offen · ${e.reason??e.note}`;
+ if(e.verdict==='offen')return `Offen · ${e.note}`;
  const routes=Object.entries(e.routes??{}),rejected=routes.filter(([,x])=>x==='rejected').map(([k])=>k);
  const detail=e.dob?'DOB':e.reaction==='false'?'Reaktion false, kein Entry':rejected.length?`Entry ${rejected.join('+')} abgelehnt`:`Reaktion ${e.reaction}`;
  return `${e.verdict==='positive'?'Positiv':'Negativ'} · ${detail}`;
