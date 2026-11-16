@@ -29,6 +29,9 @@ rule below if needed.
   `test/tdd_mit_claude/ranges/tdd_mit_claude.ts`). Nothing else in the repo (not `.vue`, not
   `.js`, not `supabase/functions/**`) is type-checked by this command.
 
+CI (`.github/workflows/ci.yml`: typecheck, test, build) runs on every branch push and PR, and
+`deploy.yml` runs it before deploying. Push to `main` only once CI is green on your branch.
+
 Supabase (edge functions + DB), via `npx supabase` (no global install in this repo):
 - `npx supabase functions deploy <name>` — deploy one edge function
 - `npx supabase db push` — apply pending migrations in `supabase/migrations/` to the linked
