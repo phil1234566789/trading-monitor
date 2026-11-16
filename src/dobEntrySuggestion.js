@@ -23,29 +23,32 @@ function statsReason(stats) {
 }
 
 // Liefert je fertiger Route (a/b) einen Vorschlag; Vorauswahl nur bei eindeutig bester Übereinstimmung mit der M5-OB-Evidence.
+// Positions-Evidence zählt vor Range-Evidence: die M5-OBs eines Re-Entrys hängen an seiner Position (Q10).
 export function dobEntrySuggestions(result,{direction,anchorTime,evidence=[],instrument}) {
   const day=berlinDateStrFor(anchorTime),dirLabel=direction==='short'?'Short':'Long';
   if(result.status!=='ready')return {choices:[],preselectedKey:null,reason:'DOB-Indikator: M5-/M1-Daten unvollständig.'};
-  const evidenceTimes=new Set(evidence.filter(isM5Ob).map(item=>item.sourceTime));
+  const timesAt=level=>new Set(evidence.filter(item=>isM5Ob(item)&&item.level===level).map(item=>item.sourceTime));
+  const positionTimes=timesAt('position'),rangeTimes=timesAt('range');
   const pairs=result.pairs.filter(pair=>pair.direction===direction&&berlinDateStrFor(pair.recognizedAt)===day);
   const price=value=>fmtPrice(value,pricePrecisionForInstrument(instrument));
   const obs=pair=>`OB1 ${formatBerlinTime(pair.firstOrderBlock.startTime)} / OB2 ${formatBerlinTime(pair.secondOrderBlock.startTime)}`;
   const choices=pairs.flatMap(pair=>{
-    const matches=[pair.firstOrderBlock,pair.secondOrderBlock].filter(ob=>evidenceTimes.has(ob.startTime)).length;
+    const count=times=>[pair.firstOrderBlock,pair.secondOrderBlock].filter(ob=>times.has(ob.startTime)).length;
+    const positionMatches=count(positionTimes),rangeMatches=count(rangeTimes);
     return Object.values(pair.entries).filter(entry=>entry.status==='ready').map(entry=>({
-      key:`${pair.id}:${entry.variant}`,pair,variant:entry.variant,evidenceMatches:matches,
+      key:`${pair.id}:${entry.variant}`,pair,variant:entry.variant,positionMatches,rangeMatches,
       entryPrice:entry.entryPrice,entryTime:entry.entryTime,stopLoss:entry.stopPrice,
       label:`Route ${entry.variant} · ${obs(pair)} · Entry ${price(entry.entryPrice)} @ ${formatDatedTime(entry.entryTime)} · SL ${price(entry.stopPrice)}`+
-        (matches?` · ★ M5-OB-Evidence ${matches}/2`:''),
+        (positionMatches?` · ★ Positions-Evidence ${positionMatches}/2`:'')+(rangeMatches?` · ★ Range-Evidence ${rangeMatches}/2`:''),
     }));
-  }).sort((a,b)=>b.evidenceMatches-a.evidenceMatches||a.entryTime-b.entryTime);
+  }).sort((a,b)=>b.positionMatches-a.positionMatches||b.rangeMatches-a.rangeMatches||a.entryTime-b.entryTime);
   if(!choices.length){
     const routes=pairs.flatMap(pair=>Object.values(pair.entries).map(entry=>`${obs(pair)} Route ${entry.variant}: ${entry.status}${entry.reason?` (${entry.reason})`:''}`));
     return {choices,preselectedKey:null,reason:routes.length?`Kein fertiger DOB-Entry ${dirLabel} am ${day}. ${routes.join(' · ')}.`:
       `Kein DOB-Paar ${dirLabel} am ${day} (Entries nur 02:00–22:00 Berlin). ${statsReason(result.stats)}`};
   }
-  const best=choices[0].evidenceMatches;
-  const unique=best>0&&choices.filter(choice=>choice.evidenceMatches===best).length===1;
+  const [best]=choices,matched=best.positionMatches+best.rangeMatches>0;
+  const unique=matched&&choices.filter(choice=>choice.positionMatches===best.positionMatches&&choice.rangeMatches===best.rangeMatches).length===1;
   return {choices,preselectedKey:unique?choices[0].key:null,
-    reason:unique?'':best>0?'Mehrere Vorschläge passen gleich gut zur M5-OB-Evidence. Bitte wählen.':'Kein Vorschlag passt zur M5-OB-Evidence der Dealing Range. Bitte wählen.'};
+    reason:unique?'':matched?'Mehrere Vorschläge passen gleich gut zur M5-OB-Evidence. Bitte wählen.':'Kein Vorschlag passt zur M5-OB-Evidence der Dealing Range. Bitte wählen.'};
 }

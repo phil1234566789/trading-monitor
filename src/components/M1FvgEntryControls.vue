@@ -18,7 +18,7 @@ defineEmits(['request','choose-dob']);
       <button v-for="choice in dobChoices" :key="choice.key" type="button" :aria-pressed="choice.key===dobChosenKey" @click="$emit('choose-dob',choice.key)">{{ choice.label }}</button>
     </div>
     <p>Bei b muss der Docht mindestens die FVG-Mitte erreichen. Bei vollständiger Füllung muss dieselbe Kerze den zugehörigen M1-OB berühren. Der zugehörige OB darf bis zur Bestätigung nicht durch einen Docht gebrochen werden. Erst eine zusätzliche Richtungskerze danach bestätigt den Entry.</p>
-    <p>c nimmt Entry und SL aus dem DOB-Indikator, Route a oder b. Gelistet werden Paare in Richtung der Dealing Range am Berliner Tag der Entry-Zeit (ohne Entry-Zeit: der jüngsten M5-OB-Evidence); ★ markiert Paare mit M5-OB-Evidence.</p>
+    <p>c nimmt Entry und SL aus dem DOB-Indikator, Route a oder b. Gelistet werden Paare in Richtung der Dealing Range am Berliner Tag der Entry-Zeit (ohne Entry-Zeit: der jüngsten M5-OB-Evidence); ★ markiert Paare mit M5-OB-Evidence; Evidence dieser Position (Re-Entry) zählt vor Range-Evidence.</p>
     <p>a und b schlagen nur Entry-Preis und -Zeit vor, c zusätzlich den Stop-Loss. Gespeichert wird erst mit „{{draft?'Position speichern':'Speichern'}}“.</p>
   </section>
 </template>

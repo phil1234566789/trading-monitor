@@ -6,7 +6,7 @@ const T=Date.UTC(2026,10,12,13,11)/1000,STATS={orderBlocks:9,reactions:{second:{
 const ob=startTime=>({startTime,top:1,bottom:0});
 const ready=(variant,entryTime,entryPrice,stopPrice)=>({variant,status:'ready',entryTime,entryPrice,stopPrice});
 const pair=(id,first,second,entries,direction='short')=>({id,direction,recognizedAt:T-600,firstOrderBlock:ob(first),secondOrderBlock:ob(second),entries});
-const evidence=[{kind:'ob',timeframe:'5M',sourceTime:T-7200},{kind:'ob',timeframe:'1H',sourceTime:T-3600}];
+const evidence=[{kind:'ob',timeframe:'5M',level:'range',sourceTime:T-7200},{kind:'ob',timeframe:'1H',level:'range',sourceTime:T-3600}];
 const run=(pairs,extra={})=>dobEntrySuggestions({status:'ready',pairs,stats:STATS},{direction:'short',anchorTime:T,evidence,instrument:'XAUUSD',...extra});
 
 describe('dobEntrySuggestions',()=>{
@@ -14,8 +14,17 @@ describe('dobEntrySuggestions',()=>{
     const out=run([pair('x',T-9000,T-5000,{a:ready('a',T-120,3929,3940)}),
       pair('y',T-7200,T-5000,{a:ready('a',T,3930,3941.5),b:{variant:'b',status:'skipped',reason:'entryAlreadyFound'}})]);
     expect(out.preselectedKey).toBe('y:a');
-    expect(out.choices[0]).toMatchObject({entryPrice:3930,entryTime:T,stopLoss:3941.5,evidenceMatches:1});
+    expect(out.choices[0]).toMatchObject({entryPrice:3930,entryTime:T,stopLoss:3941.5,rangeMatches:1,positionMatches:0});
     expect(out.choices).toHaveLength(2);
+  });
+  it('Positions-Evidence (Re-Entry) hat Vorrang vor Range-Evidence', ()=>{
+    const ev=[{kind:'ob',timeframe:'5M',level:'range',sourceTime:T-9000},{kind:'ob',timeframe:'5M',level:'range',sourceTime:T-8000},
+      {kind:'ob',timeframe:'5M',level:'position',sourceTime:T-3000},{kind:'ob',timeframe:'5M',level:'position',sourceTime:T-2000}];
+    const pairs=[pair('first',T-9000,T-8000,{a:ready('a',T-4000,3934.94,3926.76)}),pair('reentry',T-3000,T-2000,{a:ready('a',T,3953.11,3937.72)})];
+    const out=run(pairs,{evidence:ev});
+    expect(out.preselectedKey).toBe('reentry:a');
+    expect(out.choices[0]).toMatchObject({entryPrice:3953.11,stopLoss:3937.72});
+    expect(run(pairs,{evidence:ev.filter(item=>item.level==='range')}).preselectedKey).toBe('first:a');
   });
   it('lässt bei gleich guter Übereinstimmung (beide Routen) wählen', ()=>{
     const out=run([pair('y',T-7200,T-5000,{a:ready('a',T,3930,3941),b:ready('b',T+300,3931,3941)})]);
