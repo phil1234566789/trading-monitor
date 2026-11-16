@@ -19,20 +19,23 @@ const graphAt=async(id,evaluatedAt,role='second')=>{
 const status=g=>Object.fromEntries(Object.entries(g.nodes).map(([k,n])=>[k,n.status]));
 
 describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
- it('P16 OB2: Route a liefert den Entry mit fernem M5-Kanten-SL',async()=>{
-  const g=await graphAt('P16');
-  expect(g.head).toMatch(/^Intern: true · Routen: a entry, b /);
-  expect(status(g)).toMatchObject({detect:'visited',touch:'visited',broken:'visited',reaction:'visited',stop:'visited',routeA:'visited',
+ it('P16 OB2: zeigt Produktrouten und den belegten Entry mit fernem M5-Kanten-SL',async()=>{
+  const c=caseOf('P16'),fixture=await loadCaseFixture(c),at=caseSteps(c,fixture).through,result=evaluateCase(c,fixture,at);
+  const g=graphOf(c,result,at),a=result.orderBlocks[1].reaction.routes.a;
+  expect(g.head).toBe(`Intern: true · Routen: a ${a.status}, b entry`);
+  expect(status(g)).toMatchObject({detect:'visited',touch:'visited',broken:'visited',reaction:'visited',stop:'visited',routeA:({entry:'visited',rejected:'rejected',unknown:'unknown',pending:'unknown'})[a.status],
    result:'visited',closed:'not-visited',false:'not-visited',hold:'not-visited'});
   expect(g.nodes.stop.sub).toContain('ferne M5-Kante');
-  // Ausgabe-Box: Reaktion groß zuerst, Routen klein darunter.
+  // Ausgabe-Box: öffentlicher Verdict groß, Struktur und Routen separat.
   expect(g.nodes.result.headline).toBe('Reaktion: true');
-  expect(g.nodes.result.sub).toMatch(/^a: entry .*\nb: entry /);
-  expect(g.edges).toMatchObject({reactionOb2:'visited',aResult:'visited',falseResult:'not-visited'});
+  expect(g.nodes.result.sub).toContain(`a: ${a.status}`);
+  expect(g.nodes.result.sub).toMatch(/b: entry /);
+  expect(g.edges).toMatchObject({counterStop:'visited',bResult:'visited',falseResult:'not-visited'});
  });
  it('P16 OB1: Hold-Gate hält, weil der DOB erkannt ist',async()=>{
   const g=await graphAt('P16',undefined,'first');
-  expect(status(g)).toMatchObject({reaction:'visited',hold:'visited',noDob:'not-visited',stop:'not-visited'});
+  expect(status(g)).toMatchObject({reaction:'visited',hold:'visited',noDob:'not-visited',stop:'not-visited',counter:'not-visited'});
+  expect(g.edges.reactionCounter).toBe('not-visited');
   expect(g.head).toBe('Intern: true · Routen: – (OB1)');
  });
  it('503: Gegenkante vor der FVG gebrochen → Reaktion false',async()=>{
@@ -40,7 +43,7 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(g.head).toBe('Intern: false (M5-Gegenkante gebrochen) · Routen: a rejected, b rejected');
   expect(status(g)).toMatchObject({broken:'rejected',false:'rejected',reaction:'not-visited',routeA:'not-visited',stop:'not-visited',result:'rejected'});
   expect(g.edges.falseResult).toBe('rejected');
-  expect(g.history.at(-1).text).toBe('Reaktion false · M5-Gegenkante gebrochen');
+  expect(g.history.some(h=>h.text==='Struktur false · M5-Gegenkante gebrochen')).toBe(true);
  });
  it('P14: Reaktion true, SL ohne offene interne FVG → Retest-Extrem; 504 lehnt Entry b ab',async()=>{
   const g=await graphAt('P14');
@@ -48,8 +51,9 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(status(g)).toMatchObject({reaction:'visited',stop:'visited',routeA:'visited',bCheck:'visited',entryB:'visited',result:'visited'});
   expect(g.nodes.stop.sub).toBe('4.181,45\nkeine offen → Retest-Extrem');
   const g504=await graphAt('504');
-  expect(g504.head).toBe('Intern: true · Routen: a entry, b rejected');
-  expect(g504.nodes.stop.sub).toBe('4.115,45\nkeine offen → Retest-Extrem');
+  expect(g504.head).toBe('Intern: true · Routen: a rejected, b rejected');
+  expect(g504.nodes.result.headline).toBe('Reaktion: false');
+  expect(g504.nodes.counter.sub).toContain('a historisch abgelehnt');
  });
  it('nennt die 2-%-Berührungstoleranz an Touch- und Bruch-Knoten',async()=>{
   const g=await graphAt('P14');
@@ -59,7 +63,7 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
  it('folgt dem Slider: vor der OB unbekannt, vor der FVG offen',async()=>{
   const c=CHART_DEBUGGER_CASES.find(x=>x.id==='503');
   expect((await graphAt('503',c.orderBlocks[0]+60)).text).toBe('M5-OB noch nicht bekannt.');
-  const knownAt=(await graphAt('P16')).history.find(h=>h.text.startsWith('Reaktion true')).at,before=await graphAt('P16',knownAt-60);
+  const knownAt=(await graphAt('P16')).history.find(h=>h.text.startsWith('Struktur true')).at,before=await graphAt('P16',knownAt-60);
   expect(status(before)).toMatchObject({reaction:'not-visited',broken:'unknown'});
   expect(before.head).toBe('Intern: unknown (Retest da, noch keine neue FVG) · Routen: –');
  });
@@ -71,11 +75,11 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   const orderBlock={...zone,recognizedAt:orderBlockRecognitionTimes(m5,'5m').get(1793838000),timeframe:'5M'};
   const reaction=evaluateOrderBlockReaction(createOrderBlockReactionContext(m1,at,'XAUUSD'),orderBlock,reactionOptionsFor('first'));
   const g=obReactionGraph({dir:1,entry:{role:'second',orderBlock,reaction,internalFvgs:[]},context:{rows:m1,evaluatedAt:at},evaluatedAt:at});
-  // Produktstatus unknown mit Grund, kein selbst erfundenes rejected.
+  // Struktur bleibt unknown; das öffentliche Produkturteil ist ein endgültiges false.
   expect(g.head).toBe('Intern: unknown (Markt geschlossen, OB verfallen) · Routen: –');
-  expect(status(g)).toMatchObject({touch:'unknown',closed:'unknown',broken:'not-visited',result:'unknown'});
-  expect(g.nodes.result).toMatchObject({headline:'Reaktion: pending',status:'unknown',
-   sub:'Produkt: unknown · Markt geschlossen, OB verfallen\nEntry-Routen: noch keine'});
+  expect(status(g)).toMatchObject({touch:'unknown',closed:'rejected',broken:'not-visited',result:'rejected'});
+  expect(g.nodes.result).toMatchObject({headline:'Reaktion: false',status:'rejected'});
+  expect(g.nodes.result.sub).toContain('Markt geschlossen, OB verfallen');
  });
 
  it('Seitenspur übernimmt unknown aus der Produkt-Füllhistorie bei verdeckter Kerze und Lücke (Drift-Wächter)',async()=>{
@@ -105,7 +109,7 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
  it('P16: „nächste Änderung“ springt nacheinander zu Kontakt, Reaktion, Entry a, Entry b und verpasst keine Änderung',async()=>{
   const c=caseOf('P16'),fixture=await loadCaseFixture(c),{from,through}=caseSteps(c,fixture),end=evaluateCase(c,fixture,through);
   const entry=end.orderBlocks[1],times=graphChangeTimes({entry,context:end.context,pair:end.pair,partner:end.orderBlocks[0]});
-  const r=entry.reaction,key=[r.contact.knownAt,r.knownAt,r.routes.a.entryTime,r.routes.b.entryTime];
+  const r=entry.reaction,key=[r.contact.knownAt,r.knownAt,r.routes.a.knownAt,r.routes.b.entryTime];
   const jumps=[];for(let at=from,next;(next=times.find(t=>t>at))!=null&&next<=through;at=next)jumps.push(next);
   expect(jumps.filter(t=>key.includes(t))).toEqual([...new Set(key)]);
  },60000);
@@ -115,9 +119,82 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   const entry=end.orderBlocks.find(o=>o.role===role);
   const times=graphChangeTimes({entry,context:end.context,pair:end.pair,partner:end.orderBlocks.find(o=>o!==entry)??null});
   const sign=at=>{const g=graphOf(c,evaluateCase(c,fixture,at),at,role);
-   return JSON.stringify([g.head,g.text,g.history,Object.values(g.nodes).map(n=>[n.status,n.sub,n.headline,(n.meters??[]).map(m=>m.label.replace(/[\d,.]+ %/g,''))])]);};
+   return JSON.stringify([g.head,g.text,g.history,Object.values(g.nodes).map(n=>[n.status,n.sub,n.headline,(n.meters??[]).map(m=>m.label.replace(/[\d,.]+ %/g,'')),n===g.nodes.counter||n===g.nodes.bCheck?n.detail:null])]);};
   const changes=[];let previous=sign(from);
   for(let at=from+60;at<=through;at+=60){const now=sign(at);if(now!==previous)changes.push(at);previous=now;}
   expect(times.filter(t=>t>from&&t<=through)).toEqual(changes);
  },120000);
+});
+
+
+describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
+ const ob={dir:1,top:110,bottom:100,startTime:0,recognizedAt:300};
+ const fvg={direction:'long',top:113,bottom:111,candleTime:780,recognizedAt:900};
+ const enemy={direction:'short',top:109,bottom:108,candleTime:540,recognizedAt:660};
+ const graph=(reaction,internalFvgs=[],rows=[])=>obReactionGraph({dir:1,entry:{role:'second',orderBlock:ob,reaction,internalFvgs},
+  context:createOrderBlockReactionContext(rows,1800,'XAUUSD'),evaluatedAt:1800});
+ const reaction={state:'unknown',structuralState:'true',fvg,knownAt:900,contact:{candleTime:720,knownAt:780,status:'touch'},
+  verdict:{state:'pending',reason:'entryBPending',knownAt:900},routes:{a:{status:'rejected',reason:'opposingFvgOpen',knownAt:900},b:{status:'pending',reason:'entryBPending'}},
+  opponentFvgs:[{fvg:enemy,openAtReaction:true,openNow:false,blocksEntryA:true}]};
+ it('strukturelles true ohne Entry bleibt öffentlich pending; spätere Füllung hebt A-Ablehnung nicht auf',()=>{
+  const g=graph(reaction);
+  expect(g.nodes.result.headline).toBe('Reaktion: pending');
+  expect(g.nodes.counter).toMatchObject({status:'visited',sub:'1 Gegen-FVG · jetzt gefüllt · a historisch abgelehnt'});
+  expect(g.nodes.counter.detail.join(' ')).toContain('bei Reaktion offen');
+  expect(g.nodes.counter.detail.join(' ')).toContain('jetzt gefüllt');
+  expect(g.nodes.counter.detail.join(' ')).toContain('bekannt');
+  expect(g.nodes.routeA.sub).toContain('Gegen-FVG');
+  expect(g.edges).toMatchObject({reactionCounter:'visited',counterStop:'visited'});
+ });
+ it.each(['true','false','pending','unknown'])('verwendet Verdict %s ohne Routen neu zu aggregieren',state=>{
+  expect(graph({...reaction,verdict:{state,reason:null,knownAt:900}}).nodes.result.headline).toBe('Reaktion: '+state);
+ });
+ it('Verfall ist false; fehlende Historie bleibt unknown und Gegenprüfung unbesucht',()=>{
+  for(const [reason,state] of [['marketClosed','false'],['missingHistory','unknown']]){
+   const g=graph({state:'unknown',reason,verdict:{state,reason,knownAt:1200}});
+   expect(g.nodes.result.headline).toBe('Reaktion: '+state);
+   expect(g.nodes.counter.status).toBe('not-visited');
+  }
+ });
+ it('zeigt jede interne FVG und jede Gegnerquelle, auch bei unbekanntem Füllstand',()=>{
+  const internal=[{...fvg,recognizedAt:600},{...fvg,recognizedAt:660}];
+  const g=graph({...reaction,opponentFvgs:[...reaction.opponentFvgs,{fvg:{...enemy,candleTime:600},openAtReaction:null,openNow:null,blocksEntryA:false}]},internal);
+  expect(g.nodes.fvgList.meters).toHaveLength(2);
+  expect(g.nodes.fvgList.detail).toContain('Mehrere interne FVGs: Auswahl-/Prioritätsregel noch nicht fachlich festgelegt.');
+  expect(g.nodes.counter.detail.join(' ')).toContain('Füllstand unbekannt');
+  expect(g.nodes.counter.detail.filter(x=>x.includes('Quelle:'))).toHaveLength(2);
+ });
+ it('zeigt beobachtete Gegnerquellen und übernimmt nur die gelieferte Routenentscheidung',()=>{
+  const g=graph({...reaction,routes:{...reaction.routes,a:{status:'unknown',reason:'opposingFvgSelectionUnresolved',knownAt:900}}});
+  expect(g.nodes.counter.sub).not.toContain('historisch abgelehnt');
+  expect(g.nodes.counter.detail.join(' ')).toContain('Quellen und Blocker stammen aus dem Produkt');
+  expect(g.nodes.routeA.status).toBe('unknown');
+ });
+ it('spätere bekannte Füllung verdeckt keinen unbekannten historischen Zustand',()=>{
+  const g=graph({...reaction,opponentFvgs:[{fvg:enemy,openAtReaction:null,openNow:false,blocksEntryA:false}],
+   routes:{...reaction.routes,a:{status:'unknown',reason:'opposingFvgHistoryMissing',knownAt:900}}});
+  expect(g.nodes.counter.status).toBe('unknown');
+  expect(g.nodes.counter.sub).toContain('jetzt gefüllt');
+  expect(g.nodes.counter.sub).toContain('damaliger Füllstand unbekannt');
+ });
+ it('behält frühere b-Ablehnung und neue FVG als getrennte historische Ereignisse und Sprungziele',()=>{
+  const next={...fvg,candleTime:1080,recognizedAt:1200};
+  const attempts=[{fvg,status:'rejected',reason:'entryBOrderBlockTooDeep',knownAt:1020},
+   {fvg:next,status:'entry',knownAt:1380,entryTime:1380}];
+  const r={...reaction,verdict:{state:'true',reason:null,knownAt:1380},routes:{...reaction.routes,b:{status:'entry',entryTime:1380,entryPrice:114,stopLoss:99,stopAnchor:'retestExtreme',entryFvg:next,attempts}}};
+  const g=graph(r);
+  expect(g.history).toContainEqual(expect.objectContaining({at:1020,text:expect.stringContaining('Versuch 1 rejected')}));
+  expect(g.history).toContainEqual(expect.objectContaining({at:1200,text:expect.stringContaining('Versuch 2 FVG bekannt')}));
+  expect(g.history).toContainEqual(expect.objectContaining({at:1380,text:expect.stringContaining('Versuch 2 entry')}));
+  expect(g.nodes.bCheck.detail.join(' ')).toContain('Versuch 2');
+  const times=graphChangeTimes({entry:{role:'second',orderBlock:ob,reaction:r,internalFvgs:[]},context:createOrderBlockReactionContext([],1800,'XAUUSD')});
+  expect(times).toEqual(expect.arrayContaining([1020,1200,1380]));
+ });
+ it('nimmt Gegnerfüllung nach Reaktion in die Änderungssprünge auf',()=>{
+  const rows=Array.from({length:20},(_,i)=>({time:660+i*60,open:107,close:107,high:i>=7?110:107,low:106}));
+  const context=createOrderBlockReactionContext(rows,1860,'XAUUSD');
+  const times=graphChangeTimes({entry:{role:'second',orderBlock:ob,reaction,internalFvgs:[]},context});
+  expect(times).toContain(1140);
+  expect(times).not.toContain(660);
+ });
 });

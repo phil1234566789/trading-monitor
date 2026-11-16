@@ -3,9 +3,9 @@
   "cases": {
     "P17": {"verdict": "positive", "dob": true, "source": "dob-positive-505-506 (2026-10-20-p17.json)"},
     "500": {"verdict": "positive", "reaction": "true", "source": "OB2 der Referenz P14"},
-    "502": {"verdict": "positive", "reaction": "true", "source": "OB2 der Referenz P16"},
+    "502": {"verdict": "positive", "reaction": "true", "routes": {"a": "rejected", "b": "entry"}, "source": "Codex ff698950: offene Gegen-FVG 06:27 sperrt A 06:32 dauerhaft; B 06:39 erlaubt"},
     "501": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Philip 15.11.2026: Reaktion false, kein Entry"},
     "503": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Pin 503"},
-    "504": {"verdict": "negative", "reaction": "true", "routes": {"b": "rejected"}, "source": "Pin 504: Entry b abgelehnt"}
+    "504": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Philip: kein Entry; Gegen-FVG sperrt A, M1-OB-Tiefe verwirft B um 07:54"}
   }
 }

@@ -101,7 +101,8 @@ describe('native reaction references',()=>{
  it('Pin 504: touch within 2 % at 07:43, reaction 07:47, but Entry b is rejected for its M1 OB depth',()=>{
   for(const options of [{},{nearTouch:true}]){
    const r=react('2026-10-21',1792558800,1,{options});
-   expect(r).toMatchObject({state:'true',contact:{status:'touch',knownAt:1792561440},knownAt:1792561620});
+   expect(r).toMatchObject({state:'false',structuralState:'true',contact:{status:'touch',knownAt:1792561440},knownAt:1792561620});
+   expect(r.routes.a).toMatchObject({status:'rejected',reason:'opposingFvgOpen',knownAt:1792561620});
    expect(r.routes.b).toMatchObject({status:'rejected',reason:'entryBOrderBlockTooDeep',knownAt:1792562040});
   }
  });

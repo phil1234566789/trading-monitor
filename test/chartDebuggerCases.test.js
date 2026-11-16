@@ -8,10 +8,10 @@ const at=async(id,evaluatedAt,options)=>{const c=byId(id),fixture=await loadCase
 const ob2=r=>r.orderBlocks.at(-1).reaction;
 
 describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur exakter Touch)',()=>{
- it('every case finds all its OBs and evaluates a reaction by the end of its window',async()=>{
+ it('every case finds all its OBs and settles their structure, independently of pending public entries',async()=>{
   for(const c of CHART_DEBUGGER_CASES){
    const r=await at(c.id);
-   for(const ob of r.orderBlocks){expect(ob.orderBlock,`${c.id} ${ob.startTime}`).not.toBeNull();expect(ob.reaction.state).not.toBe('unknown');}
+   for(const ob of r.orderBlocks){expect(ob.orderBlock,`${c.id} ${ob.startTime}`).not.toBeNull();expect(['true','false']).toContain(ob.reaction.structuralState);}
   }
  });
  it('every case has Philips expectation, and the product deviates exactly where it is known to',async()=>{
@@ -23,7 +23,7 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
   // 501 und 504 erfüllen ihr Soll seit der 2-%-Berührungstoleranz (v9).
   expect(deviations).toEqual([]);
   expect(expectedText(byId('501'))).toBe('Negativ · Reaktion false, kein Entry');
-  expect(expectedText(byId('504'))).toBe('Negativ · Entry b abgelehnt');
+  expect(expectedText(byId('504'))).toBe('Negativ · Reaktion false, kein Entry');
   expect(expectedText(byId('P14'))).toBe('Positiv · DOB');
  });
  it('shows the same reference outcomes as the product tests',async()=>{
@@ -33,21 +33,28 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
   expect(p14.pair.entries).toMatchObject({a:{status:'ready',entryTime:1792154280,entryPrice:4177.28,stopPrice:4181.45,stopAnchor:'retestExtreme'},
    b:{status:'ready',entryTime:1792158360,entryPrice:4175.33,stopPrice:4181.45,stopAnchor:'retestExtreme'}});
   // 504: Kontakt 07:43 liegt 1,4 % vor der Kante, also Touch; Entry b scheitert am M1-OB-Einstich um 07:54.
-  expect(ob2(await at('504'))).toMatchObject({state:'true',contact:{status:'touch',knownAt:1792561440},knownAt:1792561620,
-   routes:{a:{status:'entry',entryTime:1792561620,entryPrice:4121.07,stopLoss:4115.45,stopAnchor:'retestExtreme'},
+  expect(ob2(await at('504'))).toMatchObject({state:'false',structuralState:'true',contact:{status:'touch',knownAt:1792561440},knownAt:1792561620,
+   routes:{a:{status:'rejected',reason:'opposingFvgOpen',knownAt:1792561620},
     b:{status:'rejected',reason:'entryBOrderBlockTooDeep',knownAt:1792562040}}});
   // 501: das High 05:37 liegt 1,15 % unter der Gegenkante, Reaktion false ab 05:38.
   expect(ob2(await at('501'))).toMatchObject({state:'false',reason:'m5OrderBlockBroken',knownAt:1794199080});
-  expect((await at('P16')).pair.entries).toMatchObject({a:{status:'ready',entryTime:1792557120,entryPrice:4120.27,stopPrice:4112.95},
+  expect((await at('P16')).pair.entries).toMatchObject({a:{status:'invalid',reason:'opposingFvgOpen',knownAt:1792557120},
    b:{status:'ready',entryTime:1792557540,entryPrice:4117.62,stopPrice:4112.95}});
-  expect((await at('P17')).pair.entries).toMatchObject({a:{status:'ready',entryTime:1792481460,entryPrice:4130.55,stopPrice:4136.58},b:{status:'pending'}});
+  expect((await at('P17')).pair.entries).toMatchObject({a:{status:'invalid',reason:'opposingFvgOpen',knownAt:1792481460},b:{status:'pending'}});
+  expect(ob2(await at('P17'))).toMatchObject({state:'unknown',structuralState:'true',verdict:{state:'pending'}});
  });
  it('the near-touch switch restores the near-touch reactions of OB2',async()=>{
   expect((await at('P14',undefined,NEAR)).pair.entries).toMatchObject({a:{status:'ready',entryTime:1792151400,entryPrice:4176.29,stopPrice:4181.98},
    b:{status:'ready',entryTime:1792151580,entryPrice:4175.75,stopPrice:4181.98}});
   expect(ob2(await at('504',undefined,NEAR))).toMatchObject({contact:{status:'touch',knownAt:1792561440},knownAt:1792561620,
    routes:{b:{status:'rejected',reason:'entryBOrderBlockTooDeep',knownAt:1792562040}}});
-  expect((await at('P16',undefined,NEAR)).pair.entries).toMatchObject({a:{status:'ready',entryPrice:4123.01},b:{status:'invalid',reason:'entryBOrderBlockBroken'}});
+  expect((await at('P16',undefined,NEAR)).pair.entries).toMatchObject({a:{status:'ready',entryPrice:4123.01},
+   b:{status:'ready',entryTime:1792557540,entryPrice:4117.62,stopPrice:4112.95}});
+  // Near-Route b verwirft ihren ersten OB um 06:28; die erst danach bekannte FVG 06:32 trägt den bestätigten Entry 06:39.
+  expect(ob2(await at('P16',undefined,NEAR)).routes.b.attempts).toMatchObject([
+   {status:'rejected',reason:'entryBOrderBlockBroken',knownAt:1792556880},
+   {status:'entry',entryTime:1792557540,fvg:{candleTime:1792557000,recognizedAt:1792557120}},
+  ]);
  });
  // Portiert aus dem Prototyp: Wissen kommt erst mit der schließenden Kerze, Rückspulen nimmt es wieder weg.
  it('reveals OB, reaction, Entry-b rejection and DOB only once known',async()=>{

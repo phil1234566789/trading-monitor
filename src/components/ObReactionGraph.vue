@@ -5,15 +5,15 @@ import {cssColor} from '../chartColors.js';
 // Rendert nur das Graphmodell aus obReactionGraph.js; Knoten = v7-Baum, Optik = alter Codex-Knotenplan.
 const props=defineProps({graph:{type:Object,required:true},dir:{type:Number,required:true},scope:{type:String,default:''}});
 
-// [id, x-Mitte %, top px, Breite %]; Kanten im viewBox 400×790 (x = 4 × Prozent).
+// [id, x-Mitte %, top px, Breite %]; Kanten im viewBox 400×890 (x = 4 × Prozent).
 const LAYOUT=[['detect',50,8,30],['touch',50,80,36],['closed',16,86,28],['broken',50,170,38],['false',16,186,28],
- ['reaction',50,280,36],['hold',16,370,28],['stop',62,370,52],['noDob',16,490,28],['routeA',46,490,30],['bCheck',81,490,34],
- ['entryB',81,600,30],['result',46,690,44]];
+ ['reaction',50,280,36],['counter',62,370,52],['hold',16,470,28],['stop',62,470,52],['noDob',16,590,28],['routeA',46,590,30],['bCheck',81,590,34],
+ ['entryB',81,700,30],['result',46,790,44]];
 const SIDE=['fvgList','internalOb'];
 const PATHS={detectTouch:'M200 66V80',touchClosed:'M128 109H120',touchBroken:'M200 138V170',brokenFalse:'M124 205H120',
- brokenReaction:'M200 242V280',reactionOb1:'M200 338V355H64V370',reactionOb2:'M200 338V355H248V370',holdNoDob:'M64 440V490',
- stopA:'M248 425V470H184V490',stopB:'M248 425V470H324V490',bEntry:'M324 562V600',aResult:'M184 548V690',bResult:'M324 644V720H272',
- closedResult:'M8 114H4V760H96',falseResult:'M8 209H4V760H96',side:'M260 30H276'};
+ brokenReaction:'M200 242V280',reactionOb1:'M200 338V355H64V470',reactionCounter:'M200 338V355H248V370',counterStop:'M248 438V470',holdNoDob:'M64 540V590',
+ stopA:'M248 525V570H184V590',stopB:'M248 525V570H324V590',bEntry:'M324 662V700',aResult:'M184 648V790',bResult:'M324 744V820H272',
+ closedResult:'M8 114H4V860H96',falseResult:'M8 209H4V860H96',side:'M260 30H276'};
 const STATUS_TEXT={visited:'● durchlaufen',unknown:'◇ offen / unbekannt','not-visited':'○ nicht besucht',alternative:'○ überholte Alternative',
  rejected:'× abgelehnt',info:'i Zusatzinfo · kein Gate'};
 
@@ -30,11 +30,11 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
 <template>
  <section class="obg" :style="colors" @keydown.esc="selected=null">
   <h2>OB Reaktion · Knotenplan</h2>
-  <p class="goal">Entscheidungsbaum v7 (Default W1): <strong>true / false / unknown</strong>, Entry separat. Zustände aus dem Produktergebnis zum Slider-Stand.</p>
+  <p class="goal">Entscheidungsbaum v7 (Default W1): <strong>true / false / pending / unknown</strong> für die Entry-Machbarkeit; strukturelle Reaktion separat. Zustände aus dem Produktergebnis zum Slider-Stand.</p>
   <p class="muted">Knoten anklicken → Details (Enter / Leertaste).</p>
   <div class="current"><strong>{{ graph.head }}</strong><span>{{ graph.text }}</span></div>
   <div class="plan" aria-label="Kausaler Algorithmuspfad" :data-direction="dir===1?'long':'short'">
-   <svg viewBox="0 0 400 790" preserveAspectRatio="none" aria-hidden="true">
+   <svg viewBox="0 0 400 890" preserveAspectRatio="none" aria-hidden="true">
     <defs><marker id="obg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
     <path v-for="(d,id) in PATHS" :key="id" class="edge" :d="d" marker-end="url(#obg-arrow)" :data-status="graph.edges[id]" :data-kind="id==='side'?'support':null"/>
    </svg>
@@ -78,7 +78,7 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
 h2{font-size:17px;margin:4px 0}
 .goal{font-size:12px;margin:8px 0}.muted{color:var(--muted);margin:8px 0}
 .current{font-size:12px;display:grid;gap:4px;padding:8px;background:var(--surface)}
-.plan{position:relative;width:100%;height:790px;margin-top:8px}
+.plan{position:relative;width:100%;height:890px;margin-top:8px}
 .plan>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .edge{fill:none;stroke:var(--edge);stroke-width:1.5;opacity:.35;stroke-dasharray:4 4}
 .edge[data-status="visited"]{stroke:var(--accent);stroke-width:3;opacity:1;stroke-dasharray:none}

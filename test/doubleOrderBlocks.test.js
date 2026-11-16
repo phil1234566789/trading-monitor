@@ -5,6 +5,8 @@ import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from '../src/orderBl
 import {createOrderBlockReactionContext,evaluateOrderBlockReaction,exactRetestAnchor} from '../src/orderBlockReaction.js';
 import {detectOrderBlocks} from '../src/orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from '../src/orderBlockRecognitionTime.js';
+import {closedChecklistCandles} from '../src/tradeSetupChecklistTimeBasis.js';
+import {m1FvgFullyFilled} from '../src/m1FvgEntrySequence.js';
 
 const load=name=>JSON.parse(readFileSync(new URL(`./fixtures/dob-native/${name}.json`,import.meta.url),'utf8'));
 const manifest=load('references'),days=new Map(manifest.days.map(day=>[day,load(day)]));
@@ -17,8 +19,8 @@ const run=day=>{
 const find=(day,first,second)=>run(day).pairs.find(p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime);
 const refs=pair=>pair.pins.map(pin=>manifest.references.find(ref=>ref.pin===pin));
 
-// Erwarteter Routenstatus je Referenz; ready-Werte = [entryTime, entryPrice, Retest-Extrem-SL]; ohne SL = ferne M5-Kante.
-const EXPECTED={
+// Unveränderte v9-Kandidaten vor Wiederherstellung des Gegner-Gates; Tupel = [Zeit, Preis, optional Retest-SL].
+const PRE_OPPONENT_CANDIDATES={
  P1:{a:[1794387840,4056.71,4059.69],b:'pending'},P2:{a:[1794217980,4097.82],b:[1794218520,4098.01]},P3:{a:[1793988960,4061.44],b:[1793997000,4063.99]},
  P4:{a:[1793908560,4112.9],b:'pending'},P5:{a:[1793769540,3953.11],b:'pending'},P6:{a:[1793694300,3908.58],b:[1793694420,3908.5]},
  P7:{a:[1793672220,3945.18],b:'invalid'},P8:{a:[1793606700,3903.21,3905.28],b:[1793606880,3900.06,3905.28]},
@@ -29,10 +31,53 @@ const EXPECTED={
  P16:{a:[1792557120,4120.27],b:[1792557540,4117.62]},
 };
 
+// Native Einzelbelege: Mittelkerze, knownAt, Unter-/Oberkante, erste Vollfüllung bekannt (null = nicht im Archiv).
+// Diese Tabelle begründet die A-Ablehnungen, keine Rangfolge oder Stärke mehrerer Gegner.
+const OPPOSING_SOURCES={
+ P1:[1794387420,1794387540,4055.95,4056.89,1794387900],
+ P4:[1793907840,1793907960,4112.13,4113.52,1793908620],
+ P5:[1793756700,1793756820,3954.47,3958.29,1793770200],
+ P6:[1793693460,1793693580,3907.28,3908.22,1793695200],
+ P7:[1793671920,1793672040,3944,3944.67,1793672280],
+ P10:[1793349960,1793350080,3989.48,3992.52,1793352540],
+ P12:[1792637520,1792637640,4113.07,4113.65,1792638120],
+ P15:[1791462600,1791462720,4123.19,4130.06,1791467340],
+ P16:[1792556820,1792556940,4119.06,4121.59,1792557180],
+ P17:[1792480620,1792480740,4129.16,4130.27,null],
+};
+
+function assertOpposingEvidence(fixture,ob,candidate,evidence){
+ const [candleTime,recognizedAt,bottom,top,filledAt]=evidence,at=candidate[0];
+ const rows=closedChecklistCandles(fixture.candles.m1,'1m',at),context=createOrderBlockReactionContext(rows,at,'XAUUSD');
+ const r=evaluateOrderBlockReaction(context,ob),sources=context.byDirection[ob.dir===1?'short':'long'];
+ const fvg=sources.find(f=>f.candleTime===candleTime);
+ expect(fvg).toMatchObject({candleTime,recognizedAt,bottom,top});
+ expect(recognizedAt).toBeLessThanOrEqual(at);
+ expect(r.fvg).toMatchObject({recognizedAt:at,confirmationPrice:candidate[1]});
+ const path=rows.filter(c=>c.time>=r.contact.candleTime),low=Math.min(...path.map(c=>c.low)),high=Math.max(...path.map(c=>c.high));
+ const active=sources.filter(f=>f.recognizedAt<=at&&f.bottom<=high&&f.top>=low&&!rows.some(c=>c.time>=f.recognizedAt&&m1FvgFullyFilled(c,f)));
+ expect(active).toEqual([fvg]);
+ const fill=fixture.candles.m1.find(c=>c.time>=recognizedAt&&m1FvgFullyFilled(c,fvg));
+ expect(fill?fill.time+60:null).toBe(filledAt);
+ if(filledAt!=null)expect(filledAt).toBeGreaterThan(at);
+ expect(r.routes.a).toMatchObject({status:'rejected',reason:'opposingFvgOpen',knownAt:at});
+ return r;
+}
+
 describe('double order blocks from native candles',()=>{
  // P16 war unter v6 wegen >50 % OB2-Tiefe abgelehnt; Entry b trifft den Handoff-Fall Pin 502 (06:39, 4117,62, SL 4112,95).
  it.each(manifest.pairs)('recognizes $id with its expected route statuses',pair=>{
-  const [first,second]=refs(pair),dob=find(first.day,first,second),expected=EXPECTED[pair.id];
+  const [first,second]=refs(pair),dob=find(first.day,first,second),historical=PRE_OPPONENT_CANDIDATES[pair.id];
+  expect(dob,pair.id).toBeDefined();
+  const expected={...historical};
+  if(OPPOSING_SOURCES[pair.id]){
+   assertOpposingEvidence(days.get(first.day),dob.secondOrderBlock,historical.a,OPPOSING_SOURCES[pair.id]);
+   expected.a='invalid';
+   expect(dob.entries.a).toMatchObject({reason:'opposingFvgOpen',knownAt:historical.a[0]});
+  }
+  // Bestätigter Retry-Vertrag: der verworfene erste Versuch bleibt in attempts, nur die öffentliche Route folgt dem Nachfolger.
+  if(pair.id==='P7')expected.b=[1793673300,3943.16];
+  if(pair.id==='P11')expected.b='pending';
   expect(dob.direction).toBe(first.dir===1?'long':'short');
   expect(dob.firstReaction.recognizedAt).toBeLessThanOrEqual(dob.secondRetest.candleTime);
   expect(dob.recognizedAt).toBe(dob.secondReaction.recognizedAt);
@@ -43,6 +88,14 @@ describe('double order blocks from native candles',()=>{
     stopPrice:want[2]??(first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top)});
    expect(entry.targetPrice).toBeCloseTo(entry.entryPrice+first.dir*2*Math.abs(entry.entryPrice-entry.stopPrice),8);
   }
+  if(pair.id==='P7'||pair.id==='P11'){
+   const fixture=days.get(first.day),at=fixture.candles.m1.at(-1).time+60;
+   const r=evaluateOrderBlockReaction(createOrderBlockReactionContext(fixture.candles.m1,at,'XAUUSD'),dob.secondOrderBlock);
+   expect(r.routes.b.attempts).toHaveLength(2);
+   expect(r.routes.b.attempts[0]).toMatchObject({status:'rejected',knownAt:pair.id==='P7'?1793672760:1792691760});
+   expect(r.routes.b.attempts[1]).toMatchObject({status:pair.id==='P7'?'entry':'pending',
+    fvg:{candleTime:pair.id==='P7'?1793673000:1792692000,recognizedAt:pair.id==='P7'?1793673120:1792692120}});
+  }
  });
  it.each(manifest.pairs)('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
   const [first,second]=refs(pair),fixture=days.get(first.day),full=find(first.day,first,second);
@@ -51,11 +104,13 @@ describe('double order blocks from native candles',()=>{
   expect(prefix.firstReaction).toEqual(full.firstReaction);expect(prefix.firstRetestHold.status).toBe('passed');
   expect(detectDoubleOrderBlocks({...input,evaluatedAt:full.recognizedAt-1}).pairs.some(p=>p.id===full.id)).toBe(false);
  });
- it('recognizes the additional positive reference P17 (Pins 505/506) with an M5-edge entry on OB2',()=>{
+ it('recognizes positive DOB P17 (Pins 505/506), while its open 09:17 opponent blocks A and B stays pending',()=>{
   const fixture=load('2026-10-20-p17');
   const dob=detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
    evaluatedAt:fixture.candles.m1.at(-1).time+60}).pairs.find(p=>p.id===fixture.provenance.key);
-  expect(dob.entries.a).toMatchObject({status:'ready',entryTime:1792481460,entryPrice:4130.55,stopPrice:4136.58});
+  expect(dob).toBeDefined();
+  assertOpposingEvidence(fixture,dob.secondOrderBlock,[1792481460,4130.55,4136.58],OPPOSING_SOURCES.P17);
+  expect(dob.entries.a).toMatchObject({status:'invalid',reason:'opposingFvgOpen',knownAt:1792481460});
   expect(dob.entries.b.status).toBe('pending');
  });
  it('does not reveal a reference DOB before its M1 reaction is known',()=>{
@@ -163,11 +218,11 @@ describe('XAU daily market closure (W1: bridgeClosures false)',()=>{
  it('lets the open OB expire as marketClosed, during the pause and afterwards, instead of missingHistory',()=>{
   for(const at of [pauseFrom+1800,evaluatedAt]){
    const context=createOrderBlockReactionContext(m1.filter(c=>c.time+60<=at),at,'XAUUSD');
-   expect(evaluateOrderBlockReaction(context,ob1(),reactionOptionsFor('first'))).toMatchObject({state:'unknown',reason:'marketClosed'});
+   expect(evaluateOrderBlockReaction(context,ob1(),reactionOptionsFor('first'))).toMatchObject({state:'false',structuralState:'unknown',reason:'marketClosed'});
    expect(evaluateOrderBlockReaction(context,ob1(),{bridgeClosures:true}).reason).not.toBe('marketClosed');
   }
   const bridged=createOrderBlockReactionContext(m1,evaluatedAt,'XAUUSD');
-  expect(evaluateOrderBlockReaction(bridged,ob1(),{bridgeClosures:true})).toMatchObject({state:'true',knownAt:1793920920});
+  expect(evaluateOrderBlockReaction(bridged,ob1(),{bridgeClosures:true})).toMatchObject({structuralState:'true',knownAt:1793920920});
  });
  it('treats a first-retest hold across the closure as unknown (counted as firstHoldUnknown)',()=>{
   // Das Retest-Tag-Gate fängt solche Paare im Detektor meist vorher ab; der Hold selbst darf die Pause nicht bestätigen.

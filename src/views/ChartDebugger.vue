@@ -11,7 +11,8 @@ import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice} from '../format.js';
 import {CHART_DEBUGGER_CASES,CASE_GROUPS,expectedText,productMatches,loadCaseFixture,evaluateCase,caseSteps} from '../chartDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOrderBlocks.js';
-import {obReactionGraph,graphChangeTimes,fvgFillMeter} from '../obReactionGraph.js';
+import {obReactionGraph,graphChangeTimes,structuralState} from '../obReactionGraph.js';
+import {chartDebuggerFvgZones,chartDebuggerReactionZones} from '../chartDebuggerFvgs.js';
 import ObReactionGraph from '../components/ObReactionGraph.vue';
 
 const route=useRoute(),router=useRouter();
@@ -95,14 +96,15 @@ function draw(){
  const known=orderBlocks.filter(o=>o.orderBlock).map(o=>o.orderBlock);
  if(pair){renderPersistedZones(series,[],zonePrimitives,candles);overlayPrimitives=renderDoubleOrderBlocks(series,[pair],candles,at).map(i=>i.primitive);}
  else renderPersistedZones(series,known,zonePrimitives,candles);
- // Einziges neues Overlay: FVG-Zonen über dasselbe Box-Primitive, Reaktions-FVG kräftig, interne blass mit Füllstand.
- for(const {internalFvgs,reaction} of orderBlocks)for(const fvg of internalFvgs??[]){
+ // Boxen folgen derselben OB-Rolle und demselben Inventar wie die Seitenspur, auch nach Rollenwechsel.
+ const selected=orderBlocks.find(o=>o.role===graphRole.value);
+ const fvgZones=[...chartDebuggerFvgZones(selected,result.value.context,at),...chartDebuggerReactionZones(selected,result.value.context,at)];
+ for(const {zone,label} of fvgZones){
   // Im M5-Modus fehlt die laufende M5-Kerze; eine FVG danach hätte keinen Balken zum Andocken.
-  if(snap(fvg.candleTime)>last)continue;
-  const strong=fvg===reaction?.fvg,key=strong?'fvgCandle':'obInactiveM5';
-  const primitive=new OrderBlockPrimitive({top:fvg.top,bottom:fvg.bottom,startTime:snap(fvg.candleTime),endTime:at,touched:true},
-   {fillColor:cssColorScaled(key,strong?.25:.12),borderColor:cssColor(key),textColor:cssColor(key),borderWidth:1,
-    label:strong?'Reaktions-FVG':`FVG ${fvgFillMeter(result.value.context,fvg).label}`},candles);
+  if(snap(zone.startTime)>last)continue;
+  const key='fvgCandle';
+  const primitive=new OrderBlockPrimitive({...zone,startTime:snap(zone.startTime)},
+   {fillColor:cssColorScaled(key,.25),borderColor:cssColor(key),textColor:cssColor(key),borderWidth:1,label},candles);
   series.attachPrimitive(primitive);overlayPrimitives.push(primitive);
  }
  const list=[];
@@ -112,8 +114,8 @@ function draw(){
   if(!reaction)continue;
   const tag=orderBlocks.length>1?(role==='first'?'OB1 ':'OB2 '):'';
   if(reaction.contact)list.push({time:snap(reaction.contact.candleTime),position:current.value.dir===1?'belowBar':'aboveBar',shape:'circle',color:cssColor('tradeConfirmation'),text:`${tag}${reaction.contact.status}`});
-  if(reaction.state==='true')list.push({time:snap(bar(reaction.knownAt)),position:'inBar',shape:'square',color:cssColor('tradeWin'),text:`${tag}Reaktion ✓`});
-  if(reaction.state==='false')list.push({time:snap(bar(reaction.knownAt)),position:'inBar',shape:'square',color:cssColor('tradeLoss'),text:`${tag}Reaktion ✗`});
+  if(structuralState(reaction)==='true')list.push({time:snap(bar(reaction.knownAt)),position:'inBar',shape:'square',color:cssColor('tradeWin'),text:`${tag}Reaktion ✓`});
+  if(structuralState(reaction)==='false')list.push({time:snap(bar(reaction.knownAt)),position:'inBar',shape:'square',color:cssColor('tradeLoss'),text:`${tag}Reaktion ✗`});
   for(const [name,r] of Object.entries(routes??{}))if(r.status==='entry')
    list.push({time:snap(bar(r.entryTime)),position:current.value.dir===1?'belowBar':'aboveBar',shape:current.value.dir===1?'arrowUp':'arrowDown',color:cssColor('dobConfirmed'),text:`Entry ${name}`});
  }
@@ -137,6 +139,7 @@ onMounted(()=>{
 });
 onBeforeUnmount(()=>{window.removeEventListener('keydown',onKey);chart?.remove();chart=series=null;});
 watch(result,draw);
+watch(graphRole,draw);
 watch(tf,()=>{fitPending=true;draw();});
 </script>
 

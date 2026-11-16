@@ -8,7 +8,7 @@ import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from './orderBlockRe
 import {evaluateDoubleOrderBlockRetestDay} from './doubleOrderBlockRetestDay.js';
 import {evaluateDoubleOrderBlockPriceGap} from './doubleOrderBlockPriceGap.js';
 
-export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-v9';
+export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-opponent-v10';
 
 // Nur Routen mit vollständigem Entry-Tupel bekommen ein Outcome; die Statuswörter bleiben die des Renderings.
 function pairEntries(reaction,direction,m1,evaluatedAt,instrument){
@@ -73,8 +73,9 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   const firstReaction=evaluateOrderBlockReaction(context,orderBlock,roles.first);
   const secondReaction=roles.second.nearTouch===roles.first.nearTouch?firstReaction:evaluateOrderBlockReaction(context,orderBlock,roles.second);
   result.stats.reactions.first[firstReaction.state]++;result.stats.reactions.second[secondReaction.state]++;
-  const asFirst=firstReaction.state==='true'?{orderBlock,reaction:firstReaction}:null;
-  const asSecond=secondReaction.state==='true'?{orderBlock,reaction:secondReaction}:null;
+  // OB1 braucht die Strukturreaktion, keinen eigenen Entry; OB2 behält während offener Route seinen Kandidaten.
+  const asFirst=firstReaction.structuralState==='true'?{orderBlock,reaction:firstReaction}:null;
+  const asSecond=secondReaction.structuralState==='true'?{orderBlock,reaction:secondReaction}:null;
   if(!asFirst&&!asSecond)continue;
   const m5Invalidation=m5.find(c=>!c.ignored&&c.time>=orderBlock.recognizedAt&&candleInvalidatesOrderBlock(c,orderBlock));
   // Ein späterer Bruch löscht den vorher bestätigten Vergleichsbeleg nicht aus dem Verlauf.

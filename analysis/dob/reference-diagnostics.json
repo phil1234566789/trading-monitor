@@ -1,7 +1,7 @@
 {
-  "version": "m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-v9",
+  "version": "m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-opponent-v10",
   "scope": "16 selected positive examples; no general win-rate or trading approval",
-  "nativeManifestSha256": "e3b44a4f915c0406e424ba9d74dea809ed0e6ec454eee08e2e8eaa9e8146e5ea",
+  "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
   "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
   "previousPolicy": {
     "version": "latest-reaction-first-m1-fvg-both-depth50-hold-sameday-v5",
@@ -190,20 +190,20 @@
   "footprint": [
     {
       "day": "2026-11-11",
-      "pairCount": 12,
+      "pairCount": 7,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 49,
       "reactions": {
         "first": {
-          "true": 27,
-          "false": 8,
-          "unknown": 14
+          "true": 21,
+          "false": 26,
+          "unknown": 2
         },
         "second": {
-          "true": 27,
-          "false": 8,
-          "unknown": 14
+          "true": 21,
+          "false": 26,
+          "unknown": 2
         }
       },
       "pairChecks": 351,
@@ -211,24 +211,24 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 99,
-      "pairsWithoutEntry": 1
+      "pairsWithoutEntry": 6
     },
     {
       "day": "2026-11-09",
-      "pairCount": 15,
+      "pairCount": 14,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 69,
       "reactions": {
         "first": {
-          "true": 39,
-          "false": 19,
-          "unknown": 11
+          "true": 32,
+          "false": 30,
+          "unknown": 7
         },
         "second": {
-          "true": 39,
-          "false": 19,
-          "unknown": 11
+          "true": 32,
+          "false": 30,
+          "unknown": 7
         }
       },
       "pairChecks": 741,
@@ -236,24 +236,24 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 2,
       "priceGapRejected": 134,
-      "pairsWithoutEntry": 0
+      "pairsWithoutEntry": 1
     },
     {
       "day": "2026-11-06",
-      "pairCount": 13,
+      "pairCount": 7,
       "m5Bars": 264,
       "m1Bars": 1309,
       "orderBlocks": 49,
       "reactions": {
         "first": {
-          "true": 26,
-          "false": 17,
-          "unknown": 6
+          "true": 22,
+          "false": 25,
+          "unknown": 2
         },
         "second": {
-          "true": 26,
-          "false": 17,
-          "unknown": 6
+          "true": 22,
+          "false": 25,
+          "unknown": 2
         }
       },
       "pairChecks": 325,
@@ -261,24 +261,24 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 34,
-      "pairsWithoutEntry": 0
+      "pairsWithoutEntry": 6
     },
     {
       "day": "2026-11-05",
-      "pairCount": 20,
+      "pairCount": 18,
       "m5Bars": 277,
       "m1Bars": 1381,
       "orderBlocks": 60,
       "reactions": {
         "first": {
-          "true": 38,
-          "false": 15,
-          "unknown": 7
+          "true": 32,
+          "false": 22,
+          "unknown": 6
         },
         "second": {
-          "true": 38,
-          "false": 15,
-          "unknown": 7
+          "true": 32,
+          "false": 22,
+          "unknown": 6
         }
       },
       "pairChecks": 703,
@@ -286,7 +286,7 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 90,
-      "pairsWithoutEntry": 1
+      "pairsWithoutEntry": 3
     },
     {
       "day": "2026-11-04",
@@ -296,14 +296,14 @@
       "orderBlocks": 51,
       "reactions": {
         "first": {
-          "true": 23,
-          "false": 17,
-          "unknown": 11
+          "true": 19,
+          "false": 27,
+          "unknown": 5
         },
         "second": {
-          "true": 23,
-          "false": 17,
-          "unknown": 11
+          "true": 19,
+          "false": 27,
+          "unknown": 5
         }
       },
       "pairChecks": 253,
@@ -315,20 +315,20 @@
     },
     {
       "day": "2026-11-03",
-      "pairCount": 17,
+      "pairCount": 13,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 59,
       "reactions": {
         "first": {
-          "true": 31,
-          "false": 14,
-          "unknown": 14
+          "true": 25,
+          "false": 29,
+          "unknown": 5
         },
         "second": {
-          "true": 31,
-          "false": 14,
-          "unknown": 14
+          "true": 25,
+          "false": 29,
+          "unknown": 5
         }
       },
       "pairChecks": 465,
@@ -336,24 +336,24 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 133,
-      "pairsWithoutEntry": 1
+      "pairsWithoutEntry": 5
     },
     {
       "day": "2026-11-02",
-      "pairCount": 8,
+      "pairCount": 6,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 57,
       "reactions": {
         "first": {
-          "true": 28,
-          "false": 21,
-          "unknown": 8
+          "true": 22,
+          "false": 34,
+          "unknown": 1
         },
         "second": {
-          "true": 28,
-          "false": 21,
-          "unknown": 8
+          "true": 22,
+          "false": 34,
+          "unknown": 1
         }
       },
       "pairChecks": 378,
@@ -361,24 +361,24 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 87,
-      "pairsWithoutEntry": 0
+      "pairsWithoutEntry": 2
     },
     {
       "day": "2026-10-30",
-      "pairCount": 10,
+      "pairCount": 9,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 56,
       "reactions": {
         "first": {
-          "true": 26,
-          "false": 15,
-          "unknown": 15
+          "true": 20,
+          "false": 35,
+          "unknown": 1
         },
         "second": {
-          "true": 26,
-          "false": 15,
-          "unknown": 15
+          "true": 20,
+          "false": 35,
+          "unknown": 1
         }
       },
       "pairChecks": 325,
@@ -386,7 +386,7 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 142,
-      "pairsWithoutEntry": 0
+      "pairsWithoutEntry": 1
     },
     {
       "day": "2026-10-22",
@@ -396,14 +396,14 @@
       "orderBlocks": 64,
       "reactions": {
         "first": {
-          "true": 38,
-          "false": 15,
-          "unknown": 11
+          "true": 32,
+          "false": 26,
+          "unknown": 6
         },
         "second": {
-          "true": 38,
-          "false": 15,
-          "unknown": 11
+          "true": 32,
+          "false": 26,
+          "unknown": 6
         }
       },
       "pairChecks": 703,
@@ -415,20 +415,20 @@
     },
     {
       "day": "2026-10-21",
-      "pairCount": 6,
+      "pairCount": 4,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 57,
       "reactions": {
         "first": {
-          "true": 25,
-          "false": 23,
-          "unknown": 9
+          "true": 21,
+          "false": 30,
+          "unknown": 6
         },
         "second": {
-          "true": 25,
-          "false": 23,
-          "unknown": 9
+          "true": 21,
+          "false": 30,
+          "unknown": 6
         }
       },
       "pairChecks": 300,
@@ -436,24 +436,24 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 35,
-      "pairsWithoutEntry": 0
+      "pairsWithoutEntry": 2
     },
     {
       "day": "2026-10-16",
-      "pairCount": 9,
+      "pairCount": 10,
       "m5Bars": 252,
       "m1Bars": 1245,
       "orderBlocks": 60,
       "reactions": {
         "first": {
-          "true": 31,
-          "false": 21,
-          "unknown": 8
+          "true": 25,
+          "false": 34,
+          "unknown": 1
         },
         "second": {
-          "true": 31,
-          "false": 21,
-          "unknown": 8
+          "true": 25,
+          "false": 34,
+          "unknown": 1
         }
       },
       "pairChecks": 465,
@@ -461,24 +461,24 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 0,
       "priceGapRejected": 66,
-      "pairsWithoutEntry": 2
+      "pairsWithoutEntry": 1
     },
     {
       "day": "2026-10-08",
-      "pairCount": 19,
+      "pairCount": 17,
       "m5Bars": 277,
       "m1Bars": 1379,
       "orderBlocks": 71,
       "reactions": {
         "first": {
-          "true": 39,
-          "false": 25,
-          "unknown": 7
+          "true": 32,
+          "false": 31,
+          "unknown": 8
         },
         "second": {
-          "true": 39,
-          "false": 25,
-          "unknown": 7
+          "true": 32,
+          "false": 31,
+          "unknown": 8
         }
       },
       "pairChecks": 741,
@@ -486,7 +486,7 @@
       "firstHoldUnknown": 0,
       "differentRetestDays": 2,
       "priceGapRejected": 84,
-      "pairsWithoutEntry": 2
+      "pairsWithoutEntry": 4
     }
   ],
   "references": [
@@ -533,21 +533,9 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1794387840,
-          "entryPrice": 4056.71,
-          "stopPrice": 4059.69,
-          "stopAnchor": "retestExtreme",
-          "confirmationCandleTime": 1794387780,
-          "targetPrice": 4050.75,
-          "outcome": {
-            "status": "success",
-            "recognizedAt": 1794388560,
-            "exitPrice": 4050.75,
-            "targetPrice": 4050.75,
-            "checkedThrough": 1794388560,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1794387840
         },
         "b": {
           "variant": "b",
@@ -758,21 +746,9 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1793908560,
-          "entryPrice": 4112.9,
-          "stopPrice": 4125.5,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1793908500,
-          "targetPrice": 4087.699999999999,
-          "outcome": {
-            "status": "success",
-            "recognizedAt": 1793912760,
-            "exitPrice": 4087.699999999999,
-            "targetPrice": 4087.699999999999,
-            "checkedThrough": 1793912760,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1793908560
         },
         "b": {
           "variant": "b",
@@ -825,21 +801,9 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1793769540,
-          "entryPrice": 3953.11,
-          "stopPrice": 3937.72,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1793769480,
-          "targetPrice": 3983.890000000001,
-          "outcome": {
-            "status": "success",
-            "recognizedAt": 1793770680,
-            "exitPrice": 3983.890000000001,
-            "targetPrice": 3983.890000000001,
-            "checkedThrough": 1793770680,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1793769540
         },
         "b": {
           "variant": "b",
@@ -892,21 +856,9 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1793694300,
-          "entryPrice": 3908.58,
-          "stopPrice": 3913.32,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1793694240,
-          "targetPrice": 3899.0999999999995,
-          "outcome": {
-            "status": "success",
-            "recognizedAt": 1793695620,
-            "exitPrice": 3899.0999999999995,
-            "targetPrice": 3899.0999999999995,
-            "checkedThrough": 1793695620,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1793694300
         },
         "b": {
           "variant": "b",
@@ -971,27 +923,27 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1793672220,
-          "entryPrice": 3945.18,
-          "stopPrice": 3953.26,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1793672160,
-          "targetPrice": 3929.019999999999,
-          "outcome": {
-            "status": "success",
-            "recognizedAt": 1793676960,
-            "exitPrice": 3929.019999999999,
-            "targetPrice": 3929.019999999999,
-            "checkedThrough": 1793676960,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1793672220
         },
         "b": {
           "variant": "b",
-          "status": "invalid",
-          "reason": "entryBOrderBlockTooDeep",
-          "knownAt": 1793672760
+          "status": "ready",
+          "entryTime": 1793673300,
+          "entryPrice": 3943.16,
+          "stopPrice": 3953.26,
+          "stopAnchor": "m5-edge",
+          "confirmationCandleTime": 1793673240,
+          "targetPrice": 3922.959999999999,
+          "outcome": {
+            "status": "success",
+            "recognizedAt": 1793680680,
+            "exitPrice": 3922.959999999999,
+            "targetPrice": 3922.959999999999,
+            "checkedThrough": 1793680680,
+            "reason": null
+          }
         }
       }
     },
@@ -1184,21 +1136,9 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1793352180,
-          "entryPrice": 3991.07,
-          "stopPrice": 3994.79,
-          "stopAnchor": "retestExtreme",
-          "confirmationCandleTime": 1793352120,
-          "targetPrice": 3983.6300000000006,
-          "outcome": {
-            "status": "success",
-            "recognizedAt": 1793355120,
-            "exitPrice": 3983.6300000000006,
-            "targetPrice": 3983.6300000000006,
-            "checkedThrough": 1793355120,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1793352180
         },
         "b": {
           "variant": "b",
@@ -1281,9 +1221,9 @@
         },
         "b": {
           "variant": "b",
-          "status": "invalid",
-          "reason": "entryBOrderBlockBroken",
-          "knownAt": 1792691760
+          "status": "pending",
+          "reason": "entryBPending",
+          "knownAt": 1792692120
         }
       }
     },
@@ -1330,21 +1270,9 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1792638060,
-          "entryPrice": 4113.81,
-          "stopPrice": 4123.87,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1792638000,
-          "targetPrice": 4093.6900000000014,
-          "outcome": {
-            "status": "success",
-            "recognizedAt": 1792640280,
-            "exitPrice": 4093.6900000000014,
-            "targetPrice": 4093.6900000000014,
-            "checkedThrough": 1792640280,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1792638060
         },
         "b": {
           "variant": "b",
@@ -1543,21 +1471,9 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1791466380,
-          "entryPrice": 4127.93,
-          "stopPrice": 4115.39,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1791466320,
-          "targetPrice": 4153.01,
-          "outcome": {
-            "status": "loss",
-            "recognizedAt": 1791472500,
-            "exitPrice": 4115.39,
-            "targetPrice": 4153.01,
-            "checkedThrough": 1791472500,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1791466380
         },
         "b": {
           "variant": "b",
@@ -1622,21 +1538,9 @@
       "entries": {
         "a": {
           "variant": "a",
-          "status": "ready",
-          "entryTime": 1792557120,
-          "entryPrice": 4120.27,
-          "stopPrice": 4112.95,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1792557060,
-          "targetPrice": 4134.910000000002,
-          "outcome": {
-            "status": "loss",
-            "recognizedAt": 1792564020,
-            "exitPrice": 4112.95,
-            "targetPrice": 4134.910000000002,
-            "checkedThrough": 1792564020,
-            "reason": null
-          }
+          "status": "invalid",
+          "reason": "opposingFvgOpen",
+          "knownAt": 1792557120
         },
         "b": {
           "variant": "b",
