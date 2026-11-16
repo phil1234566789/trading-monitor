@@ -159,7 +159,8 @@ try {
     const inside = (lo, hi) => ob1 && lo <= ob1.top && hi >= ob1.bottom;
     const lastOb = obs.at(-1);
     return { A: obs.length > 0, obZone: obs.some(e => inside(e.bottom, e.top)), lsLevel: lss.some(e => inside(e.price, e.price)), ls: lss.length > 0,
-      obDelta1h: lastOb ? r.ob1 - lastOb.time < HOUR : false, anyDelta1h: f.deltaT === '0–1 h', latestInZone: f.proximity === 'in Zone' };
+      obDelta1h: lastOb ? r.ob1 - lastOb.time < HOUR : false, anyDelta1h: f.deltaT === '0–1 h', latestInZone: f.proximity === 'in Zone',
+      latestObInZone: Boolean(lastOb && inside(lastOb.bottom, lastOb.top)) };
   };
   const FILTERS = {
     'A: HTF-OB berührt': x => x.A,
@@ -261,6 +262,18 @@ try {
     "G≤5 ∪ C'": x => le5(x) || cPrime(x),
     "G≤5 ∪ F1 ∪ C'": x => le5(x) || x.latestInZone || cPrime(x),
   }, gFlags);
+  // Philip: v1 baut nur die OB-Kraftquelle. Fein-Sweep über die Grenze k (Plateau um 5 oder Zufall des groben Rasters?)
+  // und ODER nur mit OB-Teilen: F1(OB) = OB1 in der Zone des jüngsten OB-Touchs, C'(OB) = jüngster OB-Touch < 1 h vor OB1 (= C).
+  const SWEEP = [0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 10, 15];
+  const within = k => x => x.g?.units != null && x.g.units <= k;
+  const sweep = SWEEP.map(k => {
+    const inside = evaluateFilters({ k: within(k), rest: x => x.g?.units != null && x.g.units > k }, gFlags);
+    return { k, bisK: inside.k, weiterAlsK: inside.rest };
+  });
+  const f1Ob = x => x.latestObInZone, cOb = x => x.A && x.obDelta1h;
+  const obCombos = evaluateFilters(Object.fromEntries([0, 1, 2, 5].flatMap(k => [
+    [`G≤${k}`, within(k)], [`G≤${k} ∪ F1(OB)`, x => within(k)(x) || f1Ob(x)], [`G≤${k} ∪ C'(OB)`, x => within(k)(x) || cOb(x)],
+    [`G≤${k} ∪ F1(OB) ∪ C'(OB)`, x => within(k)(x) || f1Ob(x) || cOb(x)]])), gFlags);
   const gReport = { measurement: 'dob-quelle-g-v1', git: gitHash, base: baseSummary,
     methodology: ['Basis, Anker OB1, Mustertrades wie source-combos-xau-2026.json.',
       'Aktive Zone: H1/H4-OB in Trade-Richtung (htfObCandles + detectOrderBlocks), erkannt vor OB1-Start, bis OB1-Start auf M5 nicht invalidiert (candleInvalidatesOrderBlock); Alter und frühere Touches egal.',
@@ -268,12 +281,17 @@ try {
       'Zonen-Alter (Info): Erkennung der nächsten Zone am selben Handelstag / bis 3 Tage / älter.',
       "Kombis: A/C'/F1 wie in source-combos; A ∩ C' ∩ F1 ist gleich C' ∩ F1, weil C' A enthält.",
       'halves: Jan–Jun und Jul–Nov 2026 nach Berliner Entry-Monat; Overfitting-Check = Vorsprung zur Basis in beiden Hälften.'],
-    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos };
+    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos, sweep, obCombos,
+    sampleGroups: { ob: 'alle Mustertrade-Positionen außer #137 (K05)', ls: '#137 (K05)' } };
   await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-g-xau-2026.json'), JSON.stringify(gReport, null, 2));
   console.log('Basis Halbjahre', JSON.stringify(baseSummary.halves));
   for (const [key, t] of Object.entries(gTables)) printFilters(`G ${key}`, t);
   console.log('\n== Zonen-Alter je Abstand', JSON.stringify(gAge));
   printFilters('G-Kombis + Overfitting', gCombos);
+  const half = (c, h) => `${c.halves[h].winrate}% ${c.halves[h].sumR}R`;
+  console.log('\n== Sweep G bis k | weiter als k');
+  for (const { k, bisK: a, weiterAlsK: b } of sweep) console.log(String(k).padStart(4), `bis: n=${a.n} ${a.winrate}% ${a.sumR}R H ${half(a, 'Jan–Jun')} / ${half(a, 'Jul–Nov')} | weiter: n=${b.n} ${b.winrate}% ${b.sumR}R H ${half(b, 'Jan–Jun')} / ${half(b, 'Jul–Nov')} | OB ${a.samples.filter(s => s.kept && s.trade !== '#137').length}/10 LS ${a.samples.find(s => s.trade === '#137').kept ? 'ja' : 'nein'}`);
+  printFilters('OB-only ODER', obCombos);
   console.log(JSON.stringify({ git: gitHash, base: report.base, events: report.events }));
   for (const [name, t] of Object.entries(report.byOb1)) {
     console.log(`\n== ${name} (Anker OB1)`);
