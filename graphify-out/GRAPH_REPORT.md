@@ -1,7 +1,7 @@
-# Graph Report - happy-goldberg-2f170d  (2026-11-16)
+# Graph Report - vigorous-hypatia-6e0955  (2026-11-16)
 
 ## Corpus Check
-- 1742 files · ~1,591,860 words
+- 1742 files · ~1,591,928 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d44d7471`
+- Built from commit: `a16bbf5e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

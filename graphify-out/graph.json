@@ -32348,7 +32348,7 @@
       "file_type": "code",
       "norm_label": "casehold()",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L116"
+      "source_location": "L120"
     },
     {
       "id": "src_doubleorderblockoutcome_evaluatedoubleorderblockoutcome",
@@ -43424,7 +43424,7 @@
       "file_type": "code",
       "norm_label": "casesteps()",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L83"
+      "source_location": "L87"
     },
     {
       "id": "src_chartdebuggercases_evaluatecase",
@@ -43436,7 +43436,7 @@
       "file_type": "code",
       "norm_label": "evaluatecase()",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L90"
+      "source_location": "L94"
     },
     {
       "id": "src_chartdebuggercases_expectationof",
@@ -43448,7 +43448,7 @@
       "file_type": "code",
       "norm_label": "expectationof()",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L54"
+      "source_location": "L56"
     },
     {
       "id": "src_chartdebuggercases_expectedtext",
@@ -43460,7 +43460,7 @@
       "file_type": "code",
       "norm_label": "expectedtext()",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L55"
+      "source_location": "L57"
     },
     {
       "id": "src_chartdebuggercases_loadcasefixture",
@@ -43472,7 +43472,7 @@
       "file_type": "code",
       "norm_label": "loadcasefixture()",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L25"
+      "source_location": "L26"
     },
     {
       "id": "src_chartdebuggercases_productmatches",
@@ -43484,7 +43484,7 @@
       "file_type": "code",
       "norm_label": "productmatches()",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L65"
+      "source_location": "L68"
     },
     {
       "id": "src_dobpairgraph_dobchangetimes",
@@ -86390,7 +86390,7 @@
       "file_type": "code",
       "norm_label": "case_groups",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L77"
+      "source_location": "L81"
     },
     {
       "id": "src_chartdebuggercases_case_window_seconds",
@@ -86401,7 +86401,7 @@
       "file_type": "code",
       "norm_label": "case_window_seconds",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L82"
+      "source_location": "L86"
     },
     {
       "id": "src_chartdebuggercases_chart_debugger_cases",
@@ -86412,7 +86412,7 @@
       "file_type": "code",
       "norm_label": "chart_debugger_cases",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L28"
+      "source_location": "L29"
     },
     {
       "id": "src_chartdebuggercases_fixtures",
@@ -86434,7 +86434,7 @@
       "file_type": "code",
       "norm_label": "reference_pairs",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L53"
+      "source_location": "L55"
     },
     {
       "id": "src_doubleorderblocks_double_order_block_default_options",
@@ -100757,7 +100757,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L117",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -100769,7 +100769,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L119",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -100781,7 +100781,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L120",
+      "source_location": "L124",
       "weight": 1.0
     },
     {
@@ -100793,7 +100793,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L120",
+      "source_location": "L124",
       "weight": 1.0
     },
     {
@@ -100805,7 +100805,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L100",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -100817,7 +100817,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L101",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -100829,7 +100829,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L101",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -100841,7 +100841,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L106",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
@@ -100853,7 +100853,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L109",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -100865,7 +100865,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L110",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -100877,7 +100877,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L91",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
@@ -100889,7 +100889,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L92",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -100901,7 +100901,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L92",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -100913,7 +100913,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L92",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -100925,7 +100925,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L93",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -100937,7 +100937,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L56",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -100949,7 +100949,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L59",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -100961,7 +100961,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L66",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -264583,7 +264583,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L116",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -264605,7 +264605,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L25",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -264616,7 +264616,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L28",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -264627,7 +264627,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L53",
+      "source_location": "L55",
       "weight": 1.0
     },
     {
@@ -264638,7 +264638,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L54",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -264649,7 +264649,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L55",
+      "source_location": "L57",
       "weight": 1.0
     },
     {
@@ -264660,7 +264660,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L65",
+      "source_location": "L68",
       "weight": 1.0
     },
     {
@@ -264671,7 +264671,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L77",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -264682,7 +264682,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L82",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -264693,7 +264693,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L83",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -264704,7 +264704,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/chartDebuggerCases.js",
-      "source_location": "L90",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -331486,5 +331486,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "d44d747178851991c60af432667bf097afe65313"
+  "built_at_commit": "a16bbf5ee2970c5a28957a57c2bfc6bac312a351"
 }
