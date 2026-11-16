@@ -55,7 +55,7 @@ async function writeState(client:any,state:Record<string,unknown>){
 }
 
 // dry: rechnet auch außerhalb 02:00–22:00, verschickt nichts und schreibt keinen Herzschlag (Prüfung von Datenpfad und Laufzeit).
-async function tick(client:any,dry=false){
+async function tick(client:any,dry=false,probes:number[]=[]){
   const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60;
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
@@ -69,7 +69,7 @@ async function tick(client:any,dry=false){
   const events=dobAlarmEvents(result,evaluatedAt),stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   if(stale)events.push(stale);
   const sendAllowed=isWithinTradingWindows(evaluatedAt,ALARM_WINDOWS);
-  if(dry)return {dry:true,evaluatedAt,sendAllowed,runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
+  if(dry)return {dry:true,evaluatedAt,sendAllowed,alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,isWithinTradingWindows(p,ALARM_WINDOWS)])),runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,setups:result.setups.length,rejected:result.rejected.length,
     events:events.map(e=>({id:e.id,phase:e.phase}))};
   const delivered=[];
@@ -104,7 +104,7 @@ Deno.serve(async request=>{
       return json(await deliver(client,{id:`dob:test:${new Date(now*1000).toISOString()}`,instrument:SYMBOL,phase:'test',signalAt:now,
         text:`🧪 DOB-Watcher ${SYMBOL}: Testnachricht ${berlinDateStrFor(now)} ${formatBerlinTime(now)}. Ab jetzt kommen Alarme beim OB2-Retest und beim Entry (02:00–22:00).`}));
     }
-    return json(await tick(client,Boolean(body?.dry)));
+    return json(await tick(client,Boolean(body?.dry),Array.isArray(body?.probes)?body.probes.filter(Number.isFinite):[]));
   }catch(error){
     return json({error:await reportError(client,error)},500);
   }
