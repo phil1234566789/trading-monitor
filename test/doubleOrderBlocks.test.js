@@ -10,6 +10,8 @@ import {m1FvgFullyFilled} from '../src/m1FvgEntrySequence.js';
 
 const load=name=>JSON.parse(readFileSync(new URL(`./fixtures/dob-native/${name}.json`,import.meta.url),'utf8'));
 const manifest=load('references'),days=new Map(manifest.days.map(day=>[day,load(day)]));
+// Entfällt per Q7: Entry b erst nach Marktschluss (Philip 16.11.). Pins und Tagesdaten bleiben im Manifest für andere Tests.
+const DROPPED_BY_Q7=new Set(['P1','P4','P12']),livePairs=manifest.pairs.filter(p=>!DROPPED_BY_Q7.has(p.id));
 const results=new Map();
 const run=day=>{
  if(!results.has(day)){const fixture=days.get(day);results.set(day,detectDoubleOrderBlocks({instrument:'XAUUSD',
@@ -64,7 +66,7 @@ function assertOpposingEvidence(fixture,ob,candidate,evidence){
 
 describe('double order blocks from native candles',()=>{
  // P16 war unter v6 wegen >50 % OB2-Tiefe abgelehnt; Entry b trifft den Handoff-Fall Pin 502 (06:39, 4117,62, SL 4112,95).
- it.each(manifest.pairs)('recognizes $id with its expected route statuses',pair=>{
+ it.each(livePairs)('recognizes $id with its expected route statuses',pair=>{
   const [first,second]=refs(pair),dob=find(first.day,first,second),historical=PRE_OPPONENT_CANDIDATES[pair.id];
   expect(dob,pair.id).toBeDefined();
   const expected={...historical};
@@ -89,7 +91,11 @@ describe('double order blocks from native candles',()=>{
    expect(entry.targetPrice).toBeCloseTo(entry.entryPrice+first.dir*2*Math.abs(entry.entryPrice-entry.stopPrice),8);
   }
  });
- it.each(manifest.pairs)('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
+ it.each([...DROPPED_BY_Q7])('%s is no DOB anymore: Entry b would only come after the market close',id=>{
+  const [first,second]=refs(manifest.pairs.find(p=>p.id===id));
+  expect(find(first.day,first,second)).toBeUndefined();
+ });
+ it.each(livePairs)('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
   const [first,second]=refs(pair),fixture=days.get(first.day),full=find(first.day,first,second);
   const input={instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1};
   const prefix=detectDoubleOrderBlocks({...input,evaluatedAt:full.recognizedAt}).pairs.find(p=>p.id===full.id);

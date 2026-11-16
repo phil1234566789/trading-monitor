@@ -5,6 +5,7 @@ import {m1FvgEntrySequence,advanceM1FvgEntrySequence,m1FvgSequenceResult,m1FvgFu
 import {m1GapCovered} from './goldWeekendGap.js';
 import {reactionVerdict} from './orderBlockReactionVerdict.js';
 import {barSecondsFor} from './timeframes.js';
+import {berlinOffsetMinutes} from './berlinTime.js';
 
 export const NEAR_TOUCH_FRACTION=.1;
 // Philip wertet ≤ 2 % der OB-Höhe an beiden Kanten als Berührung (Pin 504 Kontakt, Pin 501 Gegenkante); kein Referenzpaar
@@ -15,6 +16,12 @@ export const ENTRY_B_MAX_ORDER_BLOCK_DEPTH=.5;
 const M5_FORMATION_LOOKBACK=2*barSecondsFor('5m');
 
 const sideOf=dir=>dir===1?'long':'short';
+// Philip: nach 22:00 auf keinen Fall ein Entry, erst ab 02:00 wieder (Berliner Uhrzeit des Entry-Zeitpunkts, Grenzen inklusive).
+const ENTRY_WINDOW_MINUTES=[2*60,22*60];
+export function insideEntryWindow(sec) {
+ const minute=((Math.floor(sec/60)+berlinOffsetMinutes(sec*1000))%1440+1440)%1440;
+ return minute>=ENTRY_WINDOW_MINUTES[0]&&minute<=ENTRY_WINDOW_MINUTES[1];
+}
 function firstIndex(items,predicate) {
  let lower=0,upper=items.length;
  while(lower<upper){const mid=(lower+upper)>>>1;if(predicate(items[mid]))upper=mid;else lower=mid+1;}
@@ -132,6 +139,7 @@ function opposingFvgs(context,orderBlock,reactionAt,nose) {
 function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
  const direction=sideOf(orderBlock.dir),routes={};
  const settle=(route,entry)=>{
+  if(!insideEntryWindow(entry.entryTime)){routes[route]={status:'rejected',reason:'outsideEntryWindow',knownAt:entry.entryTime};return;}
   const stop=evaluateReactionStop(context,orderBlock,contact,entry.entryTime);
   routes[route]=stop.status==='ready'&&(direction==='long'?stop.price<entry.entryPrice:stop.price>entry.entryPrice)
    ?{status:'entry',entryTime:entry.entryTime,entryPrice:entry.entryPrice,stopLoss:stop.price,stopAnchor:stop.anchor,confirmationCandleTime:entry.confirmationCandleTime}
@@ -155,6 +163,7 @@ function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
   attempts.push({fvg:entryFvg,...result});
   routes.b={...result,entryFvg};
  };
+ // Philip: M5-OBs vom Vortag werden nicht getradet; der erste Marktschluss beendet auch die Entry-Suche (nur das Outcome läuft weiter).
  const walk=walkM1(context,fvg.recognizedAt,c=>{
   if(!c.ignored){
    // Auch zwischen zwei Versuchen überwachen: eine spätere FVG darf die gebrochene M5-OB nicht wiederbeleben (504).
@@ -189,7 +198,12 @@ function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
   else if(sequence.result.status==='invalid'){finish('rejected','entryBOrderBlockBroken',c);return false;}
   else finish('unknown','entryBUnknown',c);
   return true;
- });
+ },{bridgeClosures:false});
+ if(walk.status==='closed'&&(!routes.b||routes.b.status==='pending')){
+  // Der Schluss ist erst belegt, wenn die erste Minute danach ausbleibt (Knotenplan-Sprungziel = sichtbare Änderung).
+  routes.b={status:'rejected',reason:'marketClosed',knownAt:walk.at+60};
+  attempts.push({fvg:entryFvg,...routes.b});
+ }
  routes.b??=walk.status==='gap'?{status:'unknown',reason:'missingHistory',knownAt:walk.at}:{status:'pending',reason:'entryBPending'};
  if(routes.b.status==='pending'&&walk.status==='gap')routes.b={status:'unknown',reason:'missingHistory',knownAt:walk.at};
  routes.b.entryFvg??=entryFvg;

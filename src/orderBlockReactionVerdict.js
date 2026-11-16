@@ -10,5 +10,5 @@ export function reactionVerdict(reaction) {
  const unresolved=routes.find(r=>r.status==='unknown');
  const lastKnownAt=Math.max(...routes.map(r=>r.knownAt??-Infinity));
  if(unresolved)return {state:'unknown',reason:unresolved.reason,knownAt:Number.isFinite(lastKnownAt)?lastKnownAt:null};
- return {state:'false',reason:'entryRoutesRejected',knownAt:Math.max(...routes.map(r=>r.knownAt))};
+ return {state:'false',reason:routes.some(r=>r.reason==='marketClosed')?'marketClosed':'entryRoutesRejected',knownAt:Math.max(...routes.map(r=>r.knownAt))};
 }

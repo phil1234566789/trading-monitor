@@ -16,6 +16,7 @@ export const REASON_TEXT={
  entryPending:'wartet auf vollständigen Entry',entryRoutesRejected:'beide Entry-Routen abgelehnt',
  opposingFvgHistoryMissing:'Füllhistorie der Gegen-FVG fehlt',
  opposingFvgOpen:'Gegen-FVG bei Reaktion offen → Entry a abgelehnt',
+ outsideEntryWindow:'Entry außerhalb 02:00–22:00 Berlin → abgelehnt',
  partialOverlapOpen:'interne FVG nur teilweise in der OB',
  internalFvgHistoryMissing:'Füllhistorie interner FVG fehlt',stopNotBeyondEntry:'SL liegt nicht hinter dem Entry',
 };
@@ -159,7 +160,9 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
    nearTouch?'Near-Touch-Schalter an: ≤10 % der OB-Höhe vor der Kante zählt.':`Produkt-Default: Touch, auch bis ${TOUCH_PCT} der OB-Höhe vor der Kante.`]};
  n.closed={label:'Markt geschlossen, OB verfallen',status:closed?'rejected':'not-visited',sub:closed?'Reaktion false':'○ nicht besucht',
   detail:[bridgeClosures?'Schalter „Marktschluss überbrücken“ an: die Reaktion läuft über die XAU-Pause weiter, dieser Ausgang tritt nicht ein.'
-   :'Ohne Überbrückung verfällt eine OB, die bis zum ersten XAU-Marktschluss nach ihrer Erkennung nicht reagiert hat (Entry-Machbarkeit false).']};
+   :'Ohne Überbrückung verfällt eine OB, die bis zum ersten XAU-Marktschluss nach ihrer Erkennung nicht reagiert hat (Entry-Machbarkeit false).',
+   'Der erste Marktschluss nach der OB beendet auch laufende Entry-Routen a/b ohne Entry (marketClosed); ein bestehender Entry läuft im Outcome weiter.',
+   'Entry nur von 02:00 bis 22:00 Berlin, sonst outsideEntryWindow.']};
  n.broken={label:`Gegenkante auf M1 gebrochen (≤ ${TOUCH_PCT} der OB-Höhe), bevor eine neue ${adj} M1-FVG bekannt ist?`,
   status:rejected?'rejected':fvg?'visited':open(contact&&!closed),
   sub:rejected?`ja · ${time(r.knownAt)}`:fvg?'nein':contact&&!closed?'◇ offen':'○ nicht besucht',

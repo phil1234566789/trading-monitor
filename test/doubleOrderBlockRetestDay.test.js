@@ -20,7 +20,8 @@ it('keeps invalid retest times unknown',()=>{
 });
 it.each([1,-1])('enforces the retest-day policy in the detector for direction %s',direction=>{
  const load=name=>JSON.parse(readFileSync(new URL(`./fixtures/dob-native/${name}.json`,import.meta.url),'utf8'));
- const refs=load('references'),example=refs.pairs.find(p=>refs.references.find(r=>r.pin===p.pins[0]).dir===direction);
+ // P1/P4/P12 entfallen per Q7 (Entry b erst nach Marktschluss) und taugen nicht mehr als Beispiel.
+ const refs=load('references'),example=refs.pairs.find(p=>!['P1','P4','P12'].includes(p.id)&&refs.references.find(r=>r.pin===p.pins[0]).dir===direction);
  const [first,second]=example.pins.map(pin=>refs.references.find(r=>r.pin===pin)),fixture=load(first.day);
  const input={m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt:fixture.provenance.query.to};
  const match=p=>p.firstOrderBlock.startTime===first.startTime&&p.secondOrderBlock.startTime===second.startTime;
