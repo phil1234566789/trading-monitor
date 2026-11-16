@@ -98,7 +98,11 @@ try {
         mitTrend: { ...summary(side(true), list), samples: Object.entries(kept).filter(([, t]) => rows.find(r => r.t === t)?.f.withTrend).map(([k]) => k) },
         gegenTrend: summary(side(false), list),
         distance: Object.fromEntries(BUCKETS.map(([, b]) => [b, { mitTrend: stats(rows.filter(r => r.f.withTrend && r.f.bucket === b).map(r => r.t)),
-          gegenTrend: stats(rows.filter(r => !r.f.withTrend && r.f.bucket === b).map(r => r.t)) }])) };
+          gegenTrend: stats(rows.filter(r => !r.f.withTrend && r.f.bucket === b).map(r => r.t)) }])),
+        // Nur v2 hat die Retest-Art; der erste Touch lag bei 29,7 % (Main), deshalb gekreuzt.
+        ...(run === 'v2' ? { byRetestKind: Object.fromEntries(['first', 'followUp'].map(kind => [kind, {
+          mitTrend: summary(rows.filter(r => r.f.withTrend && r.t.sourceOfStrength?.retestKind === kind).map(r => r.t), list),
+          gegenTrend: summary(rows.filter(r => !r.f.withTrend && r.t.sourceOfStrength?.retestKind === kind).map(r => r.t), list) }])) } : {}) };
     }
     emaGate.runs[run] = out;
   }
@@ -108,6 +112,7 @@ try {
     for (const [name, v] of Object.entries(out.variants)) {
       const f = s => `${s.n} ${s.winrate}% ${s.sumR}R (${s.halves['Jan–Jun'].winrate}/${s.halves['Jul–Nov'].winrate})`;
       console.log(name.padEnd(18), 'mit:', f(v.mitTrend), v.mitTrend.samples.length + '/' + out.samplesInRun.length, '| gegen:', f(v.gegenTrend));
+      if (v.byRetestKind) for (const [kind, k] of Object.entries(v.byRetestKind)) console.log('   ', kind.padEnd(9), 'mit:', f(k.mitTrend), '| gegen:', f(k.gegenTrend));
     }
   }
 } finally {
