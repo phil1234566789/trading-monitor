@@ -18,8 +18,10 @@ function phaseOf(pair,entry){
  return {phase,phaseSince:phase==='entry'?entry.entryTime:entry.outcome.recognizedAt??entry.outcome.unavailableAt??entry.entryTime};
 }
 
+const zoneOf=ob=>({top:ob.top,bottom:ob.bottom});
 const chartOf=(pair,time)=>({firstOrderBlockStart:pair.firstOrderBlock.startTime,secondOrderBlockStart:pair.secondOrderBlock.startTime,
- firstRetestTime:pair.firstRetest.candleTime,secondRetestTime:pair.secondRetest.candleTime,time});
+ firstRetestTime:pair.firstRetest.candleTime,secondRetestTime:pair.secondRetest.candleTime,time,
+ firstOrderBlock:zoneOf(pair.firstOrderBlock),secondOrderBlock:zoneOf(pair.secondOrderBlock)});
 function setupOf(pair,route,entry){
  const ready=entry.status==='ready';
  return {id:`${pair.id}:${route}`,pairId:pair.id,instrument:pair.instrument,direction:pair.direction,route,...phaseOf(pair,entry),

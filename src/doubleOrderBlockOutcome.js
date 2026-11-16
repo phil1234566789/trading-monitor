@@ -1,6 +1,6 @@
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {entryRiskScale} from './entryRisk.js';
-import {candleTouchesPrice} from './structurePivotTime';
+import {candleTouchesPrice} from './structurePivotTime.ts';
 import {m1GapCovered} from './goldWeekendGap.js';
 
 // Preisbeobachtung des Indikators: keine Lots, Teilverkäufe, Commission oder Handelsfreigabe.

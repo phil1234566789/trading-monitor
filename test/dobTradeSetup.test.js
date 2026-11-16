@@ -1,21 +1,12 @@
-import {readFileSync,readdirSync} from 'node:fs';
+import {readdirSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {checkDobTradeSetup,dobLiveWindowInput,dobLiveWindowStart} from '../src/dobTradeSetup.js';
-import {dobSourceContext,sourceMaxDistanceAtr} from '../src/dobSourceOfStrength.js';
-import {markIgnoredCandles,htfObCandles} from '../src/sessionOccurrences.js';
+import {sourceMaxDistanceAtr} from '../src/dobSourceOfStrength.js';
 import {berlinOffsetMinutes} from '../src/berlinTime.js';
+import {directory,load,sourceContext,run,berlin} from './dobFixtures.js';
 
-const directory=new URL('./fixtures/dob-native/',import.meta.url);
-const load=day=>JSON.parse(readFileSync(new URL(`${day}.json`,directory),'utf8'));
-// H1/H4 wie die Messung: Session-Ignore und Session-Extreme der XAU-Sessions, Historie ab Archivbeginn.
-const htf=load('htf-xau-2026'),offset=sec=>berlinOffsetMinutes(sec*1000);
-const sourceContext=dobSourceContext({instrument:'XAUUSD',htfCandles:Object.fromEntries(Object.entries(htf.candles).map(([bar,rows])=>
- [bar,htfObCandles(markIgnoredCandles(rows.map(([time,open,high,low,close])=>({time,open,high,low,close})),htf.sessions,offset),htf.sessions,offset)]))});
-const run=(fixture,evaluatedAt=fixture.provenance.query.to,withSource=true,sourceOptions)=>checkDobTradeSetup({instrument:'XAUUSD',
- m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt,...(withSource?{sourceContext}:{}),sourceOptions});
 const all=result=>[...result.setups,...result.rejected];
 const SOURCE_MAX_DISTANCE_ATR=sourceMaxDistanceAtr('XAUUSD');
-const berlin=(day,hhmm)=>{const utc=Date.parse(`${day}T${hhmm}:00Z`)/1000;return utc-berlinOffsetMinutes(utc*1000)*60;};
 const berlinMinute=sec=>((Math.floor(sec/60)+berlinOffsetMinutes(sec*1000))%1440+1440)%1440;
 
 // Mustertrades Journal-Konto 8 (Berliner Zeit). Erwartet ist der nächste v0-Entry gleicher Richtung, kein Soll:
