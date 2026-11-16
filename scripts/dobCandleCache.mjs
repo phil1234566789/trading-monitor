@@ -11,7 +11,7 @@ export function dobCandleCache({ outDir, symbol, refresh, defaultStartSec, start
   // Kalenderbars bis Start plus Fenster: Wochenenden machen das zur sicheren Obergrenze für den Vorlauf.
   // coveredFrom = frühester Start, dessen Fenster der Cache trägt; ein früheres --from lädt nur das Ältere nach.
   const candles = async (bar, seconds, window) => {
-    const file = path.join(outDir, `candles-${symbol}-${bar === '1m' ? 'm1' : 'm5'}.json`);
+    const file = path.join(outDir, `candles-${symbol}-${{ '1m': 'm1', '5m': 'm5' }[bar] ?? bar}.json`);
     let cache = !refresh && existsSync(file) ? JSON.parse(await fs.readFile(file, 'utf8')) : null;
     if (Array.isArray(cache)) cache = { coveredFrom: defaultStartSec, rows: cache };
     // Ein leerer oder unvollständiger Cache wird neu geholt statt an rows[0] zu scheitern.
