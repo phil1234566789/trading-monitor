@@ -66,7 +66,7 @@ class TargetBroker:
             if not reached:
                 raise ValueError('target_not_reached')
         check=self.api.order_check(request)
-        if check is None or check.retcode!=0:raise ValueError('target_broker_precheck_failed')
+        if check is None or check.retcode!=0:raise ValueError('target_broker_precheck_failed_'+('none' if check is None else str(check.retcode)))
         return request
 
     def send(self,row,kind,index,request):

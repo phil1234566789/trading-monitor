@@ -48,6 +48,11 @@ describe('shared chart SL/TP controls',()=>{
   const missing=await render([{...row,targetChoices:[{r:2,price:null},{r:3,price:null}]}]);
   expect(missing).toContain('R-Basis fehlt');expect(missing).toContain('disabled');
  });
+ it('shows an inactive SL as an explicit warning, not as protection',async()=>{
+  const html=await render([{...base,warning:'SL NICHT AKTIV · Plan pausiert'}]);
+  expect(html).toContain('⚠ SL NICHT AKTIV · Plan pausiert');expect(html).toContain('warn');expect(html).toContain('role="alert"');
+  expect(await render([base])).not.toContain('tp-warning');
+ });
  it('keeps unknown costs honest without hiding an available R value',async()=>{
   const html=await render([{...base,forecast:{estimatedNet:null,rr:2,currency:'USD'}}]);
   expect(html).toContain('Netto —');expect(html).toContain('+2.00R');expect(html).not.toContain('$0.00');

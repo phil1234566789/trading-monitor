@@ -67,6 +67,12 @@ export function draftRiskBasis(draft){
  const outer=prices.length?(draft.direction==='long'?Math.min(...prices):Math.max(...prices)):null;
  return positionRiskBasis(draft.direction,draft.entryPrice,outer);
 }
+// Ein gespeicherter SL, der nicht beim Broker liegt, darf im Chart nie wie ein aktiver Schutz aussehen.
+export function stopWarning(d){
+ if(d.stopsDirty||!d.stops?.length)return '';
+ if(['paused','unknown'].includes(d.planState))return `SL NICHT AKTIV · Plan ${d.planState==='paused'?'pausiert':'ungeklärt'}${d.planReason?' · '+d.planReason:''}`;
+ return d.brokerStop===0?'SL NOCH NICHT BEIM BROKER':'';
+}
 export function targetDraftLines(symbol){
  return [...drafts.entries()].filter(([,d])=>d.symbol===symbol&&d.online!==false).flatMap(([orderId,d])=>{
  return ['target','stop'].flatMap(kind=>{
@@ -76,7 +82,7 @@ export function targetDraftLines(symbol){
   orderId,index,kind,price:Number(target.price),entryTime:d.entryTime,entryPrice:d.entryPrice,initialSl:d.initialSl,basisSl,
   selected:d.selectedIndex===index&&(d.selectedKind??'target')===kind,direction:d.direction,percent:shares[index],targetCount:levels.length,totalPercent,
   accountLabel:d.accountLabel,positionId:d.positionId,digits:d.digits,dirty:d.dirty,
-  ...(kind==='stop'?{splitReason:stopSplitReason(d,index),actualPercent:allocation.targets[index]?.volume/d.positionVolume*100,roundedShare:Math.abs(allocation.targets[index]?.volume/d.positionVolume*100-shares[index])>1e-7}:{}),
+  ...(kind==='stop'?{warning:stopWarning(d),splitReason:stopSplitReason(d,index),actualPercent:allocation.targets[index]?.volume/d.positionVolume*100,roundedShare:Math.abs(allocation.targets[index]?.volume/d.positionVolume*100-shares[index])>1e-7}:{}),
   forecast:calcPositionLineForecast({direction:d.direction,entryPrice:d.entryPrice,price:Number(target.price),volume:allocation.targets[index]?.volume,positionVolume:d.positionVolume,basisSl,
    minimumVolume:d.quote?.minimum_volume,lossPerUnit:d.quote?.[`loss_per_unit_${side}`],profitPerUnit:d.quote?.[`profit_per_unit_${side}`],currency:d.currency,
    entryCosts:d.costs?.entry_costs,entryVolume:d.costs?.entry_volume,swap:d.swap,estimatedExitCostsPerLot:d.costs?.estimated_exit_costs_per_lot}),

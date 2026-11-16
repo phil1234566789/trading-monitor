@@ -17,8 +17,9 @@ class TargetEngine:
             if self.cloud.call('target_result',dict(**json.loads(body),operation_id=id,result=value)).get('recorded') is True:
                 with self.db:self.db.execute('UPDATE target_sends SET delivered=1 WHERE id=?',(id,))
 
-    def observed(self,row,state,reason):
-        self.cloud.call('target_observed',dict(order_id=row['order_id'],revision=row['revision'],state=state,reason=reason))
+    def observed(self,row,state,reason,detail=None):
+        # Der konkrete Precheck-Fehler ist die einzige Spur, warum ein SL nie beim Broker ankam.
+        self.cloud.call('target_observed',dict(order_id=row['order_id'],revision=row['revision'],state=state,reason=reason,**({'detail':detail} if detail else {})))
 
     def prepare(self,row,kind,index):
         if kind=='install' and row['plan'].get('stops'):
@@ -40,7 +41,7 @@ class TargetEngine:
             if stop_index<len(plan.get('stops',[])):
                 try:self.broker.prepare(row,'stop_close',stop_index)
                 except ValueError as error:
-                    if str(error)!='target_not_reached':self.observed(row,'paused','broker_precheck_failed');return
+                    if str(error)!='target_not_reached':self.observed(row,'paused','broker_precheck_failed',str(error));return
                 else:kind,index='stop_close',stop_index
             if kind=='close':
                 if plan['native_tp']>0:return
@@ -51,7 +52,7 @@ class TargetEngine:
         try:self.prepare(row,kind,index)
         except ValueError as error:
             if str(error)=='target_not_reached':return
-            self.observed(row,'paused','broker_precheck_failed');return
+            self.observed(row,'paused','broker_precheck_failed',str(error));return
         id=str(uuid.uuid4());body=dict(order_id=row['order_id'],revision=row['revision'])
         # Das Cloud-Recht wird vor dem lokalen Journal vergeben; verlorene Bestätigung führt zu keinem Versand.
         if self.cloud.call('target_claim',dict(**body,operation_id=id,kind=kind,target_index=index,**({'exit_plan_version':1} if plan.get('exit_version')==1 else {}))).get('authorized') is not True:return

@@ -21,7 +21,7 @@ export function useMmtTargetDrawing(visible=()=>true){
   const last=candles[candles.length-1].time,bar=barSecondsFor(c.currentBar);
   for(const line of lines.sort((a,b)=>Number(a.selected)-Number(b.selected))){
    const primitive=new LiquidityLinePrimitive({price:line.price,pivotTime:line.entryTime??last,endTime:last+bar*12},
-    {color:cssColor(line.kind==='stop'?'candleDown':'candleUp'),lineWidth:line.selected?3:2,label:`${line.label} · ${line.price} · ${exitForecastLabel(line.forecast)}`,labelSide:'end-above',lenientLabels:true,forceLabel:line.selected,futureBarSeconds:bar,extendToRight:true},candles);
+    {color:cssColor(line.warning?'tradeHover':line.kind==='stop'?'candleDown':'candleUp'),dashed:!!line.warning,lineWidth:line.selected?3:2,label:`${line.warning?'⚠ '+line.warning+' · ':''}${line.label} · ${line.price} · ${exitForecastLabel(line.forecast)}`,labelSide:'end-above',lenientLabels:true,forceLabel:line.selected,futureBarSeconds:bar,extendToRight:true},candles);
    series.attachPrimitive(primitive);primitives.push({primitive,line});
   }
  });

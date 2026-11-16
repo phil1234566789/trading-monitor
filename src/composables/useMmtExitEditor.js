@@ -59,7 +59,7 @@ export function useMmtExitEditor(props,emit){
  const runtimeMetadata=()=>({symbol:chartInstrument(context.value.symbol),entryTime:props.entryTime??position.value?.opened_at_sec??null,digits:quote.value?.digits,
   entryPrice:context.value.entry,initialSl:context.value.initialSl,basisSl:plan.value?.plan.risk_basis_sl??context.value.initialSl,basisSource:plan.value?.plan.risk_basis_source??null,direction:context.value.direction,
   accountLabel:props.accountName||`Konto ${context.value.login}`,positionId:context.value.ticket,positionVolume:position.value?.volume,
-  quote:quote.value,online:props.online,currency:props.snapshot?.currency,swap:position.value?.swap,costs:costs.value,stopPreviews:stopPreviews.value,canAddStop:canAddStop.value,stopReason:stopReason.value,needsStop:position.value?.sl===0,brokerStop:position.value?.sl});
+  quote:quote.value,online:props.online,currency:props.snapshot?.currency,swap:position.value?.swap,costs:costs.value,stopPreviews:stopPreviews.value,canAddStop:canAddStop.value,stopReason:stopReason.value,needsStop:position.value?.sl===0,brokerStop:position.value?.sl,planState:plan.value?.state??null,planReason:plan.value?.reason??null});
  function savedLevels(kind){
   const levels=plan.value?.plan[kind==='stop'?'stops':'targets'];
   if(levels)return levels.slice(plan.value[kind==='stop'?'next_stop_index':'next_index']??0);

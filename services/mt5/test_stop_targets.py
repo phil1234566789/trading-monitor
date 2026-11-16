@@ -50,6 +50,12 @@ class SplitStopEngineTests(unittest.TestCase):
         engine.consider(row);engine.broker.send.assert_not_called()
         row['state']='unknown';engine.consider(row);engine.broker.send.assert_not_called()
 
+    def test_failed_install_precheck_reports_the_concrete_reason(self):
+        engine,cloud=self.engine();engine.broker.prepare.side_effect=ValueError('stop_risk_budget_exceeded')
+        engine.supports_stops=True;engine.refresh_risk=lambda:None
+        engine.consider(exit_plan());engine.broker.send.assert_not_called()
+        self.assertEqual(cloud.call.call_args.args,('target_observed',dict(order_id=exit_plan()['order_id'],revision=exit_plan()['revision'],state='paused',reason='broker_precheck_failed',detail='stop_risk_budget_exceeded')))
+
     def test_refreshes_authoritative_risk_again_after_a_slow_cloud_claim(self):
         clock=[1000];refreshed=[];cloud=Mock()
         def call(action,body):

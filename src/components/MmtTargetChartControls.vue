@@ -23,7 +23,7 @@ function keyboard(event,row,action){if(event.key==='Enter'||event.key===' '){eve
  <div class="mmt-tp-overlay" :class="{dragging}" aria-label="SL- und TP-Linien im Chart">
   <span v-if="guide" class="tp-drag-guide" :style="{top:guide.y+'px',left:guide.left+'px',width:guide.width+'px'}" aria-hidden="true"></span>
   <span v-for="row in rows.filter(r=>r.lineY!=null&&r.y!==r.lineY)" :key="`connector:${key(row)}`" class="tp-connector" :style="{right:(row.right+2)+'px',top:Math.min(row.y,row.lineY)+'px',height:Math.abs(row.y-row.lineY)+'px'}" aria-hidden="true"></span>
-  <div v-for="row in rows" :key="key(row)" :data-tp-key="key(row)" class="tp-controls" :class="{selected:row.selected}" :style="{top:row.y+'px',right:row.right+'px'}" :title="`${row.accountLabel} · Position ${row.positionId} · ${label(row)} · ${row.price}`" :aria-label="`${row.accountLabel} · Position ${row.positionId} · ${label(row)}${row.kind==='entry'?'':' '+(row.index+1)} · ${row.price}${row.kind==='entry'?'':' · '+exitForecastLabel(row.forecast)+' · '+percentLabel(row.percent)+' Prozent'}`" @pointerdown.stop @click.stop @wheel.stop @keydown.esc.stop.prevent="cancel(row)">
+  <div v-for="row in rows" :key="key(row)" :data-tp-key="key(row)" class="tp-controls" :class="{selected:row.selected,warn:!!row.warning}" :style="{top:row.y+'px',right:row.right+'px'}" :title="`${row.accountLabel} · Position ${row.positionId} · ${label(row)} · ${row.price}`" :aria-label="`${row.accountLabel} · Position ${row.positionId} · ${label(row)}${row.kind==='entry'?'':' '+(row.index+1)} · ${row.price}${row.kind==='entry'?'':' · '+exitForecastLabel(row.forecast)+' · '+percentLabel(row.percent)+' Prozent'}`" @pointerdown.stop @click.stop @wheel.stop @keydown.esc.stop.prevent="cancel(row)">
    <span class="tp-label" :title="`${row.accountLabel} · Position ${row.positionId}`">{{row.accountLabel}}</span><span class="tp-price" :title="row.offscreen?'Preis außerhalb des sichtbaren Chartbereichs; Bedienung am Rand.':undefined">{{label(row)}}{{row.kind==='entry'?'':row.index+1}} · {{row.price}}<span v-if="row.offscreen"> ↗</span><span v-if="row.dirty"> *</span></span>
    <template v-if="row.kind==='entry'">
     <span v-for="mode in row.offerStop?['risky','full']:[]" :key="mode" :title="stopPreviewReason(row.stopPreviews?.[mode],row.stopReason)">
@@ -34,6 +34,7 @@ function keyboard(event,row,action){if(event.key==='Enter'||event.key===' '){eve
     </span>
    </template>
    <template v-else>
+   <strong v-if="row.warning" class="tp-warning" role="alert">⚠ {{row.warning}}</strong>
    <span class="tp-forecast" :title="row.forecast?.costsKnown?'Geschätztes Netto dieser Teilmenge; künftiger Swap und Slippage können abweichen.':'Netto unbekannt: Kostenbasis oder native Brokerberechnung fehlt.'">{{exitForecastLabel(row.forecast)}}</span>
    <IconButton class="tp-icon tp-move" :armed="row.selected" :title="`${label(row)} ${row.index+1} verschieben · Pfeiltasten für Feinschritte`" :aria-label="`${label(row)} ${row.index+1} verschieben`" @pointerdown="pointer($event,row,'move')" @keydown="keyboard($event,row,'move')" @keydown.up.prevent="emit('nudge',row,1)" @keydown.down.prevent="emit('nudge',row,-1)">↕</IconButton>
    <span :title="row.splitReason||(row.targetCount>=5?'Maximal fünf Teilmengen':`${label(row)} ${row.index+1} teilen und neue Linie herausziehen`)">
@@ -60,6 +61,7 @@ function keyboard(event,row,action){if(event.key==='Enter'||event.key===' '){eve
 .tp-drag-guide{position:absolute;left:0;border-top:1px dashed var(--mmt-accent,#26a69a);pointer-events:none}
 .tp-controls{position:absolute;display:flex;align-items:center;gap:4px;transform:translateY(-50%);pointer-events:auto;background:var(--mmt-bg,#131722);border:1px solid var(--mmt-border,#303746);border-radius:4px;padding:2px;max-width:calc(100% - 8px);color:var(--mmt-text,#d1d4dc);font-size:10px;line-height:1}
 .tp-controls.selected{border-color:var(--mmt-accent,#26a69a)}
+.tp-controls.warn{border:2px dashed #ffd600}.tp-warning{color:#ffd600;white-space:nowrap;padding:0 4px}
 .tp-label{max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}.tp-price,.tp-forecast{white-space:nowrap}.tp-connector{position:absolute;border-right:1px solid var(--mmt-accent,#26a69a);pointer-events:none}
 .tp-icon{width:24px;height:24px;font-size:14px;border-radius:3px;flex:none;touch-action:none}
 .tp-move{cursor:ns-resize}.tp-share{padding:4px;font-size:11px;white-space:nowrap;min-height:24px}

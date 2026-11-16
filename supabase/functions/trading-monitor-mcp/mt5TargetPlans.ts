@@ -5,6 +5,9 @@ import {validateWorkerSnapshot,validateDispatchAccount} from './executionContrac
 import {validateTargetAllocation} from './targetPlanContract.js';
 import {stopRiskPreview,validateStopRisk} from './stopRiskContract.js';
 import {positionRiskMultiple,positionRiskBasis} from './targetPlanContract.js';
+import {observedReason,exitPlanAlertMessage} from './mt5ExitPlanAlert.js';
+import {sendPushover,sendTelegramText} from '../_shared/setup2Notifications.js';
+import {env} from '../_shared/setup2Http.ts';
 const uuid=z.string().uuid(),number=z.number().finite(),positive=number.positive();
 const identity={order_id:uuid.optional(),position_ticket:z.number().int().positive().safe().optional()};
 const oneIdentity=(v:{order_id?:string;position_ticket?:number})=>(v.order_id!=null)!==(v.position_ticket!=null);
@@ -113,8 +116,11 @@ export async function targetPlanAction(body:Record<string,unknown>,worker=false)
   return {authorized:checked(await db.rpc('mt5_claim_target',{p_order:orderId,p_revision:revision,p_id:id,p_kind:kind,p_index:index}))===true};
  }
  if(action==='target_observed'){
-  const state=z.enum(['paused','completed']).parse(body.state),reason=z.enum(['broker_position_changed','broker_position_closed','targets_finished_with_remainder','broker_precheck_failed']).parse(body.reason);
+  const state=z.enum(['paused','completed']).parse(body.state),reason=observedReason(z.enum(['broker_position_changed','broker_position_closed','targets_finished_with_remainder','broker_precheck_failed']).parse(body.reason),body.detail);
   const updated=checked(await db.from('mt5_target_plans').update({state,reason,updated_at:new Date().toISOString()}).eq('order_id',orderId).eq('revision',revision).in('state',['pending','active']).select('order_id'));
+  // Nur der tatsächliche Zustandswechsel alarmiert; ein Alarmfehler darf die Rückmeldung an den Worker nicht kippen.
+  const message=updated?.length?exitPlanAlertMessage(row,state,reason):null;
+  if(message)await Promise.allSettled([sendTelegramText(message,env),sendPushover(message,'MMT - SL nicht aktiv',env)]);
   return {recorded:!!updated?.length};
  }
  throw new Error('invalid_target_action');
