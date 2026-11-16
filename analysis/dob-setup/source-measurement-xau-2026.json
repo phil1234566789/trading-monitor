@@ -1,6 +1,6 @@
 {
   "measurement": "dob-quelle-der-kraft-v1",
-  "git": "5a78950a",
+  "git": "f991a18f",
   "baseGit": "71868105",
   "symbol": "XAUUSD",
   "dataEnd": 1794849660,
@@ -1230,6 +1230,7 @@
         "ob1": 1794482100,
         "ob2": 1794486300,
         "byOb1": {
+          "dayStart": 1794438060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -1251,6 +1252,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1794438060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -1323,6 +1325,7 @@
         "ob1": 1793855100,
         "ob2": 1793889600,
         "byOb1": {
+          "dayStart": 1793833260,
           "category": "LS + OB",
           "kinds": [
             "LS H1",
@@ -1343,6 +1346,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1793833260,
           "category": "LS + OB",
           "kinds": [
             "LS H1",
@@ -1582,6 +1586,7 @@
         "ob1": 1793753400,
         "ob2": 1793754600,
         "byOb1": {
+          "dayStart": 1793746860,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -1600,6 +1605,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1793746860,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -1652,6 +1658,7 @@
         "ob1": 1793765100,
         "ob2": 1793767500,
         "byOb1": {
+          "dayStart": 1793746860,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -1670,6 +1677,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1793746860,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -1722,6 +1730,7 @@
         "ob1": 1793600700,
         "ob2": 1793604600,
         "byOb1": {
+          "dayStart": 1793574060,
           "category": "nur LS",
           "kinds": [
             "LS M5"
@@ -1739,6 +1748,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1793574060,
           "category": "nur LS",
           "kinds": [
             "LS M5"
@@ -1822,6 +1832,7 @@
         "ob1": 1793020200,
         "ob2": 1793020800,
         "byOb1": {
+          "dayStart": 1792965660,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -1841,6 +1852,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1792965660,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2002,6 +2014,7 @@
         "ob1": 1792654200,
         "ob2": 1792657800,
         "byOb1": {
+          "dayStart": 1792620060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2020,6 +2033,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1792620060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2079,6 +2093,7 @@
         "ob1": 1792657800,
         "ob2": 1792659000,
         "byOb1": {
+          "dayStart": 1792620060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2097,6 +2112,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1792620060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2156,6 +2172,7 @@
         "ob1": 1792636800,
         "ob2": 1792638600,
         "byOb1": {
+          "dayStart": 1792620060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2174,6 +2191,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1792620060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2226,6 +2244,7 @@
         "ob1": 1792636800,
         "ob2": 1792638600,
         "byOb1": {
+          "dayStart": 1792620060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2244,6 +2263,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1792620060,
           "category": "LS + OB",
           "kinds": [
             "LS M5",
@@ -2296,6 +2316,7 @@
         "ob1": 1791801900,
         "ob2": 1791803100,
         "byOb1": {
+          "dayStart": 1791756060,
           "category": "nur LS",
           "kinds": [
             "LS H1",
@@ -2314,6 +2335,7 @@
           }
         },
         "byOb2": {
+          "dayStart": 1791756060,
           "category": "nur LS",
           "kinds": [
             "LS H1",

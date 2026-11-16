@@ -1,6 +1,6 @@
 {
   "measurement": "dob-quelle-kombi-v1",
-  "git": "5a78950a",
+  "git": "f991a18f",
   "base": {
     "n": 1616,
     "win": 545,
@@ -8,7 +8,42 @@
     "winrate": 33.7,
     "sumR": 19,
     "smallN": false,
+    "share": 100,
+    "a": {
+      "n": 1249,
+      "win": 423,
+      "loss": 826,
+      "winrate": 33.9,
+      "sumR": 20,
+      "smallN": false
+    },
+    "b": {
+      "n": 367,
+      "win": 122,
+      "loss": 245,
+      "winrate": 33.2,
+      "sumR": -1,
+      "smallN": false
+    },
     "monthsAboveBreakEven": 6,
+    "halves": {
+      "Jan–Jun": {
+        "n": 910,
+        "win": 310,
+        "loss": 600,
+        "winrate": 34.1,
+        "sumR": 20,
+        "smallN": false
+      },
+      "Jul–Nov": {
+        "n": 706,
+        "win": 235,
+        "loss": 471,
+        "winrate": 33.3,
+        "sumR": -1,
+        "smallN": false
+      }
+    },
     "months": 11
   },
   "methodology": [
@@ -44,6 +79,24 @@
         "smallN": false
       },
       "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 378,
+          "win": 148,
+          "loss": 230,
+          "winrate": 39.2,
+          "sumR": 66,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 364,
+          "win": 120,
+          "loss": 244,
+          "winrate": 33,
+          "sumR": -4,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 46,
@@ -206,6 +259,24 @@
         "smallN": true
       },
       "monthsAboveBreakEven": 6,
+      "halves": {
+        "Jan–Jun": {
+          "n": 129,
+          "win": 48,
+          "loss": 81,
+          "winrate": 37.2,
+          "sumR": 15,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 132,
+          "win": 41,
+          "loss": 91,
+          "winrate": 31.1,
+          "sumR": -9,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 13,
@@ -368,6 +439,24 @@
         "smallN": true
       },
       "monthsAboveBreakEven": 5,
+      "halves": {
+        "Jan–Jun": {
+          "n": 48,
+          "win": 18,
+          "loss": 30,
+          "winrate": 37.5,
+          "sumR": 6,
+          "smallN": true
+        },
+        "Jul–Nov": {
+          "n": 46,
+          "win": 18,
+          "loss": 28,
+          "winrate": 39.1,
+          "sumR": 8,
+          "smallN": true
+        }
+      },
       "months": {
         "2026-01": {
           "n": 4,
@@ -530,6 +619,24 @@
         "smallN": false
       },
       "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 152,
+          "win": 63,
+          "loss": 89,
+          "winrate": 41.4,
+          "sumR": 37,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 160,
+          "win": 58,
+          "loss": 102,
+          "winrate": 36.3,
+          "sumR": 14,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 21,
@@ -692,6 +799,24 @@
         "smallN": false
       },
       "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 373,
+          "win": 148,
+          "loss": 225,
+          "winrate": 39.7,
+          "sumR": 71,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 360,
+          "win": 119,
+          "loss": 241,
+          "winrate": 33.1,
+          "sumR": -3,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 46,
@@ -854,6 +979,24 @@
         "smallN": true
       },
       "monthsAboveBreakEven": 6,
+      "halves": {
+        "Jan–Jun": {
+          "n": 129,
+          "win": 48,
+          "loss": 81,
+          "winrate": 37.2,
+          "sumR": 15,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 132,
+          "win": 41,
+          "loss": 91,
+          "winrate": 31.1,
+          "sumR": -9,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 13,
@@ -1016,6 +1159,24 @@
         "smallN": false
       },
       "monthsAboveBreakEven": 6,
+      "halves": {
+        "Jan–Jun": {
+          "n": 404,
+          "win": 133,
+          "loss": 271,
+          "winrate": 32.9,
+          "sumR": -5,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 299,
+          "win": 106,
+          "loss": 193,
+          "winrate": 35.5,
+          "sumR": 19,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 71,
@@ -1178,6 +1339,24 @@
         "smallN": true
       },
       "monthsAboveBreakEven": 4,
+      "halves": {
+        "Jan–Jun": {
+          "n": 50,
+          "win": 17,
+          "loss": 33,
+          "winrate": 34,
+          "sumR": 1,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 54,
+          "win": 16,
+          "loss": 38,
+          "winrate": 29.6,
+          "sumR": -6,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 7,
@@ -1340,6 +1519,24 @@
         "smallN": false
       },
       "monthsAboveBreakEven": 6,
+      "halves": {
+        "Jan–Jun": {
+          "n": 325,
+          "win": 102,
+          "loss": 223,
+          "winrate": 31.4,
+          "sumR": -19,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 221,
+          "win": 81,
+          "loss": 140,
+          "winrate": 36.7,
+          "sumR": 22,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 65,
@@ -1502,6 +1699,24 @@
         "smallN": true
       },
       "monthsAboveBreakEven": 6,
+      "halves": {
+        "Jan–Jun": {
+          "n": 79,
+          "win": 31,
+          "loss": 48,
+          "winrate": 39.2,
+          "sumR": 14,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 78,
+          "win": 25,
+          "loss": 53,
+          "winrate": 32.1,
+          "sumR": -3,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 6,
@@ -1664,6 +1879,24 @@
         "smallN": false
       },
       "monthsAboveBreakEven": 8,
+      "halves": {
+        "Jan–Jun": {
+          "n": 203,
+          "win": 73,
+          "loss": 130,
+          "winrate": 36,
+          "sumR": 16,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 180,
+          "win": 72,
+          "loss": 108,
+          "winrate": 40,
+          "sumR": 36,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 42,
@@ -1826,6 +2059,24 @@
         "smallN": true
       },
       "monthsAboveBreakEven": 6,
+      "halves": {
+        "Jan–Jun": {
+          "n": 86,
+          "win": 34,
+          "loss": 52,
+          "winrate": 39.5,
+          "sumR": 16,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 99,
+          "win": 37,
+          "loss": 62,
+          "winrate": 37.4,
+          "sumR": 12,
+          "smallN": false
+        }
+      },
       "months": {
         "2026-01": {
           "n": 11,
