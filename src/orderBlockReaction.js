@@ -83,17 +83,16 @@ function fvgFill(context,fvg) {
 const openAt=(fill,at)=>fill.filledAt!=null&&fill.filledAt<=at?false:fill.gapAt!=null&&fill.gapAt<at?null:true;
 
 // SL zum Entry-Zeitpunkt: nur vor dem Retest bekannte interne FVGs zählen, die Reaktions-FVG nicht.
+// Philip: „entweder M5-Kante oder Extrempunkt beim Retest“ – jede offene OB-FVG, auch teilweise überlappend, gibt die M5-Kante.
 export function evaluateReactionStop(context,orderBlock,contact,entryAt) {
  const direction=sideOf(orderBlock.dir);
- let inside=false,overlapping=false,missing=false;
+ let open=false,missing=false;
  for(const fvg of internalOrderBlockFvgs(context,orderBlock,contact.candleTime)){
-  const open=openAt(fvgFill(context,fvg),entryAt);
-  if(open===null)missing=true;
-  else if(open&&fvg.bottom>=orderBlock.bottom&&fvg.top<=orderBlock.top)inside=true;
-  else if(open)overlapping=true;
+  const state=openAt(fvgFill(context,fvg),entryAt);
+  if(state===null)missing=true;else if(state)open=true;
  }
- if(inside)return {status:'ready',anchor:'m5-edge',price:direction==='long'?orderBlock.bottom:orderBlock.top,reason:null};
- if(missing||overlapping)return {status:'unknown',price:null,reason:missing?'internalFvgHistoryMissing':'partialOverlapOpen'};
+ if(open)return {status:'ready',anchor:'m5-edge',price:direction==='long'?orderBlock.bottom:orderBlock.top,reason:null};
+ if(missing)return {status:'unknown',price:null,reason:'internalFvgHistoryMissing'};
  return {status:'ready',anchor:'retestExtreme',price:retestExtreme(context.rows,direction,contact.candleTime,entryAt),reason:null};
 }
 

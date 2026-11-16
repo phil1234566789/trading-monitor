@@ -215,8 +215,8 @@ describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
   expect(g.nodes.stop.sub).toContain('ja → ferne M5-Kante');
   expect(g.nodes.stop.sub).toContain('nein → Retest-Extrem');
  });
- it('SL bleibt bei partieller Überlappung unbekannt, statt einen Ja-/Nein-Ast zu erfinden',()=>{
-  const g=graph({...reaction,routes:{a:{status:'unknown',reason:'partialOverlapOpen',knownAt:900,entryCandidate:{entryTime:900,entryPrice:114}},b:{status:'pending',reason:'entryBPending'}}});
+ it('SL bleibt bei fehlender Füllhistorie unbekannt, statt einen Ja-/Nein-Ast zu erfinden',()=>{
+  const g=graph({...reaction,routes:{a:{status:'unknown',reason:'internalFvgHistoryMissing',knownAt:900,entryCandidate:{entryTime:900,entryPrice:114}},b:{status:'pending',reason:'entryBPending'}}});
   expect(g.nodes.stop.status).toBe('unknown');
   expect(g.nodes.stop.sub).toContain('SL unknown');
   expect(g.nodes.stop.sub).not.toContain('● ja');

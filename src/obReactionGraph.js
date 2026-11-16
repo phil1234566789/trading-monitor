@@ -30,7 +30,6 @@ const pct=n=>Number(n.toFixed(2))+' %';
 const ROUTE_STATUS={entry:'visited',rejected:'rejected',unknown:'unknown',pending:'unknown'};
 // SL-Gründe bzw. -Anker der Produktrouten; ein unknown aus diesen Gründen hat das 50-%-Gate von Route b bereits passiert.
 const STOP_BRANCH={'m5-edge':'interne FVG offen → ferne M5-Kante',retestExtreme:'keine offen → Retest-Extrem',
- partialOverlapOpen:'nur teilweise überlappend → unknown',
  internalFvgHistoryMissing:'Füllhistorie fehlt → unknown',stopNotBeyondEntry:'SL nicht hinter dem Entry → unknown'};
 const UNKNOWN_METER=label=>({value:null,label,segments:[]});
 const meterOf=(value,words,label,positive=true)=>({value,label,
@@ -188,7 +187,7 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
   :stopKey?`SL unknown · ${STOP_BRANCH[stopKey]}`:'noch kein Entry-Zeitpunkt';
  n.stop={label:'Interne M1-FVG beim Entry noch offen?',status:!slLive?'not-visited':chosen?'visited':'unknown',
   sub:!slLive?decision:[...branches,decision].join('\n'),
-  detail:['Entscheidung zum Entry-Zeitpunkt, nicht zum aktuellen Sliderstand: ja (offen und vollständig intern) → ferne M5-Kante; nein (keine offen) → Retest-Extrem. Nur teilweise überlappend oder Füllhistorie fehlt → unknown.',
+  detail:['Entscheidung zum Entry-Zeitpunkt, nicht zum aktuellen Sliderstand: ja (eine OB-FVG offen, auch nur teilweise überlappend) → ferne M5-Kante; nein (keine offen) → Retest-Extrem. Die M5-Kante ist der maximale SL. Füllhistorie fehlt → unknown.',
    'Retest-Extrem: Short höchstes High, Long tiefstes Low von der Kontakt- bis einschließlich Entry-Kerze, ohne Puffer. Ast und Preis bleiben beim Entry eingefroren.',
    ...Object.entries(routes).map(([k,x])=>`Route ${k}: ${x.status==='entry'?'SL '+price(x.stopLoss)+' · '+(STOP_BRANCH[x.stopAnchor]??x.stopAnchor):x.status==='skipped'?SKIPPED_ENTRY_TEXT:reasonText(x.reason)}`)]};
  n.counter=opponentNode(r,dir,live&&!first);

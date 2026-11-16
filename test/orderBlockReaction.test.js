@@ -72,8 +72,9 @@ describe('internal FVG stop at entry',()=>{
   // Ignorierte Kerzen zählen wie bei Kontakt und M5-Bruch nicht.
   expect(evaluateReactionStop(context([],filled.map(c=>c.time===1080?{...c,ignored:true}:c)),ob,contact,1200).price).toBe(105);
  });
- it('keeps a partially overlapping open FVG unknown instead of guessing',()=>{
-  expect(evaluateReactionStop(context([{...inside,bottom:99,top:103}]),ob,contact,1200)).toMatchObject({status:'unknown',reason:'partialOverlapOpen'});
+ // Philip 16.11.: jede offene OB-FVG gibt die M5-Kante, auch wenn sie nur teilweise überlappt.
+ it('uses the far M5 edge for a partially overlapping open FVG too',()=>{
+  expect(evaluateReactionStop(context([{...inside,bottom:99,top:103}]),ob,contact,1200)).toMatchObject({status:'ready',anchor:'m5-edge',price:100});
  });
  it('judges the stop at entry time; a later fill does not change it, a gap or hidden candle before entry does',()=>{
   expect(evaluateReactionStop(context([inside],rows.map(c=>c.time===1500?{...c,low:101}:c)),ob,contact,1200).price).toBe(100);

@@ -38,38 +38,45 @@ for(const mirrored of [false,true])describe(`A-Entry beendet die Reaktion (${mir
   }
  });
 
- it('A unknown wegen belegter Teilüberlappung beendet B nicht: dritter nativer Versuch liefert den Entry',()=>{
+ // Philip 16.11.: „entweder M5-Kante oder Extrempunkt beim Retest“ – die nur teilweise überlappende offene FVG gibt die M5-Kante.
+ it('teilweise überlappende offene interne FVG: A tritt mit SL an der M5-Kante ein und beendet B',()=>{
   const fixture=read('2026-10-16'),m1=mirrored?reflect(fixture.candles.m1):fixture.candles.m1;
   const m5=mirrored?reflect(fixture.candles.m5):fixture.candles.m5;
   const zone=detectOrderBlocks(m5,'5m',true,0).find(z=>z.startTime===1792157400&&z.dir===(mirrored?-1:1));
   expect(zone).toBeDefined();
   const ob={...zone,recognizedAt:orderBlockRecognitionTimes(m5,'5m').get(zone.startTime),timeframe:'5M'};
-  const evaluate=at=>{
-   const context=createOrderBlockReactionContext(closedChecklistCandles(m1,'1m',at),at,'XAUUSD');
-   return {context,result:evaluateOrderBlockReaction(context,ob)};
-  };
-  const initial=evaluate(1792167240),r=initial.result;
-  // Quelle 15:33, bekannt 15:35: offen und nur teilweise innerhalb der M5-Formation, kein erfundener A-Stop.
-  const partial=internalOrderBlockFvgs(initial.context,ob,r.contact.candleTime).find(f=>f.candleTime===1792157580);
+  const context=createOrderBlockReactionContext(closedChecklistCandles(m1,'1m',1792167240),1792167240,'XAUUSD'),r=evaluateOrderBlockReaction(context,ob);
+  // Quelle 15:33, bekannt 15:35: offen und nur teilweise innerhalb der M5-Formation.
+  const partial=internalOrderBlockFvgs(context,ob,r.contact.candleTime).find(f=>f.candleTime===1792157580);
   expect(partial).toMatchObject({recognizedAt:1792157700});
-  expect(partial.bottom).toBeCloseTo(mirrored?10000-4161.16:4159.79,8);
-  expect(partial.top).toBeCloseTo(mirrored?10000-4159.79:4161.16,8);
-  expect(internalFvgOpenAt(initial.context,partial,1792167240)).toBe(true);
+  expect(internalFvgOpenAt(context,partial,1792167240)).toBe(true);
   expect(partial.bottom<ob.bottom||partial.top>ob.top).toBe(true);
-  expect(r.routes.a).toMatchObject({status:'unknown',reason:'partialOverlapOpen',knownAt:1792167240});
-  expect(r.routes.b.status).toBe('pending');
-  const final=evaluate(1792172940).result;
-  expect(final.routes.a).toEqual(r.routes.a);
-  expect(final).toMatchObject({state:'true',verdict:{state:'true',knownAt:1792172940}});
-  expect(final.routes.b).toMatchObject({status:'entry',entryTime:1792172940,
-   entryFvg:{candleTime:1792172460,recognizedAt:1792172580}});
-  expect(final.routes.b.entryPrice).toBeCloseTo(mirrored?10000-4162.5:4162.5,8);
-  expect(final.routes.b.stopLoss).toBeCloseTo(mirrored?10000-4156.61:4156.61,8);
-  expect(final.routes.b.attempts).toHaveLength(3);
+  expect(r.routes.a).toMatchObject({status:'entry',entryTime:1792167240,stopAnchor:'m5-edge'});
+  expect(r.routes.a.stopLoss).toBeCloseTo(mirrored?ob.top:ob.bottom,8);
+  expect(r.routes.b).toMatchObject({status:'skipped',reason:'entryAlreadyFound'});
+ });
+
+ // Portiert vom 16.10. 15:30 (dort tritt seit der M5-Kanten-Regel A ein): zwei M1-OB-Brüche, der dritte Versuch liefert den Entry.
+ it('A abgelehnt beendet B nicht: dritter nativer Versuch nach zwei M1-OB-Brüchen liefert den Entry (08.10. Short-OB 14:40)',()=>{
+  const fixture=read('2026-10-08'),m1=mirrored?reflect(fixture.candles.m1):fixture.candles.m1;
+  const m5=mirrored?reflect(fixture.candles.m5):fixture.candles.m5;
+  const zone=detectOrderBlocks(m5,'5m',true,0).find(z=>z.startTime===1791463200&&z.dir===(mirrored?1:-1));
+  expect(zone).toBeDefined();
+  const ob={...zone,recognizedAt:orderBlockRecognitionTimes(m5,'5m').get(zone.startTime),timeframe:'5M'};
+  const evaluate=at=>evaluateOrderBlockReaction(createOrderBlockReactionContext(closedChecklistCandles(m1,'1m',at),at,'XAUUSD'),ob);
+  const final=evaluate(fixture.candles.m1.at(-1).time+60),initial=evaluate(final.knownAt);
+  expect(initial.routes.a).toMatchObject({status:'rejected',reason:'opposingFvgOpen'});
+  expect(initial.routes.b.status).toBe('pending');
+  expect(final.routes.a).toEqual(initial.routes.a);
+  const entryTime=final.routes.b.entryTime;
+  expect(final).toMatchObject({state:'true',verdict:{state:'true',knownAt:entryTime}});
+  expect(final.routes.b).toMatchObject({status:'entry',stopAnchor:'m5-edge',entryFvg:{candleTime:1791466380,recognizedAt:1791466500}});
+  expect(final.routes.b.entryPrice).toBeCloseTo(mirrored?10000-4126.02:4126.02,8);
+  expect(final.routes.b.stopLoss).toBeCloseTo(mirrored?10000-4131.39:4131.39,8);
   expect(final.routes.b.attempts).toMatchObject([
-   {status:'rejected',reason:'entryBOrderBlockBroken',knownAt:1792167540,fvg:{candleTime:1792167120,recognizedAt:1792167240}},
-   {status:'rejected',reason:'entryBOrderBlockBroken',knownAt:1792169340,fvg:{candleTime:1792168920,recognizedAt:1792169040}},
-   {status:'entry',entryTime:1792172940,fvg:{candleTime:1792172460,recognizedAt:1792172580}},
+   {status:'rejected',reason:'entryBOrderBlockBroken',fvg:{candleTime:1791465360,recognizedAt:1791465480}},
+   {status:'rejected',reason:'entryBOrderBlockBroken',fvg:{candleTime:1791465780,recognizedAt:1791465900}},
+   {status:'entry',entryTime,fvg:{candleTime:1791466380,recognizedAt:1791466500}},
   ]);
  });
 
