@@ -58,7 +58,7 @@ export function matchLiquidityLevel(currentLiquidityLevels, time, pointY, priceT
 // nicht fest nach Richtung, weil ein Klick näher an der Oberkante eher "ich will die Oberkante"
 // meint als andersrum.
 export function matchOBZone(zones, price, time, symbol, { allowHistorical = false } = {}) {
-  const zone = (zones ?? []).find((z) => (!z.invalidated || allowHistorical) && time >= z.startTime && time <= orderBlockEndTime(z) && price <= z.top && price >= z.bottom);
+  const zone = (zones ?? []).find((z) => (!z.invalidated || allowHistorical) && time >= (z.drawStartTime ?? z.startTime) && time <= orderBlockEndTime(z) && price <= z.top && price >= z.bottom);
   if (!zone) return null;
   const nearEdge = Math.abs(price - zone.top) < Math.abs(price - zone.bottom) ? zone.top : zone.bottom;
   // endTime friert bei detectOrderBlocks() auf die berührende Kerze ein, sobald touched=true wird

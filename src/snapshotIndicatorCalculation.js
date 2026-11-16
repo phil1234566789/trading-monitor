@@ -1,4 +1,4 @@
-import { markIgnoredCandles } from './sessionOccurrences.js';
+import { markIgnoredCandles, htfObCandles } from './sessionOccurrences.js';
 import { berlinOffsetMinutes } from './berlinTime.js';
 import { collectObsZones, filterHistorical } from './priceChartObZones.js';
 import { computeRangesPivots,buildMarketStructureState } from './marketStructureAnalysis';
@@ -11,7 +11,7 @@ export function calculateSnapshotIndicators({ frames: rawFrames, source, config,
   const frames = Object.fromEntries(Object.entries(rawFrames).map(([bar, rows]) => [bar,
     markIgnoredCandles(rows, sessions, sec => berlinOffsetMinutes(sec * 1000))]));
   // HTF-OBs aus damaligen Kerzen statt aus heute fortgeschriebenen DB-Zonen.
-  const dbObZones = ['1h', '4h'].flatMap(bar => (frames[bar] ? detectOrderBlocks(frames[bar], bar === '1h' ? '1H' : '4H', false,
+  const dbObZones = ['1h', '4h'].flatMap(bar => (frames[bar] ? detectOrderBlocks(htfObCandles(frames[bar], sessions, sec => berlinOffsetMinutes(sec * 1000)), bar === '1h' ? '1H' : '4H', false,
     obMinimum(source.instrument, bar === '1h' ? '1H' : '4H')).map(z => ({ ...z, instrument: source.instrument, timeframe: bar === '1h' ? '1H' : '4H' })) : []));
   const zones = filterHistorical(collectObsZones({ ...props, m5Candles: frames['5m'] ?? [], dbObZones,
     symbol: source.instrument, replayUntil: at, price: null,

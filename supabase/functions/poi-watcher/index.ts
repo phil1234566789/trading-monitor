@@ -20,7 +20,7 @@ import { computeSweepAgeHours } from "../_shared/ageTier.ts";
 import { toPips } from "../_shared/pipConfig.js";
 import { persistTradeSetupSweeps } from "../_shared/tradeSetupSweeps.ts";
 import { forbiddenSessionAt, type SessionDangerConfig } from "../_shared/forbiddenSession.ts";
-import { markIgnored, withoutIgnored, fetchIgnoreLiquiditySessions } from "../_shared/ignoredCandles.ts";
+import { markIgnored, withoutIgnored, fetchIgnoreLiquiditySessions, markHtfObCandles, fetchHighLowSessions } from "../_shared/ignoredCandles.ts";
 import {
   findLevelTouch,
   findZoneTouch,
@@ -341,6 +341,7 @@ Deno.serve(async (req) => {
     // .eq("danger","forbidden") und genau das darf hier NICHT gelten — Asia ist auch forbidden,
     // ihre Level sollen bleiben. Ein zweites Select auf eine Handvoll Zeilen je Cron-Lauf.
     const ignoreSessionsByInstrument = await fetchIgnoreLiquiditySessions(supabase);
+    const highLowSessionsByInstrument = await fetchHighLowSessions(supabase);
 
     for (const cfg of INSTRUMENTS) {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
@@ -412,7 +413,7 @@ Deno.serve(async (req) => {
           // tf.label ("4H"/"1H") explizit mitgeben statt implizit undefined (Chat 2026-07-29) —
           // beides bleibt HTF-Verhalten (nur "1m"/"3m"/"5m" gelten als Lower-TF), aber so ist
           // derselbe Aufrufer-Stil wie bei detectSetupObs (immer explizites Timeframe-Label).
-          const zones = detectOrderBlocks(candles, tf.label, true, obMinimum(cfg.instrument, tf.label));
+          const zones = detectOrderBlocks(markHtfObCandles(candles, highLowSessionsByInstrument.get(cfg.instrument) ?? []), tf.label, true, obMinimum(cfg.instrument, tf.label));
           const existingMap = new Map(
             (existingRows ?? []).map((r) => [
               `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
@@ -460,6 +461,7 @@ Deno.serve(async (req) => {
                 // — für 1H/4H: eine spätere Kerze derselben TF schließt komplett außerhalb der Zone.
                 retested: z.retested,
                 start_time: new Date(z.startTime * 1000).toISOString(),
+                draw_start_time: z.drawStartTime == null ? null : new Date(z.drawStartTime * 1000).toISOString(),
                 // end_time kommt direkt aus der Zonen-Erkennung: waechst mit jeder Kerze, bis die
                 // Zone touched/invalidated ist, dann friert es automatisch ein (siehe
                 // detectOrderBlocks in _shared/orderBlocks.ts) — deterministisch aus der

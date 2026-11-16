@@ -188,6 +188,46 @@ export function markIgnoredCandles(candles, sessionConfigs, tzOffsetMinutesFn) {
   return candles.map((c) => (fenster.some((o) => c.time >= o.startSec && c.time < o.endSec) ? { ...c, ignored: true } : c));
 }
 
+function firstIndexAtOrAfter(candles, sec) {
+  let lo = 0, hi = candles.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (candles[mid].time < sec) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+
+// Markiert je Occurrence einer highLowRelevant-Session die Kerze mit dem Session-Tief/-Hoch
+// (sessionLowKnownAt/sessionHighKnownAt = Session-Ende). Die HTF-OB-Erkennung nutzt das erst ab
+// diesem Zeitpunkt, deshalb darf die Markierung auch über später geladene Kerzen laufen. Occurrences,
+// die vor der ersten Kerze beginnen, bleiben unmarkiert: ihr Extrem ist nicht vollständig bekannt.
+export function markSessionExtremes(candles, sessionConfigs, tzOffsetMinutesFn) {
+  if (!candles || candles.length === 0) return candles ?? [];
+  const relevant = sessionConfigs.filter((s) => s.highLowRelevant);
+  if (relevant.length === 0) return candles;
+  const out = candles.slice();
+  const first = candles[0].time;
+  for (const s of relevant) {
+    for (const o of sessionOccurrences(s.fromMinutes, s.toMinutes, first, candles[candles.length - 1].time + 1, tzOffsetMinutesFn, s.days)) {
+      if (o.startSec < first) continue;
+      let lo = -1, hi = -1;
+      for (let i = firstIndexAtOrAfter(out, o.startSec); i < out.length && out[i].time < o.endSec; i++) {
+        if (out[i].ignored) continue;
+        if (lo < 0 || out[i].low < out[lo].low) lo = i;
+        if (hi < 0 || out[i].high > out[hi].high) hi = i;
+      }
+      if (lo >= 0) out[lo] = { ...out[lo], sessionLowKnownAt: Math.min(out[lo].sessionLowKnownAt ?? Infinity, o.endSec) };
+      if (hi >= 0) out[hi] = { ...out[hi], sessionHighKnownAt: Math.min(out[hi].sessionHighKnownAt ?? Infinity, o.endSec) };
+    }
+  }
+  return out;
+}
+
+// Eingabe der HTF-OB-Erkennung (1H/4H), Kerzen bereits per markIgnoredCandles markiert: eine
+// ignorierte Kerze ohne Spanne (O=H=L=C, Gold-Tagespause) ist kein Handel und fällt weg, damit die
+// Bewegung über die Pause eine FVG bilden kann (Philip, XAU H1 03.11.2026). M1/M5 bleiben unberührt.
+export function htfObCandles(candles, sessionConfigs, tzOffsetMinutesFn) {
+  const traded = (candles ?? []).filter((c) => !(c.ignored && c.high === c.low));
+  return markSessionExtremes(traded, sessionConfigs, tzOffsetMinutesFn);
+}
+
 // Sitzungs-Kontext fürs LQ-Level (Chat 2026-07-30, Philip: "wenn ne Session 'high/low
 // entscheidend' true hat, dann & das LQ-Level gehört zur Session ... context: 'asia high'") — nur
 // Sessions mit highLowRelevant, deren TATSÄCHLICHES Zeitfenster (DST-aware) den Pivot-Zeitpunkt

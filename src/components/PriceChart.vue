@@ -35,7 +35,7 @@ import {
   collectObsZones,
   mergePinnedZones,
 } from "../priceChartObZones.js";
-import { markIgnored } from "../ignoredCandles.js";
+import { markIgnored, markHtfObCandles } from "../ignoredCandles.js";
 import {
   matchTradeSetup,
   matchLiquidityLevel,
@@ -1208,7 +1208,7 @@ function refreshDrawingsInternal() {
 // einem anderen Grund (normales Zurückscrollen) genug Kerzen geladen sind.
 const { candles: goldNativeCandles, error: goldHistoryError, load: reloadGoldHistory } = useGoldChartHistory(() => props.symbol, refreshPoiZonesInternal);
 const goldNativeObZones = computed(() => ['1H', '4H'].flatMap(tf =>
-  goldNativeZones(markIgnored(goldNativeCandles.value[tf], props.symbol), tf, props.replayUntil)));
+  goldNativeZones(markHtfObCandles(goldNativeCandles.value[tf], props.symbol), tf, props.replayUntil)));
 
 function refreshPoiZonesInternal() {
   const candles = clipReplay(allCandles);

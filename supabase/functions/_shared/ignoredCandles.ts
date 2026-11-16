@@ -5,7 +5,7 @@
 //
 // `danger` taugt als Kriterium NICHT: Asia ist genauso 'forbidden', ihre Level sollen bleiben.
 // Deshalb die eigene Spalte ignore_liquidity (Migration 20260927150000).
-import { markIgnoredCandles } from "./sessionOccurrences.js";
+import { markIgnoredCandles, htfObCandles } from "./sessionOccurrences.js";
 import { berlinOffsetMinutes } from "./berlinTime.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
@@ -51,6 +51,34 @@ export async function fetchIgnoreLiquiditySessions(supabase: SupabaseClient): Pr
       days: r.days as number[] | null,
       ignoreLiquidity: true,
     });
+    byInstrument.set(r.instrument as string, list);
+  }
+  return byInstrument;
+}
+
+export interface HighLowSession {
+  fromMinutes: number;
+  toMinutes: number;
+  days: number[] | null;
+  highLowRelevant: boolean;
+}
+
+// HTF-OB-Erkennung: flache Pausenkerzen weg, Session-Extreme markiert (htfObCandles, htfEdgeFromC1).
+export function markHtfObCandles<T extends { time: number }>(candles: T[], sessions: HighLowSession[]): T[] {
+  return htfObCandles(candles, sessions, berlinOffsetFromSec) as T[];
+}
+
+export async function fetchHighLowSessions(supabase: SupabaseClient): Promise<Map<string, HighLowSession[]>> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("instrument, from_minutes, to_minutes, days")
+    .eq("high_low_relevant", true)
+    .limit(200);
+  if (error) throw error;
+  const byInstrument = new Map<string, HighLowSession[]>();
+  for (const r of data ?? []) {
+    const list = byInstrument.get(r.instrument as string) ?? [];
+    list.push({ fromMinutes: r.from_minutes as number, toMinutes: r.to_minutes as number, days: r.days as number[] | null, highLowRelevant: true });
     byInstrument.set(r.instrument as string, list);
   }
   return byInstrument;

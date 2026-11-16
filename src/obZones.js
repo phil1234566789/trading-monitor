@@ -49,7 +49,7 @@ async function reconstructZones(rows, instrument, asOfSec) {
 // 268 Stück, die Zahl wächst nicht unbegrenzt — jede wird irgendwann berührt) plus die jüngsten
 // berührten.
 const MAX_BERUEHRTE = 500;
-const SPALTEN = "instrument, timeframe, direction, top, bottom, touched, invalidated, start_time, end_time";
+const SPALTEN = "instrument, timeframe, direction, top, bottom, touched, invalidated, start_time, end_time, draw_start_time";
 
 // Auch invalidierte Zonen können touched=false sein: nach dem FXCM-Backfill waren es 1250 Zeilen.
 function fetchUntouchedZones(instrument) {
@@ -87,6 +87,7 @@ export function mapObZone(row) {
     touched: row.touched,
     invalidated: row.invalidated,
     startTime: Math.floor(new Date(row.start_time).getTime() / 1000),
+    ...(row.draw_start_time ? { drawStartTime: Math.floor(new Date(row.draw_start_time).getTime() / 1000) } : {}),
     endTime: row.end_time == null ? null : Math.floor(new Date(row.end_time).getTime() / 1000),
   };
 }

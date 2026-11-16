@@ -4,7 +4,7 @@
 // auf demselben Chart sieht. Eigene Datei statt Anhängsel an sessions.js (schon ~400 Zeilen) oder
 // sessionBonus.js (das macht Labels, nicht Kerzen).
 import { sessions } from "./sessions.js";
-import { markIgnoredCandles } from "./sessionOccurrences.js";
+import { markIgnoredCandles, htfObCandles } from "./sessionOccurrences.js";
 
 const tzOffsetMinutes = (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset();
 
@@ -18,4 +18,9 @@ export function markIgnored(candles, symbol) {
 // markIgnoredCandles) — die FVG-Erkennung darf das NICHT und liest stattdessen das Flag.
 export function withoutIgnored(candles, symbol) {
   return markIgnored(candles, symbol).filter((c) => !c.ignored);
+}
+
+// HTF-OB-Erkennung braucht zusätzlich die Session-Extreme (htfEdgeFromC1 in orderBlockDetection.js).
+export function markHtfObCandles(candles, symbol) {
+  return htfObCandles(markIgnored(candles, symbol), sessions.filter((s) => s.instrument === symbol), tzOffsetMinutes);
 }

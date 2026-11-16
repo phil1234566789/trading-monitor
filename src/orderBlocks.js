@@ -165,7 +165,7 @@ class ZonePaneView {
     // Zeitpunkt. snapToBarTime klemmt einen zu großen targetTime ohnehin auf die letzte Kerze,
     // Infinity nutzt genau das statt eine eigene "letzte Kerze"-Sonderbehandlung zu brauchen.
     this._p1 = {
-      x: chartObjectCoordinate(timeScale,candles,z.startTime,this._source._options.eventBarSeconds,this._source._options.futureBarSeconds),
+      x: chartObjectCoordinate(timeScale,candles,z.drawStartTime ?? z.startTime,this._source._options.eventBarSeconds,this._source._options.futureBarSeconds),
       y: series.priceToCoordinate(z.top),
     };
     this._p2 = {
