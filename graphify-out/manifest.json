@@ -10068,8 +10068,8 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/winrate-xau-2026-dob-setup-v0.json": {
-    "mtime": 1794859886.7384944,
-    "seen": 1794860921.5779839,
+    "mtime": 1794862058.6820784,
+    "seen": 1794862164.9531918,
     "ast_hash": "19f16e7acf053adf9cab19c7de586b07",
     "semantic_hash": ""
   },
@@ -10080,9 +10080,9 @@
     "semantic_hash": ""
   },
   "scripts/dobSetupWinrate.mjs": {
-    "mtime": 1794859886.8847115,
-    "seen": 1794860921.5789843,
-    "ast_hash": "c4be345bd2bbdac6ed0078847beddce7",
+    "mtime": 1794861891.1138444,
+    "seen": 1794862164.9741948,
+    "ast_hash": "06e063cb3d9e415611bb0aeadf7ce628",
     "semantic_hash": ""
   },
   "src/chartSelectionHalo.js": {
@@ -10200,9 +10200,9 @@
     "semantic_hash": ""
   },
   "scripts/dobTradeSetupsFill.mjs": {
-    "mtime": 1794861291.7167718,
-    "seen": 1794861531.2562346,
-    "ast_hash": "f6bf4527b78ae93863b27adcaebc1451",
+    "mtime": 1794861891.1138444,
+    "seen": 1794862164.9751952,
+    "ast_hash": "1cb7b2851723c37526c70c893e0f1f9b",
     "semantic_hash": ""
   },
   "src/composables/useDobChartRoute.js": {
@@ -10227,6 +10227,12 @@
     "mtime": 1794860815.6156318,
     "seen": 1794860921.579984,
     "ast_hash": "b3f9a93f188e229b2bf09d9988b44c44",
+    "semantic_hash": ""
+  },
+  "scripts/dobSetupGrid.mjs": {
+    "mtime": 1794861890.3480315,
+    "seen": 1794862164.9741948,
+    "ast_hash": "c6fa4502111703ea730e84be71215020",
     "semantic_hash": ""
   }
 }
