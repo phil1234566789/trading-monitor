@@ -11,8 +11,8 @@ const load=day=>JSON.parse(readFileSync(new URL(`${day}.json`,directory),'utf8')
 const htf=load('htf-xau-2026'),offset=sec=>berlinOffsetMinutes(sec*1000);
 const sourceContext=dobSourceContext({instrument:'XAUUSD',htfCandles:Object.fromEntries(Object.entries(htf.candles).map(([bar,rows])=>
  [bar,htfObCandles(markIgnoredCandles(rows.map(([time,open,high,low,close])=>({time,open,high,low,close})),htf.sessions,offset),htf.sessions,offset)]))});
-const run=(fixture,evaluatedAt=fixture.provenance.query.to,withSource=true)=>checkDobTradeSetup({instrument:'XAUUSD',
- m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt,...(withSource?{sourceContext}:{})});
+const run=(fixture,evaluatedAt=fixture.provenance.query.to,withSource=true,sourceOptions)=>checkDobTradeSetup({instrument:'XAUUSD',
+ m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt,...(withSource?{sourceContext}:{}),sourceOptions});
 const all=result=>[...result.setups,...result.rejected];
 const SOURCE_MAX_DISTANCE_ATR=sourceMaxDistanceAtr('XAUUSD');
 const berlin=(day,hhmm)=>{const utc=Date.parse(`${day}T${hhmm}:00Z`)/1000;return utc-berlinOffsetMinutes(utc*1000)*60;};
@@ -89,17 +89,19 @@ describe('checkDobTradeSetup v0-Kern',()=>{
 });
 
 // OB-Quelle = alle Mustertrade-Positionen außer K05 (#137, LS-Quelle, gehört zur späteren LS-Version).
-// Zone = nächste aktive H1/H4-OB in Trade-Richtung laut G. Philips eigene Quelle trifft sie bei #134/#136/#140 exakt;
-// bei #135 (LS 4142,14), #138 (alter M5-OB), #139 (M5-OB + LS) und #141 (LS) findet G eine andere aktive HTF-Zone.
+// v1 = nächste aktive H1/H4-OB ≤ 1,5 ATR; v2 = dasselbe, aber die Zone muss vor OB1 retestet sein (Philip, Q17).
+// Philips eigene Zone treffen #134/#136/#140 exakt (jeweils vor OB1 berührt). #135 nimmt mit Retest die retestete H4-Zone
+// statt der nie berührten H1-Zone. #139/#139b: die einzige nahe Zone wurde vor OB1 nie berührt (Philips Quelle dort: M5-OB + LS).
 const OB_SAMPLES=[
- ['#134','2026-11-12','14:11','short','H1',3954.74,3964.91],['#135','2026-11-05','16:14','short','H1',4158.6,4167.16],
- ['#136','2026-11-04','04:13','long','H1',3917.39,3922.72],['#136b','2026-11-04','06:21','long','H1',3917.39,3922.72],
- ['#138','2026-10-26','14:34','short','H4',4020.03,4034.21],['#139','2026-10-22','10:52','short','H1',4108.4,4116.2],
- ['#139b','2026-10-22','11:24','short','H1',4108.4,4116.2],['#140','2026-10-22','05:03','short','H1',4122.1,4126.19],
- ['#140b','2026-10-22','05:22','short','H1',4122.1,4126.19],['#141','2026-10-12','15:34','short','H4',4166.18,4225.24],
-].map(([trade,day,at,direction,timeframe,bottom,top])=>({trade,day,at,direction,timeframe,zone:{bottom,top}}));
+ ['#134','2026-11-12','14:11','short',['H1',3954.74,3964.91]],['#135','2026-11-05','16:14','short',['H1',4158.6,4167.16],['H4',4166.18,4225.24]],
+ ['#136','2026-11-04','04:13','long',['H1',3917.39,3922.72]],['#136b','2026-11-04','06:21','long',['H1',3917.39,3922.72]],
+ ['#138','2026-10-26','14:34','short',['H4',4020.03,4034.21]],['#139','2026-10-22','10:52','short',['H1',4108.4,4116.2],null],
+ ['#139b','2026-10-22','11:24','short',['H1',4108.4,4116.2],null],['#140','2026-10-22','05:03','short',['H1',4122.1,4126.19]],
+ ['#140b','2026-10-22','05:22','short',['H1',4122.1,4126.19]],['#141','2026-10-12','15:34','short',['H4',4166.18,4225.24]],
+].map(([trade,day,at,direction,v1,v2=v1])=>({trade,day,at,direction,v1,v2}));
+const sourceOf=([timeframe,bottom,top])=>({kind:'htfOb',timeframe,zone:{bottom,top}});
 
-describe('checkDobTradeSetup v1: Phase ob2Retest',()=>{
+describe('checkDobTradeSetup: Phase ob2Retest',()=>{
  // Alarmzeitpunkt (Q3): OB2 berührt, OB1-Reaktion und -Hold stehen, Quelle passt; die OB2-Reaktion fehlt noch.
  it('#134 meldet ob2Retest ab dem OB2-Kontakt und gibt dann an das Paar ab',()=>{
   const fixture=load('2026-11-12'),done=nearestIn(run(fixture).setups,{day:'2026-11-12',at:'14:11',direction:'short'});
@@ -116,14 +118,25 @@ describe('checkDobTradeSetup v1: Phase ob2Retest',()=>{
  });
 });
 
-describe('checkDobTradeSetup v1: Quelle der Kraft',()=>{
- it.each(OB_SAMPLES)('$trade: v0-Entry hat eine Quelle der Kraft',sample=>{
-  const result=run(load(sample.day)),setup=nearestIn(all(result),sample);
-  // #140 Pos. 1 (05:03) hat keinen eigenen v0-Trade, sie fällt auf den Trade von #140b (05:24).
+describe('checkDobTradeSetup: Quelle der Kraft',()=>{
+ // #140 Pos. 1 (05:03) hat keinen eigenen v0-Trade, sie fällt auf den Trade von #140b (05:24).
+ it.each(OB_SAMPLES)('$trade: v1 (ohne Retest) findet eine Quelle',sample=>{
+  const result=run(load(sample.day),undefined,true,{requireRetest:false}),setup=nearestIn(all(result),sample);
   expect(Math.abs(setup.entryTime-berlin(sample.day,sample.at))).toBeLessThanOrEqual(30*60);
   expect(result.setups).toContainEqual(setup);
-  expect(setup.sourceOfStrength).toMatchObject({kind:'htfOb',timeframe:sample.timeframe,zone:sample.zone});
+  expect(setup.sourceOfStrength).toMatchObject(sourceOf(sample.v1));
   expect(setup.sourceOfStrength.distanceAtr).toBeLessThanOrEqual(SOURCE_MAX_DISTANCE_ATR);
+ });
+ it.each(OB_SAMPLES)('$trade: v2 verlangt den Retest der Zone vor OB1',sample=>{
+  const result=run(load(sample.day)),setup=nearestIn(all(result),sample);
+  if(sample.v2){
+   expect(result.setups).toContainEqual(setup);
+   expect(setup.sourceOfStrength).toMatchObject({...sourceOf(sample.v2),retested:true});
+   expect(setup.sourceOfStrength.distanceAtr).toBeLessThanOrEqual(SOURCE_MAX_DISTANCE_ATR);
+  }else{
+   expect(result.rejected).toContainEqual(setup);
+   expect(setup.reason).toBe('noSourceOfStrength');
+  }
  });
  it('#137 (LS-Quelle) wird mit Grund verworfen, nicht still weggelassen',()=>{
   const result=run(load('2026-11-02')),setup=nearest(SAMPLE_TRADES[3]);

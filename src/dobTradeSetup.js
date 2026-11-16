@@ -3,9 +3,10 @@ import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed,sourceMaxDistanceAtr} from './dobSourceOfStrength.js';
 
-// v1 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ k H1-ATR von OB1, k je Instrument, dobSourceOfStrength.js) + DOB + TP 2R.
-// Einziger Guardrail bleibt das Entry-Verbot 22:00–02:00, das der Indikator selbst setzt. Die LS-Quelle kommt später.
-export const DOB_TRADE_SETUP_VERSION='dob-setup-v1';
+// v2 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ k H1-ATR von OB1, k je Instrument, vor OB1 retestet; dobSourceOfStrength.js)
+// + DOB + TP 2R. Den Retest verlangt Philip fachlich (Q17), auch wenn er die Winrate nicht hebt; sourceOptions.requireRetest=false
+// rechnet nur den historischen v1-Lauf nach. Einziger Guardrail bleibt das Entry-Verbot 22:00–02:00 im Indikator; LS-Quelle kommt später.
+export const DOB_TRADE_SETUP_VERSION='dob-setup-v2';
 
 // Phasen für Alarm-Zeitpunkt und Dedup (pairId+phase): ob2Retest = OB2 berührt, Reaktion steht aus (Alarm, Q3);
 // ob2Recognized = OB2-Reaktion da, Route b wartet auf den Entry; entry = Trade läuft, danach der Ausgang.
@@ -34,6 +35,7 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 
 // Eingabe wie detectDoubleOrderBlocks (über doubleOrderBlockInput gebaut) plus htfCandles {'1h','4h'} (markHtfObCandles) oder ein
 // vorberechneter sourceContext (Statistik: einmal über die ganze Historie). Ausgang und 2R kommen aus evaluateDoubleOrderBlockOutcome.
+// sourceOptions: {requireRetest} (Standard true).
 // setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 export function checkDobTradeSetup(input){
  const dob=detectDoubleOrderBlocks({...input,options:{...input.options,retests:true}});
@@ -41,7 +43,8 @@ export function checkDobTradeSetup(input){
  const sources=new Map(),maxAtr=sourceMaxDistanceAtr(input.instrument);
  const sourceOf=pair=>{
   const key=`${pair.direction}:${pair.firstOrderBlock.startTime}`;
-  if(!sources.has(key))sources.set(key,context&&nearestHtfSource(context,{firstOrderBlock:pair.firstOrderBlock,direction:pair.direction,m5Candles:input.m5Candles}));
+  if(!sources.has(key))sources.set(key,context&&nearestHtfSource(context,{firstOrderBlock:pair.firstOrderBlock,direction:pair.direction,m5Candles:input.m5Candles},
+   {requireRetest:input.sourceOptions?.requireRetest??true}));
   return sources.get(key);
  };
  // liveFrom (dobLiveWindowInput): Paare aus dem Vorlauf vor dem Schluss gehören zur Vorsession.

@@ -16,7 +16,9 @@ const SYMBOL = 'XAUUSD', START_DAY = flag('--from') ?? '2026-01-01', DRY = proce
 const RUNS = {
   'dob-setup-v0': { label: 'v0 · nur DOB', description: 'DOB + TP 2R, ohne Quelle der Kraft', sort: 0, version: 'dob-setup-v0', pick: r => [...r.setups, ...r.rejected] },
   'dob-setup-v1': { label: 'v1 · Quelle der Kraft (G 1,5 ATR)', description: 'DOB + TP 2R, aktive H1/H4-OB-Zone höchstens 1,5 H1-ATR von OB1',
-    sort: 1, version: 'dob-setup-v1', pick: r => r.setups },
+    sort: 1, version: 'dob-setup-v1', pick: r => r.setups, sourceOptions: { requireRetest: false } },
+  'dob-setup-v2': { label: 'v2 · Quelle der Kraft mit Retest', description: 'wie v1, die H1/H4-Zone muss vor OB1 retestet sein',
+    sort: 2, version: 'dob-setup-v2', pick: r => r.setups, sourceOptions: { requireRetest: true } },
 };
 const RUN_ID = flag('--run') ?? 'dob-setup-v0';
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
@@ -49,7 +51,7 @@ try {
 
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
   // Der Lauf entscheidet, welche Setups zählen; die Quelle der Kraft kommt aus dem einmal vorberechneten Kontext.
-  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, sourceContext })) });
+  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, sourceContext, sourceOptions: RUNS[RUN_ID].sourceOptions })) });
   const trades = dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup: runSetups, dobLiveWindowInput }).setups,
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   const carrying = new Map();
