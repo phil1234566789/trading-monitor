@@ -1,7 +1,7 @@
 import {readFileSync,readdirSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {checkDobTradeSetup,dobLiveWindowInput,dobLiveWindowStart} from '../src/dobTradeSetup.js';
-import {dobSourceContext,SOURCE_MAX_DISTANCE_ATR} from '../src/dobSourceOfStrength.js';
+import {dobSourceContext,sourceMaxDistanceAtr} from '../src/dobSourceOfStrength.js';
 import {markIgnoredCandles,htfObCandles} from '../src/sessionOccurrences.js';
 import {berlinOffsetMinutes} from '../src/berlinTime.js';
 
@@ -14,6 +14,7 @@ const sourceContext=dobSourceContext({instrument:'XAUUSD',htfCandles:Object.from
 const run=(fixture,evaluatedAt=fixture.provenance.query.to,withSource=true)=>checkDobTradeSetup({instrument:'XAUUSD',
  m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt,...(withSource?{sourceContext}:{})});
 const all=result=>[...result.setups,...result.rejected];
+const SOURCE_MAX_DISTANCE_ATR=sourceMaxDistanceAtr('XAUUSD');
 const berlin=(day,hhmm)=>{const utc=Date.parse(`${day}T${hhmm}:00Z`)/1000;return utc-berlinOffsetMinutes(utc*1000)*60;};
 const berlinMinute=sec=>((Math.floor(sec/60)+berlinOffsetMinutes(sec*1000))%1440+1440)%1440;
 
@@ -136,5 +137,15 @@ describe('checkDobTradeSetup v1: Quelle der Kraft',()=>{
   expect(result.setups).toEqual([]);
   expect(result.rejected.length).toBeGreaterThan(0);
   expect(new Set(result.rejected.map(s=>s.reason))).toEqual(new Set(['missingHtfCandles']));
+ });
+ it('ohne gemessenen ATR-Faktor gibt es keine Quelle (kein stiller Default)',()=>{
+  const fixture=load('2026-11-02');
+  expect(SOURCE_MAX_DISTANCE_ATR).toBe(1.5);
+  expect(sourceMaxDistanceAtr('GBPUSD')).toBeNull();
+  const result=checkDobTradeSetup({instrument:'GBPUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
+   evaluatedAt:fixture.provenance.query.to,sourceContext});
+  expect(result.setups).toEqual([]);
+  expect(result.rejected.length).toBeGreaterThan(0);
+  expect(new Set(result.rejected.map(s=>s.reason))).toEqual(new Set(['noSourceOfStrengthConfig']));
  });
 });

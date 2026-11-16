@@ -278,6 +278,8 @@ try {
   const atrOf = x => x.g?.usd == null || !x.atr ? null : x.g.usd / x.atr;
   const sweepUsd = sweepBy(usdOf, [0, 1, 2, 3, 5, 7, 10, 15, 20, 30]);
   const sweepAtr = sweepBy(atrOf, [0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3]);
+  // Philip: warum genau 1,5? Feines Raster um den gewählten Wert, um Plateau statt Spitze zu belegen.
+  const sweepAtrFine = sweepBy(atrOf, Array.from({ length: 11 }, (_, i) => +(1 + i / 10).toFixed(1)));
   const usdLe = k => x => usdOf(x) != null && usdOf(x) <= k;
   const usdCombos = evaluateFilters(Object.fromEntries([0, 3, 5, 7, 10, 15].flatMap(k => [
     [`G$≤${k}`, usdLe(k)], [`G$≤${k} ∪ F1`, x => usdLe(k)(x) || x.latestInZone], [`G$≤${k} ∪ C'`, x => usdLe(k)(x) || cPrime(x)],
@@ -306,7 +308,7 @@ try {
       'Zonen-Alter (Info): Erkennung der nächsten Zone am selben Handelstag / bis 3 Tage / älter.',
       "Kombis: A/C'/F1 wie in source-combos; A ∩ C' ∩ F1 ist gleich C' ∩ F1, weil C' A enthält.",
       'halves: Jan–Jun und Jul–Nov 2026 nach Berliner Entry-Monat; Overfitting-Check = Vorsprung zur Basis in beiden Hälften.'],
-    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos, sweep, obCombos, sweepUsd, sweepAtr, usdCombos, pureOb, lsShare,
+    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos, sweep, obCombos, sweepUsd, sweepAtr, sweepAtrFine, usdCombos, pureOb, lsShare,
     sessionsByFilter: SESSION_FILTERS,
     sampleGroups: { ob: 'alle Mustertrade-Positionen außer #137 (K05)', ls: '#137 (K05)' } };
   await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-g-xau-2026.json'), JSON.stringify(gReport, null, 2));
@@ -318,7 +320,7 @@ try {
   console.log('\n== Sweep G bis k | weiter als k');
   for (const { k, bisK: a, weiterAlsK: b } of sweep) console.log(String(k).padStart(4), `bis: n=${a.n} ${a.winrate}% ${a.sumR}R H ${half(a, 'Jan–Jun')} / ${half(a, 'Jul–Nov')} | weiter: n=${b.n} ${b.winrate}% ${b.sumR}R H ${half(b, 'Jan–Jun')} / ${half(b, 'Jul–Nov')} | OB ${a.samples.filter(s => s.kept && s.trade !== '#137').length}/10 LS ${a.samples.find(s => s.trade === '#137').kept ? 'ja' : 'nein'}`);
   printFilters('OB-only ODER', obCombos);
-  for (const [name, list] of [['USD', sweepUsd], ['ATR', sweepAtr]]) {
+  for (const [name, list] of [['USD', sweepUsd], ['ATR', sweepAtr], ['ATR fein', sweepAtrFine]]) {
     console.log(`
 == Sweep ${name} bis k | weiter als k`);
     for (const { k, bisK: a, weiterAlsK: b } of list) console.log(String(k).padStart(4), `bis: n=${a.n} ${a.winrate}% ${a.sumR}R H ${half(a, 'Jan–Jun')} / ${half(a, 'Jul–Nov')} | weiter: n=${b.n} ${b.winrate}% ${b.sumR}R H ${half(b, 'Jan–Jun')} / ${half(b, 'Jul–Nov')} | OB ${a.samples.filter(s => s.kept && s.trade !== '#137').length}/10 LS ${a.samples.find(s => s.trade === '#137').kept ? 'ja' : 'nein'}`);

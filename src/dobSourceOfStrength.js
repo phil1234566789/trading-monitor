@@ -1,10 +1,11 @@
 import {detectOrderBlocks,candleInvalidatesOrderBlock} from './orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
-import {obMinimum} from './instrumentConfig.js';
+import {obMinimum,instrumentConfig} from './instrumentConfig.js';
 
-// Quelle der Kraft v1 (Philip, Q15/Q16): aktive H1/H4-OB-Zone in Trade-Richtung, höchstens 1,5 H1-ATR(14) von OB1 entfernt.
-// Gemessen in analysis/dob-setup/source-g-xau-2026.json; Messskript (scripts/dobSourceMeasurement.mjs) und Produkt teilen dieses Modul.
-export const SOURCE_MAX_DISTANCE_ATR=1.5;
+// Quelle der Kraft v1 (Philip, Q15/Q16): aktive H1/H4-OB-Zone in Trade-Richtung, höchstens k H1-ATR(14) von OB1 entfernt.
+// k je Instrument in instrumentConfig (dobSourceMaxAtr); nur XAU ist gemessen (analysis/dob-setup/source-g-xau-2026.json),
+// ohne Eintrag gibt es bewusst keine Quelle statt eines stillen Defaults. Messskript und Produkt teilen dieses Modul.
+export const sourceMaxDistanceAtr=instrument=>instrumentConfig(instrument).dobSourceMaxAtr??null;
 const HOUR=3600,ATR_PERIOD=14;
 const TIMEFRAMES=[['1h','H1','1H'],['4h','H4','4H']];
 
@@ -67,4 +68,4 @@ export function nearestHtfSource(context,{firstOrderBlock:ob1,direction,m5Candle
   distanceUsd:best.distanceUsd,atr,distanceAtr:atr?best.distanceUsd/atr:null};
 }
 
-export const sourceOfStrengthPassed=source=>source?.distanceAtr!=null&&source.distanceAtr<=SOURCE_MAX_DISTANCE_ATR;
+export const sourceOfStrengthPassed=(source,maxAtr)=>maxAtr!=null&&source?.distanceAtr!=null&&source.distanceAtr<=maxAtr;

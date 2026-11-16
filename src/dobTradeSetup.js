@@ -1,9 +1,9 @@
 import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
-import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed} from './dobSourceOfStrength.js';
+import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed,sourceMaxDistanceAtr} from './dobSourceOfStrength.js';
 
-// v1 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ 1,5 H1-ATR von OB1, dobSourceOfStrength.js) + DOB + TP 2R.
+// v1 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ k H1-ATR von OB1, k je Instrument, dobSourceOfStrength.js) + DOB + TP 2R.
 // Einziger Guardrail bleibt das Entry-Verbot 22:00–02:00, das der Indikator selbst setzt. Die LS-Quelle kommt später.
 export const DOB_TRADE_SETUP_VERSION='dob-setup-v1';
 
@@ -38,7 +38,7 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 export function checkDobTradeSetup(input){
  const dob=detectDoubleOrderBlocks({...input,options:{...input.options,retests:true}});
  const context=input.sourceContext??(input.htfCandles?dobSourceContext({htfCandles:input.htfCandles,instrument:input.instrument}):null);
- const sources=new Map();
+ const sources=new Map(),maxAtr=sourceMaxDistanceAtr(input.instrument);
  const sourceOf=pair=>{
   const key=`${pair.direction}:${pair.firstOrderBlock.startTime}`;
   if(!sources.has(key))sources.set(key,context&&nearestHtfSource(context,{firstOrderBlock:pair.firstOrderBlock,direction:pair.direction,m5Candles:input.m5Candles}));
@@ -53,8 +53,8 @@ export function checkDobTradeSetup(input){
  const setups=[],rejected=[];
  for(const [pair,setup] of candidates){
   const sourceOfStrength=sourceOf(pair);
-  if(sourceOfStrengthPassed(sourceOfStrength))setups.push({...setup,sourceOfStrength});
-  else rejected.push({...setup,sourceOfStrength,reason:context?'noSourceOfStrength':'missingHtfCandles'});
+  if(sourceOfStrengthPassed(sourceOfStrength,maxAtr))setups.push({...setup,sourceOfStrength});
+  else rejected.push({...setup,sourceOfStrength,reason:maxAtr==null?'noSourceOfStrengthConfig':context?'noSourceOfStrength':'missingHtfCandles'});
  }
  return {version:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,rejected,stats:dob.stats};
 }
