@@ -1,6 +1,6 @@
 import {detectOrderBlocks} from './orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
-import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
+import {doubleOrderBlockInput} from './doubleOrderBlockInput.js';
 import {obMinimum} from './instrumentConfig.js';
 import {createOrderBlockReactionContext,evaluateOrderBlockReaction,internalOrderBlockFvgs} from './orderBlockReaction.js';
 import {detectDoubleOrderBlocks,reactionOptionsFor} from './doubleOrderBlocks.js';
@@ -70,9 +70,9 @@ export function caseSteps(c,fixture){
 }
 
 
-// Alles nur aus Kerzen, die zu evaluatedAt geschlossen sind; dieselben Produktmodule wie Chart und Messung.
+// Dieselbe Eingabe wie der Dashboard-Worker (geschlossen + Session-Ignore), dieselben Produktmodule wie Chart und Messung.
 export function evaluateCase(c,fixture,evaluatedAt,options={}){
- const m5=closedChecklistCandles(fixture.candles.m5,'5m',evaluatedAt),m1=closedChecklistCandles(fixture.candles.m1,'1m',evaluatedAt);
+ const input=doubleOrderBlockInput({m5:fixture.candles.m5,m1:fixture.candles.m1,symbol:INSTRUMENT,evaluatedAt}),m5=input.m5Candles,m1=input.m1Candles;
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(INSTRUMENT,'5m'));
  const context=createOrderBlockReactionContext(m1,evaluatedAt,INSTRUMENT);
  const orderBlocks=c.orderBlocks.map((startTime,index)=>{
@@ -87,7 +87,7 @@ export function evaluateCase(c,fixture,evaluatedAt,options={}){
  let pair=null;
  if(c.orderBlocks.length===2){
   const id=`dob:${INSTRUMENT}:${c.dir}:${c.orderBlocks[0]}:${c.orderBlocks[1]}`;
-  pair=detectDoubleOrderBlocks({m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,instrument:INSTRUMENT,evaluatedAt,options}).pairs.find(p=>p.id===id)??null;
+  pair=detectDoubleOrderBlocks({...input,options}).pairs.find(p=>p.id===id)??null;
  }
  return {m1,m5,context,orderBlocks,pair};
 }

@@ -4,7 +4,7 @@ import {fetchCandlesCached} from '../candleCache.js';
 import {TRADE_SETUP_M5_CANDLE_COUNT} from '../priceChartConstants.js';
 import {nextCandlePollDelay} from '../candlePolling.js';
 import {formatDatedTime} from '../berlinTime.js';
-import {markIgnored} from '../ignoredCandles.js';
+import {doubleOrderBlockInput} from '../doubleOrderBlockInput.js';
 import {sessions} from '../sessions.js';
 import {collectDoubleOrderBlockPins} from '../doubleOrderBlockPin.js';
 import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
@@ -61,7 +61,7 @@ export function useDoubleOrderBlockChart(context) {
         activeWorker.terminate();
         if(!disposed&&request===sequence){worker=null;status.value='DOB-Auswertung fehlgeschlagen. Erneut laden.';key=null;}
       };
-      activeWorker.postMessage({m5Candles:markIgnored(m5,c.symbol),m1Candles:markIgnored(m1,c.symbol),instrument:c.symbol,evaluatedAt:c.evaluatedAt});
+      activeWorker.postMessage(doubleOrderBlockInput({m5,m1,symbol:c.symbol,evaluatedAt:c.evaluatedAt}));
     } catch(error) {
       if(!disposed&&request===sequence){status.value=`DOB: ${error.message||'Daten konnten nicht geladen werden.'}`;key=null;}
     }
