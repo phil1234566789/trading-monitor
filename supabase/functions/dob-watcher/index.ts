@@ -47,10 +47,11 @@ async function writeState(client:any,state:Record<string,unknown>){
   checked(await client.from('dob_watcher_state').upsert({instrument:SYMBOL,last_run_at:new Date().toISOString(),updated_at:new Date().toISOString(),...state}));
 }
 
-async function tick(client:any){
+// dry: rechnet auch außerhalb 02:00–22:00, verschickt nichts und schreibt keinen Herzschlag (Prüfung von Datenpfad und Laufzeit).
+async function tick(client:any,dry=false){
   const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60;
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
-  if(!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
+  if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
   const sessions=(checked(await client.from('sessions').select('label,from_minutes,to_minutes,days,ignore_liquidity').eq('instrument',SYMBOL).limit(200)) as any[])
     .map(r=>({label:r.label,fromMinutes:r.from_minutes,toMinutes:r.to_minutes,days:r.days,ignoreLiquidity:r.ignore_liquidity??false}));
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,bar,evaluatedAt)));
@@ -60,6 +61,9 @@ async function tick(client:any){
   const calcStart=performance.now(),result=checkDobTradeSetup(input),calcMs=Math.round(performance.now()-calcStart);
   const events=dobAlarmEvents(result,evaluatedAt),stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   if(stale)events.push(stale);
+  if(dry)return {dry:true,evaluatedAt,runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
+    liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,setups:result.setups.length,rejected:result.rejected.length,
+    events:events.map(e=>({id:e.id,phase:e.phase}))};
   const delivered=[];
   for(const event of events){const d=await deliver(client,event);if(d)delivered.push(d);}
   await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
@@ -91,7 +95,7 @@ Deno.serve(async request=>{
       return json(await deliver(client,{id:`dob:test:${new Date(now*1000).toISOString()}`,instrument:SYMBOL,phase:'test',signalAt:now,
         text:`🧪 DOB-Watcher ${SYMBOL}: Testnachricht ${berlinDateStrFor(now)} ${formatBerlinTime(now)}. Ab jetzt kommen Alarme beim OB2-Retest und beim Entry (02:00–22:00).`}));
     }
-    return json(await tick(client));
+    return json(await tick(client,Boolean(body?.dry)));
   }catch(error){
     return json({error:await reportError(client,error)},500);
   }

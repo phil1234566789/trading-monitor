@@ -430,6 +430,10 @@ verify_jwt = false
 [functions.setup2-notification-watch]
 verify_jwt = false
 
+# Cron-Aufruf mit Vault-Token statt JWT; die Function prüft den Token selbst (secretMatches).
+[functions.dob-watcher]
+verify_jwt = false
+
 # Private MMT-Endpunkte mit eigenen Bearer-Tokens.
 [functions.mt5-worker]
 verify_jwt = false
