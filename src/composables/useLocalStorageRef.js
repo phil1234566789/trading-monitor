@@ -1,4 +1,4 @@
-import { ref, watch } from "vue";
+import { effectScope, ref, watch } from "vue";
 
 const STORAGE_PREFIX = "trading-monitor:";
 // Cache je Key (Chat 2026-07-28) — ohne den erzeugte jeder Aufrufer eine EIGENE, unabhängige ref-
@@ -27,14 +27,16 @@ export function useLocalStorageRef(key, defaultValue) {
   }
 
   const value = ref(initial);
-  watch(value, (v) => {
+  // Eigener, losgelöster Scope: die Ref lebt im Cache über jede Komponente hinaus. Hinge der watch am Scope der ersten
+  // aufrufenden Komponente, schriebe nach deren Unmount (Seitenwechsel) keiner mehr in localStorage.
+  effectScope(true).run(() => watch(value, (v) => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(v));
     } catch {
       // localStorage kann fehlschlagen (privater Modus, Quota) — dann gilt der Toggle halt nur
       // für die aktuelle Session, kein Show-Stopper.
     }
-  });
+  }, { flush: "sync" }));
 
   cache.set(key, value);
   return value;
