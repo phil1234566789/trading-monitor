@@ -17,7 +17,7 @@ const PATHS={detectTouch:'M200 66V80',touchClosed:'M128 109H120',touchBroken:'M2
 const STATUS_TEXT={visited:'● durchlaufen',unknown:'◇ offen / unbekannt','not-visited':'○ nicht besucht',alternative:'○ überholte Alternative',
  rejected:'× abgelehnt',info:'i Zusatzinfo · kein Gate'};
 
-const colors=computed(()=>({'--long':cssColor('candleUp'),'--short':cssColor('candleDown'),'--rejected':cssColor('tradeLoss'),
+const colors=computed(()=>({'--long':cssColor('candleUp'),'--short':`color-mix(in srgb, ${cssColor('candleDown')} 65%, white)`,'--rejected':cssColor('tradeLoss'),
  '--fill':cssColor('tradeWin'),'--fvg':cssColor('fvgCandle')}));
 const selected=ref(null);
 // Fallwechsel schließt die Details wie im Prototyp; ein Slider-Schritt lässt sie offen und aktualisiert sie.
@@ -39,7 +39,7 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
     <path v-for="(d,id) in PATHS" :key="id" class="edge" :d="d" marker-end="url(#obg-arrow)" :data-status="graph.edges[id]" :data-kind="id==='side'?'support':null"/>
    </svg>
    <button v-for="[id,x,y,w] in LAYOUT" :key="id" type="button" class="node" :style="{left:x+'%',top:y+'px',width:w+'%'}"
-    :data-status="graph.nodes[id].status" :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+nodeText(graph.nodes[id])"
+    :data-status="graph.nodes[id].status" :data-direction="(id==='counter'?-dir:dir)===1?'long':'short'" :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+nodeText(graph.nodes[id])"
     @click="toggle(id)">
     <span>{{ graph.nodes[id].label }}</span>
     <strong v-if="graph.nodes[id].headline" class="headline">{{ graph.nodes[id].headline }}</strong>
@@ -95,8 +95,8 @@ h2{font-size:17px;margin:4px 0}
 .node[data-status="not-visited"],.node[data-status="alternative"]{opacity:.45;background:color-mix(in srgb,var(--surface) 80%,black)}
 .node[data-status="rejected"]{border-color:var(--rejected);background:color-mix(in srgb,var(--rejected) 25%,var(--surface));color:color-mix(in srgb,var(--rejected) 25%,white)}
 .node[aria-expanded="true"]{outline:2px solid var(--fvg);outline-offset:2px}
-.plan[data-direction="long"] .node>span:first-child{color:var(--long)}
-.plan[data-direction="short"] .node>span:first-child{color:var(--short)}
+.plan[data-direction="long"] .side .node>span:first-child,.node[data-direction="long"]>span:first-child{color:var(--long)}
+.plan[data-direction="short"] .side .node>span:first-child,.node[data-direction="short"]>span:first-child{color:var(--short)}
 .side{position:absolute;left:68%;top:8px;width:30%;max-height:350px;overflow:auto;display:flex;flex-direction:column;gap:10px;z-index:1;
  border-left:1px dashed var(--edge);padding-left:4px}
 .side .node{position:static;transform:none;width:100%;flex:none;font-size:11px;min-height:66px;border-style:dashed}
