@@ -112,7 +112,7 @@ function reactionFvg(context,direction,contact,knownAt) {
 }
 
 // Gegen-FVG im tatsächlich durchlaufenen Preisweg: spätere Füllung hebt eine damalige A-Ablehnung nicht auf (502).
-function opposingFvgs(context,orderBlock,contact,reactionAt) {
+function opposingFvgs(context,orderBlock,contact,reactionAt,nose) {
  const rows=context.rows;
  let low=Infinity,high=-Infinity;
  for(let i=firstIndex(rows,c=>c.time>=contact.candleTime);i<rows.length&&rows[i].time+60<=reactionAt;i++){
@@ -127,9 +127,13 @@ function opposingFvgs(context,orderBlock,contact,reactionAt) {
   if(fvg.top<low||fvg.bottom>high)continue;
   const fill=fvgFill(context,fvg),openAtReaction=openAt(fill,reactionAt);
   if(openAtReaction===false)continue;
-  result.push({fvg,openAtReaction,openNow:openAt(fill,context.evaluatedAt),
-   filledAt:fill.filledAt,blocksEntryA:openAtReaction===true});
+  result.push({fvg,openAtReaction,openNow:openAt(fill,context.evaluatedAt),filledAt:fill.filledAt,nearest:false,blocksEntryA:false});
  }
+ // Philip: maßgeblich ist nur die preislich nächste Gegen-FVG in Trade-Richtung vor der Nase des Retest (Bestätigungspreis);
+ // „jede offene lehnt ab“ ließe Entry a praktisch nie zu. Eine FVG, die den Preis umschließt, liegt direkt davor.
+ const ahead=result.filter(x=>orderBlock.dir===1?x.fvg.top>nose:x.fvg.bottom<nose);
+ const nearest=ahead.reduce((best,x)=>!best||(orderBlock.dir===1?x.fvg.bottom<best.fvg.bottom:x.fvg.top>best.fvg.top)?x:best,null);
+ if(nearest){nearest.nearest=true;nearest.blocksEntryA=nearest.openAtReaction===true;}
  return result;
 }
 
@@ -144,10 +148,9 @@ function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
    :{status:'unknown',reason:stop.reason??'stopNotBeyondEntry',knownAt:entry.entryTime,entryCandidate:{entryTime:entry.entryTime,entryPrice:entry.entryPrice}};
  };
  const immediate=m1FvgSequenceResult(m1FvgEntrySequence(fvg,'immediate',context.instrument));
- const active=opponents.filter(x=>x.openAtReaction===true);
- // Entscheidungsbaum (Philip): eine offene Gegen-FVG reicht für die Ablehnung, ihre Anzahl ändert nichts; alle bleiben in opponentFvgs.
- if(active.length)routes.a={status:'rejected',reason:'opposingFvgOpen',knownAt:fvg.recognizedAt};
- else if(opponents.some(x=>x.openAtReaction===null))routes.a={status:'unknown',reason:'opposingFvgHistoryMissing',knownAt:fvg.recognizedAt};
+ const nearest=opponents.find(x=>x.nearest);
+ if(nearest?.openAtReaction===true)routes.a={status:'rejected',reason:'opposingFvgOpen',knownAt:fvg.recognizedAt};
+ else if(nearest&&nearest.openAtReaction===null)routes.a={status:'unknown',reason:'opposingFvgHistoryMissing',knownAt:fvg.recognizedAt};
  else if(immediate.status==='ready')settle('a',immediate);else routes.a={status:'unknown',reason:'entryUnavailable',knownAt:fvg.recognizedAt};
  // Ein vollständiger Entry beendet die Reaktion (Philip/P14); spätere B-Ereignisse wären ein zweiter Einstieg.
  if(routes.a.status==='entry'){
@@ -255,7 +258,7 @@ export function evaluateOrderBlockReaction(context,orderBlock,{nearTouch=false,b
   }
   const fvg=reactionFvg(context,direction,contact,c.time+60);
   if(!fvg)return false;
-  const opponents=opposingFvgs(context,orderBlock,contact,fvg.recognizedAt);
+  const opponents=opposingFvgs(context,orderBlock,contact,fvg.recognizedAt,fvg.confirmationPrice);
   result={state:'true',reason:null,contact,fvg,knownAt:fvg.recognizedAt,opponentFvgs:opponents,
    penetration:measureOrderBlockPenetration(orderBlock,direction,rows.slice(contactIndex,i+1)),routes:evaluateRoutes(context,orderBlock,contact,fvg,opponents)};
   return true;

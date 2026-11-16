@@ -129,6 +129,12 @@ describe('native reaction references',()=>{
   expect(r.opponentFvgs.filter(x=>x.fvg.candleTime<startTime)).toEqual([]);
   expect(r.routes.a).toMatchObject({status:'entry',entryTime,entryPrice});
  });
+ // U1: zwei offene bullische Gegen-FVGs; nur die 10:36 liegt direkt vor dem Bestätigungspreis 3907,33 und blockiert A.
+ it('U1: only the nearest opposing FVG in trade direction blocks Entry a, the other stays visible',()=>{
+  const r=react('2026-11-03',1793694900,-1,{options:{}});
+  expect(r.opponentFvgs.map(x=>[x.fvg.candleTime,x.openAtReaction,x.blocksEntryA])).toEqual([[1793698500,true,false],[1793698560,true,true]]);
+  expect(r.routes.a).toMatchObject({status:'rejected',reason:'opposingFvgOpen'});
+ });
  it('stays unknown before contact, before the FVG and across a missing minute',()=>{
   expect(react('2026-10-21',1792552500,1,{evaluatedAt:1792555200}).reason).toBe('noContact');
   expect(react('2026-10-21',1792552500,1,{evaluatedAt:1792556040})).toMatchObject({state:'unknown',reason:'awaitingFvg'});
