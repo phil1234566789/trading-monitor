@@ -26,10 +26,10 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(status(g)).toMatchObject({detect:'visited',touch:'visited',broken:'visited',reaction:'visited',stop:'visited',routeA:({entry:'visited',rejected:'rejected',unknown:'unknown',pending:'unknown'})[a.status],
    result:'visited',closed:'not-visited',false:'not-visited',hold:'not-visited'});
   expect(g.nodes.stop.sub).toContain('ferne M5-Kante');
-  // Ausgabe-Box: öffentlicher Verdict groß, Struktur und Routen separat.
+  // Ausgabe-Box: nur der Rückgabewert; die Routenbegründungen stehen im Baum (head, routeA oben).
   expect(g.nodes.result.headline).toBe('Reaktion: true');
-  expect(g.nodes.result.sub).toContain(`a: ${a.status}`);
-  expect(g.nodes.result.sub).toMatch(/b: entry /);
+  expect(g.nodes.result.sub).toMatch(/^Entry \d\d:\d\d @ \S+ · SL \S+ \(OB-Kante\)$/);
+  expect(g.nodes.result.sub).not.toMatch(/a: |b: |Struktur/);
   expect(g.edges).toMatchObject({counterA:'visited',bStop:'visited',stopResult:'visited',falseResult:'not-visited'});
  });
  it('P16 OB1: Hold-Gate hält, weil der DOB erkannt ist',async()=>{
@@ -79,7 +79,8 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(g.head).toBe('Intern: unknown (Markt geschlossen, OB verfallen) · Routen: –');
   expect(status(g)).toMatchObject({touch:'unknown',closed:'rejected',broken:'not-visited',result:'rejected'});
   expect(g.nodes.result).toMatchObject({headline:'Reaktion: false',status:'rejected'});
-  expect(g.nodes.result.sub).toContain('Markt geschlossen, OB verfallen');
+  expect(g.nodes.result.sub).toBe('');
+  expect(g.nodes.closed.label).toBe('Markt geschlossen, OB verfallen');
  });
 
  it('Seitenspur übernimmt unknown aus der Produkt-Füllhistorie bei verdeckter Kerze und Lücke (Drift-Wächter)',async()=>{
@@ -195,7 +196,7 @@ describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
    b:{status:'skipped',reason:'entryAlreadyFound',knownAt:1200}}};
   const g=graph(r);
   for(const node of [g.nodes.bCheck,g.nodes.entryB])expect(node).toMatchObject({status:'not-visited',sub:'nicht geprüft · Entry a bereits gefunden'});
-  expect(g.nodes.result.sub).toContain('b: nicht geprüft · Entry a bereits gefunden');
+  expect(g.nodes.result.sub).toMatch(/^Entry \d\d:\d\d @ 114 · SL 99 \(Retest\)$/);
   expect(g.edges).toMatchObject({aStop:'visited',aB:'not-visited',bCandidate:'not-visited',bStop:'not-visited',stopResult:'visited'});
   expect(g.history.some(h=>h.text.startsWith('Route b'))).toBe(false);
   const times=graphChangeTimes({entry:{role:'second',orderBlock:ob,reaction:r,internalFvgs:[]},context:createOrderBlockReactionContext([],1800,'XAUUSD')});

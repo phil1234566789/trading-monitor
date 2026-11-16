@@ -89,16 +89,18 @@ function sideTrack(dir,entry,context){
  return {fvgList,internalOb};
 }
 
-// Öffentlicher Verdict stammt aus dem Produkt; die strukturelle FVG-Bestätigung ist kein Entry.
-const routeText=(name,x)=>x.status==='skipped'?`${name}: ${SKIPPED_ENTRY_TEXT}`:`${name}: ${x.status}${x.status==='entry'?` ${price(x.entryPrice)} · ${time(x.entryTime)} · SL ${price(x.stopLoss)}`:x.reason?' · '+reasonText(x.reason):''}`;
-function resultNode(r,first,resultRoutes){
- const verdict=r?.verdict,state=verdict?.state??'unknown',routes=Object.entries(resultRoutes);
- const lines=[`Struktur: ${structuralState(r)}${r?.reason?' · '+reasonText(r.reason):''}`,
-  verdict?.reason?'Urteil: '+reasonText(verdict.reason):null,
-  first?'OB1 trägt keinen Entry':routes.length?null:'Entry-Routen: noch keine',...routes.map(([k,x])=>routeText(k,x))].filter(Boolean);
- return {label:'Ausgabe',headline:`Reaktion: ${state}`,
-  status:state==='true'?'visited':state==='false'?'rejected':'unknown',sub:lines.join('\n'),
-  detail:[`Entry-Machbarkeit: ${state}${verdict?.knownAt!=null?' · ab '+time(verdict.knownAt):''}.`,...lines]};
+// Ausgabe = nur der Rückgabewert von evaluateOrderBlockReaction, rollenunabhängig; Begründungen stehen im Baum.
+const STOP_ANCHOR_TEXT={'m5-edge':'OB-Kante',retestExtreme:'Retest'};
+// true trägt den frühesten Entry, wie verdict.knownAt; false/pending/unknown tragen nichts.
+export function reactionOutput(r){
+ const state=r?.verdict?.state??'unknown';
+ const entry=state==='true'?Object.values(r.routes??{}).filter(x=>x.status==='entry').sort((a,b)=>a.entryTime-b.entryTime)[0]:null;
+ return {state,entry:entry?`Entry ${time(entry.entryTime)} @ ${price(entry.entryPrice)} · SL ${price(entry.stopLoss)} (${STOP_ANCHOR_TEXT[entry.stopAnchor]??entry.stopAnchor})`:''};
+}
+function resultNode(r){
+ const {state,entry}=reactionOutput(r);
+ return {label:'Ausgabe',headline:`Reaktion: ${state}`,status:state==='true'?'visited':state==='false'?'rejected':'unknown',
+  sub:entry,detail:[entry?`${state} · ${entry}`:state]};
 }
 
 const fillState=open=>open===true?'offen':open===false?'gefüllt':'Füllstand unbekannt';
@@ -145,7 +147,7 @@ function roleView({entry,pair=null,partner=null}){
 }
 
 export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,bridgeClosures=false,...links}){
- const {orderBlock:ob,reaction:r}=entry,adj=adjective(dir),{first,live,routes,resultRoutes,pair,partner}=roleView({entry,...links});
+ const {orderBlock:ob,reaction:r}=entry,adj=adjective(dir),{first,live,routes,pair,partner}=roleView({entry,...links});
  const contact=r?.contact,fvg=r?.fvg,rejected=structuralState(r)==='false',closed=r?.reason==='marketClosed',open=s=>s?'unknown':'not-visited';
  const n={};
  n.detect={label:`${dir===1?'Bullische':'Bärische'} M5-OB erkannt`,status:ob?'visited':'unknown',sub:ob?`${range(ob)} · ${time(ob.recognizedAt)}`:'noch nicht bekannt',
@@ -193,7 +195,7 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
  n.routeA={label:'Entry-Kandidat a',...routeEntry(a,'Erst mit Reaktion true.')};
  n.bCheck=bCheckNode(b);
  n.entryB={label:'Entry-Kandidat b',...(b?.status==='skipped'||hasEntryCandidate(b)||n.bCheck.status==='visited'?routeEntry(b):routeEntry(null,b?'Route b hat das Entry-Gate nicht erreicht.':'Erst mit Reaktion true.'))};
- n.result=resultNode(r,first,resultRoutes);
+ n.result=resultNode(r);
  Object.assign(n,sideTrack(dir,entry,context));
 
  const v=s=>s==='visited'||s==='rejected'?s:'not-visited';
