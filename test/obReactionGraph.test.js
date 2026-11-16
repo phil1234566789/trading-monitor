@@ -166,7 +166,7 @@ describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
   expect(g.nodes.counter.detail.filter(x=>x.includes('Quelle:'))).toHaveLength(2);
  });
  it('zeigt beobachtete Gegnerquellen und übernimmt nur die gelieferte Routenentscheidung',()=>{
-  const g=graph({...reaction,routes:{...reaction.routes,a:{status:'unknown',reason:'opposingFvgSelectionUnresolved',knownAt:900}}});
+  const g=graph({...reaction,routes:{...reaction.routes,a:{status:'unknown',reason:'entryUnavailable',knownAt:900}}});
   expect(g.nodes.counter.sub).not.toContain('historisch abgelehnt');
   expect(g.nodes.counter.detail.join(' ')).toContain('Quellen und Blocker stammen aus dem Produkt');
   expect(g.nodes.routeA.status).toBe('unknown');

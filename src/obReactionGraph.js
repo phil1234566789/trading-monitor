@@ -14,7 +14,7 @@ export const REASON_TEXT={
  entryBUnknown:'Entry b unbekannt',entryBOrderBlockBroken:'M1-OB der FVG gebrochen',entryBOrderBlockTooDeep:'M1-OB über 50 % eingestochen',
  entryAlreadyFound:'Entry a bereits gefunden',
  entryPending:'wartet auf vollständigen Entry',entryRoutesRejected:'beide Entry-Routen abgelehnt',
- opposingFvgSelectionUnresolved:'mehrere Gegen-FVGs: Auswahlregel ungeklärt',opposingFvgHistoryMissing:'Füllhistorie der Gegen-FVG fehlt',
+ opposingFvgHistoryMissing:'Füllhistorie der Gegen-FVG fehlt',
  opposingFvgOpen:'Gegen-FVG bei Reaktion offen → Entry a abgelehnt',
  partialOverlapOpen:'interne FVG nur teilweise in der OB',
  internalFvgHistoryMissing:'Füllhistorie interner FVG fehlt',stopNotBeyondEntry:'SL liegt nicht hinter dem Entry',
@@ -113,7 +113,7 @@ function opponentNode(r,dir,live){
    ...sources.map(({fvg,openAtReaction,openNow,blocksEntryA})=>`Quelle: ${range(fvg)} · M1-FVG ${time(fvg.candleTime)} · erste Kerze ${time(fvg.candleTime-60)} · bekannt ${time(fvg.recognizedAt)} · bei Reaktion ${fillState(openAtReaction)} · jetzt ${fillState(openNow)} · ${blocksEntryA?'als Entry-a-Blocker markiert':'kein belegter Entry-a-Blocker'}.`),
    sources.length?'Spätere Füllung beschreibt die Quelle; sie schreibt die historische Entry-a-Entscheidung nicht um.':'Keine gegnerische FVG im vom Produkt geprüften Reaktionsweg.',
    'Zählt nur FVGs, die seit der M5-OB entstanden sind (M1-FVG-Zeit ≥ OB-Start), bis zur Reaktion.',
-   r?.routes?.b?.status==='skipped'?`Entry b: ${SKIPPED_ENTRY_TEXT}.`:'Entry b wird geprüft, wenn a keinen Entry liefert. Quellen und Blocker stammen aus dem Produkt; keine zusätzliche Stärke- oder Auswahlregel.']};
+   r?.routes?.b?.status==='skipped'?`Entry b: ${SKIPPED_ENTRY_TEXT}.`:'Entry b wird geprüft, wenn a keinen Entry liefert. Quellen und Blocker stammen aus dem Produkt; jede bei Reaktion offene Gegen-FVG lehnt a ab, egal wie viele.']};
 }
 
 const hasEntryCandidate=x=>x?.status==='entry'||Boolean(x?.status==='unknown'&&x.entryCandidate);

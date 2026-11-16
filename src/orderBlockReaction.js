@@ -145,9 +145,8 @@ function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
  };
  const immediate=m1FvgSequenceResult(m1FvgEntrySequence(fvg,'immediate',context.instrument));
  const active=opponents.filter(x=>x.openAtReaction===true);
- // Eine Rangfolge mehrerer Gegner ist nicht fachlich festgelegt; weder die jüngste noch die größte erfinden.
- if(active.length>1)routes.a={status:'unknown',reason:'opposingFvgSelectionUnresolved',knownAt:fvg.recognizedAt};
- else if(active.length)routes.a={status:'rejected',reason:'opposingFvgOpen',knownAt:fvg.recognizedAt};
+ // Entscheidungsbaum (Philip): eine offene Gegen-FVG reicht für die Ablehnung, ihre Anzahl ändert nichts; alle bleiben in opponentFvgs.
+ if(active.length)routes.a={status:'rejected',reason:'opposingFvgOpen',knownAt:fvg.recognizedAt};
  else if(opponents.some(x=>x.openAtReaction===null))routes.a={status:'unknown',reason:'opposingFvgHistoryMissing',knownAt:fvg.recognizedAt};
  else if(immediate.status==='ready')settle('a',immediate);else routes.a={status:'unknown',reason:'entryUnavailable',knownAt:fvg.recognizedAt};
  // Ein vollständiger Entry beendet die Reaktion (Philip/P14); spätere B-Ereignisse wären ein zweiter Einstieg.

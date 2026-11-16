@@ -32,7 +32,7 @@ export const CHART_DEBUGGER_CASES=[
  {id:'P17',label:'P17 · DOB Short · 20.10.',day:'2026-10-20-p17',dir:-1,orderBlocks:[1792473900,1792479900]},
  {id:'507',label:'Pin 507 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794204000,1794205800]},
  {id:'508',label:'Pin 508 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794205800,1794207000]},
- {id:'U1',label:'U1 · Offen · Short · 03.11. · mehrere Gegen-FVGs offen',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
+ {id:'U1',label:'U1 · Short · 03.11. · Gegen-FVG offen, OB bricht vor Entry b',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
  {id:'U2',label:'U2 · Offen · Short · 09.11. · FVG ragt teilweise in OB',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
  {id:'U3',label:'U3 · Offen · Short · 04.11. · Entry b nach Marktschluss',day:'2026-11-04',dir:-1,orderBlocks:[1793824800]},
 ];

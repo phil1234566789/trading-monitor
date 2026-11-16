@@ -24,9 +24,9 @@ it('treats expiry as finished but missing evidence as unknown',()=>{
  expect(reactionVerdict({structuralState:'unknown',reason:'awaitingFvg',knownAt:null})).toMatchObject({state:'pending'});
 });
 
-it('does not disguise an unresolved stop or multiple-FVG policy as a negative reference',()=>{
- expect(reactionVerdict({structuralState:'true',routes:{a:{status:'unknown',reason:'opposingFvgSelectionUnresolved',knownAt:120},b:{status:'rejected',knownAt:180}}}))
-  .toMatchObject({state:'unknown',reason:'opposingFvgSelectionUnresolved'});
+it('does not disguise an unresolved stop as a negative reference',()=>{
+ expect(reactionVerdict({structuralState:'true',routes:{a:{status:'unknown',reason:'partialOverlapOpen',knownAt:120},b:{status:'rejected',knownAt:180}}}))
+  .toMatchObject({state:'unknown',reason:'partialOverlapOpen'});
 });
 
 it('reports unknown only once no route is pending: the latest route knownAt, null without any',()=>{
