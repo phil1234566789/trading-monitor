@@ -134,7 +134,7 @@ try {
   });
 
   const gitHash = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
-    + (execSync('git status --porcelain', { cwd: root }).toString().trim() ? '-dirty' : '');
+    + (execSync('git status --porcelain -- . ":!analysis/dob-setup"', { cwd: root }).toString().trim() ? '-dirty' : '');
   const report = { measurement: 'dob-quelle-der-kraft-v1', git: gitHash, baseGit: base.git, symbol: SYMBOL, dataEnd: base.dataEnd,
     breakEvenWinrate: 33.3, base: stats(rows), baseByRoute: { a: stats(rows.filter(r => r.route === 'a')), b: stats(rows.filter(r => r.route === 'b')) },
     methodology: [
