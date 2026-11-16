@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -27,5 +27,10 @@ describe('dobTradeStatistics',()=>{
   expect(dobSourceLabel({source_kind:null})).toBe('–');
   expect(dobSourceLabel({source_kind:'ob_h1',source_distance_atr:0.84,source_distance_usd:12})).toBe('H1-OB · 0,8 ATR');
   expect(dobSourceLabel({source_kind:'ob_h4',source_distance_atr:null,source_distance_usd:12.5})).toBe('H4-OB · 12,5 USD');
+ });
+ it('Pin-Schlüssel ist laufunabhängig, Zeile und Pin-Kontext ergeben denselben',()=>{
+  const trade={instrument:'XAUUSD',direction:'short',entry_time:at,entry_price:3867.93,stop_price:3875.6};
+  expect(dobTradePinKey({...trade,id:'dob-setup-v1:x',run_id:'dob-setup-v1'})).toBe(dobTradePinKey({...trade,id:'dob-setup-v2:x',run_id:'dob-setup-v2'}));
+  expect(dobTradePinKey(trade)).toBe(`XAUUSD:short:${at}:3867.93:3875.6`);
  });
 });

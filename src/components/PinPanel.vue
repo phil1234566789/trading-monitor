@@ -111,7 +111,7 @@ function onEntryClick(event, entry) {
         <div class="pin-panel-entry-header">DOB-Trade {{row.entry.dobTradeContext?.direction==='long'?'Long':'Short'}} · {{row.entry.dobTradeContext?.instrument}} · Route {{row.entry.dobTradeContext?.route}}
           <button class="pin-panel-remove" aria-label="DOB-Trade-Pin entfernen" @click="emit('remove',row.entry.id)">🗑</button>
         </div>
-        <div class="pin-panel-entry-prices" v-if="row.entry.dobTradeContext">Lauf {{row.entry.dobTradeContext.run_id}} · Entry {{formatDatedTime(row.entry.dobTradeContext.entry_time)}} · {{DOB_OUTCOME_LABELS[row.entry.dobTradeContext.outcome]??row.entry.dobTradeContext.outcome}}</div>
+        <div class="pin-panel-entry-prices" v-if="row.entry.dobTradeContext">gepinnt in {{row.entry.dobTradeContext.run_id}} · Entry {{formatDatedTime(row.entry.dobTradeContext.entry_time)}} · {{DOB_OUTCOME_LABELS[row.entry.dobTradeContext.outcome]??row.entry.dobTradeContext.outcome}}</div>
         <RouterLink v-if="row.entry.dobTradeContext" :to="dobChartLink(row.entry.dobTradeContext)" @click.stop>Trade im Chart</RouterLink>
       </template>
       <template v-else-if="row.entry.kind === 'double_order_block'">

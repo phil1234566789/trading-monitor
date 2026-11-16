@@ -20,6 +20,7 @@ import { supabase } from "./supabaseClient.js";
 import {isChartOrderBlockTimeframe} from './chartOrderBlockPin.js';
 import { findOrCreateObZoneId, findOrCreateTradeSetupId } from "./tradeIntake.js";
 import { fetchAllRows } from './dbReadPaging.js';
+import { dobTradePinKey } from './dobTradeStatistics.js';
 import {scopePinSource} from './simulationPinSource.js';
 import { pinTypeFields } from './pinType.js';
 import {persistDoubleOrderBlockPin} from '../supabase/functions/_shared/doubleOrderBlockPinStore.js';
@@ -186,25 +187,27 @@ export async function fetchSimulationPins(runId) {
   return data.map(toEntry);
 }
 
-export async function fetchDobTradePins(runId) {
+export async function fetchDobTradePins(instrument) {
   const {data,error}=await fetchAllRows((from,to)=>supabase.from('pin_context').select(ROW_COLUMNS).eq('kind','dob_trade')
-    .eq('dob_trade_context->>run_id',runId).order('id').range(from,to));
+    .eq('dob_trade_context->>instrument',instrument).order('id').range(from,to));
   if(error) throw error;
   return data.map(toEntry);
 }
 
-// Ein Pin je Trade (dob_trade_key = Lauf + Setup-ID); erneutes Pinnen ändert nur Notiz/Typ, der Kontext bleibt eingefroren.
+// Ein Pin je Trade über alle Läufe (dob_trade_key = dobTradePinKey); erneutes Pinnen ändert nur Notiz/Typ, der Kontext
+// (inkl. Lauf, in dem gepinnt wurde) bleibt eingefroren.
 export async function addDobTradePin(row,note,pinType) {
-  const context={id:row.id,run_id:row.run_id,setup_id:row.setup_id,instrument:row.instrument,direction:row.direction,route:row.route,
+  const key=dobTradePinKey(row);
+  const context={trade_key:key,id:row.id,run_id:row.run_id,setup_id:row.setup_id,instrument:row.instrument,direction:row.direction,route:row.route,
     entry_time:row.entry_time,entry_price:row.entry_price,stop_price:row.stop_price,target_price:row.target_price,
     outcome:row.outcome,exit_time:row.exit_time,exit_price:row.exit_price};
-  const {data:existing,error:readError}=await supabase.from('pin_context').select('id').eq('dob_trade_key',row.id).maybeSingle();
+  const {data:existing,error:readError}=await supabase.from('pin_context').select('id').eq('dob_trade_key',key).maybeSingle();
   if(readError) throw readError;
   if(existing) {
     if(!await updatePinNote(existing.id,note,pinType)) throw new Error('Pin-Notiz konnte nicht gespeichert werden.');
     return existing.id;
   }
-  const {error}=await supabase.from('pin_context').insert({kind:'dob_trade',dob_trade_key:row.id,dob_trade_context:context,
+  const {error}=await supabase.from('pin_context').insert({kind:'dob_trade',dob_trade_key:key,dob_trade_context:context,
     note:note || null,...pinTypeFields(pinType)});
   if(error) throw error;
 }
