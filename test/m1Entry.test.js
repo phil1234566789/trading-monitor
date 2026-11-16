@@ -36,8 +36,9 @@ describe('first M1 FVG entry', () => {
     expect(m1EntryFromFvg({ ...context, instrument: 'EURUSD' }, fvg, candles, at('09:50')).id).not.toBe(original.id);
   });
   it('shows Entry 1 without inventing a requirement that all other checks pass', () => {
-    expect(entryChecklist({ entry: entryAt('09:50'), detailStatuses: ['unmet'] })).toMatchObject({
-      status: 'passed', details: ['Entry 1 um 09:50 Uhr', 'Weiter SL: 6,0 Pips', 'Enger SL: 3,3 Pips'], detailStatuses: ['passed'] });
+    // Seit 5ecb37d3 tragen neue Entries eine Kategorie; ohne sie zeigt die Checkliste den historischen Hinweis.
+    expect(entryChecklist({ entry: { ...entryAt('09:50'), entryCategory: 'full' }, detailStatuses: ['unmet'] })).toMatchObject({
+      status: 'passed', details: ['Entry 1 um 09:50 Uhr', 'Full Entry', 'Weiter SL: 6,0 Pips', 'Enger SL: 3,3 Pips'], detailStatuses: ['passed'] });
     expect(entryChecklist({ entry: entryAt('10:15'), evaluatedAt: at('10:15') }).details[0]).toBe('Entry 1 um 09:50 Uhr');
     expect(entryChecklist({ entry: { label: 'Entry 1', recognizedAt: Date.parse('2026-01-09T09:50:00+01:00') / 1000 } }).details[0]).toBe('Entry 1 um 09:50 Uhr');
     expect(entryChecklist({})).toMatchObject({ status: 'pending', details: [] });
