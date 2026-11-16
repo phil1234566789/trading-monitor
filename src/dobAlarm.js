@@ -1,5 +1,5 @@
 import {formatBerlinTime,berlinDateStrFor} from './berlinTime.js';
-import {dobSourceLabel} from './dobTradeStatistics.js';
+import {dobSourceLabel} from './dobSourceLabel.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 
 // Alarme des DOB-Live-Watchers (supabase/functions/dob-watcher) aus dem Ergebnis von checkDobTradeSetup(). Rein, damit Vitest

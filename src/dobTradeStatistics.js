@@ -41,13 +41,6 @@ export function matchDobTradePins(pins,rows){
  return matched;
 }
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
-// Kraftquelle aus den v1-Feldern, z.B. „H1-OB · 0,8 ATR“; v0 hat keine und zeigt „–“.
-export function dobSourceLabel(row){
- if(!row.source_kind)return '–';
- const num=v=>v.toLocaleString('de-DE',{maximumFractionDigits:1});
- const distance=Number.isFinite(row.source_distance_atr)?` · ${num(row.source_distance_atr)} ATR`
-  :Number.isFinite(row.source_distance_usd)?` · ${num(row.source_distance_usd)} USD`:'';
- const kind=/^ob_(h\d)$/.exec(row.source_kind);
- return (kind?`${kind[1].toUpperCase()}-OB`:row.source_kind)+distance;
-}
+// Eigenes Modul, damit der DOB-Watcher (Deno) das Label ohne die Pin-Abgleich-Kette dieser Datei importieren kann.
+export {dobSourceLabel} from './dobSourceLabel.js';
 export const dobTradeR=row=>row.outcome==='success'?2:row.outcome==='loss'?-1:null;
