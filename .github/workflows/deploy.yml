@@ -15,13 +15,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
+          cache: npm
       - run: npm ci
       - name: Guard historical OB reaction contracts
         run: npx vitest run test/obReactionHistoricalContract.test.js test/orderBlockReactionVerdict.test.js test/orderBlockInternalFvgs.test.js test/orderBlockReactionRetry.test.js test/orderBlockReactionTerminal.test.js test/chartDebuggerCases.test.js test/chartDebuggerFvgs.test.js test/chartDebuggerP7.test.js test/obReactionGraph.test.js test/orderBlockReaction.test.js test/doubleOrderBlocks.test.js
