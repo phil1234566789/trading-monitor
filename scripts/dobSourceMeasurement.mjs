@@ -30,7 +30,7 @@ const server = await createServer({ root, envDir, server: { middlewareMode: true
 try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinOffsetMinutes, berlinDateStrFor },
-    { detectOrderBlocks, candleTouchesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
+    { detectOrderBlocks, candleTouchesOrderBlock, candleInvalidatesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
     { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }] = await Promise.all(['/src/forexCandles.js',
     '/src/supabaseClient.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/orderBlockDetection.js', '/src/liquidityDetection.js',
     '/src/orderBlockRecognitionTime.js', '/src/instrumentConfig.js', '/src/dobTradeSetup.js'].map(load));
@@ -48,12 +48,15 @@ try {
   const firstM5 = (from, to, hit) => { for (let i = lowerBound(m5, from); i < m5.length && m5[i].time < to; i++) if (!m5[i].ignored && hit(m5[i])) return m5[i].time; return null; };
 
   // Ereignisse: {kind, tf, side (long = Quelle für Long), time, ...}
-  const events = [];
+  const events = [], htfZones = [];
   for (const [bar, tf] of [['1h', 'H1'], ['4h', 'H4']]) {
     const input = htfObCandles(frames[bar], sessions, offset), recognized = orderBlockRecognitionTimes(input, bar);
     for (const zone of detectOrderBlocks(input, bar === '1h' ? '1H' : '4H', false, obMinimum(SYMBOL, bar === '1h' ? '1H' : '4H'))) {
       const at = recognized.get(zone.startTime), time = at && firstM5(at, Infinity, c => candleTouchesOrderBlock(c, zone));
       if (time) events.push({ kind: 'ob', tf, side: zone.dir === 1 ? 'long' : 'short', time, top: zone.top, bottom: zone.bottom, startTime: zone.startTime });
+      // G: aktive Zone = erkannt und auf M5 noch nicht invalidiert, egal wie alt oder wie oft berührt.
+      if (at) htfZones.push({ tf, side: zone.dir === 1 ? 'long' : 'short', top: zone.top, bottom: zone.bottom, recognizedAt: at,
+        invalidatedAt: firstM5(at, Infinity, c => candleInvalidatesOrderBlock(c, zone)) ?? Infinity });
     }
   }
   for (const [rows, tf, dur] of [[frames['1h'], 'H1', HOUR], [frames['4h'], 'H4', 4 * HOUR], [m5, 'M5', 300]]) {
@@ -95,7 +98,7 @@ try {
       proximity = gap === 0 ? 'in Zone' : gap <= 2 * (ob1.top - ob1.bottom) ? 'nah (≤ 2 OB1-Höhen)' : 'fern';
     }
     return {
-      category: hasOb && hasLs ? 'LS + OB' : hasOb ? 'nur OB' : hasLs ? 'nur LS' : 'keine', kinds: [...kinds].sort(),
+      dayStart, category: hasOb && hasLs ? 'LS + OB' : hasOb ? 'nur OB' : hasLs ? 'nur LS' : 'keine', kinds: [...kinds].sort(),
       deltaT: latest ? bucket(anchor - latest.time, [HOUR, 3 * HOUR], ['0–1 h', '1–3 h', '3 h–Marktschluss']) : 'keine Quelle',
       deltaMin: latest ? Math.round((anchor - latest.time) / 60) : null,
       lsAge: latestLs ? bucket(latestLs.time - latestLs.pivotTime, [4 * HOUR, 24 * HOUR], ['< 4 h', '4–24 h', '> 24 h']) : 'kein LS',
@@ -175,16 +178,23 @@ try {
   };
   const month = r => berlinDateStrFor(r.entryTime).slice(0, 7);
   const months = [...new Set(rows.map(month))].sort();
-  const flagged = rows.map(r => ({ r, x: flags(r) }));
-  const combos = Object.fromEntries(Object.entries(FILTERS).map(([name, keep]) => {
-    const kept = flagged.filter(({ x }) => keep(x)).map(({ r }) => r);
+  const sampleRows = samples.filter(s => s.v0).map(s => [s.trade, rows.find(r => r.entryTime === s.v0.entryTime && r.direction === SAMPLES.find(x => x[0] === s.trade)[3])]);
+  // Overfitting-Check: Vorsprung muss in beiden Halbjahren halten.
+  const HALVES = { 'Jan–Jun': m => m <= '2026-06', 'Jul–Nov': m => m >= '2026-07' };
+  const summarize = kept => {
     const byMonth = Object.fromEntries(months.map(m => [m, stats(kept.filter(r => month(r) === m))]));
-    return [name, { ...stats(kept), share: +(kept.length / rows.length * 100).toFixed(1), a: stats(kept.filter(r => r.route === 'a')), b: stats(kept.filter(r => r.route === 'b')),
-      monthsAboveBreakEven: Object.values(byMonth).filter(s => s.winrate != null && s.winrate > 33.3).length, months: byMonth,
-      samples: samples.filter(s => s.v0).map(s => { const r = rows.find(row => row.entryTime === s.v0.entryTime && row.direction === (s.v0.byOb1 && SAMPLES.find(x => x[0] === s.trade)[3]));
-        return { trade: s.trade, kept: Boolean(r && keep(flags(r))) }; }) }];
-  }));
-  const comboReport = { measurement: 'dob-quelle-kombi-v1', git: gitHash, base: { ...report.base, monthsAboveBreakEven: months.filter(m => (stats(rows.filter(r => month(r) === m)).winrate ?? 0) > 33.3).length, months: months.length },
+    return { ...stats(kept), share: +(kept.length / rows.length * 100).toFixed(1), a: stats(kept.filter(r => r.route === 'a')), b: stats(kept.filter(r => r.route === 'b')),
+      monthsAboveBreakEven: Object.values(byMonth).filter(s => s.winrate != null && s.winrate > 33.3).length,
+      halves: Object.fromEntries(Object.entries(HALVES).map(([h, inHalf]) => [h, stats(kept.filter(r => inHalf(month(r))))])), months: byMonth };
+  };
+  const evaluateFilters = (filters, flagsOf) => {
+    const flagged = rows.map(r => ({ r, x: flagsOf(r) }));
+    return Object.fromEntries(Object.entries(filters).map(([name, keep]) => [name, { ...summarize(flagged.filter(({ x }) => keep(x)).map(({ r }) => r)),
+      samples: sampleRows.map(([trade, r]) => ({ trade, kept: Boolean(r && keep(flagsOf(r))) })) }]));
+  };
+  const combos = evaluateFilters(FILTERS, flags);
+  const baseSummary = { ...summarize(rows), months: months.length };
+  const comboReport = { measurement: 'dob-quelle-kombi-v1', git: gitHash, base: baseSummary,
     methodology: ['Basis und Quellen wie source-measurement-xau-2026.json (Anker OB1, selber Handelstag, Trade-Richtung).',
       'A = mindestens ein H1/H4-OB-Erst-Touch; B = OB1 überlappt eine dieser OB-Zonen; C = jüngster OB-Touch < 1 h vor OB1; C’ = jüngste Quelle jeder Art < 1 h vor OB1; D = zusätzlich ein LS-Sweep.',
       'E: „in Zone“ über alle Quellen des Tages: OB-Zone = OB1 überlappt eine HTF-OB-Zone; LS-Level = Level-Preis liegt innerhalb von OB1. B ist per Definition gleich E1. F: nur die jüngste Quelle (wie proximity der Erstmessung).',
@@ -192,8 +202,65 @@ try {
       'samples: ob der Filter den v0-Trade des Mustertrades behält (#136b/#139b/#140b sind Re-Entries, #140 fällt auf den Trade von #140b).'],
     filters: combos };
   await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-combos-xau-2026.json'), JSON.stringify(comboReport, null, 2));
-  console.log('\n== Kombi (Basis', JSON.stringify(comboReport.base.winrate), comboReport.base.monthsAboveBreakEven + '/' + months.length, 'Monate)');
-  for (const [name, c] of Object.entries(combos)) console.log(name.padEnd(40), `n=${c.n} ${c.winrate}% ${c.sumR}R ${c.share}% | a ${c.a.n} ${c.a.winrate}% ${c.a.sumR}R | b ${c.b.n} ${c.b.winrate}% ${c.b.sumR}R${c.b.smallN ? '*' : ''} | Monate ${c.monthsAboveBreakEven}/${months.length} |`, c.samples.filter(s => s.kept).map(s => s.trade).join(' '));
+  const printFilters = (title, list) => {
+    console.log(`\n== ${title} (Basis ${baseSummary.winrate}% ${baseSummary.monthsAboveBreakEven}/${months.length} Monate)`);
+    for (const [name, c] of Object.entries(list)) console.log(name.padEnd(44), `n=${c.n} ${c.winrate}% ${c.sumR}R ${c.share}% | a ${c.a.n} ${c.a.winrate}% | b ${c.b.n} ${c.b.winrate}%${c.b.smallN ? '*' : ''} | M ${c.monthsAboveBreakEven}/${months.length} | H1 ${c.halves['Jan–Jun'].n} ${c.halves['Jan–Jun'].winrate}% ${c.halves['Jan–Jun'].sumR}R | H2 ${c.halves['Jul–Nov'].n} ${c.halves['Jul–Nov'].winrate}% ${c.halves['Jul–Nov'].sumR}R |`, c.samples.filter(s => s.kept).map(s => s.trade).join(' '));
+  };
+  printFilters('Kombi', combos);
+
+  // DOB-QUELLE-G: Abstand OB1 ↔ nächste aktive H1/H4-OB-Zone in Trade-Richtung, beliebig alt (Philip: maßgeblich ist der Preisabstand).
+  const G_BUCKETS = [[0, 'in Zone'], [1, '≤ 1 OB1-Höhe'], [2, '≤ 2'], [5, '≤ 5'], [Infinity, 'weiter']];
+  const nearestZone = (r, tfs) => {
+    const ob1 = zones.get(r.ob1), dayStart = r.byOb1.dayStart;
+    if (!ob1) return null;
+    const height = ob1.top - ob1.bottom;
+    let best = null;
+    for (const z of htfZones) {
+      if (!tfs.includes(z.tf) || z.side !== r.direction || z.recognizedAt > r.ob1 || z.invalidatedAt <= r.ob1) continue;
+      const units = Math.max(0, z.bottom - ob1.top, ob1.bottom - z.top) / height;
+      if (!best || units < best.units) best = { units, z };
+    }
+    if (!best) return { bucket: 'keine aktive Zone', age: null };
+    const ageSec = r.ob1 - best.z.recognizedAt;
+    return { bucket: G_BUCKETS.find(([max]) => best.units <= max)[1], units: best.units,
+      age: best.z.recognizedAt >= dayStart ? 'selber Tag' : ageSec <= 3 * 86400 ? '1–3 Tage' : 'älter' };
+  };
+  const gCache = new Map();
+  const gFlags = r => {
+    if (!gCache.has(r)) gCache.set(r, { ...flags(r), gH1: nearestZone(r, ['H1']), gH4: nearestZone(r, ['H4']), g: nearestZone(r, ['H1', 'H4']) });
+    return gCache.get(r);
+  };
+  const bucketFilters = key => Object.fromEntries([...G_BUCKETS.map(([, b]) => b), 'keine aktive Zone']
+    .map(b => [`G ${key === 'g' ? 'H1/H4' : key.slice(1)}: ${b}`, x => x[key]?.bucket === b]));
+  const gTables = Object.fromEntries(['gH1', 'gH4', 'g'].map(key => [key, evaluateFilters(bucketFilters(key), gFlags)]));
+  // Zonen-Alter nur zur Info: je Abstands-Bucket (H1/H4 gemeinsam) aufgeteilt.
+  const gAge = Object.fromEntries(G_BUCKETS.map(([, b]) => [b, Object.fromEntries(['selber Tag', '1–3 Tage', 'älter'].map(age =>
+    [age, stats(rows.filter(r => gFlags(r).g?.bucket === b && gFlags(r).g.age === age))]))]));
+  const inZone = x => x.g?.bucket === 'in Zone', near1 = x => inZone(x) || x.g?.bucket === '≤ 1 OB1-Höhe';
+  const cPrime = x => x.A && x.anyDelta1h;
+  const gCombos = evaluateFilters({
+    'A': x => x.A, "C'": cPrime, 'F1': x => x.latestInZone,
+    'G: in Zone (H1/H4)': inZone, 'G: in Zone oder ≤ 1 (H1/H4)': near1,
+    // Buckets laufen nicht monoton (≤ 1 schwächer als ≤ 2), deshalb auch breitere Grenzen.
+    'G: bis 2 OB1-Höhen (H1/H4)': x => near1(x) || x.g?.bucket === '≤ 2',
+    'G: bis 5 OB1-Höhen (H1/H4)': x => ['in Zone', '≤ 1 OB1-Höhe', '≤ 2', '≤ 5'].includes(x.g?.bucket),
+    'A ∩ F1': x => x.A && x.latestInZone, "C' ∩ F1 (= A ∩ C' ∩ F1)": x => cPrime(x) && x.latestInZone,
+    "G(in Zone) ∩ C'": x => inZone(x) && cPrime(x), "G(≤ 1) ∩ C'": x => near1(x) && cPrime(x),
+    'G(in Zone) ∩ F1': x => inZone(x) && x.latestInZone,
+  }, gFlags);
+  const gReport = { measurement: 'dob-quelle-g-v1', git: gitHash, base: baseSummary,
+    methodology: ['Basis, Anker OB1, Mustertrades wie source-combos-xau-2026.json.',
+      'Aktive Zone: H1/H4-OB in Trade-Richtung (htfObCandles + detectOrderBlocks), erkannt vor OB1-Start, bis OB1-Start auf M5 nicht invalidiert (candleInvalidatesOrderBlock); Alter und frühere Touches egal.',
+      'Abstand: Preislücke zwischen OB1 und der nächsten aktiven Zone in OB1-Höhen; in Zone = Überlappung. H1/H4 = nächste Zone beider Zeitebenen.',
+      'Zonen-Alter (Info): Erkennung der nächsten Zone am selben Handelstag / bis 3 Tage / älter.',
+      "Kombis: A/C'/F1 wie in source-combos; A ∩ C' ∩ F1 ist gleich C' ∩ F1, weil C' A enthält.",
+      'halves: Jan–Jun und Jul–Nov 2026 nach Berliner Entry-Monat; Overfitting-Check = Vorsprung zur Basis in beiden Hälften.'],
+    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos };
+  await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-g-xau-2026.json'), JSON.stringify(gReport, null, 2));
+  console.log('Basis Halbjahre', JSON.stringify(baseSummary.halves));
+  for (const [key, t] of Object.entries(gTables)) printFilters(`G ${key}`, t);
+  console.log('\n== Zonen-Alter je Abstand', JSON.stringify(gAge));
+  printFilters('G-Kombis + Overfitting', gCombos);
   console.log(JSON.stringify({ git: gitHash, base: report.base, events: report.events }));
   for (const [name, t] of Object.entries(report.byOb1)) {
     console.log(`\n== ${name} (Anker OB1)`);
