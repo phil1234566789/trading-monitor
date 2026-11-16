@@ -16,6 +16,7 @@ const FIXTURES={
  '2026-11-03':()=>import('../test/fixtures/dob-native/2026-11-03.json'),
  '2026-11-04':()=>import('../test/fixtures/dob-native/2026-11-04.json'),
  '2026-11-09':()=>import('../test/fixtures/dob-native/2026-11-09.json'),
+ '2026-10-12':()=>import('../test/fixtures/dob-native/2026-10-12.json'),
  '2026-10-20-p17':()=>import('../test/fixtures/dob-native/2026-10-20-p17.json'),
 };
 export const loadCaseFixture=async c=>(await FIXTURES[c.day]()).default;
@@ -36,6 +37,9 @@ export const CHART_DEBUGGER_CASES=[
  {id:'P17',label:'P17 · DOB Short · 20.10.',day:'2026-10-20-p17',dir:-1,orderBlocks:[1792473900,1792479900]},
  {id:'507',label:'Pin 507 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794204000,1794205800]},
  {id:'508',label:'Pin 508 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794205800,1794207000]},
+ // 497/498: beide reagieren true, das Paar scheitert am OB1-Hold (M1 08:00 sticht über das OB1-Retest-Hoch 4192,19).
+ {id:'497',label:'Pins 497/498 · DOB Short? · 12.10. · OB1-Hold bricht 08:00',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800]},
+ {id:'498',label:'Pin 498 · Short · 12.10. · OB2 einzeln',day:'2026-10-12',dir:-1,orderBlocks:[1791784800]},
  {id:'U1',label:'U1 · Short · 03.11. · Gegen-FVG offen, OB bricht vor Entry b',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
  {id:'U2',label:'U2 · Short · 09.11. · FVG ragt unten raus, SL M5-Kante',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
  {id:'U3',label:'U3 · Short · 04.11. · Reaktion nach 22:00, kein Entry',day:'2026-11-04',dir:-1,orderBlocks:[1793824800]},

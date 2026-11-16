@@ -43,6 +43,15 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
   expect((await at('P17')).pair.entries).toMatchObject({a:{status:'invalid',reason:'opposingFvgOpen',knownAt:1792481460},b:{status:'pending'}});
   expect(ob2(await at('P17'))).toMatchObject({state:'unknown',structuralState:'true',verdict:{state:'pending'}});
  });
+ it('Pins 497/498: both OBs react, but the M1 08:00 high breaks the OB1 hold before the OB2 reaction',async()=>{
+  const {orderBlocks:[first,second],m1,pair}=await at('497');
+  expect(pair).toBeNull();
+  expect(first.reaction).toMatchObject({state:'true',contact:{candleTime:1791784380},penetration:{extremePrice:4192.19},knownAt:1791784680});
+  expect(second.reaction).toMatchObject({state:'true',contact:{candleTime:1791788640},knownAt:1791789300});
+  const holdBreak=m1.find(c=>c.time>first.reaction.knownAt&&c.high>first.reaction.penetration.extremePrice);
+  expect(holdBreak).toMatchObject({time:1791784800,high:4192.69});
+  expect(holdBreak.time).toBeLessThan(second.reaction.knownAt);
+ });
  it('the near-touch switch restores the near-touch reactions of OB2',async()=>{
   expect((await at('P14',undefined,NEAR)).pair.entries).toMatchObject({a:{status:'ready',entryTime:1792151400,entryPrice:4176.29,stopPrice:4181.98},
    b:{status:'skipped',reason:'entryAlreadyFound',knownAt:1792151400}});
