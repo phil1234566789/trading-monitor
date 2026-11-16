@@ -3,7 +3,10 @@ import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {doubleOrderBlockInput} from './doubleOrderBlockInput.js';
 import {obMinimum} from './instrumentConfig.js';
 import {createOrderBlockReactionContext,reactionOrSkip,internalOrderBlockFvgs} from './orderBlockReaction.js';
-import {detectDoubleOrderBlocks,reactionOptionsFor} from './doubleOrderBlocks.js';
+import {detectDoubleOrderBlocks,reactionOptionsFor,firstRetestHoldAnchorOf,firstRetestHoldHistory} from './doubleOrderBlocks.js';
+import {orderBlockRetestHoldAt} from './orderBlockRetestHold.js';
+import {structuralState} from './obReactionGraph.js';
+import {formatBerlinTime} from './berlinTime.js';
 import references from '../test/fixtures/dob-native/references.json';
 import EXPECTATIONS from '../test/fixtures/dob-native/chart-debugger-expectations.json';
 
@@ -38,8 +41,9 @@ export const CHART_DEBUGGER_CASES=[
  {id:'507',label:'Pin 507 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794204000,1794205800]},
  {id:'508',label:'Pin 508 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794205800,1794207000]},
  // 497/498: beide reagieren true, das Paar scheitert am OB1-Hold (M1 08:00 sticht über das OB1-Retest-Hoch 4192,19).
- {id:'497',label:'Pins 497/498 · DOB Short? · 12.10. · OB1-Hold bricht 08:00',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800]},
- {id:'498',label:'Pin 498 · Short · 12.10. · OB2 einzeln',day:'2026-10-12',dir:-1,orderBlocks:[1791784800]},
+ // graphRole: Startansicht des Knotenplans; 497 zeigt den Hold-Knoten von OB1, 498 seine eigene Reaktion als OB2.
+ {id:'497',label:'Pin 497 · OB1 · Short · 12.10. · Paar mit 498',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800],graphRole:'first'},
+ {id:'498',label:'Pin 498 · OB2 · Short · 12.10. · Paar mit 497',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800]},
  {id:'U1',label:'U1 · Short · 03.11. · Gegen-FVG offen, OB bricht vor Entry b',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
  {id:'U2',label:'U2 · Short · 09.11. · FVG ragt unten raus, SL M5-Kante',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
  {id:'U3',label:'U3 · Short · 04.11. · Reaktion nach 22:00, kein Entry',day:'2026-11-04',dir:-1,orderBlocks:[1793824800]},
@@ -52,6 +56,7 @@ export function expectedText(c){
  const e=expectationOf(c);
  if(!e)return 'kein Soll';
  if(e.verdict==='offen')return `Offen · ${e.note}`;
+ if(e.hold)return `${e.verdict==='positive'?'Positiv':'Negativ'} · Hold ${e.hold.status==='failed'?'gebrochen '+formatBerlinTime(e.hold.breakAt):e.hold.status}`;
  const routes=Object.entries(e.routes??{}),rejected=routes.filter(([,x])=>x==='rejected').map(([k])=>k);
  const detail=e.dob?'DOB':e.reaction==='false'?'Reaktion false, kein Entry':rejected.length?`Entry ${rejected.join('+')} abgelehnt`:`Reaktion ${e.reaction}`;
  return `${e.verdict==='positive'?'Positiv':'Negativ'} · ${detail}`;
@@ -63,6 +68,8 @@ export function productMatches(c,result){
  // Offen = Philip klärt noch; ✓ heißt nur: das Produkt liefert hier weiter denselben Zustand (bei unknown: denselben Grund).
  if(e.verdict==='offen')return r?.verdict?.state===e.state&&(e.state!=='unknown'||r.verdict.reason===e.reason);
  if(e.dob&&!result.pair)return false;
+ if(e.dob===false&&result.pair)return false;
+ if(e.hold)return result.hold?.status===e.hold.status&&(e.hold.breakAt==null||result.hold.firstSweepTime===e.hold.breakAt);
  if(e.reaction&&r?.state!==e.reaction)return false;
  if(e.verdict==='negative'&&Object.values(r?.routes??{}).some(route=>route.status==='entry'))return false;
  return Object.entries(e.routes??{}).every(([k,x])=>r?.routes?.[k]?.status===x);
@@ -98,5 +105,18 @@ export function evaluateCase(c,fixture,evaluatedAt,options={}){
   const id=`dob:${INSTRUMENT}:${c.dir}:${c.orderBlocks[0]}:${c.orderBlocks[1]}`;
   pair=detectDoubleOrderBlocks({...input,options}).pairs.find(p=>p.id===id)??null;
  }
- return {m1,m5,context,orderBlocks,pair};
+ const [first,second]=c.orderBlocks.length===2?orderBlocks:[];
+ const hold=structuralState(first?.reaction)==='true'&&first.reaction.knownAt<=evaluatedAt
+  ?caseHold(context,first,second,m1,evaluatedAt,reactionOptionsFor('first',options).bridgeClosures):null;
+ return {m1,m5,context,orderBlocks,pair,hold};
+}
+
+// Hold-Gate wie im Detektor, aber auch ohne erkanntes Paar (dort zählt das Produkt den Bruch nur in stats).
+// Geprüft bis zur OB2-Reaktion; solange sie aussteht, bis zum Sliderstand.
+function caseHold(context,first,second,m1,evaluatedAt,bridgeClosures){
+ const final=structuralState(second.reaction)==='true'&&second.reaction.knownAt<=evaluatedAt;
+ const secondRetestAt=second.reaction?.contact?.candleTime??evaluatedAt,target={orderBlock:first.orderBlock,reaction:first.reaction};
+ const anchor=firstRetestHoldAnchorOf(context,target,secondRetestAt,bridgeClosures);
+ const at=orderBlockRetestHoldAt(firstRetestHoldHistory(context,target,secondRetestAt,m1,evaluatedAt,bridgeClosures),final?second.reaction.fvg.recognizedAt:evaluatedAt);
+ return {...at,anchor,final,breakCandle:m1.find(x=>x.time===at.firstSweepTime)??null};
 }

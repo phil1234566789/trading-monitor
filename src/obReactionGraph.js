@@ -142,13 +142,13 @@ function bCheckNode(b){
 
 // Rollen-Weiche für Graph und Sprungziele: OB1 eines DOB endet im Hold-Gate (nur dort zählen Paar und Partner),
 // OB2 bzw. Einzel-OB in SL und Entry-Routen (Routen-Knoten erst mit Reaktion true, Ausgabe zeigt alle Produktrouten).
-function roleView({entry,pair=null,partner=null}){
+function roleView({entry,pair=null,partner=null,hold=null}){
  const r=entry.reaction,first=(entry.role??'second')==='first',live=structuralState(r)==='true';
- return {first,live,routes:live&&!first?r.routes:{},resultRoutes:first?{}:r?.routes??{},pair:first?pair:null,partner:first?partner:null};
+ return {first,live,routes:live&&!first?r.routes:{},resultRoutes:first?{}:r?.routes??{},pair:first?pair:null,partner:first?partner:null,hold:first?hold:null};
 }
 
 export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,bridgeClosures=false,...links}){
- const {orderBlock:ob,reaction:r}=entry,adj=adjective(dir),{first,live,routes,pair,partner}=roleView({entry,...links});
+ const {orderBlock:ob,reaction:r}=entry,adj=adjective(dir),{first,live,routes,pair,partner,hold}=roleView({entry,...links});
  const contact=r?.contact,fvg=r?.fvg,rejected=structuralState(r)==='false',closed=r?.reason==='marketClosed',open=s=>s?'unknown':'not-visited';
  const n={};
  n.detect={label:`${dir===1?'Bullische':'Bärische'} M5-OB erkannt`,status:ob?'visited':'unknown',sub:ob?`${range(ob)} · ${time(ob.recognizedAt)}`:'noch nicht bekannt',
@@ -173,14 +173,20 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
  n.reaction={label:`Reaktion true (neue ${adj} M1-FVG)`,status:live?'visited':'not-visited',sub:live?`${range(fvg)} · ${time(fvg.recognizedAt)}`:'○ nicht besucht',
   detail:live?[`Reaktions-FVG ${range(fvg)}, bekannt ${time(fvg.recognizedAt)}.`,
    r.penetration?.status==='ready'?`Retest bis ${pct(r.penetration.maxPenetrationFraction*100)} in die M5-OB.`:null].filter(Boolean):['Noch keine Reaktions-FVG.']};
- // Das Produkt zählt ein gescheitertes Hold-Gate nur in stats, nicht je Paar: ohne Paar bleibt der Grund offen.
- const holdLive=first&&live,partnerLive=structuralState(partner?.reaction)==='true',noDob=holdLive&&!pair&&partnerLive;
- n.hold={label:'OB1: Retest-Extrem hält bis OB2-Reaktion?',status:!holdLive?'not-visited':pair?'visited':'unknown',
-  sub:!holdLive?'○ nicht besucht':pair?`ja · ${pair.firstRetestHold.status}`:noDob?'kein DOB · Grund offen':'wartet auf OB2-Reaktion',
-  detail:[pair?`DOB erkannt um ${time(pair.recognizedAt)}; Hold ${pair.firstRetestHold.status}.`
-   :noDob?'OB2 hat reagiert, aber kein DOB: Hold gescheitert oder anderes Gate (Retest-Tag, Preislücke, kein Entry). Das Produkt nennt den Grund nicht je Paar.'
-   :'Hold wird bis zur OB2-Reaktion gemessen.']};
- n.noDob={label:'kein DOB',status:open(noDob),sub:noDob?'◇ Grund offen':'○ nicht besucht',detail:n.hold.detail};
+ // Das Produkt zählt ein gescheitertes Hold-Gate nur in stats; den Beleg je Fall rechnet evaluateCase (hold) nach.
+ const holdLive=first&&live,partnerLive=structuralState(partner?.reaction)==='true',holdFailed=holdLive&&hold?.status==='failed';
+ const noDob=holdLive&&!pair&&partnerLive&&!holdFailed,sweep=hold?.breakCandle,sweepPrice=sweep&&price(dir===1?sweep.low:sweep.high);
+ n.hold={label:'OB1: Retest-Extrem hält bis OB2-Reaktion?',status:!holdLive?'not-visited':holdFailed?'rejected':pair?'visited':'unknown',
+  sub:!holdLive?'○ nicht besucht':holdFailed?`nein · gebrochen ${time(hold.firstSweepTime)} @ ${sweepPrice}`
+   :pair?`ja · ${pair.firstRetestHold.status}`:noDob?'kein DOB · Grund offen':'hält bisher · wartet auf OB2-Reaktion',
+  detail:[hold&&`Anker: ${hold.anchor.kind==='exact'?'exaktes ':'Reaktions-'}Retest-Extrem ${price(hold.anchor.price)} ab ${time(hold.anchor.fromTime)}.`,
+   hold&&`Prüfzeitraum ${time(hold.checkedFrom)}–${time(hold.checkedThrough)} ${hold.final?'(bis zur OB2-Reaktion)':'(bis Sliderstand, OB2-Reaktion steht aus)'}.`,
+   holdFailed?`Gebrochen: M1 ${time(hold.firstSweepTime)} ${dir===1?'Low':'High'} ${sweepPrice} jenseits des Ankers, bekannt ${time(hold.firstSweepKnownAt)} → kein DOB.`
+    :hold?`Ergebnis: ${hold.status}${hold.reason?' · '+hold.reason:''}.`:null,
+   pair?`DOB erkannt um ${time(pair.recognizedAt)}; Hold ${pair.firstRetestHold.status}.`
+    :noDob?'OB2 hat reagiert, aber kein DOB: anderes Gate (Retest-Tag, Preislücke, kein Entry). Das Produkt nennt den Grund nicht je Paar.'
+    :hold?null:'Hold wird bis zur OB2-Reaktion gemessen.'].filter(Boolean)};
+ n.noDob={label:'kein DOB',status:holdFailed?'rejected':open(noDob),sub:holdFailed?'Hold gebrochen':noDob?'◇ Grund offen':'○ nicht besucht',detail:n.hold.detail};
  const list=Object.values(routes),entries=list.filter(x=>x.status==='entry');
  const stopKey=list.map(x=>x.status==='entry'?x.stopAnchor:x.reason).find(k=>STOP_BRANCH[k]),slLive=live&&!first&&list.some(hasEntryCandidate);
  const chosen=entries[0],anchor=chosen?.stopAnchor;
@@ -251,11 +257,11 @@ function history(ob,r,routes,evaluatedAt){
 // Sprungziele für „vorige/nächste Änderung“: alle Zeitpunkte, an denen sich der Plan ändert, aus den knownAt-Zeiten
 // des Endergebnisses. Das Produkt ist zeitpunkttreu, darum gelten sie auch für frühere Slider-Stände.
 export function graphChangeTimes({entry,context,...links}){
- const {orderBlock:ob,reaction:r}=entry,{resultRoutes,pair,partner}=roleView({entry,...links});
+ const {orderBlock:ob,reaction:r}=entry,{resultRoutes,pair,partner,hold}=roleView({entry,...links});
  if(!ob)return [];
  // Hold-Knoten zeigt Paar/Partner erst ab der eigenen Reaktion true; vorher wäre der Sprung leer.
  const holdFrom=structuralState(r)==='true'?r.knownAt:Infinity,fromHold=t=>t>=holdFrom?t:null;
- const times=[ob.recognizedAt,r?.contact?.knownAt,r?.knownAt,r?.verdict?.knownAt,fromHold(pair?.recognizedAt),fromHold(partner?.reaction?.knownAt)];
+ const times=[ob.recognizedAt,r?.contact?.knownAt,r?.knownAt,r?.verdict?.knownAt,fromHold(pair?.recognizedAt),fromHold(partner?.reaction?.knownAt),fromHold(hold?.firstSweepKnownAt)];
  for(const x of Object.values(resultRoutes).filter(x=>x.status!=='skipped'))times.push(x.status==='entry'?x.entryTime:x.knownAt);
  times.push(...attemptHistory(resultRoutes.b).map(h=>h.at));
  // Ohne Entry a fällt das sichtbare Paar bei einer b-Ablehnung weg und kehrt mit einem neuen Versuch zurück.

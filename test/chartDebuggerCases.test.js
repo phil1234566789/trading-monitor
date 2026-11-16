@@ -44,8 +44,11 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
   expect(ob2(await at('P17'))).toMatchObject({state:'unknown',structuralState:'true',verdict:{state:'pending'}});
  });
  it('Pins 497/498: both OBs react, but the M1 08:00 high breaks the OB1 hold before the OB2 reaction',async()=>{
-  const {orderBlocks:[first,second],m1,pair}=await at('497');
+  const {orderBlocks:[first,second],m1,pair,hold}=await at('497');
   expect(pair).toBeNull();
+  expect(hold).toMatchObject({status:'failed',reason:'retestExtremeSwept',final:true,checkedFrom:1791784680,checkedThrough:1791789300,
+   firstSweepTime:1791784800,firstSweepKnownAt:1791784860,anchor:{kind:'exact',price:4192.19,fromTime:1791784680},breakCandle:{high:4192.69}});
+  expect(expectedText(byId('498'))).toBe('Negativ · Hold gebrochen 08:00');
   expect(first.reaction).toMatchObject({state:'true',contact:{candleTime:1791784380},penetration:{extremePrice:4192.19},knownAt:1791784680});
   expect(second.reaction).toMatchObject({state:'true',contact:{candleTime:1791788640},knownAt:1791789300});
   const holdBreak=m1.find(c=>c.time>first.reaction.knownAt&&c.high>first.reaction.penetration.extremePrice);

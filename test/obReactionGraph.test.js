@@ -38,6 +38,16 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(g.edges.reactionCounter).toBe('not-visited');
   expect(g.head).toBe('Intern: true · Routen: – (OB1)');
  });
+ it('497 OB1: Hold-Knoten zeigt Anker, Prüfzeitraum und die brechende M1-Kerze',async()=>{
+  const c=caseOf('497'),fixture=await loadCaseFixture(c),at=caseSteps(c,fixture).through,result=evaluateCase(c,fixture,at);
+  const entry=result.orderBlocks[0],g=obReactionGraph({dir:c.dir,entry,context:result.context,evaluatedAt:at,pair:result.pair,hold:result.hold,partner:result.orderBlocks[1]});
+  expect(status(g)).toMatchObject({hold:'rejected',noDob:'rejected'});
+  expect(g.edges.holdNoDob).toBe('rejected');
+  expect(g.nodes.hold.sub).toBe('nein · gebrochen 08:00 @ 4.192,69');
+  expect(g.nodes.hold.detail).toEqual(['Anker: exaktes Retest-Extrem 4.192,19 ab 07:58.','Prüfzeitraum 07:58–09:15 (bis zur OB2-Reaktion).',
+   'Gebrochen: M1 08:00 High 4.192,69 jenseits des Ankers, bekannt 08:01 → kein DOB.']);
+  expect(graphChangeTimes({entry,context:result.context,pair:result.pair,hold:result.hold,partner:result.orderBlocks[1]})).toContain(1791784860);
+ });
  it('503: Gegenkante vor der FVG gebrochen → Reaktion false',async()=>{
   const g=await graphAt('503');
   expect(g.head).toBe('Intern: false (M5-Gegenkante gebrochen) · Routen: a rejected, b rejected');

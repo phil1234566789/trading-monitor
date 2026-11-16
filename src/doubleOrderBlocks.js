@@ -26,10 +26,14 @@ function pairEntries(reaction,direction,m1,evaluatedAt,instrument){
 export function firstRetestHoldAnchor(exactAnchor,secondRetestAt){
  return exactAnchor&&exactAnchor.fromTime<=secondRetestAt?'exact':'near';
 }
-function firstRetestHoldHistory(context,first,secondRetestAt,m1,evaluatedAt,bridgeClosures){
+// Auch vom Chart-Debugger genutzt, damit er den Hold eines gescheiterten Paars mit demselben Anker zeigt.
+export function firstRetestHoldAnchorOf(context,first,secondRetestAt,bridgeClosures){
  first.exactAnchor??=exactRetestAnchor(context,first.orderBlock,first.reaction,{bridgeClosures})??false;
- const kind=firstRetestHoldAnchor(first.exactAnchor,secondRetestAt),key=`${kind}Hold`;
- const anchor=kind==='exact'?first.exactAnchor:{fromTime:first.reaction.fvg.recognizedAt,price:first.reaction.penetration.extremePrice};
+ const kind=firstRetestHoldAnchor(first.exactAnchor,secondRetestAt);
+ return {kind,...(kind==='exact'?first.exactAnchor:{fromTime:first.reaction.fvg.recognizedAt,price:first.reaction.penetration.extremePrice})};
+}
+export function firstRetestHoldHistory(context,first,secondRetestAt,m1,evaluatedAt,bridgeClosures){
+ const anchor=firstRetestHoldAnchorOf(context,first,secondRetestAt,bridgeClosures),key=`${anchor.kind}Hold`;
  first[key]??=orderBlockRetestHoldHistory({candles:m1,direction:first.orderBlock.dir===1?'long':'short',
   anchorPrice:anchor.price,fromTime:anchor.fromTime,evaluatedAt,instrument:bridgeClosures?context.instrument:null});
  return first[key];

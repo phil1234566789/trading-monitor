@@ -23,10 +23,10 @@ const nearTouch=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.nearTouch),bridgeClosures
 const options=computed(()=>({nearTouch:nearTouch.value,bridgeClosures:bridgeClosures.value}));
 const result=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,evaluatedAt.value,options.value));
 // Knotenplan zeigt standardmäßig den Entry-tragenden OB (OB2 bzw. Einzel-OB); bei DOBs ist OB1 umschaltbar.
-const graphRole=ref('second');
-watch(caseId,()=>{graphRole.value='second';});
-const graphInput=({orderBlocks,context,pair})=>{const entry=orderBlocks.find(o=>o.role===graphRole.value);
- return {entry,context,pair,partner:orderBlocks.find(o=>o!==entry)??null};};
+const graphRole=ref(current.value.graphRole??'second');
+watch(caseId,()=>{graphRole.value=current.value.graphRole??'second';});
+const graphInput=({orderBlocks,context,pair,hold})=>{const entry=orderBlocks.find(o=>o.role===graphRole.value);
+ return {entry,context,pair,hold,partner:orderBlocks.find(o=>o!==entry)??null};};
 const graph=computed(()=>result.value&&obReactionGraph({...graphInput(result.value),dir:current.value.dir,evaluatedAt:evaluatedAt.value,
  bridgeClosures:bridgeClosures.value,nearTouch:reactionOptionsFor(graphRole.value,{nearTouch:nearTouch.value}).nearTouch}));
 // Einmal je Fall/Schalter/Rolle am Fensterende ausgewertet; die Sprünge selbst rechnen nichts mehr.
