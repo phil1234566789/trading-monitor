@@ -4,6 +4,7 @@ import {loadTradeSetup11Context} from '../tradeSetup11ContextLoader.js';
 import {sessions} from '../sessions.js';
 import {createTradeSetup11Worker} from '../tradeSetup11WorkerClient.js';
 import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
+import {mergeCandles} from '../candleCache.js';
 import {TRADE_SETUP_OB_SWEEP_PROFILE} from '../tradeSetup.js';
 import {restoreTradeSetupSourceReferences} from '../../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
 
@@ -45,7 +46,8 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
     const matching=context.symbol===input.symbol;
     if(!input.candles.length){evaluation++;worker.cancel();assessments.value=[];status.value='TS1.1: M5-Daten fehlen.';}
     return base.computeTradeSetups({...input,policyContext:{
-      instrument:input.symbol,m5Candles:input.candles,evaluatedAt:input.evaluatedAt,settings:input.settings??{},
+      // Längere Ankerhistorie des Loaders vorne anfügen, sonst bleibt TS1.1 bei altem D1-Anker unbekannt.
+      instrument:input.symbol,m5Candles:matching&&context.m5?mergeCandles(context.m5,input.candles):input.candles,evaluatedAt:input.evaluatedAt,settings:input.settings??{},
       sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE,
       h1Candles:matching?context.h1:[],d1Candles:matching?context.d1:[],
     }});
