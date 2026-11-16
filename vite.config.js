@@ -65,4 +65,20 @@ export default defineConfig({
   // /trading-monitor/ ausgehen und 404en. Hash-History (siehe router.js) macht den Rest der
   // SPA-Navigation davon unabhängig.
   base: "/trading-monitor/",
+  // Tests laufen ohne .env (CI hat keine Secrets): supabaseClient.js wirft sonst schon beim
+  // Import "supabaseUrl is required". Feste Dummy-Werte statt der lokalen .env, damit kein Test
+  // versehentlich gegen die echte DB läuft. SUPABASE_* braucht der Edge-Function-Client, den
+  // die *.test.ts über die MCP-Tools importieren (wirft sonst schon beim Import).
+  test: {
+    env: {
+      VITE_SUPABASE_URL: "http://localhost:54321",
+      VITE_SUPABASE_ANON_KEY: "vitest-dummy-anon-key",
+      SUPABASE_URL: "http://localhost:54321",
+      SUPABASE_ANON_KEY: "vitest-dummy-anon-key",
+    },
+    setupFiles: ["test/setup/denoStub.js"],
+    // Deno-Specifier "npm:paket@version/pfad" auf das gleichnamige node_modules-Paket abbilden.
+    // Versionen stimmen nur, solange package.json dieselben Pins führt (zod exakt 3.24.1).
+    alias: [{ find: /^npm:((?:@[^/@]+\/)?[^/@]+)(?:@[^/]+)?(\/.*)?$/, replacement: "$1$2" }],
+  },
 });

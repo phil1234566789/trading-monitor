@@ -63,6 +63,12 @@ const TEILPORTS = [
   // (currentPrice/priceThreshold) und einen isPriceRelevant-Zweig, und selectRelevantHtfLevels
   // fehlt im Backend komplett. Beides wird von computeRangesPivots nicht benutzt.
   "liquidityDetection",
+  // Browser-Seite baut nur Snapshot/Label/Hit-Test und importiert die Validierung direkt aus der
+  // Deno-Datei — kein Duplikat, sondern Wrapper um die eine Quelle.
+  "doubleOrderBlockPin",
+  // Laut Kopfkommentar bewusster Deno-Spiegel für das TS1.1-Opt-in, mit TS-Typen und lokalen
+  // Imports (liquidity.ts/ageTier.ts) statt der Browser-Helfer.
+  "tradeSetupSweepSources",
 ];
 
 // Kommentare duerfen abweichen (die MCP-Kopien verweisen auf andere Nachbardateien), Import-Pfade

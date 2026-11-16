@@ -3,7 +3,8 @@ import {watcherFreshness} from '../supabase/functions/_shared/setup2Freshness.js
 import {partitionLiveSources,continuousHistory,recoveryConfig,recoveryMatches,recoverSuspendedRange,suspendedResumeTime,refreshRecoveredHistory} from '../services/setup2/recovery.js';
 const mock=vi.hoisted(()=>({scan:null}));
 vi.mock('../src/tradeSetup2Scan.js',()=>({scanTradeSetup2Window:(input)=>mock.scan(input)}));
-vi.mock('../services/setup2/events.js',()=>({structureReady:()=>false,rememberStructure:()=>null,minuteAlarmEvents:minute=>[{id:`event-${minute.knownAt}`,kind:'trading',stage:3,payload:{}}]}));
+// importOriginal: recovery.js braucht inzwischen den echten structureTrackingKey.
+vi.mock('../services/setup2/events.js',async importOriginal=>({...await importOriginal(),structureReady:()=>false,rememberStructure:()=>null,minuteAlarmEvents:minute=>[{id:`event-${minute.knownAt}`,kind:'trading',stage:3,payload:{}}]}));
 const at=Date.parse('2026-10-14T10:00:00Z')/1000,iso=t=>new Date(t*1000).toISOString();
 it('live excludes suspended raw and retained sources while preserving fresh sources',()=>{
  const a={instrument:'GBPUSD',tradeSetupId:1},b={instrument:'GBPUSD',tradeSetupId:2};

@@ -2,8 +2,8 @@
 export function instrumentConfig(symbol) {
   return symbol === 'XAUUSD'
     ? { precision: 2, tick: 0.01, pip: 0.01, strategyScale: 15000,
-        minFvg: { '5m': 0, '1H': 2.53, '4H': 6.19 } }
-    : { precision: 5, tick: 0.00001, pip: 0.0001, strategyScale: 1, minFvg: {} };
+        minFvg: { '5m': 0, '1H': 2.53, '4H': 6.19 }, dobMaxPositiveZoneGap: 2 }
+    : { precision: 5, tick: 0.00001, pip: 0.0001, strategyScale: 1, minFvg: {}, dobMaxPositiveZoneGap: null };
 }
 
 export function strategyDistance(forexPriceDistance, symbol) {
