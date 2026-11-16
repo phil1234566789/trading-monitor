@@ -4,7 +4,8 @@ import IconButton from './ui/IconButton.vue';
 import ActionButton from './ui/ActionButton.vue';
 import {exitKindLabel,exitForecastLabel,stopChoiceLabel,stopPreviewReason} from '../mmtExitPresentation.js';
 const props=defineProps({rows:Array,dragging:Boolean,guide:Object,cancellation:Object});
-const emit=defineEmits(['move','split','nudge','share','save','cancel','add-stop']);
+const emit=defineEmits(['move','split','nudge','share','save','cancel','add-stop','add-target']);
+const targetChoiceMissing='R-Basis fehlt: zuerst einen SL hinter dem Entry setzen.';
 const editing=ref(null),percent=ref('');
 const key=row=>`${row.orderId}:${row.kind??'target'}:${row.index}`;
 const label=row=>exitKindLabel(row.kind);
@@ -25,8 +26,11 @@ function keyboard(event,row,action){if(event.key==='Enter'||event.key===' '){eve
   <div v-for="row in rows" :key="key(row)" :data-tp-key="key(row)" class="tp-controls" :class="{selected:row.selected}" :style="{top:row.y+'px',right:row.right+'px'}" :title="`${row.accountLabel} · Position ${row.positionId} · ${label(row)} · ${row.price}`" :aria-label="`${row.accountLabel} · Position ${row.positionId} · ${label(row)}${row.kind==='entry'?'':' '+(row.index+1)} · ${row.price}${row.kind==='entry'?'':' · '+exitForecastLabel(row.forecast)+' · '+percentLabel(row.percent)+' Prozent'}`" @pointerdown.stop @click.stop @wheel.stop @keydown.esc.stop.prevent="cancel(row)">
    <span class="tp-label" :title="`${row.accountLabel} · Position ${row.positionId}`">{{row.accountLabel}}</span><span class="tp-price" :title="row.offscreen?'Preis außerhalb des sichtbaren Chartbereichs; Bedienung am Rand.':undefined">{{label(row)}}{{row.kind==='entry'?'':row.index+1}} · {{row.price}}<span v-if="row.offscreen"> ↗</span><span v-if="row.dirty"> *</span></span>
    <template v-if="row.kind==='entry'">
-    <span v-for="mode in ['risky','full']" :key="mode" :title="stopPreviewReason(row.stopPreviews?.[mode],row.stopReason)">
+    <span v-for="mode in row.offerStop?['risky','full']:[]" :key="mode" :title="stopPreviewReason(row.stopPreviews?.[mode],row.stopReason)">
      <ActionButton class="tp-share" :disabled="!row.canAddStop||!row.stopPreviews?.[mode]?.price" :title="stopPreviewReason(row.stopPreviews?.[mode],row.stopReason)" @click="emit('add-stop',row,mode)">{{stopChoiceLabel(mode,row.stopPreviews?.[mode])}}</ActionButton>
+    </span>
+    <span v-for="choice in row.targetChoices??[]" :key="'tp'+choice.r" :title="choice.price?`TP ${choice.r}R · ${choice.price}`:targetChoiceMissing">
+     <ActionButton class="tp-share" :disabled="!choice.price" :title="choice.price?`TP ${choice.r}R · ${choice.price}`:targetChoiceMissing" @click="emit('add-target',row,choice.r)">TP {{choice.r}}R</ActionButton>
     </span>
    </template>
    <template v-else>

@@ -48,6 +48,19 @@ export function addStopDraft(orderId,mode){
  drafts.set(orderId,{...value,stops:[{price:preview.price,percent:100,volume:''}],riskMode:mode,dirty:true,stopsDirty:true});
  selectTargetDraft(orderId,0,'stop');return true;
 }
+export const TARGET_CHOICES_R=[2,3];
+// TP-Vorschlag in R vom Entry, mit derselben R-Basis wie die Netto/R-Prognose der Linien.
+export function targetChoicePrice(value,r){
+ const basis=value&&draftRiskBasis(value);if(!basis||!(value.entryPrice>0))return null;
+ const price=value.entryPrice+(value.direction==='long'?1:-1)*r*Math.abs(value.entryPrice-basis);
+ return price>0?(Number.isInteger(value.digits)?Number(price.toFixed(value.digits)):price):null;
+}
+export function addTargetDraft(orderId,r){
+ const value=drafts.get(orderId),price=TARGET_CHOICES_R.includes(r)&&targetChoicePrice(value,r);
+ if(!value||value.targets?.length||!price)return false;
+ drafts.set(orderId,{...value,targets:[{price,percent:100,volume:''}],dirty:true});
+ selectTargetDraft(orderId,0,'target');return true;
+}
 export function draftRiskBasis(draft){
  if(draft.basisSl??draft.initialSl)return draft.basisSl??draft.initialSl;
  const prices=draft.stopsDirty?(draft.stops??[]).map(s=>Number(s.price)).filter(p=>Number.isFinite(p)&&p>0):[];
@@ -70,9 +83,10 @@ export function targetDraftLines(symbol){
   label:`${kind==='stop'?'SL':'TP'} ${index+1} · ${d.dirty?'Entwurf':'gespeichert'} · ${allocation.targets[index]?.volume??(target.volume===''?'—':target.volume??'—')} Lot`,
  }]:[]);});});
 }
-export function stopEntryDraftLines(symbol){
- return [...drafts.entries()].filter(([,d])=>d.symbol===symbol&&d.online!==false&&d.needsStop&&!d.stops?.length).map(([orderId,d])=>({
+export function entryDraftLines(symbol){
+ return [...drafts.entries()].filter(([,d])=>d.symbol===symbol&&d.online!==false&&((d.needsStop&&!d.stops?.length)||!d.targets?.length)).map(([orderId,d])=>({
   orderId,index:-1,kind:'entry',price:d.entryPrice,entryTime:d.entryTime,entryPrice:d.entryPrice,accountLabel:d.accountLabel,positionId:d.positionId,
   canAddStop:d.canAddStop,stopPreviews:d.stopPreviews,stopReason:d.stopReason,dirty:d.dirty,direction:d.direction,
+  offerStop:Boolean(d.needsStop&&!d.stops?.length),targetChoices:d.targets?.length?[]:TARGET_CHOICES_R.map(r=>({r,price:targetChoicePrice(d,r)})),
  }));
 }

@@ -1,5 +1,5 @@
 import {afterEach,describe,it,expect} from 'vitest';
-import {setTargetDraft,removeTargetDraft,useTargetDraft,splitTargetDraft,changeTargetShare,moveTargetDraft,selectTargetDraft,targetDraftLines,stopEntryDraftLines,addStopDraft} from '../src/mmtTargetDrafts.js';
+import {setTargetDraft,removeTargetDraft,useTargetDraft,splitTargetDraft,changeTargetShare,moveTargetDraft,selectTargetDraft,targetDraftLines,entryDraftLines,addStopDraft,addTargetDraft} from '../src/mmtTargetDrafts.js';
 
 afterEach(()=>{removeTargetDraft('exit');removeTargetDraft('other');});
 const position=()=>({symbol:'XAUUSD',entryPrice:2000,initialSl:null,basisSl:null,positionVolume:1,direction:'long',digits:2,
@@ -11,11 +11,22 @@ const position=()=>({symbol:'XAUUSD',entryPrice:2000,initialSl:null,basisSl:null
 describe('joint TP and SL drafts',()=>{
  it('adds the risk preview as an unsaved whole-position SL without changing targets or historical risk',()=>{
   setTargetDraft('exit',position());
-  expect(stopEntryDraftLines('XAUUSD')).toHaveLength(1);
+  expect(entryDraftLines('XAUUSD')).toHaveLength(1);
   expect(addStopDraft('exit','risky')).toBe(true);
   expect(useTargetDraft('exit').value).toMatchObject({stops:[{price:1997.75,percent:100,volume:''}],riskMode:'risky',stopsDirty:true,dirty:true,initialSl:null,basisSl:null,selectedKind:'stop',selectedIndex:0});
   expect(useTargetDraft('exit').value.targets).toEqual([{price:2020,volume:1}]);
-  expect(stopEntryDraftLines('XAUUSD')).toEqual([]);
+  expect(entryDraftLines('XAUUSD')).toEqual([]);
+ });
+ it('offers TP 2R/3R at the entry when no TP exists, measured from the R basis',()=>{
+  setTargetDraft('exit',{...position(),targets:[],needsStop:false,basisSl:1995});
+  expect(entryDraftLines('XAUUSD')[0]).toMatchObject({offerStop:false,targetChoices:[{r:2,price:2010},{r:3,price:2015}]});
+  expect(addTargetDraft('exit',3)).toBe(true);
+  expect(useTargetDraft('exit').value).toMatchObject({targets:[{price:2015,percent:100,volume:''}],dirty:true,stopsDirty:false,selectedKind:'target',selectedIndex:0});
+  expect(entryDraftLines('XAUUSD')).toEqual([]);expect(addTargetDraft('exit',2)).toBe(false);
+  setTargetDraft('exit',{...position(),targets:[],needsStop:false,direction:'short',basisSl:2004.5});
+  expect(entryDraftLines('XAUUSD')[0].targetChoices).toEqual([{r:2,price:1991},{r:3,price:1986.5}]);
+  setTargetDraft('exit',{...position(),targets:[]});
+  expect(entryDraftLines('XAUUSD')[0].targetChoices.every(c=>c.price===null)).toBe(true);expect(addTargetDraft('exit',2)).toBe(false);
  });
  it('does not overwrite an existing stop or use an unavailable preview',()=>{
   setTargetDraft('exit',{...position(),canAddStop:false});expect(addStopDraft('exit','risky')).toBe(false);

@@ -36,10 +36,17 @@ describe('shared chart SL/TP controls',()=>{
   expect(html).toContain('TP 1 teilen');expect(html).toContain('Netto ≈ $995.00');
  });
  it('offers only the two risk choices at an unprotected entry and makes clamps visible',async()=>{
-  const row={...base,kind:'entry',index:-1,canAddStop:true,showSave:false,stopPreviews:{risky:{price:1997,budget:{allocation:200,cost_buffer:25,effective_percent:.4}},full:{error:'risk_budget_exhausted'}}};
+  const row={...base,kind:'entry',index:-1,canAddStop:true,offerStop:true,showSave:false,stopPreviews:{risky:{price:1997,budget:{allocation:200,cost_buffer:25,effective_percent:.4}},full:{error:'risk_budget_exhausted'}}};
   const html=await render([row]);
   expect(html).toContain('SL 0,5 → 0,4 %');expect(html).toContain('SL 0,9 %');expect(html).not.toContain('Entry 0 teilen');
   expect(html).not.toContain('Speichern');expect(html).toContain('Kein freies Markt-/Tages-/Drawdownbudget.');
+ });
+ it('offers TP 2R/3R at the entry while no TP exists and explains a missing R basis',async()=>{
+  const row={...base,kind:'entry',index:-1,showSave:false,offerStop:false,targetChoices:[{r:2,price:2010},{r:3,price:2015}]};
+  const html=await render([row]);
+  expect(html).toContain('TP 2R');expect(html).toContain('TP 3R · 2015');expect(html).not.toContain('SL 0,5');
+  const missing=await render([{...row,targetChoices:[{r:2,price:null},{r:3,price:null}]}]);
+  expect(missing).toContain('R-Basis fehlt');expect(missing).toContain('disabled');
  });
  it('keeps unknown costs honest without hiding an available R value',async()=>{
   const html=await render([{...base,forecast:{estimatedNet:null,rr:2,currency:'USD'}}]);

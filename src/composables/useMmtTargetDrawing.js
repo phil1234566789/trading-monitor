@@ -1,6 +1,6 @@
 import {createApp,h,shallowRef,watch,watchEffect,onScopeDispose} from 'vue';
 import {LiquidityLinePrimitive} from '../liquidity.js';
-import {targetDraftLines,stopEntryDraftLines,addStopDraft,moveTargetDraft,selectTargetDraft,splitTargetDraft,changeTargetShare} from '../mmtTargetDrafts.js';
+import {targetDraftLines,entryDraftLines,addStopDraft,addTargetDraft,moveTargetDraft,selectTargetDraft,splitTargetDraft,changeTargetShare} from '../mmtTargetDrafts.js';
 import {exitForecastLabel} from '../mmtExitPresentation.js';
 import {barSecondsFor} from '../timeframes.js';
 import {cssColor} from '../chartColors.js';
@@ -60,12 +60,13 @@ export function useMmtTargetDrawing(visible=()=>true){
  }
  function split(line,event){const index=splitTargetDraft(line.orderId,line.index,line.kind);if(index!=null)start({...line,index},event);}
  function addStop(line,mode){if(addStopDraft(line.orderId,mode))activeTarget={...line,index:0,kind:'stop'};}
+ function addTarget(line,r){if(addTargetDraft(line.orderId,r))activeTarget={...line,index:0,kind:'target'};}
  function nudge(line,direction){activeTarget=line;moveTargetDraft(line.orderId,line.index,line.price+direction*10**-(line.digits??2),line.kind);}
  function tick(){
   if(!chart||!element||!visible())return;
   updateGuide();
   const height=chart.panes?.()[0]?.getHeight?.()??element.clientHeight-30,right=Math.max(0,element.clientWidth-chart.timeScale().width());
-  const rows=[...primitives.map(({line})=>line),...stopEntryDraftLines(context.value?.symbol)].map(line=>{
+  const rows=[...primitives.map(({line})=>line),...entryDraftLines(context.value?.symbol)].map(line=>{
    const lineY=series.priceToCoordinate(line.price),inside=lineY!=null&&lineY>=0&&lineY<=height;
    // Auch Sidebar-Entwürfe brauchen Speichern/Abbrechen außerhalb der Preisansicht; Linienpreise bleiben echt.
    return {...line,y:inside?lineY:(line.selected||line.dirty)?Math.min(height,Math.max(0,lineY??height)):null,lineY,right,offscreen:!inside,saveState:targetSaveState(line.orderId)};
@@ -104,7 +105,7 @@ export function useMmtTargetDrawing(visible=()=>true){
   windowTarget=element.ownerDocument?.defaultView;windowTarget?.addEventListener('blur',blur);
   element.addEventListener('pointerdown',down,true);document.addEventListener('pointermove',move,true);document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true);document.addEventListener('lostpointercapture',up,true);document.addEventListener('keydown',escape,true);document.addEventListener('pointerdown',leave,true);document.addEventListener('focusin',leave,true);
   overlay=document.createElement('div');element.appendChild(overlay);
-  app=createApp({render:()=>h(MmtTargetChartControls,{rows:controls.value,dragging:dragging.value,guide:guide.value,cancellation:cancellation.value,onCancel:cancel,onMove:start,onSplit:split,onNudge:nudge,onShare:(line,value)=>{activeTarget=line;changeTargetShare(line.orderId,line.index,value,line.kind);},onAddStop:addStop,onSave:line=>saveTargetDraft(line.orderId)})});app.mount(overlay);
+  app=createApp({render:()=>h(MmtTargetChartControls,{rows:controls.value,dragging:dragging.value,guide:guide.value,cancellation:cancellation.value,onCancel:cancel,onMove:start,onSplit:split,onNudge:nudge,onShare:(line,value)=>{activeTarget=line;changeTargetShare(line.orderId,line.index,value,line.kind);},onAddStop:addStop,onAddTarget:addTarget,onSave:line=>saveTargetDraft(line.orderId)})});app.mount(overlay);
   if(visible())frame=requestAnimationFrame(tick);
  }
  function refresh(value){context.value=value;}

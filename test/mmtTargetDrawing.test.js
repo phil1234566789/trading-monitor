@@ -57,10 +57,11 @@ describe('existing TP line dragging',()=>{
   drawing.create(chart,series,element);drawing.refresh({symbol:'XAUUSD',candles:[{time:100}],currentBar:'1m'});await nextTick();
   // Derselbe Entwurfswechsel wie Editor.update: kein Chart-Event und keine ausgewählte Linie.
   setTargetDraft('one',{...useTargetDraft('one').value,stops:[{price:5000,volume:.8}],dirty:true,stopsDirty:true});await nextTick();raf.mock.calls.at(-1)[0]();
-  const rows=renderOverlay.value().props.rows,row=rows.find(r=>r.orderId==='one');
+  const rows=renderOverlay.value().props.rows,row=rows.find(r=>r.orderId==='one'&&r.kind!=='entry');
   expect(row).toMatchObject({kind:'stop',price:5000,selected:false,offscreen:true,showSave:true});
+  expect(rows.find(r=>r.orderId==='one'&&r.kind==='entry').targetChoices).toHaveLength(2);
   expect(row.lineY).toBe(1110);expect(row.y).toBeGreaterThanOrEqual(0);expect(row.y).toBeLessThanOrEqual(400);
-  expect(rows.find(r=>r.orderId==='other')).toMatchObject({price:5100,showSave:true});
+  expect(rows.find(r=>r.orderId==='other'&&r.kind!=='entry')).toMatchObject({price:5100,showSave:true});
   for(let n=0;n<4;n++)raf.mock.calls.at(-1)[0]();
   expect(renderOverlay.value().props.rows).toBe(rows);
   renderOverlay.value().props.onCancel(row);await nextTick();
