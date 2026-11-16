@@ -5,15 +5,15 @@ import {cssColor} from '../chartColors.js';
 // Rendert nur das Graphmodell aus obReactionGraph.js; Knoten = v7-Baum, Optik = alter Codex-Knotenplan.
 const props=defineProps({graph:{type:Object,required:true},dir:{type:Number,required:true},scope:{type:String,default:''}});
 
-// [id, x-Mitte %, top px, Breite %]; Kanten im viewBox 400×890 (x = 4 × Prozent).
+// [id, x-Mitte %, top px, Breite %, Mindesthöhe px]; feste Anschlusskanten hinter den Kandidaten.
 const LAYOUT=[['detect',50,8,30],['touch',50,80,36],['closed',16,86,28],['broken',50,170,38],['false',16,186,28],
- ['reaction',50,280,36],['counter',62,370,52],['hold',16,470,28],['stop',62,470,52],['noDob',16,590,28],['routeA',46,590,30],['bCheck',81,590,34],
- ['entryB',81,700,30],['result',46,790,44]];
+ ['reaction',50,280,36],['counter',62,370,52],['hold',16,470,28],['routeA',46,470,30,108],['noDob',16,590,28],['bCheck',81,590,34,90],
+ ['entryB',81,700,30,70],['stop',46,800,52,120],['result',46,940,44]];
 const SIDE=['fvgList','internalOb'];
 const PATHS={detectTouch:'M200 66V80',touchClosed:'M128 109H120',touchBroken:'M200 138V170',brokenFalse:'M124 205H120',
- brokenReaction:'M200 242V280',reactionOb1:'M200 338V355H64V470',reactionCounter:'M200 338V355H248V370',counterStop:'M248 438V470',holdNoDob:'M64 540V590',
- stopA:'M248 568V578H184V590',stopB:'M244 620H256',bEntry:'M324 662V700',aResult:'M184 648V790',bResult:'M324 744V820H272',
- closedResult:'M8 114H4V860H96',falseResult:'M8 209H4V860H96',side:'M260 30H276'};
+ brokenReaction:'M200 242V280',reactionOb1:'M200 338V355H64V470',reactionCounter:'M200 338V355H248V370',counterA:'M248 438V452H184V470',holdNoDob:'M64 540V590',
+ aB:'M244 524H324V590',bCandidate:'M324 680V700',aStop:'M184 578V800',bStop:'M324 770V784H184V800',stopResult:'M184 920V940',
+ bEndResult:'M392 620H396V1010H272',closedResult:'M8 114H4V1010H96',falseResult:'M8 209H4V1010H96',side:'M260 30H276'};
 const STATUS_TEXT={visited:'● durchlaufen',unknown:'◇ offen / unbekannt','not-visited':'○ nicht besucht',alternative:'○ überholte Alternative',
  rejected:'× abgelehnt',info:'i Quelleninfo'};
 
@@ -30,15 +30,15 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
 <template>
  <section class="obg" :style="colors" @keydown.esc="selected=null">
   <h2>OB Reaktion · Knotenplan</h2>
-  <p class="goal">Entscheidungsbaum v7 (Default W1): <strong>true / false / pending / unknown</strong> für die Entry-Machbarkeit; Entry a, andernfalls b. Strukturelle Bestätigung und Zustände aus dem Produktergebnis zum Slider-Stand.</p>
+  <p class="goal">Entscheidungsbaum v7 (Default W1): <strong>true / false / pending / unknown</strong> für die Entry-Machbarkeit; Entry-Kandidat a, andernfalls b → SL-Prüfung → vollständiger Entry. Strukturelle Bestätigung und Zustände aus dem Produktergebnis zum Slider-Stand.</p>
   <p class="muted">Knoten anklicken → Details (Enter / Leertaste).</p>
   <div class="current"><strong>{{ graph.head }}</strong><span>{{ graph.text }}</span></div>
   <div class="plan" aria-label="Kausaler Algorithmuspfad" :data-direction="dir===1?'long':'short'">
-   <svg viewBox="0 0 400 890" preserveAspectRatio="none" aria-hidden="true">
+   <svg viewBox="0 0 400 1080" preserveAspectRatio="none" aria-hidden="true">
     <defs><marker id="obg-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>
     <path v-for="(d,id) in PATHS" :key="id" class="edge" :d="d" marker-end="url(#obg-arrow)" :data-status="graph.edges[id]" :data-kind="id==='side'?'support':null"/>
    </svg>
-   <button v-for="[id,x,y,w] in LAYOUT" :key="id" type="button" class="node" :style="{left:x+'%',top:y+'px',width:w+'%'}"
+   <button v-for="[id,x,y,w,h] in LAYOUT" :key="id" type="button" class="node" :style="{left:x+'%',top:y+'px',width:w+'%',minHeight:h?h+'px':undefined}"
     :data-node="id" :data-status="graph.nodes[id].status" :data-direction="(id==='counter'?-dir:dir)===1?'long':'short'" :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+nodeText(graph.nodes[id])"
     @click="toggle(id)">
     <span>{{ graph.nodes[id].label }}</span>
@@ -79,7 +79,7 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
 h2{font-size:17px;margin:4px 0}
 .goal{font-size:12px;margin:8px 0}.muted{color:var(--muted);margin:8px 0}
 .current{font-size:12px;display:grid;gap:4px;padding:8px;background:var(--surface)}
-.plan{position:relative;width:100%;height:890px;margin-top:8px}
+.plan{position:relative;width:100%;height:1080px;margin-top:8px}
 .plan>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .edge{fill:none;stroke:var(--edge);stroke-width:1.5;opacity:.35;stroke-dasharray:4 4}
 .edge[data-status="visited"]{stroke:var(--accent);stroke-width:3;opacity:1;stroke-dasharray:none}

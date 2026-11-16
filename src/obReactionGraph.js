@@ -113,11 +113,12 @@ function opponentNode(r,dir,live){
    r?.routes?.b?.status==='skipped'?`Entry b: ${SKIPPED_ENTRY_TEXT}.`:'Entry b wird geprüft, wenn a keinen Entry liefert. Quellen und Blocker stammen aus dem Produkt; keine zusätzliche Stärke- oder Auswahlregel.']};
 }
 
+const hasEntryCandidate=x=>x?.status==='entry'||Boolean(x?.status==='unknown'&&x.entryCandidate);
 function routeEntry(x,unvisited){
  if(x?.status==='skipped')return {status:'not-visited',sub:SKIPPED_ENTRY_TEXT,detail:[SKIPPED_ENTRY_TEXT]};
  if(!x)return {status:'not-visited',sub:'○ nicht besucht',detail:[unvisited]};
  return {status:ROUTE_STATUS[x.status],sub:x.status==='entry'?`${price(x.entryPrice)} · ${time(x.entryTime)}`:`${x.status} · ${reasonText(x.reason)}`,
-  detail:[x.status==='entry'?`Entry ${price(x.entryPrice)} um ${time(x.entryTime)}, SL ${price(x.stopLoss)}.`:`${x.status}: ${reasonText(x.reason)}.`,
+  detail:[x.status==='entry'?`Entry-Kandidat ${price(x.entryPrice)} um ${time(x.entryTime)}; SL wird danach geprüft.`:`${x.status}: ${reasonText(x.reason)}.`,
    x.entryFvg?`Quelle: Entry-b-FVG ${range(x.entryFvg)} · bekannt ${time(x.entryFvg.recognizedAt)}.`:null,
    x.entryCandidate?`Kandidat ${price(x.entryCandidate.entryPrice)} um ${time(x.entryCandidate.entryTime)}; ohne belegten SL kein Entry.`:null].filter(Boolean)};
 }
@@ -176,7 +177,7 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
    :'Hold wird bis zur OB2-Reaktion gemessen.']};
  n.noDob={label:'kein DOB',status:open(noDob),sub:noDob?'◇ Grund offen':'○ nicht besucht',detail:n.hold.detail};
  const list=Object.values(routes),entries=list.filter(x=>x.status==='entry');
- const stopKey=list.map(x=>x.status==='entry'?x.stopAnchor:x.reason).find(k=>STOP_BRANCH[k]),slLive=live&&!first;
+ const stopKey=list.map(x=>x.status==='entry'?x.stopAnchor:x.reason).find(k=>STOP_BRANCH[k]),slLive=live&&!first&&list.some(hasEntryCandidate);
  const chosen=entries[0],anchor=chosen?.stopAnchor;
  const branches=[`${anchor==='m5-edge'?'●':'○'} ja → ferne M5-Kante${anchor==='m5-edge'?' · '+price(chosen.stopLoss):''}`,
   `${anchor==='retestExtreme'?'●':'○'} nein → Retest-Extrem${anchor==='retestExtreme'?' · '+price(chosen.stopLoss):''}`];
@@ -189,18 +190,21 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
    ...Object.entries(routes).map(([k,x])=>`Route ${k}: ${x.status==='entry'?'SL '+price(x.stopLoss)+' · '+(STOP_BRANCH[x.stopAnchor]??x.stopAnchor):x.status==='skipped'?SKIPPED_ENTRY_TEXT:reasonText(x.reason)}`)]};
  n.counter=opponentNode(r,dir,live&&!first);
  const a=routes.a,b=routes.b;
- n.routeA={label:'Route a: Entry bei FVG-Bestätigung',...routeEntry(a,'Erst mit Reaktion true.')};
+ n.routeA={label:'Entry-Kandidat a',...routeEntry(a,'Erst mit Reaktion true.')};
  n.bCheck=bCheckNode(b);
- n.entryB={label:'Entry b',...(b?.status==='skipped'||n.bCheck.status==='visited'?routeEntry(b):routeEntry(null,b?'Route b hat das Entry-Gate nicht erreicht.':'Erst mit Reaktion true.'))};
+ n.entryB={label:'Entry-Kandidat b',...(b?.status==='skipped'||hasEntryCandidate(b)||n.bCheck.status==='visited'?routeEntry(b):routeEntry(null,b?'Route b hat das Entry-Gate nicht erreicht.':'Erst mit Reaktion true.'))};
  n.result=resultNode(r,first,resultRoutes);
  Object.assign(n,sideTrack(dir,entry,context));
 
  const v=s=>s==='visited'||s==='rejected'?s:'not-visited';
+ const candidateEdge=x=>!hasEntryCandidate(x)?'not-visited':x.status==='entry'?'visited':'unknown';
  const edges={detectTouch:ob?'visited':'unknown',touchClosed:closed?'unknown':'not-visited',touchBroken:contact?'visited':'not-visited',
   brokenFalse:v(n.false.status),brokenReaction:v(n.reaction.status),reactionOb1:holdLive?'visited':'not-visited',
-  reactionCounter:live&&!first?'visited':'not-visited',counterStop:slLive?'visited':'not-visited',holdNoDob:n.noDob.status,stopA:n.routeA.status,stopB:n.bCheck.status,
-  bEntry:n.entryB.status,aResult:a?.status==='entry'?'visited':'not-visited',bResult:v(n.entryB.status),closedResult:closed?'rejected':'not-visited',
-  falseResult:v(n.false.status),side:'info'};
+  reactionCounter:live&&!first?'visited':'not-visited',counterA:live&&!first?'visited':'not-visited',holdNoDob:n.noDob.status,
+  aB:b&&b.status!=='skipped'?n.bCheck.status:'not-visited',bCandidate:n.entryB.status,
+  aStop:candidateEdge(a),bStop:candidateEdge(b),stopResult:!slLive?'not-visited':chosen?'visited':'unknown',
+  bEndResult:b?.status==='rejected'?'rejected':b?.status==='unknown'&&!hasEntryCandidate(b)?'unknown':'not-visited',
+  closedResult:closed?'rejected':'not-visited',falseResult:v(n.false.status),side:'info'};
  const head=`Intern: ${structuralState(r)}${r?.reason?` (${reasonText(r.reason)})`:''} · Routen: ${
   first?'– (OB1)':r?.routes?Object.entries(r.routes).map(([k,x])=>`${k} ${x.status==='skipped'?SKIPPED_ENTRY_TEXT:x.status}`).join(', '):'–'}`;
  const text=!ob?'M5-OB noch nicht bekannt.':!r||r.reason==='noContact'?'M5-OB bekannt; noch kein Retest.'

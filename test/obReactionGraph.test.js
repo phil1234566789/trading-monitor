@@ -30,7 +30,7 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
   expect(g.nodes.result.headline).toBe('Reaktion: true');
   expect(g.nodes.result.sub).toContain(`a: ${a.status}`);
   expect(g.nodes.result.sub).toMatch(/b: entry /);
-  expect(g.edges).toMatchObject({counterStop:'visited',bResult:'visited',falseResult:'not-visited'});
+  expect(g.edges).toMatchObject({counterA:'visited',bStop:'visited',stopResult:'visited',falseResult:'not-visited'});
  });
  it('P16 OB1: Hold-Gate hält, weil der DOB erkannt ist',async()=>{
   const g=await graphAt('P16',undefined,'first');
@@ -144,7 +144,7 @@ describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
   expect(g.nodes.counter.detail.join(' ')).toContain('jetzt gefüllt');
   expect(g.nodes.counter.detail.join(' ')).toContain('bekannt');
   expect(g.nodes.routeA.sub).toContain('Gegen-FVG');
-  expect(g.edges).toMatchObject({reactionCounter:'visited',counterStop:'visited',aResult:'not-visited'});
+  expect(g.edges).toMatchObject({reactionCounter:'visited',counterA:'visited',aStop:'not-visited',stopResult:'not-visited'});
  });
  it.each(['true','false','pending','unknown'])('verwendet Verdict %s ohne Routen neu zu aggregieren',state=>{
   expect(graph({...reaction,verdict:{state,reason:null,knownAt:900}}).nodes.result.headline).toBe('Reaktion: '+state);
@@ -196,7 +196,7 @@ describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
   const g=graph(r);
   for(const node of [g.nodes.bCheck,g.nodes.entryB])expect(node).toMatchObject({status:'not-visited',sub:'nicht geprüft · Entry a bereits gefunden'});
   expect(g.nodes.result.sub).toContain('b: nicht geprüft · Entry a bereits gefunden');
-  expect(g.edges).toMatchObject({aResult:'visited',stopB:'not-visited',bEntry:'not-visited',bResult:'not-visited'});
+  expect(g.edges).toMatchObject({aStop:'visited',aB:'not-visited',bCandidate:'not-visited',bStop:'not-visited',stopResult:'visited'});
   expect(g.history.some(h=>h.text.startsWith('Route b'))).toBe(false);
   const times=graphChangeTimes({entry:{role:'second',orderBlock:ob,reaction:r,internalFvgs:[]},context:createOrderBlockReactionContext([],1800,'XAUUSD')});
   expect(times).not.toContain(1200);
@@ -215,11 +215,20 @@ describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
   expect(g.nodes.stop.sub).toContain('nein → Retest-Extrem');
  });
  it('SL bleibt bei partieller Überlappung unbekannt, statt einen Ja-/Nein-Ast zu erfinden',()=>{
-  const g=graph({...reaction,routes:{a:{status:'unknown',reason:'partialOverlapOpen',knownAt:900},b:{status:'pending',reason:'entryBPending'}}});
+  const g=graph({...reaction,routes:{a:{status:'unknown',reason:'partialOverlapOpen',knownAt:900,entryCandidate:{entryTime:900,entryPrice:114}},b:{status:'pending',reason:'entryBPending'}}});
   expect(g.nodes.stop.status).toBe('unknown');
   expect(g.nodes.stop.sub).toContain('SL unknown');
   expect(g.nodes.stop.sub).not.toContain('● ja');
   expect(g.nodes.stop.sub).not.toContain('● nein');
+ });
+ it('wartendes b besucht den SL erst mit einem Entry-Kandidaten',()=>{
+  const waiting=graph(reaction);
+  expect(waiting.nodes.stop.status).toBe('not-visited');
+  expect(waiting.edges).toMatchObject({aStop:'not-visited',bStop:'not-visited',stopResult:'not-visited'});
+  const candidate=graph({...reaction,routes:{...reaction.routes,b:{status:'unknown',reason:'partialOverlapOpen',knownAt:1200,entryCandidate:{entryTime:1200,entryPrice:114}}}});
+  expect(candidate.nodes.entryB.label).toBe('Entry-Kandidat b');
+  expect(candidate.nodes.stop.status).toBe('unknown');
+  expect(candidate.edges).toMatchObject({bStop:'unknown',stopResult:'unknown'});
  });
  it('nimmt Gegnerfüllung nach Reaktion in die Änderungssprünge auf',()=>{
   const rows=Array.from({length:20},(_,i)=>({time:660+i*60,open:107,close:107,high:i>=7?110:107,low:106}));
