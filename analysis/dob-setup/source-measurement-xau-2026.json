@@ -1,0 +1,2409 @@
+{
+  "measurement": "dob-quelle-der-kraft-v1",
+  "git": "988819e2",
+  "baseGit": "71868105",
+  "symbol": "XAUUSD",
+  "dataEnd": 1794849660,
+  "breakEvenWinrate": 33.3,
+  "base": {
+    "n": 1616,
+    "win": 545,
+    "loss": 1071,
+    "winrate": 33.7,
+    "sumR": 19,
+    "smallN": false
+  },
+  "baseByRoute": {
+    "a": {
+      "n": 1249,
+      "win": 423,
+      "loss": 826,
+      "winrate": 33.9,
+      "sumR": 20,
+      "smallN": false
+    },
+    "b": {
+      "n": 367,
+      "win": 122,
+      "loss": 245,
+      "winrate": 33.2,
+      "sumR": -1,
+      "smallN": false
+    }
+  },
+  "methodology": [
+    "Trades: einmalige v0-Trades (Richtung/Entry/SL) aus winrate-xau-2026-dob-setup-v0.json; Anker OB1 = spätester OB1-Start aller DOB-Paare des Trades.",
+    "Quelle: nur in Trade-Richtung (Short: bärischer HTF-OB / Sweep eines Hochs; Long umgekehrt), Ereignis vor dem Anker und ab der letzten XAU-Tagespause davor (dobLiveWindowStart).",
+    "OB-Touch: H1/H4-OBs aus htfObCandles + detectOrderBlocks (Kante 081d2d47), erste M5-Kerze ab Erkennung, die die Zone berührt (nur der Erst-Touch).",
+    "LS-Sweep: detectLiquidityLevels (Periode 5) auf H1/H4/M5, erster Touch nach Bestätigung, HTF-Zeit auf die erste M5-Kerze am Level verfeinert.",
+    "Δt und Abstand: jüngste Quelle vor dem Anker; LS-Alter: jüngster Sweep (bei mehreren Levels in derselben Kerze das älteste Pivot), Sweep-Zeit − Pivot-Zeit; Nähe: Preislücke OB1 ↔ Quell-Zone/Level.",
+    "n = Win + Loss (ambiguous/unknown nicht gezählt); Winrate in %; ΣR = 2·Win − Loss; smallN = n < 50. Break-even bei 2R: 33,3 %.",
+    "byOb1 = Auftrag (Quelle vor OB1); byOb2 = Gegenprobe mit Anker OB2-Start, weil Philips Ereignis teils zwischen OB1 und OB2 liegt."
+  ],
+  "events": {
+    "ob H1": 705,
+    "ob H4": 104,
+    "ls H1": 611,
+    "ls H4": 117,
+    "ls M5": 7277
+  },
+  "byOb1": {
+    "category": {
+      "keine": {
+        "gesamt": {
+          "n": 163,
+          "win": 57,
+          "loss": 106,
+          "winrate": 35,
+          "sumR": 8,
+          "smallN": false
+        },
+        "a": {
+          "n": 123,
+          "win": 51,
+          "loss": 72,
+          "winrate": 41.5,
+          "sumR": 30,
+          "smallN": false
+        },
+        "b": {
+          "n": 40,
+          "win": 6,
+          "loss": 34,
+          "winrate": 15,
+          "sumR": -22,
+          "smallN": true
+        }
+      },
+      "LS + OB": {
+        "gesamt": {
+          "n": 733,
+          "win": 267,
+          "loss": 466,
+          "winrate": 36.4,
+          "sumR": 68,
+          "smallN": false
+        },
+        "a": {
+          "n": 583,
+          "win": 208,
+          "loss": 375,
+          "winrate": 35.7,
+          "sumR": 41,
+          "smallN": false
+        },
+        "b": {
+          "n": 150,
+          "win": 59,
+          "loss": 91,
+          "winrate": 39.3,
+          "sumR": 27,
+          "smallN": false
+        }
+      },
+      "nur LS": {
+        "gesamt": {
+          "n": 711,
+          "win": 220,
+          "loss": 491,
+          "winrate": 30.9,
+          "sumR": -51,
+          "smallN": false
+        },
+        "a": {
+          "n": 539,
+          "win": 164,
+          "loss": 375,
+          "winrate": 30.4,
+          "sumR": -47,
+          "smallN": false
+        },
+        "b": {
+          "n": 172,
+          "win": 56,
+          "loss": 116,
+          "winrate": 32.6,
+          "sumR": -4,
+          "smallN": false
+        }
+      },
+      "nur OB": {
+        "gesamt": {
+          "n": 9,
+          "win": 1,
+          "loss": 8,
+          "winrate": 11.1,
+          "sumR": -6,
+          "smallN": true
+        },
+        "a": {
+          "n": 4,
+          "win": 0,
+          "loss": 4,
+          "winrate": 0,
+          "sumR": -4,
+          "smallN": true
+        },
+        "b": {
+          "n": 5,
+          "win": 1,
+          "loss": 4,
+          "winrate": 20,
+          "sumR": -2,
+          "smallN": true
+        }
+      }
+    },
+    "kinds": {
+      "keine": {
+        "gesamt": {
+          "n": 163,
+          "win": 57,
+          "loss": 106,
+          "winrate": 35,
+          "sumR": 8,
+          "smallN": false
+        },
+        "a": {
+          "n": 123,
+          "win": 51,
+          "loss": 72,
+          "winrate": 41.5,
+          "sumR": 30,
+          "smallN": false
+        },
+        "b": {
+          "n": 40,
+          "win": 6,
+          "loss": 34,
+          "winrate": 15,
+          "sumR": -22,
+          "smallN": true
+        }
+      },
+      "LS H1": {
+        "gesamt": {
+          "n": 513,
+          "win": 166,
+          "loss": 347,
+          "winrate": 32.4,
+          "sumR": -15,
+          "smallN": false
+        },
+        "a": {
+          "n": 404,
+          "win": 128,
+          "loss": 276,
+          "winrate": 31.7,
+          "sumR": -20,
+          "smallN": false
+        },
+        "b": {
+          "n": 109,
+          "win": 38,
+          "loss": 71,
+          "winrate": 34.9,
+          "sumR": 5,
+          "smallN": false
+        }
+      },
+      "LS H4": {
+        "gesamt": {
+          "n": 107,
+          "win": 41,
+          "loss": 66,
+          "winrate": 38.3,
+          "sumR": 16,
+          "smallN": false
+        },
+        "a": {
+          "n": 85,
+          "win": 33,
+          "loss": 52,
+          "winrate": 38.8,
+          "sumR": 14,
+          "smallN": false
+        },
+        "b": {
+          "n": 22,
+          "win": 8,
+          "loss": 14,
+          "winrate": 36.4,
+          "sumR": 2,
+          "smallN": true
+        }
+      },
+      "LS M5": {
+        "gesamt": {
+          "n": 1444,
+          "win": 487,
+          "loss": 957,
+          "winrate": 33.7,
+          "sumR": 17,
+          "smallN": false
+        },
+        "a": {
+          "n": 1122,
+          "win": 372,
+          "loss": 750,
+          "winrate": 33.2,
+          "sumR": -6,
+          "smallN": false
+        },
+        "b": {
+          "n": 322,
+          "win": 115,
+          "loss": 207,
+          "winrate": 35.7,
+          "sumR": 23,
+          "smallN": false
+        }
+      },
+      "OB H1": {
+        "gesamt": {
+          "n": 714,
+          "win": 261,
+          "loss": 453,
+          "winrate": 36.6,
+          "sumR": 69,
+          "smallN": false
+        },
+        "a": {
+          "n": 564,
+          "win": 203,
+          "loss": 361,
+          "winrate": 36,
+          "sumR": 45,
+          "smallN": false
+        },
+        "b": {
+          "n": 150,
+          "win": 58,
+          "loss": 92,
+          "winrate": 38.7,
+          "sumR": 24,
+          "smallN": false
+        }
+      },
+      "OB H4": {
+        "gesamt": {
+          "n": 173,
+          "win": 63,
+          "loss": 110,
+          "winrate": 36.4,
+          "sumR": 16,
+          "smallN": false
+        },
+        "a": {
+          "n": 136,
+          "win": 46,
+          "loss": 90,
+          "winrate": 33.8,
+          "sumR": 2,
+          "smallN": false
+        },
+        "b": {
+          "n": 37,
+          "win": 17,
+          "loss": 20,
+          "winrate": 45.9,
+          "sumR": 14,
+          "smallN": true
+        }
+      }
+    },
+    "deltaT": {
+      "0–1 h": {
+        "gesamt": {
+          "n": 632,
+          "win": 223,
+          "loss": 409,
+          "winrate": 35.3,
+          "sumR": 37,
+          "smallN": false
+        },
+        "a": {
+          "n": 487,
+          "win": 170,
+          "loss": 317,
+          "winrate": 34.9,
+          "sumR": 23,
+          "smallN": false
+        },
+        "b": {
+          "n": 145,
+          "win": 53,
+          "loss": 92,
+          "winrate": 36.6,
+          "sumR": 14,
+          "smallN": false
+        }
+      },
+      "1–3 h": {
+        "gesamt": {
+          "n": 539,
+          "win": 174,
+          "loss": 365,
+          "winrate": 32.3,
+          "sumR": -17,
+          "smallN": false
+        },
+        "a": {
+          "n": 430,
+          "win": 137,
+          "loss": 293,
+          "winrate": 31.9,
+          "sumR": -19,
+          "smallN": false
+        },
+        "b": {
+          "n": 109,
+          "win": 37,
+          "loss": 72,
+          "winrate": 33.9,
+          "sumR": 2,
+          "smallN": false
+        }
+      },
+      "3 h–Marktschluss": {
+        "gesamt": {
+          "n": 282,
+          "win": 91,
+          "loss": 191,
+          "winrate": 32.3,
+          "sumR": -9,
+          "smallN": false
+        },
+        "a": {
+          "n": 209,
+          "win": 65,
+          "loss": 144,
+          "winrate": 31.1,
+          "sumR": -14,
+          "smallN": false
+        },
+        "b": {
+          "n": 73,
+          "win": 26,
+          "loss": 47,
+          "winrate": 35.6,
+          "sumR": 5,
+          "smallN": false
+        }
+      },
+      "keine Quelle": {
+        "gesamt": {
+          "n": 163,
+          "win": 57,
+          "loss": 106,
+          "winrate": 35,
+          "sumR": 8,
+          "smallN": false
+        },
+        "a": {
+          "n": 123,
+          "win": 51,
+          "loss": 72,
+          "winrate": 41.5,
+          "sumR": 30,
+          "smallN": false
+        },
+        "b": {
+          "n": 40,
+          "win": 6,
+          "loss": 34,
+          "winrate": 15,
+          "sumR": -22,
+          "smallN": true
+        }
+      }
+    },
+    "lsAge": {
+      "< 4 h": {
+        "gesamt": {
+          "n": 920,
+          "win": 302,
+          "loss": 618,
+          "winrate": 32.8,
+          "sumR": -14,
+          "smallN": false
+        },
+        "a": {
+          "n": 713,
+          "win": 229,
+          "loss": 484,
+          "winrate": 32.1,
+          "sumR": -26,
+          "smallN": false
+        },
+        "b": {
+          "n": 207,
+          "win": 73,
+          "loss": 134,
+          "winrate": 35.3,
+          "sumR": 12,
+          "smallN": false
+        }
+      },
+      "> 24 h": {
+        "gesamt": {
+          "n": 195,
+          "win": 71,
+          "loss": 124,
+          "winrate": 36.4,
+          "sumR": 18,
+          "smallN": false
+        },
+        "a": {
+          "n": 154,
+          "win": 55,
+          "loss": 99,
+          "winrate": 35.7,
+          "sumR": 11,
+          "smallN": false
+        },
+        "b": {
+          "n": 41,
+          "win": 16,
+          "loss": 25,
+          "winrate": 39,
+          "sumR": 7,
+          "smallN": true
+        }
+      },
+      "4–24 h": {
+        "gesamt": {
+          "n": 329,
+          "win": 114,
+          "loss": 215,
+          "winrate": 34.7,
+          "sumR": 13,
+          "smallN": false
+        },
+        "a": {
+          "n": 255,
+          "win": 88,
+          "loss": 167,
+          "winrate": 34.5,
+          "sumR": 9,
+          "smallN": false
+        },
+        "b": {
+          "n": 74,
+          "win": 26,
+          "loss": 48,
+          "winrate": 35.1,
+          "sumR": 4,
+          "smallN": false
+        }
+      },
+      "kein LS": {
+        "gesamt": {
+          "n": 172,
+          "win": 58,
+          "loss": 114,
+          "winrate": 33.7,
+          "sumR": 2,
+          "smallN": false
+        },
+        "a": {
+          "n": 127,
+          "win": 51,
+          "loss": 76,
+          "winrate": 40.2,
+          "sumR": 26,
+          "smallN": false
+        },
+        "b": {
+          "n": 45,
+          "win": 7,
+          "loss": 38,
+          "winrate": 15.6,
+          "sumR": -24,
+          "smallN": true
+        }
+      }
+    },
+    "proximity": {
+      "fern": {
+        "gesamt": {
+          "n": 436,
+          "win": 141,
+          "loss": 295,
+          "winrate": 32.3,
+          "sumR": -13,
+          "smallN": false
+        },
+        "a": {
+          "n": 331,
+          "win": 105,
+          "loss": 226,
+          "winrate": 31.7,
+          "sumR": -16,
+          "smallN": false
+        },
+        "b": {
+          "n": 105,
+          "win": 36,
+          "loss": 69,
+          "winrate": 34.3,
+          "sumR": 3,
+          "smallN": false
+        }
+      },
+      "in Zone": {
+        "gesamt": {
+          "n": 383,
+          "win": 145,
+          "loss": 238,
+          "winrate": 37.9,
+          "sumR": 52,
+          "smallN": false
+        },
+        "a": {
+          "n": 293,
+          "win": 111,
+          "loss": 182,
+          "winrate": 37.9,
+          "sumR": 40,
+          "smallN": false
+        },
+        "b": {
+          "n": 90,
+          "win": 34,
+          "loss": 56,
+          "winrate": 37.8,
+          "sumR": 12,
+          "smallN": false
+        }
+      },
+      "keine Quelle": {
+        "gesamt": {
+          "n": 163,
+          "win": 57,
+          "loss": 106,
+          "winrate": 35,
+          "sumR": 8,
+          "smallN": false
+        },
+        "a": {
+          "n": 123,
+          "win": 51,
+          "loss": 72,
+          "winrate": 41.5,
+          "sumR": 30,
+          "smallN": false
+        },
+        "b": {
+          "n": 40,
+          "win": 6,
+          "loss": 34,
+          "winrate": 15,
+          "sumR": -22,
+          "smallN": true
+        }
+      },
+      "nah (≤ 2 OB1-Höhen)": {
+        "gesamt": {
+          "n": 634,
+          "win": 202,
+          "loss": 432,
+          "winrate": 31.9,
+          "sumR": -28,
+          "smallN": false
+        },
+        "a": {
+          "n": 502,
+          "win": 156,
+          "loss": 346,
+          "winrate": 31.1,
+          "sumR": -34,
+          "smallN": false
+        },
+        "b": {
+          "n": 132,
+          "win": 46,
+          "loss": 86,
+          "winrate": 34.8,
+          "sumR": 6,
+          "smallN": false
+        }
+      }
+    }
+  },
+  "byOb2": {
+    "category": {
+      "keine": {
+        "gesamt": {
+          "n": 116,
+          "win": 41,
+          "loss": 75,
+          "winrate": 35.3,
+          "sumR": 7,
+          "smallN": false
+        },
+        "a": {
+          "n": 90,
+          "win": 37,
+          "loss": 53,
+          "winrate": 41.1,
+          "sumR": 21,
+          "smallN": false
+        },
+        "b": {
+          "n": 26,
+          "win": 4,
+          "loss": 22,
+          "winrate": 15.4,
+          "sumR": -14,
+          "smallN": true
+        }
+      },
+      "LS + OB": {
+        "gesamt": {
+          "n": 792,
+          "win": 288,
+          "loss": 504,
+          "winrate": 36.4,
+          "sumR": 72,
+          "smallN": false
+        },
+        "a": {
+          "n": 628,
+          "win": 227,
+          "loss": 401,
+          "winrate": 36.1,
+          "sumR": 53,
+          "smallN": false
+        },
+        "b": {
+          "n": 164,
+          "win": 61,
+          "loss": 103,
+          "winrate": 37.2,
+          "sumR": 19,
+          "smallN": false
+        }
+      },
+      "nur LS": {
+        "gesamt": {
+          "n": 701,
+          "win": 215,
+          "loss": 486,
+          "winrate": 30.7,
+          "sumR": -56,
+          "smallN": false
+        },
+        "a": {
+          "n": 527,
+          "win": 159,
+          "loss": 368,
+          "winrate": 30.2,
+          "sumR": -50,
+          "smallN": false
+        },
+        "b": {
+          "n": 174,
+          "win": 56,
+          "loss": 118,
+          "winrate": 32.2,
+          "sumR": -6,
+          "smallN": false
+        }
+      },
+      "nur OB": {
+        "gesamt": {
+          "n": 7,
+          "win": 1,
+          "loss": 6,
+          "winrate": 14.3,
+          "sumR": -4,
+          "smallN": true
+        },
+        "a": {
+          "n": 4,
+          "win": 0,
+          "loss": 4,
+          "winrate": 0,
+          "sumR": -4,
+          "smallN": true
+        },
+        "b": {
+          "n": 3,
+          "win": 1,
+          "loss": 2,
+          "winrate": 33.3,
+          "sumR": 0,
+          "smallN": true
+        }
+      }
+    },
+    "kinds": {
+      "keine": {
+        "gesamt": {
+          "n": 116,
+          "win": 41,
+          "loss": 75,
+          "winrate": 35.3,
+          "sumR": 7,
+          "smallN": false
+        },
+        "a": {
+          "n": 90,
+          "win": 37,
+          "loss": 53,
+          "winrate": 41.1,
+          "sumR": 21,
+          "smallN": false
+        },
+        "b": {
+          "n": 26,
+          "win": 4,
+          "loss": 22,
+          "winrate": 15.4,
+          "sumR": -14,
+          "smallN": true
+        }
+      },
+      "LS H1": {
+        "gesamt": {
+          "n": 513,
+          "win": 165,
+          "loss": 348,
+          "winrate": 32.2,
+          "sumR": -18,
+          "smallN": false
+        },
+        "a": {
+          "n": 402,
+          "win": 127,
+          "loss": 275,
+          "winrate": 31.6,
+          "sumR": -21,
+          "smallN": false
+        },
+        "b": {
+          "n": 111,
+          "win": 38,
+          "loss": 73,
+          "winrate": 34.2,
+          "sumR": 3,
+          "smallN": false
+        }
+      },
+      "LS H4": {
+        "gesamt": {
+          "n": 107,
+          "win": 41,
+          "loss": 66,
+          "winrate": 38.3,
+          "sumR": 16,
+          "smallN": false
+        },
+        "a": {
+          "n": 85,
+          "win": 33,
+          "loss": 52,
+          "winrate": 38.8,
+          "sumR": 14,
+          "smallN": false
+        },
+        "b": {
+          "n": 22,
+          "win": 8,
+          "loss": 14,
+          "winrate": 36.4,
+          "sumR": 2,
+          "smallN": true
+        }
+      },
+      "LS M5": {
+        "gesamt": {
+          "n": 1493,
+          "win": 503,
+          "loss": 990,
+          "winrate": 33.7,
+          "sumR": 16,
+          "smallN": false
+        },
+        "a": {
+          "n": 1155,
+          "win": 386,
+          "loss": 769,
+          "winrate": 33.4,
+          "sumR": 3,
+          "smallN": false
+        },
+        "b": {
+          "n": 338,
+          "win": 117,
+          "loss": 221,
+          "winrate": 34.6,
+          "sumR": 13,
+          "smallN": false
+        }
+      },
+      "OB H1": {
+        "gesamt": {
+          "n": 772,
+          "win": 282,
+          "loss": 490,
+          "winrate": 36.5,
+          "sumR": 74,
+          "smallN": false
+        },
+        "a": {
+          "n": 610,
+          "win": 222,
+          "loss": 388,
+          "winrate": 36.4,
+          "sumR": 56,
+          "smallN": false
+        },
+        "b": {
+          "n": 162,
+          "win": 60,
+          "loss": 102,
+          "winrate": 37,
+          "sumR": 18,
+          "smallN": false
+        }
+      },
+      "OB H4": {
+        "gesamt": {
+          "n": 173,
+          "win": 63,
+          "loss": 110,
+          "winrate": 36.4,
+          "sumR": 16,
+          "smallN": false
+        },
+        "a": {
+          "n": 136,
+          "win": 46,
+          "loss": 90,
+          "winrate": 33.8,
+          "sumR": 2,
+          "smallN": false
+        },
+        "b": {
+          "n": 37,
+          "win": 17,
+          "loss": 20,
+          "winrate": 45.9,
+          "sumR": 14,
+          "smallN": true
+        }
+      }
+    },
+    "deltaT": {
+      "0–1 h": {
+        "gesamt": {
+          "n": 471,
+          "win": 169,
+          "loss": 302,
+          "winrate": 35.9,
+          "sumR": 36,
+          "smallN": false
+        },
+        "a": {
+          "n": 364,
+          "win": 133,
+          "loss": 231,
+          "winrate": 36.5,
+          "sumR": 35,
+          "smallN": false
+        },
+        "b": {
+          "n": 107,
+          "win": 36,
+          "loss": 71,
+          "winrate": 33.6,
+          "sumR": 1,
+          "smallN": false
+        }
+      },
+      "1–3 h": {
+        "gesamt": {
+          "n": 657,
+          "win": 227,
+          "loss": 430,
+          "winrate": 34.6,
+          "sumR": 24,
+          "smallN": false
+        },
+        "a": {
+          "n": 507,
+          "win": 172,
+          "loss": 335,
+          "winrate": 33.9,
+          "sumR": 9,
+          "smallN": false
+        },
+        "b": {
+          "n": 150,
+          "win": 55,
+          "loss": 95,
+          "winrate": 36.7,
+          "sumR": 15,
+          "smallN": false
+        }
+      },
+      "3 h–Marktschluss": {
+        "gesamt": {
+          "n": 372,
+          "win": 108,
+          "loss": 264,
+          "winrate": 29,
+          "sumR": -48,
+          "smallN": false
+        },
+        "a": {
+          "n": 288,
+          "win": 81,
+          "loss": 207,
+          "winrate": 28.1,
+          "sumR": -45,
+          "smallN": false
+        },
+        "b": {
+          "n": 84,
+          "win": 27,
+          "loss": 57,
+          "winrate": 32.1,
+          "sumR": -3,
+          "smallN": false
+        }
+      },
+      "keine Quelle": {
+        "gesamt": {
+          "n": 116,
+          "win": 41,
+          "loss": 75,
+          "winrate": 35.3,
+          "sumR": 7,
+          "smallN": false
+        },
+        "a": {
+          "n": 90,
+          "win": 37,
+          "loss": 53,
+          "winrate": 41.1,
+          "sumR": 21,
+          "smallN": false
+        },
+        "b": {
+          "n": 26,
+          "win": 4,
+          "loss": 22,
+          "winrate": 15.4,
+          "sumR": -14,
+          "smallN": true
+        }
+      }
+    },
+    "lsAge": {
+      "< 4 h": {
+        "gesamt": {
+          "n": 1036,
+          "win": 348,
+          "loss": 688,
+          "winrate": 33.6,
+          "sumR": 8,
+          "smallN": false
+        },
+        "a": {
+          "n": 798,
+          "win": 264,
+          "loss": 534,
+          "winrate": 33.1,
+          "sumR": -6,
+          "smallN": false
+        },
+        "b": {
+          "n": 238,
+          "win": 84,
+          "loss": 154,
+          "winrate": 35.3,
+          "sumR": 14,
+          "smallN": false
+        }
+      },
+      "> 24 h": {
+        "gesamt": {
+          "n": 159,
+          "win": 52,
+          "loss": 107,
+          "winrate": 32.7,
+          "sumR": -3,
+          "smallN": false
+        },
+        "a": {
+          "n": 123,
+          "win": 40,
+          "loss": 83,
+          "winrate": 32.5,
+          "sumR": -3,
+          "smallN": false
+        },
+        "b": {
+          "n": 36,
+          "win": 12,
+          "loss": 24,
+          "winrate": 33.3,
+          "sumR": 0,
+          "smallN": true
+        }
+      },
+      "4–24 h": {
+        "gesamt": {
+          "n": 298,
+          "win": 103,
+          "loss": 195,
+          "winrate": 34.6,
+          "sumR": 11,
+          "smallN": false
+        },
+        "a": {
+          "n": 234,
+          "win": 82,
+          "loss": 152,
+          "winrate": 35,
+          "sumR": 12,
+          "smallN": false
+        },
+        "b": {
+          "n": 64,
+          "win": 21,
+          "loss": 43,
+          "winrate": 32.8,
+          "sumR": -1,
+          "smallN": false
+        }
+      },
+      "kein LS": {
+        "gesamt": {
+          "n": 123,
+          "win": 42,
+          "loss": 81,
+          "winrate": 34.1,
+          "sumR": 3,
+          "smallN": false
+        },
+        "a": {
+          "n": 94,
+          "win": 37,
+          "loss": 57,
+          "winrate": 39.4,
+          "sumR": 17,
+          "smallN": false
+        },
+        "b": {
+          "n": 29,
+          "win": 5,
+          "loss": 24,
+          "winrate": 17.2,
+          "sumR": -14,
+          "smallN": true
+        }
+      }
+    },
+    "proximity": {
+      "fern": {
+        "gesamt": {
+          "n": 373,
+          "win": 114,
+          "loss": 259,
+          "winrate": 30.6,
+          "sumR": -31,
+          "smallN": false
+        },
+        "a": {
+          "n": 284,
+          "win": 86,
+          "loss": 198,
+          "winrate": 30.3,
+          "sumR": -26,
+          "smallN": false
+        },
+        "b": {
+          "n": 89,
+          "win": 28,
+          "loss": 61,
+          "winrate": 31.5,
+          "sumR": -5,
+          "smallN": false
+        }
+      },
+      "in Zone": {
+        "gesamt": {
+          "n": 355,
+          "win": 139,
+          "loss": 216,
+          "winrate": 39.2,
+          "sumR": 62,
+          "smallN": false
+        },
+        "a": {
+          "n": 276,
+          "win": 108,
+          "loss": 168,
+          "winrate": 39.1,
+          "sumR": 48,
+          "smallN": false
+        },
+        "b": {
+          "n": 79,
+          "win": 31,
+          "loss": 48,
+          "winrate": 39.2,
+          "sumR": 14,
+          "smallN": false
+        }
+      },
+      "keine Quelle": {
+        "gesamt": {
+          "n": 116,
+          "win": 41,
+          "loss": 75,
+          "winrate": 35.3,
+          "sumR": 7,
+          "smallN": false
+        },
+        "a": {
+          "n": 90,
+          "win": 37,
+          "loss": 53,
+          "winrate": 41.1,
+          "sumR": 21,
+          "smallN": false
+        },
+        "b": {
+          "n": 26,
+          "win": 4,
+          "loss": 22,
+          "winrate": 15.4,
+          "sumR": -14,
+          "smallN": true
+        }
+      },
+      "nah (≤ 2 OB1-Höhen)": {
+        "gesamt": {
+          "n": 772,
+          "win": 251,
+          "loss": 521,
+          "winrate": 32.5,
+          "sumR": -19,
+          "smallN": false
+        },
+        "a": {
+          "n": 599,
+          "win": 192,
+          "loss": 407,
+          "winrate": 32.1,
+          "sumR": -23,
+          "smallN": false
+        },
+        "b": {
+          "n": 173,
+          "win": 59,
+          "loss": 114,
+          "winrate": 34.1,
+          "sumR": 4,
+          "smallN": false
+        }
+      }
+    }
+  },
+  "samples": [
+    {
+      "trade": "#134",
+      "philip": {
+        "entry": "2026-11-12 14:11",
+        "source": "H1-OB"
+      },
+      "v0": {
+        "entryTime": 1794489000,
+        "offsetMin": -1,
+        "route": "a",
+        "outcome": "success",
+        "ob1": 1794482100,
+        "ob2": 1794486300,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 15,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1794481200,
+            "price": null,
+            "zone": [
+              3954.74,
+              3964.91
+            ]
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "1–3 h",
+          "deltaMin": 85,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1794481200,
+            "price": null,
+            "zone": [
+              3954.74,
+              3964.91
+            ]
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1794444900,
+            "price": 3995.25,
+            "pivotTime": 1794438000
+          },
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1794445500,
+            "zone": [
+              3998.47,
+              4006.87
+            ],
+            "obStart": 1794416400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1794462600,
+            "price": 3979.3,
+            "pivotTime": 1794460200
+          },
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1794481200,
+            "zone": [
+              3954.74,
+              3964.91
+            ],
+            "obStart": 1794470400
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#135",
+      "philip": {
+        "entry": "2026-11-05 16:14",
+        "source": "LS M5"
+      },
+      "v0": {
+        "entryTime": 1793891940,
+        "offsetMin": 5,
+        "route": "b",
+        "outcome": "success",
+        "ob1": 1793855100,
+        "ob2": 1793889600,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS H1",
+            "LS H4",
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "1–3 h",
+          "deltaMin": 75,
+          "lsAge": "> 24 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793850600,
+            "price": 4142.14,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS H1",
+            "LS H4",
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 10,
+          "lsAge": "< 4 h",
+          "proximity": "nah (≤ 2 OB1-Höhen)",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793889000,
+            "price": 4129.63,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793835900,
+            "price": 4066.2,
+            "pivotTime": 1793826600
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793835900,
+            "price": 4065.63,
+            "pivotTime": 1793833500
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793836200,
+            "price": 4071.06,
+            "pivotTime": 1793220300
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793836200,
+            "price": 4070.39,
+            "pivotTime": 1793815500
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793836200,
+            "price": 4067.55,
+            "pivotTime": 1793824500
+          },
+          {
+            "kind": "ls",
+            "tf": "H1",
+            "time": 1793838600,
+            "price": 4082.22,
+            "pivotTime": 1793217600
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793838600,
+            "price": 4093.98,
+            "pivotTime": 1792657500
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793838600,
+            "price": 4092.45,
+            "pivotTime": 1792664400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793838600,
+            "price": 4091.7,
+            "pivotTime": 1792673100
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793838600,
+            "price": 4082.22,
+            "pivotTime": 1793217600
+          },
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1793841000,
+            "zone": [
+              4108.4,
+              4116.2
+            ],
+            "obStart": 1792638000
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793841000,
+            "price": 4102.73,
+            "pivotTime": 1792650000
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793841000,
+            "price": 4101.02,
+            "pivotTime": 1792653300
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793842500,
+            "price": 4123.87,
+            "pivotTime": 1792636200
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793843100,
+            "price": 4127.95,
+            "pivotTime": 1792626600
+          },
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1793843400,
+            "zone": [
+              4130.14,
+              4131.05
+            ],
+            "obStart": 1792623600
+          },
+          {
+            "kind": "ls",
+            "tf": "H4",
+            "time": 1793844000,
+            "price": 4082.22,
+            "pivotTime": 1793206800
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793846700,
+            "price": 4138.13,
+            "pivotTime": 1793844300
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793850000,
+            "price": 4140.45,
+            "pivotTime": 1793848200
+          },
+          {
+            "kind": "ls",
+            "tf": "H1",
+            "time": 1793850600,
+            "price": 4142.14,
+            "pivotTime": 1792612800
+          },
+          {
+            "kind": "ls",
+            "tf": "H4",
+            "time": 1793850600,
+            "price": 4142.14,
+            "pivotTime": 1792602000
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793850600,
+            "price": 4142.14,
+            "pivotTime": 1792615500
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793865900,
+            "price": 4130.5,
+            "pivotTime": 1793862300
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793869500,
+            "price": 4131.34,
+            "pivotTime": 1793859600
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793869500,
+            "price": 4131,
+            "pivotTime": 1793865900
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793877300,
+            "price": 4134.2,
+            "pivotTime": 1793869500
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793886300,
+            "price": 4124.86,
+            "pivotTime": 1793883900
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793889000,
+            "price": 4129.63,
+            "pivotTime": 1793886900
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#136",
+      "philip": {
+        "entry": "2026-11-04 04:13",
+        "source": "H1-OB"
+      },
+      "v0": {
+        "entryTime": 1793761980,
+        "offsetMin": 0,
+        "route": "a",
+        "outcome": "success",
+        "ob1": 1793753400,
+        "ob2": 1793754600,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 20,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793752200,
+            "price": 3926.62,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 40,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793752200,
+            "price": 3926.62,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1793752200,
+            "zone": [
+              3917.39,
+              3922.72
+            ],
+            "obStart": 1793739600
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793752200,
+            "price": 3926.62,
+            "pivotTime": 1793749500
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#136b",
+      "philip": {
+        "entry": "2026-11-04 06:21",
+        "source": "H1-OB"
+      },
+      "v0": {
+        "entryTime": 1793769540,
+        "offsetMin": -2,
+        "route": "a",
+        "outcome": "success",
+        "ob1": 1793765100,
+        "ob2": 1793767500,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "3 h–Marktschluss",
+          "deltaMin": 215,
+          "lsAge": "< 4 h",
+          "proximity": "nah (≤ 2 OB1-Höhen)",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793752200,
+            "price": 3926.62,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "3 h–Marktschluss",
+          "deltaMin": 255,
+          "lsAge": "< 4 h",
+          "proximity": "nah (≤ 2 OB1-Höhen)",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793752200,
+            "price": 3926.62,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1793752200,
+            "zone": [
+              3917.39,
+              3922.72
+            ],
+            "obStart": 1793739600
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793752200,
+            "price": 3926.62,
+            "pivotTime": 1793749500
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#137",
+      "philip": {
+        "entry": "2026-11-02 09:05",
+        "source": "LS M5"
+      },
+      "v0": {
+        "entryTime": 1793606700,
+        "offsetMin": 0,
+        "route": "a",
+        "outcome": "success",
+        "ob1": 1793600700,
+        "ob2": 1793604600,
+        "byOb1": {
+          "category": "nur LS",
+          "kinds": [
+            "LS M5"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 50,
+          "lsAge": "4–24 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793597700,
+            "price": 3913.12,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "nur LS",
+          "kinds": [
+            "LS M5"
+          ],
+          "deltaT": "1–3 h",
+          "deltaMin": 115,
+          "lsAge": "4–24 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793597700,
+            "price": 3913.12,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793575500,
+            "price": 3901.89,
+            "pivotTime": 1793378100
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793577600,
+            "price": 3902.2,
+            "pivotTime": 1793575500
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793581200,
+            "price": 3903.58,
+            "pivotTime": 1793577600
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793592300,
+            "price": 3907.78,
+            "pivotTime": 1793589300
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793597100,
+            "price": 3909.05,
+            "pivotTime": 1793592600
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793597700,
+            "price": 3915.06,
+            "pivotTime": 1793582100
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793597700,
+            "price": 3913.12,
+            "pivotTime": 1793586000
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#138",
+      "philip": {
+        "entry": "2026-10-26 14:34",
+        "source": "LS M5 + alter M5-OB"
+      },
+      "v0": {
+        "entryTime": 1793021640,
+        "offsetMin": 0,
+        "route": "a",
+        "outcome": "loss",
+        "ob1": 1793020200,
+        "ob2": 1793020800,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1",
+            "OB H4"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 45,
+          "lsAge": "< 4 h",
+          "proximity": "nah (≤ 2 OB1-Höhen)",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793017500,
+            "price": 4022.21,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1",
+            "OB H4"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 55,
+          "lsAge": "< 4 h",
+          "proximity": "nah (≤ 2 OB1-Höhen)",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793017500,
+            "price": 4022.21,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792982100,
+            "price": 3995.82,
+            "pivotTime": 1792980300
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792983000,
+            "price": 4000.47,
+            "pivotTime": 1792977300
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792983600,
+            "price": 4006.4,
+            "pivotTime": 1792773900
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792983600,
+            "price": 4004.03,
+            "pivotTime": 1792966500
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792983600,
+            "price": 4003.53,
+            "pivotTime": 1792968300
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792983600,
+            "price": 4003.36,
+            "pivotTime": 1792971300
+          },
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1792984800,
+            "zone": [
+              4016.16,
+              4023.19
+            ],
+            "obStart": 1792764000
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792990800,
+            "price": 4016.6,
+            "pivotTime": 1792984800
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792999800,
+            "price": 4009.81,
+            "pivotTime": 1792997400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793001600,
+            "price": 4011.36,
+            "pivotTime": 1792999800
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793001900,
+            "price": 4015.37,
+            "pivotTime": 1792994700
+          },
+          {
+            "kind": "ob",
+            "tf": "H4",
+            "time": 1793004600,
+            "zone": [
+              4020.03,
+              4034.21
+            ],
+            "obStart": 1792760400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793004600,
+            "price": 4019.26,
+            "pivotTime": 1792990800
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793014800,
+            "price": 4016.42,
+            "pivotTime": 1793012400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793015400,
+            "price": 4020.48,
+            "pivotTime": 1793007600
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793015400,
+            "price": 4019.18,
+            "pivotTime": 1793009400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1793017500,
+            "price": 4022.21,
+            "pivotTime": 1793004600
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#139",
+      "philip": {
+        "entry": "2026-10-22 10:52",
+        "source": "LS M5/M1 + M5-OB"
+      },
+      "v0": {
+        "entryTime": 1792659120,
+        "offsetMin": 0,
+        "route": "a",
+        "outcome": "success",
+        "ob1": 1792654200,
+        "ob2": 1792657800,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "1–3 h",
+          "deltaMin": 85,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792649100,
+            "price": 4092.99,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "1–3 h",
+          "deltaMin": 145,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792649100,
+            "price": 4092.99,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1792636200,
+            "zone": [
+              4122.1,
+              4126.19
+            ],
+            "obStart": 1792627200
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792636200,
+            "price": 4118.36,
+            "pivotTime": 1792631400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792649100,
+            "price": 4092.99,
+            "pivotTime": 1792644900
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#139b",
+      "philip": {
+        "entry": "2026-10-22 11:24",
+        "source": "LS M5/M1 + M5-OB"
+      },
+      "v0": {
+        "entryTime": 1792661040,
+        "offsetMin": 0,
+        "route": "b",
+        "outcome": "success",
+        "ob1": 1792657800,
+        "ob2": 1792659000,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "1–3 h",
+          "deltaMin": 145,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792649100,
+            "price": 4092.99,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "1–3 h",
+          "deltaMin": 165,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792649100,
+            "price": 4092.99,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1792636200,
+            "zone": [
+              4122.1,
+              4126.19
+            ],
+            "obStart": 1792627200
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792636200,
+            "price": 4118.36,
+            "pivotTime": 1792631400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792649100,
+            "price": 4092.99,
+            "pivotTime": 1792644900
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#140",
+      "philip": {
+        "entry": "2026-10-22 05:03",
+        "source": "H1-OB + LS Asia-Mid"
+      },
+      "v0": {
+        "entryTime": 1792639440,
+        "offsetMin": 21,
+        "route": "a",
+        "outcome": "success",
+        "ob1": 1792636800,
+        "ob2": 1792638600,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 10,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792636200,
+            "price": 4118.36,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 40,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792636200,
+            "price": 4118.36,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1792636200,
+            "zone": [
+              4122.1,
+              4126.19
+            ],
+            "obStart": 1792627200
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792636200,
+            "price": 4118.36,
+            "pivotTime": 1792631400
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#140b",
+      "philip": {
+        "entry": "2026-10-22 05:22",
+        "source": "H1-OB + LS Asia-Mid"
+      },
+      "v0": {
+        "entryTime": 1792639440,
+        "offsetMin": 2,
+        "route": "a",
+        "outcome": "success",
+        "ob1": 1792636800,
+        "ob2": 1792638600,
+        "byOb1": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 10,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792636200,
+            "price": 4118.36,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "LS + OB",
+          "kinds": [
+            "LS M5",
+            "OB H1"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 40,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792636200,
+            "price": 4118.36,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ob",
+            "tf": "H1",
+            "time": 1792636200,
+            "zone": [
+              4122.1,
+              4126.19
+            ],
+            "obStart": 1792627200
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1792636200,
+            "price": 4118.36,
+            "pivotTime": 1792631400
+          }
+        ]
+      }
+    },
+    {
+      "trade": "#141",
+      "philip": {
+        "entry": "2026-10-12 15:34",
+        "source": "LS M5"
+      },
+      "v0": {
+        "entryTime": 1791812040,
+        "offsetMin": 0,
+        "route": "a",
+        "outcome": "success",
+        "ob1": 1791801900,
+        "ob2": 1791803100,
+        "byOb1": {
+          "category": "nur LS",
+          "kinds": [
+            "LS H1",
+            "LS M5"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 20,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791800700,
+            "price": 4178.46,
+            "zone": null
+          }
+        },
+        "byOb2": {
+          "category": "nur LS",
+          "kinds": [
+            "LS H1",
+            "LS M5"
+          ],
+          "deltaT": "0–1 h",
+          "deltaMin": 40,
+          "lsAge": "< 4 h",
+          "proximity": "in Zone",
+          "latest": {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791800700,
+            "price": 4178.46,
+            "zone": null
+          }
+        },
+        "sourcesBeforeOb2": [
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791761400,
+            "price": 4197.22,
+            "pivotTime": 1791577200
+          },
+          {
+            "kind": "ls",
+            "tf": "H1",
+            "time": 1791763800,
+            "price": 4207.58,
+            "pivotTime": 1791522000
+          },
+          {
+            "kind": "ls",
+            "tf": "H1",
+            "time": 1791763800,
+            "price": 4202.14,
+            "pivotTime": 1791568800
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791763800,
+            "price": 4207.58,
+            "pivotTime": 1791524100
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791763800,
+            "price": 4202.14,
+            "pivotTime": 1791571800
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791763800,
+            "price": 4199.26,
+            "pivotTime": 1791761400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791766800,
+            "price": 4210.33,
+            "pivotTime": 1791764700
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791790500,
+            "price": 4187.84,
+            "pivotTime": 1791788400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791800700,
+            "price": 4179.25,
+            "pivotTime": 1791794400
+          },
+          {
+            "kind": "ls",
+            "tf": "M5",
+            "time": 1791800700,
+            "price": 4178.46,
+            "pivotTime": 1791796500
+          }
+        ]
+      }
+    }
+  ]
+}
