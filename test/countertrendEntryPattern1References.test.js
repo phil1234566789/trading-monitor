@@ -56,7 +56,8 @@ describe('real 97/105 entry pattern 1 replay',()=>{
     expect(sizeSimulation(entries[0].entry,'narrow')).toMatchObject({status:'ready',stopPrice:1.32454,riskBudget:500});
    } else expect(sizeSimulation(entries[0].entry,'wide')).toMatchObject({status:'ready',riskBudget:500});
    const context=activeM1Context(entries[0].checklist);
-   context.m5Candles=m5Candles;context.settings={};
+   // Wie im Scan-Input: ohne Sessions gilt die M5-Historie seit 5ecb37d3 als unbelegt, dann fehlt der M5-Beleg.
+   context.m5Candles=m5Candles;context.settings={};context.sessionConfigs=sessions.sessions;
    const structure=buildM1Structure(m1Candles,context.anchor,entries[0].knownAt);
    const unknown=evaluateM1Checklist({context,candles:m1Candles,evaluatedAt:entries[0].knownAt,
     structure:{...structure,state:null}});
