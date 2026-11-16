@@ -8,6 +8,8 @@
     "503": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Pin 503"},
     "504": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Philip: kein Entry; Gegen-FVG sperrt A, M1-OB-Tiefe verwirft B um 07:54"},
     "507": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"},
-    "508": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"}
+    "508": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"},
+    "U1": {"verdict": "offen", "reason": "opposingFvgSelectionUnresolved", "source": "Philip klärt"},
+    "U2": {"verdict": "offen", "reason": "partialOverlapOpen", "source": "Philip klärt"}
   }
 }
