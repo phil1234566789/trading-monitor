@@ -29,7 +29,7 @@ const SAMPLES = [
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
-  const [{ fetchInitialCandles }, { supabase }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinOffsetMinutes },
+  const [{ fetchInitialCandles }, { supabase }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinOffsetMinutes, berlinDateStrFor },
     { detectOrderBlocks, candleTouchesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
     { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }] = await Promise.all(['/src/forexCandles.js',
     '/src/supabaseClient.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/orderBlockDetection.js', '/src/liquidityDetection.js',
@@ -148,6 +148,52 @@ try {
     events: Object.fromEntries(['ob H1', 'ob H4', 'ls H1', 'ls H4', 'ls M5'].map(k => [k, events.filter(e => `${e.kind} ${e.tf}` === k).length])),
     byOb1: tables('byOb1'), byOb2: tables('byOb2'), samples };
   await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-measurement-xau-2026.json'), JSON.stringify(report, null, 2));
+
+  // DOB-QUELLE-KOMBI: Kombinationen der stärksten Einzelmerkmale, Anker OB1. Zone = jede Quelle des Tages, nicht nur die jüngste.
+  const zones = new Map([...trades.values()].map(t => [t.ob1, m5Zones.get(t.ob1)]));
+  const flags = r => {
+    const f = r.byOb1, ob1 = zones.get(r.ob1), obs = f.found.filter(e => e.kind === 'ob'), lss = f.found.filter(e => e.kind === 'ls');
+    const inside = (lo, hi) => ob1 && lo <= ob1.top && hi >= ob1.bottom;
+    const lastOb = obs.at(-1);
+    return { A: obs.length > 0, obZone: obs.some(e => inside(e.bottom, e.top)), lsLevel: lss.some(e => inside(e.price, e.price)), ls: lss.length > 0,
+      obDelta1h: lastOb ? r.ob1 - lastOb.time < HOUR : false, anyDelta1h: f.deltaT === '0–1 h', latestInZone: f.proximity === 'in Zone' };
+  };
+  const FILTERS = {
+    'A: HTF-OB berührt': x => x.A,
+    'B: A + OB1 in der OB-Zone': x => x.A && x.obZone,
+    'C: A + Δt OB-Touch → OB1 < 1 h': x => x.A && x.obDelta1h,
+    "C': A + Δt jüngste Quelle → OB1 < 1 h": x => x.A && x.anyDelta1h,
+    'D: A + LS-Sweep': x => x.A && x.ls,
+    'E1: OB1 in einer OB-Zone': x => x.obZone,
+    'E2: OB1 an einem LS-Level': x => x.lsLevel,
+    'E3: nur OB-Zone': x => x.obZone && !x.lsLevel,
+    'E4: nur LS-Level': x => x.lsLevel && !x.obZone,
+    'E5: OB-Zone und LS-Level': x => x.obZone && x.lsLevel,
+    // Gegenstück zur Erstmessung: dort zählte nur die jüngste Quelle.
+    'F1: jüngste Quelle in Zone': x => x.latestInZone,
+    'F2: A + jüngste Quelle in Zone': x => x.A && x.latestInZone,
+  };
+  const month = r => berlinDateStrFor(r.entryTime).slice(0, 7);
+  const months = [...new Set(rows.map(month))].sort();
+  const flagged = rows.map(r => ({ r, x: flags(r) }));
+  const combos = Object.fromEntries(Object.entries(FILTERS).map(([name, keep]) => {
+    const kept = flagged.filter(({ x }) => keep(x)).map(({ r }) => r);
+    const byMonth = Object.fromEntries(months.map(m => [m, stats(kept.filter(r => month(r) === m))]));
+    return [name, { ...stats(kept), share: +(kept.length / rows.length * 100).toFixed(1), a: stats(kept.filter(r => r.route === 'a')), b: stats(kept.filter(r => r.route === 'b')),
+      monthsAboveBreakEven: Object.values(byMonth).filter(s => s.winrate != null && s.winrate > 33.3).length, months: byMonth,
+      samples: samples.filter(s => s.v0).map(s => { const r = rows.find(row => row.entryTime === s.v0.entryTime && row.direction === (s.v0.byOb1 && SAMPLES.find(x => x[0] === s.trade)[3]));
+        return { trade: s.trade, kept: Boolean(r && keep(flags(r))) }; }) }];
+  }));
+  const comboReport = { measurement: 'dob-quelle-kombi-v1', git: gitHash, base: { ...report.base, monthsAboveBreakEven: months.filter(m => (stats(rows.filter(r => month(r) === m)).winrate ?? 0) > 33.3).length, months: months.length },
+    methodology: ['Basis und Quellen wie source-measurement-xau-2026.json (Anker OB1, selber Handelstag, Trade-Richtung).',
+      'A = mindestens ein H1/H4-OB-Erst-Touch; B = OB1 überlappt eine dieser OB-Zonen; C = jüngster OB-Touch < 1 h vor OB1; C’ = jüngste Quelle jeder Art < 1 h vor OB1; D = zusätzlich ein LS-Sweep.',
+      'E: „in Zone“ über alle Quellen des Tages: OB-Zone = OB1 überlappt eine HTF-OB-Zone; LS-Level = Level-Preis liegt innerhalb von OB1. B ist per Definition gleich E1. F: nur die jüngste Quelle (wie proximity der Erstmessung).',
+      'share = Anteil der Trades an der Basis in %; Monat = Berliner Monat des Entries; monthsAboveBreakEven = Monate mit Winrate > 33,3 %.',
+      'samples: ob der Filter den v0-Trade des Mustertrades behält (#136b/#139b/#140b sind Re-Entries, #140 fällt auf den Trade von #140b).'],
+    filters: combos };
+  await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-combos-xau-2026.json'), JSON.stringify(comboReport, null, 2));
+  console.log('\n== Kombi (Basis', JSON.stringify(comboReport.base.winrate), comboReport.base.monthsAboveBreakEven + '/' + months.length, 'Monate)');
+  for (const [name, c] of Object.entries(combos)) console.log(name.padEnd(40), `n=${c.n} ${c.winrate}% ${c.sumR}R ${c.share}% | a ${c.a.n} ${c.a.winrate}% ${c.a.sumR}R | b ${c.b.n} ${c.b.winrate}% ${c.b.sumR}R${c.b.smallN ? '*' : ''} | Monate ${c.monthsAboveBreakEven}/${months.length} |`, c.samples.filter(s => s.kept).map(s => s.trade).join(' '));
   console.log(JSON.stringify({ git: gitHash, base: report.base, events: report.events }));
   for (const [name, t] of Object.entries(report.byOb1)) {
     console.log(`\n== ${name} (Anker OB1)`);
