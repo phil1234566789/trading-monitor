@@ -237,16 +237,29 @@ try {
   const gAge = Object.fromEntries(G_BUCKETS.map(([, b]) => [b, Object.fromEntries(['selber Tag', '1–3 Tage', 'älter'].map(age =>
     [age, stats(rows.filter(r => gFlags(r).g?.bucket === b && gFlags(r).g.age === age))]))]));
   const inZone = x => x.g?.bucket === 'in Zone', near1 = x => inZone(x) || x.g?.bucket === '≤ 1 OB1-Höhe';
+  const le2 = x => near1(x) || x.g?.bucket === '≤ 2', le5 = x => le2(x) || x.g?.bucket === '≤ 5';
   const cPrime = x => x.A && x.anyDelta1h;
   const gCombos = evaluateFilters({
     'A': x => x.A, "C'": cPrime, 'F1': x => x.latestInZone,
     'G: in Zone (H1/H4)': inZone, 'G: in Zone oder ≤ 1 (H1/H4)': near1,
     // Buckets laufen nicht monoton (≤ 1 schwächer als ≤ 2), deshalb auch breitere Grenzen.
-    'G: bis 2 OB1-Höhen (H1/H4)': x => near1(x) || x.g?.bucket === '≤ 2',
-    'G: bis 5 OB1-Höhen (H1/H4)': x => ['in Zone', '≤ 1 OB1-Höhe', '≤ 2', '≤ 5'].includes(x.g?.bucket),
+    'G: bis 2 OB1-Höhen (H1/H4)': le2, 'G: bis 5 OB1-Höhen (H1/H4)': le5,
     'A ∩ F1': x => x.A && x.latestInZone, "C' ∩ F1 (= A ∩ C' ∩ F1)": x => cPrime(x) && x.latestInZone,
     "G(in Zone) ∩ C'": x => inZone(x) && cPrime(x), "G(≤ 1) ∩ C'": x => near1(x) && cPrime(x),
     'G(in Zone) ∩ F1': x => inZone(x) && x.latestInZone,
+    // Philip meint die Filter als ODER: ein Setup zählt, sobald einer greift. C' ⊂ A, also nur ohne A.
+    'A ∪ F1': x => x.A || x.latestInZone,
+    'A ∪ G(in Zone)': x => x.A || inZone(x),
+    'F1 ∪ G(in Zone)': x => x.latestInZone || inZone(x),
+    'A ∪ F1 ∪ G(in Zone)': x => x.A || x.latestInZone || inZone(x),
+    'G(≤ 1) ∪ F1': x => near1(x) || x.latestInZone,
+    "C' ∪ F1": x => cPrime(x) || x.latestInZone,
+    "C' ∪ G(in Zone)": x => cPrime(x) || inZone(x),
+    "C' ∪ F1 ∪ G(in Zone)": x => cPrime(x) || x.latestInZone || inZone(x),
+    'G≤2 ∪ F1': x => le2(x) || x.latestInZone,
+    'G≤5 ∪ F1': x => le5(x) || x.latestInZone,
+    "G≤5 ∪ C'": x => le5(x) || cPrime(x),
+    "G≤5 ∪ F1 ∪ C'": x => le5(x) || x.latestInZone || cPrime(x),
   }, gFlags);
   const gReport = { measurement: 'dob-quelle-g-v1', git: gitHash, base: baseSummary,
     methodology: ['Basis, Anker OB1, Mustertrades wie source-combos-xau-2026.json.',
