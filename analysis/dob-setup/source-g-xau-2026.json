@@ -1,6 +1,6 @@
 {
   "measurement": "dob-quelle-g-v1",
-  "git": "f991a18f",
+  "git": "85ec9460",
   "base": {
     "n": 1616,
     "win": 545,
@@ -5580,6 +5580,2166 @@
         {
           "trade": "#139b",
           "kept": false
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "A ∪ F1": {
+      "n": 940,
+      "win": 342,
+      "loss": 598,
+      "winrate": 36.4,
+      "sumR": 86,
+      "smallN": false,
+      "share": 58.2,
+      "a": {
+        "n": 738,
+        "win": 265,
+        "loss": 473,
+        "winrate": 35.9,
+        "sumR": 57,
+        "smallN": false
+      },
+      "b": {
+        "n": 202,
+        "win": 77,
+        "loss": 125,
+        "winrate": 38.1,
+        "sumR": 29,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 8,
+      "halves": {
+        "Jan–Jun": {
+          "n": 495,
+          "win": 187,
+          "loss": 308,
+          "winrate": 37.8,
+          "sumR": 66,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 445,
+          "win": 155,
+          "loss": 290,
+          "winrate": 34.8,
+          "sumR": 20,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 77,
+          "win": 26,
+          "loss": 51,
+          "winrate": 33.8,
+          "sumR": 1,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 69,
+          "win": 26,
+          "loss": 43,
+          "winrate": 37.7,
+          "sumR": 9,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 98,
+          "win": 39,
+          "loss": 59,
+          "winrate": 39.8,
+          "sumR": 19,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 84,
+          "win": 30,
+          "loss": 54,
+          "winrate": 35.7,
+          "sumR": 6,
+          "smallN": false
+        },
+        "2026-05": {
+          "n": 83,
+          "win": 27,
+          "loss": 56,
+          "winrate": 32.5,
+          "sumR": -2,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 84,
+          "win": 39,
+          "loss": 45,
+          "winrate": 46.4,
+          "sumR": 33,
+          "smallN": false
+        },
+        "2026-07": {
+          "n": 83,
+          "win": 27,
+          "loss": 56,
+          "winrate": 32.5,
+          "sumR": -2,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 96,
+          "win": 29,
+          "loss": 67,
+          "winrate": 30.2,
+          "sumR": -9,
+          "smallN": false
+        },
+        "2026-09": {
+          "n": 116,
+          "win": 43,
+          "loss": 73,
+          "winrate": 37.1,
+          "sumR": 13,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 92,
+          "win": 33,
+          "loss": 59,
+          "winrate": 35.9,
+          "sumR": 7,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 58,
+          "win": 23,
+          "loss": 35,
+          "winrate": 39.7,
+          "sumR": 11,
+          "smallN": false
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": true
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "A ∪ G(in Zone)": {
+      "n": 788,
+      "win": 289,
+      "loss": 499,
+      "winrate": 36.7,
+      "sumR": 79,
+      "smallN": false,
+      "share": 48.8,
+      "a": {
+        "n": 621,
+        "win": 224,
+        "loss": 397,
+        "winrate": 36.1,
+        "sumR": 51,
+        "smallN": false
+      },
+      "b": {
+        "n": 167,
+        "win": 65,
+        "loss": 102,
+        "winrate": 38.9,
+        "sumR": 28,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 8,
+      "halves": {
+        "Jan–Jun": {
+          "n": 401,
+          "win": 158,
+          "loss": 243,
+          "winrate": 39.4,
+          "sumR": 73,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 387,
+          "win": 131,
+          "loss": 256,
+          "winrate": 33.9,
+          "sumR": 6,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 46,
+          "win": 18,
+          "loss": 28,
+          "winrate": 39.1,
+          "sumR": 8,
+          "smallN": true
+        },
+        "2026-02": {
+          "n": 59,
+          "win": 23,
+          "loss": 36,
+          "winrate": 39,
+          "sumR": 10,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 85,
+          "win": 34,
+          "loss": 51,
+          "winrate": 40,
+          "sumR": 17,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 76,
+          "win": 30,
+          "loss": 46,
+          "winrate": 39.5,
+          "sumR": 14,
+          "smallN": false
+        },
+        "2026-05": {
+          "n": 68,
+          "win": 21,
+          "loss": 47,
+          "winrate": 30.9,
+          "sumR": -5,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 67,
+          "win": 32,
+          "loss": 35,
+          "winrate": 47.8,
+          "sumR": 29,
+          "smallN": false
+        },
+        "2026-07": {
+          "n": 62,
+          "win": 19,
+          "loss": 43,
+          "winrate": 30.6,
+          "sumR": -5,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 88,
+          "win": 25,
+          "loss": 63,
+          "winrate": 28.4,
+          "sumR": -13,
+          "smallN": false
+        },
+        "2026-09": {
+          "n": 104,
+          "win": 40,
+          "loss": 64,
+          "winrate": 38.5,
+          "sumR": 16,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 80,
+          "win": 27,
+          "loss": 53,
+          "winrate": 33.8,
+          "sumR": 1,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 53,
+          "win": 20,
+          "loss": 33,
+          "winrate": 37.7,
+          "sumR": 7,
+          "smallN": false
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": true
+        },
+        {
+          "trade": "#137",
+          "kept": false
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "F1 ∪ G(in Zone)": {
+      "n": 467,
+      "win": 183,
+      "loss": 284,
+      "winrate": 39.2,
+      "sumR": 82,
+      "smallN": false,
+      "share": 28.9,
+      "a": {
+        "n": 364,
+        "win": 142,
+        "loss": 222,
+        "winrate": 39,
+        "sumR": 62,
+        "smallN": false
+      },
+      "b": {
+        "n": 103,
+        "win": 41,
+        "loss": 62,
+        "winrate": 39.8,
+        "sumR": 20,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 252,
+          "win": 98,
+          "loss": 154,
+          "winrate": 38.9,
+          "sumR": 42,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 215,
+          "win": 85,
+          "loss": 130,
+          "winrate": 39.5,
+          "sumR": 40,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 45,
+          "win": 11,
+          "loss": 34,
+          "winrate": 24.4,
+          "sumR": -12,
+          "smallN": true
+        },
+        "2026-02": {
+          "n": 45,
+          "win": 15,
+          "loss": 30,
+          "winrate": 33.3,
+          "sumR": 0,
+          "smallN": true
+        },
+        "2026-03": {
+          "n": 38,
+          "win": 15,
+          "loss": 23,
+          "winrate": 39.5,
+          "sumR": 7,
+          "smallN": true
+        },
+        "2026-04": {
+          "n": 34,
+          "win": 19,
+          "loss": 15,
+          "winrate": 55.9,
+          "sumR": 23,
+          "smallN": true
+        },
+        "2026-05": {
+          "n": 51,
+          "win": 17,
+          "loss": 34,
+          "winrate": 33.3,
+          "sumR": 0,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 39,
+          "win": 21,
+          "loss": 18,
+          "winrate": 53.8,
+          "sumR": 24,
+          "smallN": true
+        },
+        "2026-07": {
+          "n": 54,
+          "win": 17,
+          "loss": 37,
+          "winrate": 31.5,
+          "sumR": -3,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 32,
+          "win": 11,
+          "loss": 21,
+          "winrate": 34.4,
+          "sumR": 1,
+          "smallN": true
+        },
+        "2026-09": {
+          "n": 38,
+          "win": 14,
+          "loss": 24,
+          "winrate": 36.8,
+          "sumR": 4,
+          "smallN": true
+        },
+        "2026-10": {
+          "n": 63,
+          "win": 29,
+          "loss": 34,
+          "winrate": 46,
+          "sumR": 24,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 28,
+          "win": 14,
+          "loss": 14,
+          "winrate": 50,
+          "sumR": 14,
+          "smallN": true
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": false
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": false
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "A ∪ F1 ∪ G(in Zone)": {
+      "n": 963,
+      "win": 353,
+      "loss": 610,
+      "winrate": 36.7,
+      "sumR": 96,
+      "smallN": false,
+      "share": 59.7,
+      "a": {
+        "n": 756,
+        "win": 274,
+        "loss": 482,
+        "winrate": 36.2,
+        "sumR": 66,
+        "smallN": false
+      },
+      "b": {
+        "n": 207,
+        "win": 79,
+        "loss": 128,
+        "winrate": 38.2,
+        "sumR": 30,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 8,
+      "halves": {
+        "Jan–Jun": {
+          "n": 509,
+          "win": 194,
+          "loss": 315,
+          "winrate": 38.1,
+          "sumR": 73,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 454,
+          "win": 159,
+          "loss": 295,
+          "winrate": 35,
+          "sumR": 23,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 77,
+          "win": 26,
+          "loss": 51,
+          "winrate": 33.8,
+          "sumR": 1,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 77,
+          "win": 29,
+          "loss": 48,
+          "winrate": 37.7,
+          "sumR": 10,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 98,
+          "win": 39,
+          "loss": 59,
+          "winrate": 39.8,
+          "sumR": 19,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 85,
+          "win": 31,
+          "loss": 54,
+          "winrate": 36.5,
+          "sumR": 8,
+          "smallN": false
+        },
+        "2026-05": {
+          "n": 86,
+          "win": 28,
+          "loss": 58,
+          "winrate": 32.6,
+          "sumR": -2,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 86,
+          "win": 41,
+          "loss": 45,
+          "winrate": 47.7,
+          "sumR": 37,
+          "smallN": false
+        },
+        "2026-07": {
+          "n": 85,
+          "win": 27,
+          "loss": 58,
+          "winrate": 31.8,
+          "sumR": -4,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 96,
+          "win": 29,
+          "loss": 67,
+          "winrate": 30.2,
+          "sumR": -9,
+          "smallN": false
+        },
+        "2026-09": {
+          "n": 118,
+          "win": 44,
+          "loss": 74,
+          "winrate": 37.3,
+          "sumR": 14,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 96,
+          "win": 35,
+          "loss": 61,
+          "winrate": 36.5,
+          "sumR": 9,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 59,
+          "win": 24,
+          "loss": 35,
+          "winrate": 40.7,
+          "sumR": 13,
+          "smallN": false
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": true
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "G(≤ 1) ∪ F1": {
+      "n": 572,
+      "win": 219,
+      "loss": 353,
+      "winrate": 38.3,
+      "sumR": 85,
+      "smallN": false,
+      "share": 35.4,
+      "a": {
+        "n": 445,
+        "win": 172,
+        "loss": 273,
+        "winrate": 38.7,
+        "sumR": 71,
+        "smallN": false
+      },
+      "b": {
+        "n": 127,
+        "win": 47,
+        "loss": 80,
+        "winrate": 37,
+        "sumR": 14,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 9,
+      "halves": {
+        "Jan–Jun": {
+          "n": 321,
+          "win": 120,
+          "loss": 201,
+          "winrate": 37.4,
+          "sumR": 39,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 251,
+          "win": 99,
+          "loss": 152,
+          "winrate": 39.4,
+          "sumR": 46,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 54,
+          "win": 12,
+          "loss": 42,
+          "winrate": 22.2,
+          "sumR": -18,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 56,
+          "win": 21,
+          "loss": 35,
+          "winrate": 37.5,
+          "sumR": 7,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 53,
+          "win": 20,
+          "loss": 33,
+          "winrate": 37.7,
+          "sumR": 7,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 44,
+          "win": 19,
+          "loss": 25,
+          "winrate": 43.2,
+          "sumR": 13,
+          "smallN": true
+        },
+        "2026-05": {
+          "n": 67,
+          "win": 25,
+          "loss": 42,
+          "winrate": 37.3,
+          "sumR": 8,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 47,
+          "win": 23,
+          "loss": 24,
+          "winrate": 48.9,
+          "sumR": 22,
+          "smallN": true
+        },
+        "2026-07": {
+          "n": 60,
+          "win": 19,
+          "loss": 41,
+          "winrate": 31.7,
+          "sumR": -3,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 35,
+          "win": 13,
+          "loss": 22,
+          "winrate": 37.1,
+          "sumR": 4,
+          "smallN": true
+        },
+        "2026-09": {
+          "n": 49,
+          "win": 20,
+          "loss": 29,
+          "winrate": 40.8,
+          "sumR": 11,
+          "smallN": true
+        },
+        "2026-10": {
+          "n": 73,
+          "win": 29,
+          "loss": 44,
+          "winrate": 39.7,
+          "sumR": 14,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 34,
+          "win": 18,
+          "loss": 16,
+          "winrate": 52.9,
+          "sumR": 20,
+          "smallN": true
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": false
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "C' ∪ F1": {
+      "n": 541,
+      "win": 209,
+      "loss": 332,
+      "winrate": 38.6,
+      "sumR": 86,
+      "smallN": false,
+      "share": 33.5,
+      "a": {
+        "n": 414,
+        "win": 160,
+        "loss": 254,
+        "winrate": 38.6,
+        "sumR": 66,
+        "smallN": false
+      },
+      "b": {
+        "n": 127,
+        "win": 49,
+        "loss": 78,
+        "winrate": 38.6,
+        "sumR": 20,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 281,
+          "win": 107,
+          "loss": 174,
+          "winrate": 38.1,
+          "sumR": 40,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 260,
+          "win": 102,
+          "loss": 158,
+          "winrate": 39.2,
+          "sumR": 46,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 53,
+          "win": 15,
+          "loss": 38,
+          "winrate": 28.3,
+          "sumR": -8,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 41,
+          "win": 13,
+          "loss": 28,
+          "winrate": 31.7,
+          "sumR": -2,
+          "smallN": true
+        },
+        "2026-03": {
+          "n": 47,
+          "win": 19,
+          "loss": 28,
+          "winrate": 40.4,
+          "sumR": 10,
+          "smallN": true
+        },
+        "2026-04": {
+          "n": 38,
+          "win": 16,
+          "loss": 22,
+          "winrate": 42.1,
+          "sumR": 10,
+          "smallN": true
+        },
+        "2026-05": {
+          "n": 55,
+          "win": 20,
+          "loss": 35,
+          "winrate": 36.4,
+          "sumR": 5,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 47,
+          "win": 24,
+          "loss": 23,
+          "winrate": 51.1,
+          "sumR": 25,
+          "smallN": true
+        },
+        "2026-07": {
+          "n": 57,
+          "win": 19,
+          "loss": 38,
+          "winrate": 33.3,
+          "sumR": 0,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 41,
+          "win": 13,
+          "loss": 28,
+          "winrate": 31.7,
+          "sumR": -2,
+          "smallN": true
+        },
+        "2026-09": {
+          "n": 69,
+          "win": 29,
+          "loss": 40,
+          "winrate": 42,
+          "sumR": 18,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 60,
+          "win": 26,
+          "loss": 34,
+          "winrate": 43.3,
+          "sumR": 18,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 33,
+          "win": 15,
+          "loss": 18,
+          "winrate": 45.5,
+          "sumR": 12,
+          "smallN": true
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": false
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "C' ∪ G(in Zone)": {
+      "n": 393,
+      "win": 161,
+      "loss": 232,
+      "winrate": 41,
+      "sumR": 90,
+      "smallN": false,
+      "share": 24.4,
+      "a": {
+        "n": 304,
+        "win": 124,
+        "loss": 180,
+        "winrate": 40.8,
+        "sumR": 68,
+        "smallN": false
+      },
+      "b": {
+        "n": 89,
+        "win": 37,
+        "loss": 52,
+        "winrate": 41.6,
+        "sumR": 22,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 191,
+          "win": 84,
+          "loss": 107,
+          "winrate": 44,
+          "sumR": 61,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 202,
+          "win": 77,
+          "loss": 125,
+          "winrate": 38.1,
+          "sumR": 29,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 21,
+          "win": 7,
+          "loss": 14,
+          "winrate": 33.3,
+          "sumR": 0,
+          "smallN": true
+        },
+        "2026-02": {
+          "n": 32,
+          "win": 10,
+          "loss": 22,
+          "winrate": 31.3,
+          "sumR": -2,
+          "smallN": true
+        },
+        "2026-03": {
+          "n": 34,
+          "win": 13,
+          "loss": 21,
+          "winrate": 38.2,
+          "sumR": 5,
+          "smallN": true
+        },
+        "2026-04": {
+          "n": 34,
+          "win": 20,
+          "loss": 14,
+          "winrate": 58.8,
+          "sumR": 26,
+          "smallN": true
+        },
+        "2026-05": {
+          "n": 37,
+          "win": 14,
+          "loss": 23,
+          "winrate": 37.8,
+          "sumR": 5,
+          "smallN": true
+        },
+        "2026-06": {
+          "n": 33,
+          "win": 20,
+          "loss": 13,
+          "winrate": 60.6,
+          "sumR": 27,
+          "smallN": true
+        },
+        "2026-07": {
+          "n": 40,
+          "win": 12,
+          "loss": 28,
+          "winrate": 30,
+          "sumR": -4,
+          "smallN": true
+        },
+        "2026-08": {
+          "n": 30,
+          "win": 10,
+          "loss": 20,
+          "winrate": 33.3,
+          "sumR": 0,
+          "smallN": true
+        },
+        "2026-09": {
+          "n": 57,
+          "win": 26,
+          "loss": 31,
+          "winrate": 45.6,
+          "sumR": 21,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 50,
+          "win": 18,
+          "loss": 32,
+          "winrate": 36,
+          "sumR": 4,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 25,
+          "win": 11,
+          "loss": 14,
+          "winrate": 44,
+          "sumR": 8,
+          "smallN": true
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": false
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": false
+        },
+        {
+          "trade": "#137",
+          "kept": false
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": false
+        },
+        {
+          "trade": "#139b",
+          "kept": false
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "C' ∪ F1 ∪ G(in Zone)": {
+      "n": 594,
+      "win": 237,
+      "loss": 357,
+      "winrate": 39.9,
+      "sumR": 117,
+      "smallN": false,
+      "share": 36.8,
+      "a": {
+        "n": 459,
+        "win": 183,
+        "loss": 276,
+        "winrate": 39.9,
+        "sumR": 90,
+        "smallN": false
+      },
+      "b": {
+        "n": 135,
+        "win": 54,
+        "loss": 81,
+        "winrate": 40,
+        "sumR": 27,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 309,
+          "win": 124,
+          "loss": 185,
+          "winrate": 40.1,
+          "sumR": 63,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 285,
+          "win": 113,
+          "loss": 172,
+          "winrate": 39.6,
+          "sumR": 54,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 53,
+          "win": 15,
+          "loss": 38,
+          "winrate": 28.3,
+          "sumR": -8,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 50,
+          "win": 16,
+          "loss": 34,
+          "winrate": 32,
+          "sumR": -2,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 50,
+          "win": 20,
+          "loss": 30,
+          "winrate": 40,
+          "sumR": 10,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 46,
+          "win": 23,
+          "loss": 23,
+          "winrate": 50,
+          "sumR": 23,
+          "smallN": true
+        },
+        "2026-05": {
+          "n": 58,
+          "win": 21,
+          "loss": 37,
+          "winrate": 36.2,
+          "sumR": 5,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 52,
+          "win": 29,
+          "loss": 23,
+          "winrate": 55.8,
+          "sumR": 35,
+          "smallN": false
+        },
+        "2026-07": {
+          "n": 63,
+          "win": 20,
+          "loss": 43,
+          "winrate": 31.7,
+          "sumR": -3,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 43,
+          "win": 14,
+          "loss": 29,
+          "winrate": 32.6,
+          "sumR": -1,
+          "smallN": true
+        },
+        "2026-09": {
+          "n": 71,
+          "win": 30,
+          "loss": 41,
+          "winrate": 42.3,
+          "sumR": 19,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 72,
+          "win": 31,
+          "loss": 41,
+          "winrate": 43.1,
+          "sumR": 21,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 36,
+          "win": 18,
+          "loss": 18,
+          "winrate": 50,
+          "sumR": 18,
+          "smallN": true
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": false
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "G≤2 ∪ F1": {
+      "n": 726,
+      "win": 272,
+      "loss": 454,
+      "winrate": 37.5,
+      "sumR": 90,
+      "smallN": false,
+      "share": 44.9,
+      "a": {
+        "n": 562,
+        "win": 211,
+        "loss": 351,
+        "winrate": 37.5,
+        "sumR": 71,
+        "smallN": false
+      },
+      "b": {
+        "n": 164,
+        "win": 61,
+        "loss": 103,
+        "winrate": 37.2,
+        "sumR": 19,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 404,
+          "win": 148,
+          "loss": 256,
+          "winrate": 36.6,
+          "sumR": 40,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 322,
+          "win": 124,
+          "loss": 198,
+          "winrate": 38.5,
+          "sumR": 50,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 63,
+          "win": 16,
+          "loss": 47,
+          "winrate": 25.4,
+          "sumR": -15,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 63,
+          "win": 21,
+          "loss": 42,
+          "winrate": 33.3,
+          "sumR": 0,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 66,
+          "win": 24,
+          "loss": 42,
+          "winrate": 36.4,
+          "sumR": 6,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 70,
+          "win": 28,
+          "loss": 42,
+          "winrate": 40,
+          "sumR": 14,
+          "smallN": false
+        },
+        "2026-05": {
+          "n": 78,
+          "win": 27,
+          "loss": 51,
+          "winrate": 34.6,
+          "sumR": 3,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 64,
+          "win": 32,
+          "loss": 32,
+          "winrate": 50,
+          "sumR": 32,
+          "smallN": false
+        },
+        "2026-07": {
+          "n": 70,
+          "win": 22,
+          "loss": 48,
+          "winrate": 31.4,
+          "sumR": -4,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 56,
+          "win": 17,
+          "loss": 39,
+          "winrate": 30.4,
+          "sumR": -5,
+          "smallN": false
+        },
+        "2026-09": {
+          "n": 66,
+          "win": 28,
+          "loss": 38,
+          "winrate": 42.4,
+          "sumR": 18,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 82,
+          "win": 34,
+          "loss": 48,
+          "winrate": 41.5,
+          "sumR": 20,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 48,
+          "win": 23,
+          "loss": 25,
+          "winrate": 47.9,
+          "sumR": 21,
+          "smallN": true
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": true
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "G≤5 ∪ F1": {
+      "n": 1131,
+      "win": 409,
+      "loss": 722,
+      "winrate": 36.2,
+      "sumR": 96,
+      "smallN": false,
+      "share": 69.9,
+      "a": {
+        "n": 878,
+        "win": 316,
+        "loss": 562,
+        "winrate": 36,
+        "sumR": 70,
+        "smallN": false
+      },
+      "b": {
+        "n": 253,
+        "win": 93,
+        "loss": 160,
+        "winrate": 36.8,
+        "sumR": 26,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 622,
+          "win": 222,
+          "loss": 400,
+          "winrate": 35.7,
+          "sumR": 44,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 509,
+          "win": 187,
+          "loss": 322,
+          "winrate": 36.7,
+          "sumR": 52,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 104,
+          "win": 32,
+          "loss": 72,
+          "winrate": 30.8,
+          "sumR": -8,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 89,
+          "win": 28,
+          "loss": 61,
+          "winrate": 31.5,
+          "sumR": -5,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 106,
+          "win": 37,
+          "loss": 69,
+          "winrate": 34.9,
+          "sumR": 5,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 113,
+          "win": 39,
+          "loss": 74,
+          "winrate": 34.5,
+          "sumR": 4,
+          "smallN": false
+        },
+        "2026-05": {
+          "n": 105,
+          "win": 41,
+          "loss": 64,
+          "winrate": 39,
+          "sumR": 18,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 105,
+          "win": 45,
+          "loss": 60,
+          "winrate": 42.9,
+          "sumR": 30,
+          "smallN": false
+        },
+        "2026-07": {
+          "n": 100,
+          "win": 29,
+          "loss": 71,
+          "winrate": 29,
+          "sumR": -13,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 102,
+          "win": 32,
+          "loss": 70,
+          "winrate": 31.4,
+          "sumR": -6,
+          "smallN": false
+        },
+        "2026-09": {
+          "n": 123,
+          "win": 51,
+          "loss": 72,
+          "winrate": 41.5,
+          "sumR": 30,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 112,
+          "win": 43,
+          "loss": 69,
+          "winrate": 38.4,
+          "sumR": 17,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 72,
+          "win": 32,
+          "loss": 40,
+          "winrate": 44.4,
+          "sumR": 24,
+          "smallN": false
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": true
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "G≤5 ∪ C'": {
+      "n": 1075,
+      "win": 389,
+      "loss": 686,
+      "winrate": 36.2,
+      "sumR": 92,
+      "smallN": false,
+      "share": 66.5,
+      "a": {
+        "n": 832,
+        "win": 301,
+        "loss": 531,
+        "winrate": 36.2,
+        "sumR": 71,
+        "smallN": false
+      },
+      "b": {
+        "n": 243,
+        "win": 88,
+        "loss": 155,
+        "winrate": 36.2,
+        "sumR": 21,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 8,
+      "halves": {
+        "Jan–Jun": {
+          "n": 575,
+          "win": 210,
+          "loss": 365,
+          "winrate": 36.5,
+          "sumR": 55,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 500,
+          "win": 179,
+          "loss": 321,
+          "winrate": 35.8,
+          "sumR": 37,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 80,
+          "win": 27,
+          "loss": 53,
+          "winrate": 33.8,
+          "sumR": 1,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 80,
+          "win": 25,
+          "loss": 55,
+          "winrate": 31.3,
+          "sumR": -5,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 109,
+          "win": 38,
+          "loss": 71,
+          "winrate": 34.9,
+          "sumR": 5,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 112,
+          "win": 41,
+          "loss": 71,
+          "winrate": 36.6,
+          "sumR": 11,
+          "smallN": false
+        },
+        "2026-05": {
+          "n": 96,
+          "win": 37,
+          "loss": 59,
+          "winrate": 38.5,
+          "sumR": 15,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 98,
+          "win": 42,
+          "loss": 56,
+          "winrate": 42.9,
+          "sumR": 28,
+          "smallN": false
+        },
+        "2026-07": {
+          "n": 96,
+          "win": 27,
+          "loss": 69,
+          "winrate": 28.1,
+          "sumR": -15,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 104,
+          "win": 32,
+          "loss": 72,
+          "winrate": 30.8,
+          "sumR": -8,
+          "smallN": false
+        },
+        "2026-09": {
+          "n": 119,
+          "win": 50,
+          "loss": 69,
+          "winrate": 42,
+          "sumR": 31,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 113,
+          "win": 41,
+          "loss": 72,
+          "winrate": 36.3,
+          "sumR": 10,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 68,
+          "win": 29,
+          "loss": 39,
+          "winrate": 42.6,
+          "sumR": 19,
+          "smallN": false
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": true
+        },
+        {
+          "trade": "#137",
+          "kept": false
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
+        },
+        {
+          "trade": "#140",
+          "kept": true
+        },
+        {
+          "trade": "#140b",
+          "kept": true
+        },
+        {
+          "trade": "#141",
+          "kept": true
+        }
+      ]
+    },
+    "G≤5 ∪ F1 ∪ C'": {
+      "n": 1160,
+      "win": 418,
+      "loss": 742,
+      "winrate": 36,
+      "sumR": 94,
+      "smallN": false,
+      "share": 71.8,
+      "a": {
+        "n": 897,
+        "win": 324,
+        "loss": 573,
+        "winrate": 36.1,
+        "sumR": 75,
+        "smallN": false
+      },
+      "b": {
+        "n": 263,
+        "win": 94,
+        "loss": 169,
+        "winrate": 35.7,
+        "sumR": 19,
+        "smallN": false
+      },
+      "monthsAboveBreakEven": 7,
+      "halves": {
+        "Jan–Jun": {
+          "n": 633,
+          "win": 228,
+          "loss": 405,
+          "winrate": 36,
+          "sumR": 51,
+          "smallN": false
+        },
+        "Jul–Nov": {
+          "n": 527,
+          "win": 190,
+          "loss": 337,
+          "winrate": 36.1,
+          "sumR": 43,
+          "smallN": false
+        }
+      },
+      "months": {
+        "2026-01": {
+          "n": 105,
+          "win": 32,
+          "loss": 73,
+          "winrate": 30.5,
+          "sumR": -9,
+          "smallN": false
+        },
+        "2026-02": {
+          "n": 90,
+          "win": 28,
+          "loss": 62,
+          "winrate": 31.1,
+          "sumR": -6,
+          "smallN": false
+        },
+        "2026-03": {
+          "n": 110,
+          "win": 39,
+          "loss": 71,
+          "winrate": 35.5,
+          "sumR": 7,
+          "smallN": false
+        },
+        "2026-04": {
+          "n": 117,
+          "win": 42,
+          "loss": 75,
+          "winrate": 35.9,
+          "sumR": 9,
+          "smallN": false
+        },
+        "2026-05": {
+          "n": 105,
+          "win": 41,
+          "loss": 64,
+          "winrate": 39,
+          "sumR": 18,
+          "smallN": false
+        },
+        "2026-06": {
+          "n": 106,
+          "win": 46,
+          "loss": 60,
+          "winrate": 43.4,
+          "sumR": 32,
+          "smallN": false
+        },
+        "2026-07": {
+          "n": 103,
+          "win": 30,
+          "loss": 73,
+          "winrate": 29.1,
+          "sumR": -13,
+          "smallN": false
+        },
+        "2026-08": {
+          "n": 106,
+          "win": 32,
+          "loss": 74,
+          "winrate": 30.2,
+          "sumR": -10,
+          "smallN": false
+        },
+        "2026-09": {
+          "n": 126,
+          "win": 52,
+          "loss": 74,
+          "winrate": 41.3,
+          "sumR": 30,
+          "smallN": false
+        },
+        "2026-10": {
+          "n": 118,
+          "win": 44,
+          "loss": 74,
+          "winrate": 37.3,
+          "sumR": 14,
+          "smallN": false
+        },
+        "2026-11": {
+          "n": 74,
+          "win": 32,
+          "loss": 42,
+          "winrate": 43.2,
+          "sumR": 22,
+          "smallN": false
+        }
+      },
+      "samples": [
+        {
+          "trade": "#134",
+          "kept": true
+        },
+        {
+          "trade": "#135",
+          "kept": true
+        },
+        {
+          "trade": "#136",
+          "kept": true
+        },
+        {
+          "trade": "#136b",
+          "kept": true
+        },
+        {
+          "trade": "#137",
+          "kept": true
+        },
+        {
+          "trade": "#138",
+          "kept": true
+        },
+        {
+          "trade": "#139",
+          "kept": true
+        },
+        {
+          "trade": "#139b",
+          "kept": true
         },
         {
           "trade": "#140",
