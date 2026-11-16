@@ -145,6 +145,7 @@ export class DivergenceLinePrimitive {
   attached({ chart, series, requestUpdate }) {
     this._chart = chart;
     this._series = series;
+    this._requestUpdate = requestUpdate; // für applySelectionHalo (chartSelectionHalo.js)
     requestUpdate();
   }
 

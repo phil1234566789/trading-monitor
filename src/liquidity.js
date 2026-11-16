@@ -211,6 +211,7 @@ export class LiquidityLinePrimitive {
   attached({ chart, series, requestUpdate }) {
     this._chart = chart;
     this._series = series;
+    this._requestUpdate = requestUpdate; // für applySelectionHalo (chartSelectionHalo.js)
     // Anders als beim initialen Laden (wo candleSeries.setData() ohnehin einen Redraw
     // auslöst) hängt ein Primitive-Wechsel allein (z.B. beim "Liquidität"-Toggle) sonst
     // in der Luft, bis irgendein anderes Chart-Event (Resize/Pan/nächster Poll) zufällig

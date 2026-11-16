@@ -26,6 +26,7 @@ import M5CandleClock from "./M5CandleClock.vue";
 import { createPriceChart } from "../priceChartSetup.js";
 import { historicalEvidenceHint } from "../tradeEvidence";
 import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
+import { applySelectionHalo } from "../chartSelectionHalo.js";
 import {
   firstCandleTouch,
   firstCandleTouchRange,
@@ -907,6 +908,21 @@ function tradeLikeEntriesForCandles(candles) {
   return [...trades, ...tsc];
 }
 
+// Welches Journal-Item hinter einem Bestätigungs-/Target-Primitive steht — für den Hover-Halo
+// ohne Neuaufbau (siehe chartSelectionHalo.js). WeakMap, damit detachte Primitives nichts festhalten.
+const haloItemOf = new WeakMap();
+const isTradeTargetSelected = (target) => props.hoveredTradeTargetId != null && props.hoveredTradeTargetId === target.id;
+// Die Invalidierung hat keine trade_evidence-Id — für sie entscheidet die Range-Id, damit ein Hover
+// über ihre TSC-/Modal-Zeile dasselbe tut wie bei einer Bestätigung.
+const isTradeConfirmationSelected = (confirmation) =>
+  confirmation.category === "invalidation"
+    ? props.hoveredInvalidationRangeId != null && props.hoveredInvalidationRangeId === confirmation.dealingRangeId
+    : props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
+function trackHalo(list, primitive, item) {
+  haloItemOf.set(primitive, item);
+  list.push(primitive);
+}
+
 function refreshTradeTargetLinksInternal() {
   // tscRange (siehe tradeLikeEntriesForCandles) kann per watch feuern, bevor candleSeries im
   // onMounted-Chart-Setup steht (Bug-Report Philip 2026-08-27, Crash "Cannot read properties of
@@ -928,7 +944,7 @@ function refreshTradeTargetLinksInternal() {
       // refreshTradeConfirmationLinksInternal) — EINMAL pro Target berechnet, für beide
       // Zeichenpfade unten (OB-Box/generische Linie) wiederverwendet. Kein Pin-Panel-Ursprung wie
       // bei Confirmations (Pin kennt keinen "trade_target"-kind), nur TSC-/Modal-Zeilen-Hover.
-      const isSelectedPin = props.hoveredTradeTargetId != null && props.hoveredTradeTargetId === target.id;
+      const isSelectedPin = isTradeTargetSelected(target);
       // OB-Ziele als echte Box statt nur einer Linie an der näheren Kante (Bug-Report Philip
       // 2026-07-31: "es zeichnet sich weder Linie noch Box, nur das Label"). Alt-OB-Targets ohne
       // rangeLow/rangeHigh (vor Migration 20260731170000) fallen zurück auf die bisherige Linie.
@@ -951,7 +967,7 @@ function refreshTradeTargetLinksInternal() {
           candles,
         );
         candleSeries.attachPrimitive(primitive);
-        tradeTargetLinkPrimitives.push(primitive);
+        trackHalo(tradeTargetLinkPrimitives, primitive, target);
         continue;
       }
       // Ein Pivot-Target mit liquidity_level_id (Task "1H-Struktur-Pivots auf kanonische
@@ -983,7 +999,7 @@ function refreshTradeTargetLinksInternal() {
         candles,
       );
       candleSeries.attachPrimitive(primitive);
-      tradeTargetLinkPrimitives.push(primitive);
+      trackHalo(tradeTargetLinkPrimitives, primitive, target);
     }
   }
 }
@@ -1044,14 +1060,9 @@ function refreshTradeConfirmationLinksInternal() {
       // vorher nur im OB-Zweig. Quelle ist props.hoveredPinTradeConfirmationId, das seit demselben
       // Task NEBEN dem bisherigen PinPanel-Hover auch TSC-/Modal-Zeilen-Hover einschließt (siehe
       // Dashboard.vue).
-      // Die Invalidierung hat keine trade_evidence-Id, über die der Halo sonst läuft — für sie
-      // entscheidet die Range-Id, damit ein Hover über ihre TSC-/Modal-Zeile dasselbe tut wie bei
-      // einer Bestätigung. Der Pivot-Fall braucht das nicht (er highlightet über das native
-      // LQ-Level, siehe Dashboard.vue: hoveredPinLiquidityLevelKey).
-      const isSelectedPin =
-        confirmation.category === "invalidation"
-          ? props.hoveredInvalidationRangeId != null && props.hoveredInvalidationRangeId === confirmation.dealingRangeId
-          : props.hoveredPinTradeConfirmationId != null && props.hoveredPinTradeConfirmationId === confirmation.id;
+      // Der Pivot-Fall braucht keinen eigenen Halo (er highlightet über das native LQ-Level, siehe
+      // Dashboard.vue: hoveredPinLiquidityLevelKey).
+      const isSelectedPin = isTradeConfirmationSelected(confirmation);
       // RSI-Divergenz-Bestätigungen als echter Zwei-Bein-Konnektor (dieselbe DivergenceLinePrimitive
       // wie die live erkannten Divergenzen, siehe refreshRsiDivergenceInternal) statt nur einer
       // horizontalen Linie — sourceTime/touchedTime tragen bereits fromTime/toTime (siehe
@@ -1065,7 +1076,7 @@ function refreshTradeConfirmationLinksInternal() {
           candles,
         );
         candleSeries.attachPrimitive(primitive);
-        tradeConfirmationLinkPrimitives.push(primitive);
+        trackHalo(tradeConfirmationLinkPrimitives, primitive, confirmation);
         continue;
       }
       // OB-Bestätigungen als echte Box statt nur einer Linie (siehe refreshTradeTargetLinksInternal
@@ -1093,7 +1104,7 @@ function refreshTradeConfirmationLinksInternal() {
           candles,
         );
         candleSeries.attachPrimitive(primitive);
-        tradeConfirmationLinkPrimitives.push(primitive);
+        trackHalo(tradeConfirmationLinkPrimitives, primitive, confirmation);
         continue;
       }
       // Self-Heal wie bei Pivot-Targets (firstCandleTouch) — eine Bestätigung ohne touchedTime (z.B.
@@ -1119,7 +1130,7 @@ function refreshTradeConfirmationLinksInternal() {
         candles,
       );
       candleSeries.attachPrimitive(primitive);
-      tradeConfirmationLinkPrimitives.push(primitive);
+      trackHalo(tradeConfirmationLinkPrimitives, primitive, confirmation);
     }
   }
 }
@@ -2356,8 +2367,11 @@ watch(() => props.pinRsiDivergenceKeys, refreshRsiDivergenceInternal);
 // pin*Ids-Watches oben, nur für die zusätzliche Auswahl-Hervorhebung.
 watch(() => props.hoveredPinObZoneKey, refreshPoiZonesInternal);
 watch(() => props.hoveredPinTradeSetupId, ()=>{refreshTradeSetupLinksInternal();renderTradeSetupsInternal();});
-watch(() => props.hoveredPinTradeConfirmationId, refreshTradeConfirmationLinksInternal);
-watch(() => props.hoveredTradeTargetId, refreshTradeTargetLinksInternal);
+// Hover kippt nur den Halo der stehenden Primitives, kein Neuaufbau (siehe chartSelectionHalo.js).
+watch([() => props.hoveredPinTradeConfirmationId, () => props.hoveredInvalidationRangeId], () =>
+  applySelectionHalo(tradeConfirmationLinkPrimitives, (p) => isTradeConfirmationSelected(haloItemOf.get(p))),
+);
+watch(() => props.hoveredTradeTargetId, () => applySelectionHalo(tradeTargetLinkPrimitives, (p) => isTradeTargetSelected(haloItemOf.get(p))));
 watch(() => props.hoveredPinLiquidityLevelKey, refreshLiquidityInternal);
 watch(() => props.hoveredPinRsiDivergenceKey, refreshRsiDivergenceInternal);
 // Direkt-Rendering gepinnter Objekte (Chat 2026-08-18, Task "Pin-Kontext: gepinnte Objekte direkt

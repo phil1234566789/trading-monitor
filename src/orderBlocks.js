@@ -192,6 +192,7 @@ export class OrderBlockPrimitive {
   attached({ chart, series, requestUpdate }) {
     this._chart = chart;
     this._series = series;
+    this._requestUpdate = requestUpdate; // für applySelectionHalo (chartSelectionHalo.js)
     // Fehlte hier (anders als bei LiquidityLinePrimitive.attached, siehe liquidity.js) — ein frisch
     // attachtes Primitive ohne begleitendes candleSeries.setData() hängt sonst in der Luft, bis
     // zufällig ein anderes Chart-Event einen Redraw auslöst. Bug-Report Philip 2026-07-31: eine neu
