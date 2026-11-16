@@ -45,7 +45,7 @@ async function checkAllCases(){
   await new Promise(resolve=>setTimeout(resolve));
  }
 }
-const checkMark=id=>({true:' ✓',false:' ✗'})[productCheck.value[id]]??' …';
+const checkMark=id=>id in productCheck.value?({true:' ✓',false:' ✗'})[productCheck.value[id]]??'':' …';
 
 // M5 kommt nativ aus derselben Fixture (closedChecklistCandles in evaluateCase); Reaktion und FVG-Füllung bleiben M1.
 const tf=ref('m1');

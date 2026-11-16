@@ -6,6 +6,8 @@
     "502": {"verdict": "positive", "reaction": "true", "routes": {"a": "rejected", "b": "entry"}, "source": "Codex ff698950: offene Gegen-FVG 06:27 sperrt A 06:32 dauerhaft; B 06:39 erlaubt"},
     "501": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Philip 15.11.2026: Reaktion false, kein Entry"},
     "503": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Pin 503"},
-    "504": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Philip: kein Entry; Gegen-FVG sperrt A, M1-OB-Tiefe verwirft B um 07:54"}
+    "504": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Philip: kein Entry; Gegen-FVG sperrt A, M1-OB-Tiefe verwirft B um 07:54"},
+    "507": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"},
+    "508": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"}
   }
 }
