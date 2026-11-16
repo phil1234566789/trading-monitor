@@ -27,10 +27,11 @@ export function dobCandleCache({ outDir, symbol, refresh, defaultStartSec, start
   const sessions = async () => {
     const file = path.join(outDir, `sessions-${symbol}.json`);
     if (!refresh && existsSync(file)) return JSON.parse(await fs.readFile(file, 'utf8'));
-    const { data, error } = await supabase.from('sessions').select('from_minutes,to_minutes,days,ignore_liquidity')
+    const { data, error } = await supabase.from('sessions').select('label,danger,from_minutes,to_minutes,days,ignore_liquidity')
       .eq('instrument', symbol).limit(200);
     if (error) throw error;
-    const rows = data.map(r => ({ fromMinutes: r.from_minutes, toMinutes: r.to_minutes, days: r.days, ignoreLiquidity: r.ignore_liquidity ?? false }));
+    const rows = data.map(r => ({ label: r.label, danger: r.danger, fromMinutes: r.from_minutes, toMinutes: r.to_minutes, days: r.days,
+      ignoreLiquidity: r.ignore_liquidity ?? false }));
     await write(file, rows);
     return rows;
   };

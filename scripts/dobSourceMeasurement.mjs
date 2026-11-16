@@ -29,7 +29,7 @@ const SAMPLES = [
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
-  const [{ fetchInitialCandles }, { supabase }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinOffsetMinutes, berlinDateStrFor },
+  const [{ fetchInitialCandles }, { supabase }, { markIgnoredCandles, htfObCandles, sessionOccurrences }, { berlinDayRangeUtcMs, berlinOffsetMinutes, berlinDateStrFor },
     { detectOrderBlocks, candleTouchesOrderBlock, candleInvalidatesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
     { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }] = await Promise.all(['/src/forexCandles.js',
     '/src/supabaseClient.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/orderBlockDetection.js', '/src/liquidityDetection.js',
@@ -210,6 +210,15 @@ try {
   printFilters('Kombi', combos);
 
   // DOB-QUELLE-G: Abstand OB1 ↔ nächste aktive H1/H4-OB-Zone in Trade-Richtung, beliebig alt (Philip: maßgeblich ist der Preisabstand).
+  // H1-ATR(14) (Wilder) zum OB1-Start nur als Info-Spalte; im Repo gibt es keine ATR-Funktion.
+  const h1Traded = frames['1h'].filter(c => !c.ignored), atrSeries = [];
+  for (let i = 1, atr = null, sum = 0; i < h1Traded.length; i++) {
+    const c = h1Traded[i], prev = h1Traded[i - 1].close;
+    const tr = Math.max(c.high - c.low, Math.abs(c.high - prev), Math.abs(c.low - prev));
+    if (i <= 14) { sum += tr; if (i === 14) atr = sum / 14; } else atr = (atr * 13 + tr) / 14;
+    if (atr != null) atrSeries.push({ closedAt: c.time + HOUR, atr });
+  }
+  const atrAt = t => { let lo = 0, hi = atrSeries.length; while (lo < hi) { const m = (lo + hi) >> 1; if (atrSeries[m].closedAt <= t) lo = m + 1; else hi = m; } return atrSeries[lo - 1]?.atr ?? null; };
   const G_BUCKETS = [[0, 'in Zone'], [1, '≤ 1 OB1-Höhe'], [2, '≤ 2'], [5, '≤ 5'], [Infinity, 'weiter']];
   const nearestZone = (r, tfs) => {
     const ob1 = zones.get(r.ob1), dayStart = r.byOb1.dayStart;
@@ -223,12 +232,12 @@ try {
     }
     if (!best) return { bucket: 'keine aktive Zone', age: null };
     const ageSec = r.ob1 - best.z.recognizedAt;
-    return { bucket: G_BUCKETS.find(([max]) => best.units <= max)[1], units: best.units,
+    return { bucket: G_BUCKETS.find(([max]) => best.units <= max)[1], units: best.units, usd: best.units * height,
       age: best.z.recognizedAt >= dayStart ? 'selber Tag' : ageSec <= 3 * 86400 ? '1–3 Tage' : 'älter' };
   };
   const gCache = new Map();
   const gFlags = r => {
-    if (!gCache.has(r)) gCache.set(r, { ...flags(r), gH1: nearestZone(r, ['H1']), gH4: nearestZone(r, ['H4']), g: nearestZone(r, ['H1', 'H4']) });
+    if (!gCache.has(r)) gCache.set(r, { ...flags(r), gH1: nearestZone(r, ['H1']), gH4: nearestZone(r, ['H4']), g: nearestZone(r, ['H1', 'H4']), atr: atrAt(r.ob1) });
     return gCache.get(r);
   };
   const bucketFilters = key => Object.fromEntries([...G_BUCKETS.map(([, b]) => b), 'keine aktive Zone']
@@ -271,9 +280,37 @@ try {
     return { k, bisK: inside.k, weiterAlsK: inside.rest };
   });
   const f1Ob = x => x.latestObInZone, cOb = x => x.A && x.obDelta1h;
+
+  // DOB-QUELLE-SWEEP: Philip will den Abstand in USD (OB-Größe schwankt). Kürzester Preisabstand OB1 ↔ Zone, 0 bei Überlappung.
+  const sweepBy = (value, ks) => ks.map(k => {
+    const res = evaluateFilters({ k: x => value(x) != null && value(x) <= k, rest: x => value(x) != null && value(x) > k }, gFlags);
+    return { k, bisK: res.k, weiterAlsK: res.rest };
+  });
+  const usdOf = x => x.g?.usd ?? null;
+  const atrOf = x => x.g?.usd == null || !x.atr ? null : x.g.usd / x.atr;
+  const sweepUsd = sweepBy(usdOf, [0, 1, 2, 3, 5, 7, 10, 15, 20, 30]);
+  const sweepAtr = sweepBy(atrOf, [0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3]);
+  const usdLe = k => x => usdOf(x) != null && usdOf(x) <= k;
+  const usdCombos = evaluateFilters(Object.fromEntries([0, 3, 5, 7, 10, 15].flatMap(k => [
+    [`G$≤${k}`, usdLe(k)], [`G$≤${k} ∪ F1`, x => usdLe(k)(x) || x.latestInZone], [`G$≤${k} ∪ C'`, x => usdLe(k)(x) || cPrime(x)],
+    [`G$≤${k} ∪ F1 ∪ C'`, x => usdLe(k)(x) || x.latestInZone || cPrime(x)],
+    [`G$≤${k} ∪ F1(OB) ∪ C'(OB)`, x => usdLe(k)(x) || f1Ob(x) || cOb(x)]])), gFlags);
+  // Reine OB-Variante der bisher besten Kombi (F1/C' enthalten LS-Quellen als jüngste Quelle).
+  const pureOb = evaluateFilters({ "C' ∪ F1 ∪ G(in Zone)": x => cPrime(x) || x.latestInZone || inZone(x),
+    "C'(OB) ∪ F1(OB) ∪ G(in Zone)": x => cOb(x) || f1Ob(x) || inZone(x) }, gFlags);
+  const lsShare = { "C' mit LS als jüngster Quelle": rows.filter(r => gFlags(r).A && gFlags(r).anyDelta1h && r.byOb1.latest?.kind === 'ls').length,
+    'F1 mit LS als jüngster Quelle': rows.filter(r => gFlags(r).latestInZone && r.byOb1.latest?.kind === 'ls').length };
+  // Session je Entry (Philip entscheidet später, v1 hat keinen Session-Filter).
+  const sessionOf = r => sessions.find(s => !s.ignoreLiquidity && sessionOccurrences(s.fromMinutes, s.toMinutes, r.entryTime, r.entryTime + 1, offset, s.days).length)?.label ?? 'keine Session';
+  const sessionTable = keep => {
+    const groups = Map.groupBy(rows.filter(r => keep(gFlags(r))), sessionOf);
+    return Object.fromEntries([...groups].map(([label, list]) => [label, { ...stats(list), halves: summarize(list).halves }]));
+  };
   const obCombos = evaluateFilters(Object.fromEntries([0, 1, 2, 5].flatMap(k => [
     [`G≤${k}`, within(k)], [`G≤${k} ∪ F1(OB)`, x => within(k)(x) || f1Ob(x)], [`G≤${k} ∪ C'(OB)`, x => within(k)(x) || cOb(x)],
     [`G≤${k} ∪ F1(OB) ∪ C'(OB)`, x => within(k)(x) || f1Ob(x) || cOb(x)]])), gFlags);
+  const SESSION_FILTERS = Object.fromEntries([['Basis', () => true], ['G$≤10', usdLe(10)], ['G$≤15', usdLe(15)], ['G$≤20', usdLe(20)], ['G ≤ 1,5 ATR', x => atrOf(x) != null && atrOf(x) <= 1.5],
+    ["C' ∪ F1 ∪ G(in Zone)", x => cPrime(x) || x.latestInZone || inZone(x)], ['A ∪ F1', x => x.A || x.latestInZone]].map(([n, f]) => [n, sessionTable(f)]));
   const gReport = { measurement: 'dob-quelle-g-v1', git: gitHash, base: baseSummary,
     methodology: ['Basis, Anker OB1, Mustertrades wie source-combos-xau-2026.json.',
       'Aktive Zone: H1/H4-OB in Trade-Richtung (htfObCandles + detectOrderBlocks), erkannt vor OB1-Start, bis OB1-Start auf M5 nicht invalidiert (candleInvalidatesOrderBlock); Alter und frühere Touches egal.',
@@ -281,7 +318,8 @@ try {
       'Zonen-Alter (Info): Erkennung der nächsten Zone am selben Handelstag / bis 3 Tage / älter.',
       "Kombis: A/C'/F1 wie in source-combos; A ∩ C' ∩ F1 ist gleich C' ∩ F1, weil C' A enthält.",
       'halves: Jan–Jun und Jul–Nov 2026 nach Berliner Entry-Monat; Overfitting-Check = Vorsprung zur Basis in beiden Hälften.'],
-    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos, sweep, obCombos,
+    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos, sweep, obCombos, sweepUsd, sweepAtr, usdCombos, pureOb, lsShare,
+    sessionsByFilter: SESSION_FILTERS,
     sampleGroups: { ob: 'alle Mustertrade-Positionen außer #137 (K05)', ls: '#137 (K05)' } };
   await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-g-xau-2026.json'), JSON.stringify(gReport, null, 2));
   console.log('Basis Halbjahre', JSON.stringify(baseSummary.halves));
@@ -292,6 +330,15 @@ try {
   console.log('\n== Sweep G bis k | weiter als k');
   for (const { k, bisK: a, weiterAlsK: b } of sweep) console.log(String(k).padStart(4), `bis: n=${a.n} ${a.winrate}% ${a.sumR}R H ${half(a, 'Jan–Jun')} / ${half(a, 'Jul–Nov')} | weiter: n=${b.n} ${b.winrate}% ${b.sumR}R H ${half(b, 'Jan–Jun')} / ${half(b, 'Jul–Nov')} | OB ${a.samples.filter(s => s.kept && s.trade !== '#137').length}/10 LS ${a.samples.find(s => s.trade === '#137').kept ? 'ja' : 'nein'}`);
   printFilters('OB-only ODER', obCombos);
+  for (const [name, list] of [['USD', sweepUsd], ['ATR', sweepAtr]]) {
+    console.log(`
+== Sweep ${name} bis k | weiter als k`);
+    for (const { k, bisK: a, weiterAlsK: b } of list) console.log(String(k).padStart(4), `bis: n=${a.n} ${a.winrate}% ${a.sumR}R H ${half(a, 'Jan–Jun')} / ${half(a, 'Jul–Nov')} | weiter: n=${b.n} ${b.winrate}% ${b.sumR}R H ${half(b, 'Jan–Jun')} / ${half(b, 'Jul–Nov')} | OB ${a.samples.filter(s => s.kept && s.trade !== '#137').length}/10 LS ${a.samples.find(s => s.trade === '#137').kept ? 'ja' : 'nein'}`);
+  }
+  printFilters('USD-ODER', usdCombos);
+  printFilters('reine OB-Variante', pureOb);
+  console.log('LS-Anteil', JSON.stringify(lsShare));
+  console.log('Sessions', JSON.stringify(SESSION_FILTERS, null, 0));
   console.log(JSON.stringify({ git: gitHash, base: report.base, events: report.events }));
   for (const [name, t] of Object.entries(report.byOb1)) {
     console.log(`\n== ${name} (Anker OB1)`);
