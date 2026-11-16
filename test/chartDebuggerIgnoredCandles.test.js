@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {sessions} from '../src/sessions.js';
 import {doubleOrderBlockInput} from '../src/doubleOrderBlockInput.js';
 import {loadCaseFixture,evaluateCase} from '../src/chartDebuggerCases.js';
+import {detectDoubleOrderBlocks} from '../src/doubleOrderBlocks.js';
 
 // Spread Hour wie in Philips XAUUSD-Sessions: 23:00–00:00 Berlin, Mo–Fr, Kerzen ignorieren.
 const SPREAD_HOUR={id:'spread',instrument:'XAUUSD',fromMinutes:1380,toMinutes:0,days:[1,2,3,4,5],ignoreLiquidity:true};
@@ -26,6 +27,14 @@ it('ignorierte Spread-Hour-Kerzen ändern das Debugger-Ergebnis wie im Dashboard
  expect(reaction().verdict).toMatchObject({state:'false',reason:'entryRoutesRejected'});
  sessions.splice(0,0,SPREAD_HOUR);
  expect(reaction().verdict).toMatchObject({state:'false',reason:'marketClosed'});
+});
+
+it('der Vorfilter auf geschlossene Kerzen ändert die Paare nicht, auch mit laufender Kerze',async()=>{
+ const fixture=await loadCaseFixture(c),{m5,m1}=fixture.candles;
+ // 09.11. 17:32:30 Berlin: M5 17:30 und M1 17:32 laufen noch.
+ const evaluatedAt=1794241950,raw=detectDoubleOrderBlocks({m5Candles:m5,m1Candles:m1,instrument:'XAUUSD',evaluatedAt});
+ expect(raw.pairs.length).toBeGreaterThan(0);
+ expect(detectDoubleOrderBlocks(doubleOrderBlockInput({m5,m1,symbol:'XAUUSD',evaluatedAt}))).toEqual(raw);
 });
 
 it('das Dashboard baut seine Worker-Eingabe über dieselbe Funktion',()=>{
