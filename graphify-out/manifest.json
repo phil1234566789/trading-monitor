@@ -10176,15 +10176,21 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/source-measurement-xau-2026.json": {
-    "mtime": 1794856388.1653628,
-    "seen": 1794856458.5492659,
-    "ast_hash": "20657a5da44ae5bd1ebb44e2e851111d",
+    "mtime": 1794856892.7128897,
+    "seen": 1794856957.1487772,
+    "ast_hash": "866bbe6c19ad188986a61d382299ffd3",
     "semantic_hash": ""
   },
   "scripts/dobSourceMeasurement.mjs": {
-    "mtime": 1794856382.2354963,
-    "seen": 1794856458.5492659,
-    "ast_hash": "fcaf3e0bd1b6dd89106b3e4c2cf4e5f1",
+    "mtime": 1794856886.5774386,
+    "seen": 1794856957.1702967,
+    "ast_hash": "3eedad8c1bf02e5f86a606466b82a22e",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/source-combos-xau-2026.json": {
+    "mtime": 1794856892.8044963,
+    "seen": 1794856957.1487772,
+    "ast_hash": "3311c509fee4994d7836cf655bc46183",
     "semantic_hash": ""
   }
 }
