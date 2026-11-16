@@ -103,7 +103,7 @@ const fillState=open=>open===true?'offen':open===false?'gefüllt':'Füllstand un
 function opponentNode(r,dir,live){
  const sources=live?r.opponentFvgs??[]:[],blocked=r?.routes?.a?.status==='rejected'&&r.routes.a.reason==='opposingFvgOpen',unknownNow=sources.some(x=>x.openNow==null),unknownThen=sources.some(x=>x.openAtReaction==null);
  const now=unknownNow?'Füllstand unbekannt':sources.some(x=>x.openNow)?'offen':'gefüllt';
- return {label:`Gegen-FVG: ${adjective(-dir)} M1-FVG im Weg?`,status:!live?'not-visited':unknownNow||unknownThen?'unknown':'visited',
+ return {label:`💀 Gegen-FVG: ${adjective(-dir)} M1-FVG im Weg?`,status:!live?'not-visited':unknownNow||unknownThen?'unknown':'visited',
   sub:!live?'○ nicht besucht':sources.length?`${sources.length} Gegen-FVG · jetzt ${now}${unknownThen?' · damaliger Füllstand unbekannt':''}${blocked?' · a historisch abgelehnt':''}`:'keine Gegen-FVG im Reaktionsweg',
   detail:!live?['Erst nach Bekanntwerden der Reaktions-FVG.']:[
    ...sources.map(({fvg,openAtReaction,openNow,blocksEntryA})=>`Quelle: ${range(fvg)} · M1-FVG ${time(fvg.candleTime)} · erste Kerze ${time(fvg.candleTime-60)} · bekannt ${time(fvg.recognizedAt)} · bei Reaktion ${fillState(openAtReaction)} · jetzt ${fillState(openNow)} · ${blocksEntryA?'als Entry-a-Blocker markiert':'kein belegter Entry-a-Blocker'}.`),
