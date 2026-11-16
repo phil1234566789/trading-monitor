@@ -2,8 +2,15 @@ import { supabase } from "./supabaseClient.js";
 
 // Statische Beschreibungen der bekannten Alarm-Typen — die DB (alarm_settings) speichert nur
 // den enabled-Zustand je `key`, nicht den Anzeigetext. Neue Alarme hier ergänzen, sobald sie
-// im poi-watcher dazukommen (siehe ALARM_TYPES-Kommentar dort).
+// im poi-watcher oder dob-watcher dazukommen. windowInstrument: dessen trading_schedules.alarm_windows
+// steuern den Versand dieses Alarms und sind auf der Alarme-Seite direkt editierbar.
 export const ALARM_TYPES = [
+  {
+    key: "dob_setup",
+    label: "DOB-Setup XAUUSD",
+    description: "Doppelter Orderblock mit Quelle der Kraft (v2): Alarm beim OB2-Retest und beim Entry (dob-watcher). Erkennung und Protokoll laufen 02:00–22:00 weiter, gesendet wird nur im Alarmfenster.",
+    windowInstrument: "XAUUSD",
+  },
   {
     key: "ob_zone_4h",
     label: "4H Order-Block erreicht",

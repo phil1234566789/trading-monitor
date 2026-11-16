@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { fetchAlarmSettings, setAlarmEnabled } from "../alarmSettings.js";
+import ScheduleWindowsEditor from "../components/ScheduleWindowsEditor.vue";
 
 const alarms = ref([]);
 const loading = ref(true);
@@ -54,6 +55,14 @@ async function toggle(alarm) {
         >
           <span class="alarme-switch-knob"></span>
         </button>
+        <ScheduleWindowsEditor
+          v-if="alarm.windowInstrument"
+          class="alarme-windows"
+          :instrument="alarm.windowInstrument"
+          kind="alarmWindows"
+          :title="`Alarmfenster (Berlin, wie Handelszeiten ${alarm.windowInstrument})`"
+          empty-text="nie senden"
+        />
       </div>
     </div>
   </div>
@@ -95,9 +104,16 @@ async function toggle(alarm) {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   padding: 14px 0;
   border-bottom: 1px solid #2a2e39;
+}
+
+/* Fenster-Editor (z.B. DOB-Setup) in eigener Zeile unter Text und Schalter. */
+.alarme-windows {
+  flex-basis: 100%;
+  margin-bottom: 0;
 }
 
 .alarme-label {
