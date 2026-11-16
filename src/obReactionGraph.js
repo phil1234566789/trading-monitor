@@ -213,7 +213,10 @@ export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,b
  const text=!ob?'M5-OB noch nicht bekannt.':!r||r.reason==='noContact'?'M5-OB bekannt; noch kein Retest.'
   :live?`Reaktion bestätigt um ${time(r.knownAt)}; ${first?'OB1 geht in das Hold-Gate.':'Entry a beendet die Auswertung; andernfalls wird b geprüft.'}`
   :rejected?`Reaktion false um ${time(r.knownAt)}: ${reasonText(r.reason)}.`:`Reaktion unknown: ${reasonText(r.reason)}.`;
- return {head,text,nodes:n,edges,history:history(ob,r,routes,evaluatedAt)};
+ // Kopfzeile: welcher Aufruf mit welchem OB; Uhrzeit = OB-Kerze, Preise erst, wenn die OB bekannt ist.
+ const start=entry.startTime??ob?.startTime;
+ const title=['evaluateOrderBlockReaction()',dir===1?'Long':'Short',`M5-OB${start!=null?' '+time(start):''}`,ob&&range(ob)].filter(Boolean).join(' · ');
+ return {title,head,text,nodes:n,edges,history:history(ob,r,routes,evaluatedAt)};
 }
 
 // Versuche bleiben getrennte Ereignisse; ein späterer Entry überschreibt die frühere Ablehnung nicht.

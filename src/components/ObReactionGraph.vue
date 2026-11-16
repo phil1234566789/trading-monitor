@@ -29,9 +29,7 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
 
 <template>
  <section class="obg" :style="colors" @keydown.esc="selected=null">
-  <h2>OB Reaktion · Knotenplan</h2>
-  <p class="goal">Entscheidungsbaum v7 (Default W1): <strong>true / false / pending / unknown</strong> für die Entry-Machbarkeit; Entry-Kandidat a, andernfalls b → SL-Prüfung → vollständiger Entry. Strukturelle Bestätigung und Zustände aus dem Produktergebnis zum Slider-Stand.</p>
-  <p class="muted">Knoten anklicken → Details (Enter / Leertaste).</p>
+  <h2>{{ graph.title }}</h2>
   <div class="current"><strong>{{ graph.head }}</strong><span>{{ graph.text }}</span></div>
   <div class="plan" aria-label="Kausaler Algorithmuspfad" :data-direction="dir===1?'long':'short'">
    <svg viewBox="0 0 400 1080" preserveAspectRatio="none" aria-hidden="true">
@@ -77,7 +75,6 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
 .obg{--surface:#1c2226;--line:#364147;--accent:#9cd5ef;--muted:#b3bec4;--text:#eff3f4;--edge:color-mix(in srgb,var(--muted) 45%,var(--surface));
  font-size:14px;line-height:1.5;color:var(--text)}
 h2{font-size:17px;margin:4px 0}
-.goal{font-size:12px;margin:8px 0}.muted{color:var(--muted);margin:8px 0}
 .current{font-size:12px;display:grid;gap:4px;padding:8px;background:var(--surface)}
 .plan{position:relative;width:100%;height:1080px;margin-top:8px}
 .plan>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
