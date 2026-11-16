@@ -7,6 +7,7 @@ import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
 import {dobAlarmEvents,dobStaleAlarm} from '../../../src/dobAlarm.js';
 import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
+import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
 
 const SYMBOL='XAUUSD';
 // M1/M5 reichen für das Live-Fenster samt Wochenende; H1/H4 für beliebig alte Quell-Zonen und den ATR.
@@ -14,6 +15,9 @@ const SYMBOL='XAUUSD';
 const COUNTS: Record<string,number>={'1m':2000,'5m':450,'1h':6000,'4h':1500};
 const BAR_SECONDS: Record<string,number>={'1m':60,'5m':300,'1h':3600,'4h':14400};
 const offset=(sec:number)=>berlinOffsetMinutes(sec*1000);
+// Philip: gesendet wird nur Mo–Fr 09:00–18:00 Berlin; Erkennung und Protokoll laufen weiter 02:00–22:00 (Dedup, Statistik).
+// Gleiches Format wie trading_schedules.alarm_windows ([von,bis) in Minuten seit Mitternacht).
+const ALARM_WINDOWS:TradingWindows={weekday:[[9*60,18*60]],saturday:[],sunday:[]};
 
 // Cursor über das tatsächlich zuletzt gelieferte Zeitfeld: PostgREST kappt Seiten still bei ~1000 Zeilen (CLAUDE.md).
 async function closedCandles(client:any,bar:string,evaluatedAt:number){
@@ -28,10 +32,13 @@ async function closedCandles(client:any,bar:string,evaluatedAt:number){
     .filter(c=>c.time+BAR_SECONDS[bar]<=evaluatedAt);
 }
 
-async function deliver(client:any,event:any){
+// Außerhalb des Alarmfensters: ins Protokoll als suppressed, nie nachsenden (der Dedup-Schlüssel ist damit verbraucht).
+async function deliver(client:any,event:any,sendAllowed=true){
   const inserted=checked(await client.from('dob_alarm_events').upsert({id:event.id,instrument:event.instrument,phase:event.phase,setup_id:event.setupId??null,
-    direction:event.direction??null,signal_at:new Date(event.signalAt*1000).toISOString(),text:event.text},{onConflict:'id',ignoreDuplicates:true}).select('id')) as any[];
+    direction:event.direction??null,signal_at:new Date(event.signalAt*1000).toISOString(),text:event.text,
+    ...(sendAllowed?{}:{status:'suppressed',error:'outsideAlarmWindow'})},{onConflict:'id',ignoreDuplicates:true}).select('id')) as any[];
   if(!inserted.length)return null;
+  if(!sendAllowed)return {id:event.id,status:'suppressed'};
   let status='sent',error=null;
   try{await sendTelegramText(event.text,env);}
   catch(failure){
@@ -61,11 +68,12 @@ async function tick(client:any,dry=false){
   const calcStart=performance.now(),result=checkDobTradeSetup(input),calcMs=Math.round(performance.now()-calcStart);
   const events=dobAlarmEvents(result,evaluatedAt),stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   if(stale)events.push(stale);
-  if(dry)return {dry:true,evaluatedAt,runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
+  const sendAllowed=isWithinTradingWindows(evaluatedAt,ALARM_WINDOWS);
+  if(dry)return {dry:true,evaluatedAt,sendAllowed,runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,setups:result.setups.length,rejected:result.rejected.length,
     events:events.map(e=>({id:e.id,phase:e.phase}))};
   const delivered=[];
-  for(const event of events){const d=await deliver(client,event);if(d)delivered.push(d);}
+  for(const event of events){const d=await deliver(client,event,sendAllowed);if(d)delivered.push(d);}
   await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
     runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:result.setups.length,rejected:result.rejected.length,skipped:null,error:null});
   return {evaluatedAt,calcMs,setups:result.setups.length,events:events.length,delivered};
@@ -76,7 +84,8 @@ async function reportError(client:any,error:unknown){
   const message=error instanceof Error?error.message:String(error),now=Math.floor(Date.now()/1000);
   await writeState(client,{error:message}).catch(()=>{});
   await deliver(client,{id:`dob:error:${SYMBOL}:${berlinDateStrFor(now)}:${formatBerlinTime(Math.floor(now/3600)*3600)}`,instrument:SYMBOL,phase:'error',
-    signalAt:now,text:`⚠️ DOB-Watcher ${SYMBOL}: Lauf fehlgeschlagen (${message.slice(0,300)}). Alarme können fehlen.`}).catch(()=>{});
+    signalAt:now,text:`⚠️ DOB-Watcher ${SYMBOL}: Lauf fehlgeschlagen (${message.slice(0,300)}). Alarme können fehlen.`},
+    isWithinTradingWindows(now,ALARM_WINDOWS)).catch(()=>{});
   return message;
 }
 
