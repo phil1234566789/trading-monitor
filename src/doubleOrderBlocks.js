@@ -8,9 +8,9 @@ import {orderBlockRetestHoldHistory,orderBlockRetestHoldAt} from './orderBlockRe
 import {evaluateDoubleOrderBlockRetestDay} from './doubleOrderBlockRetestDay.js';
 import {evaluateDoubleOrderBlockPriceGap} from './doubleOrderBlockPriceGap.js';
 
-export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-opponent-v10';
+export const DOUBLE_ORDER_BLOCK_VERSION='m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-opponent-terminal-entry-v11';
 
-// Nur Routen mit vollständigem Entry-Tupel bekommen ein Outcome; die Statuswörter bleiben die des Renderings.
+// Nur vollständige Entries bekommen ein Outcome; nach A bleibt B ausdrücklich skipped, nicht pending oder unknown.
 function pairEntries(reaction,direction,m1,evaluatedAt,instrument){
  return Object.fromEntries(Object.entries(reaction.routes).map(([variant,route])=>{
   if(route.status!=='entry')return [variant,{variant,status:route.status==='rejected'?'invalid':route.status,reason:route.reason,knownAt:route.knownAt??null}];

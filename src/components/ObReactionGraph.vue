@@ -12,10 +12,10 @@ const LAYOUT=[['detect',50,8,30],['touch',50,80,36],['closed',16,86,28],['broken
 const SIDE=['fvgList','internalOb'];
 const PATHS={detectTouch:'M200 66V80',touchClosed:'M128 109H120',touchBroken:'M200 138V170',brokenFalse:'M124 205H120',
  brokenReaction:'M200 242V280',reactionOb1:'M200 338V355H64V470',reactionCounter:'M200 338V355H248V370',counterStop:'M248 438V470',holdNoDob:'M64 540V590',
- stopA:'M248 525V570H184V590',stopB:'M248 525V570H324V590',bEntry:'M324 662V700',aResult:'M184 648V790',bResult:'M324 744V820H272',
+ stopA:'M248 568V578H184V590',stopB:'M244 620H256',bEntry:'M324 662V700',aResult:'M184 648V790',bResult:'M324 744V820H272',
  closedResult:'M8 114H4V860H96',falseResult:'M8 209H4V860H96',side:'M260 30H276'};
 const STATUS_TEXT={visited:'● durchlaufen',unknown:'◇ offen / unbekannt','not-visited':'○ nicht besucht',alternative:'○ überholte Alternative',
- rejected:'× abgelehnt',info:'i Zusatzinfo · kein Gate'};
+ rejected:'× abgelehnt',info:'i Quelleninfo'};
 
 const colors=computed(()=>({'--long':cssColor('candleUp'),'--short':`color-mix(in srgb, ${cssColor('candleDown')} 65%, white)`,'--rejected':cssColor('tradeLoss'),
  '--fill':cssColor('tradeWin'),'--fvg':cssColor('fvgCandle')}));
@@ -30,7 +30,7 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
 <template>
  <section class="obg" :style="colors" @keydown.esc="selected=null">
   <h2>OB Reaktion · Knotenplan</h2>
-  <p class="goal">Entscheidungsbaum v7 (Default W1): <strong>true / false / pending / unknown</strong> für die Entry-Machbarkeit; strukturelle Reaktion separat. Zustände aus dem Produktergebnis zum Slider-Stand.</p>
+  <p class="goal">Entscheidungsbaum v7 (Default W1): <strong>true / false / pending / unknown</strong> für die Entry-Machbarkeit; Entry a, andernfalls b. Strukturelle Bestätigung und Zustände aus dem Produktergebnis zum Slider-Stand.</p>
   <p class="muted">Knoten anklicken → Details (Enter / Leertaste).</p>
   <div class="current"><strong>{{ graph.head }}</strong><span>{{ graph.text }}</span></div>
   <div class="plan" aria-label="Kausaler Algorithmuspfad" :data-direction="dir===1?'long':'short'">
@@ -47,9 +47,10 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
    </button>
    <div class="side">
     <button v-for="id in SIDE" :key="id" type="button" class="node" data-info="true" :data-status="graph.nodes[id].status"
-     :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+nodeText(graph.nodes[id])+' · Zusatzinformation, kein Pflicht-Gate'"
+     :aria-expanded="selected===id" :aria-label="graph.nodes[id].label+' · '+nodeText(graph.nodes[id])+' · '+(graph.nodes[id].description??'Zusatzbeleg')"
      @click="toggle(id)">
      <span>{{ graph.nodes[id].label }}</span>
+     <small v-if="graph.nodes[id].description">{{ graph.nodes[id].description }}</small>
      <small>{{ nodeText(graph.nodes[id]) }}</small>
      <span v-for="(m,i) in graph.nodes[id].meters" :key="i" class="meter" :data-tone="m.value==null?'unknown':null" role="img" :aria-label="m.label" :title="(m.range?m.range+' · ':'')+m.label">
       <template v-if="m.value==null">{{ m.label }}</template>
@@ -60,7 +61,7 @@ const nodeText=node=>node.sub??STATUS_TEXT[node.status];
     </button>
    </div>
   </div>
-  <p class="legend">● durchlaufen · ◇ offen / unbekannt · ○ nicht besucht · × abgelehnt · gestrichelte Seitenspur: Zusatzinfos, keine Gates</p>
+  <p class="legend">● durchlaufen · ◇ offen / unbekannt · ○ nicht besucht · × abgelehnt · Seitenspur: aktueller Quellenzustand · SL-Entscheidung beim Entry eingefroren</p>
   <section v-if="detail" class="details" aria-label="Knotendetails">
    <header><strong>{{ detail.label }} · {{ STATUS_TEXT[detail.status] }}</strong><button aria-label="Knotendetails schließen" @click="selected=null">×</button></header>
    <p v-for="line in detail.detail" :key="line">{{ line }}</p>

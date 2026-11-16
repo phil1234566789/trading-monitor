@@ -24,7 +24,7 @@ jobs:
           node-version: 20
       - run: npm ci
       - name: Guard historical OB reaction contracts
-        run: npx vitest run test/obReactionHistoricalContract.test.js test/orderBlockReactionVerdict.test.js test/orderBlockInternalFvgs.test.js test/orderBlockReactionRetry.test.js test/chartDebuggerCases.test.js test/chartDebuggerFvgs.test.js test/chartDebuggerP7.test.js test/obReactionGraph.test.js test/orderBlockReaction.test.js test/doubleOrderBlocks.test.js
+        run: npx vitest run test/obReactionHistoricalContract.test.js test/orderBlockReactionVerdict.test.js test/orderBlockInternalFvgs.test.js test/orderBlockReactionRetry.test.js test/orderBlockReactionTerminal.test.js test/chartDebuggerCases.test.js test/chartDebuggerFvgs.test.js test/chartDebuggerP7.test.js test/obReactionGraph.test.js test/orderBlockReaction.test.js test/doubleOrderBlocks.test.js
       - run: npm run build
         env:
           # Supabase anon-Key ist bewusst öffentlich (RLS-Policies sind die eigentliche

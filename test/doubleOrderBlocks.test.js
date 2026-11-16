@@ -75,9 +75,13 @@ describe('double order blocks from native candles',()=>{
    expected.a='invalid';
    expect(dob.entries.a).toMatchObject({reason:'opposingFvgOpen',knownAt:historical.a[0]});
   }
-  // Bestätigter Retry-Vertrag: der verworfene erste Versuch bleibt in attempts, nur die öffentliche Route folgt dem Nachfolger.
+  // Neuer Nutzervertrag: nach gültigem A wird B nicht mehr geprüft; historische B-Kandidaten bleiben oben dokumentiert.
+  if(!OPPOSING_SOURCES[pair.id]){
+   expected.b='skipped';
+   expect(dob.entries.b).toEqual({variant:'b',status:'skipped',reason:'entryAlreadyFound',knownAt:historical.a[0]});
+  }
+  // Retry bleibt bei blockiertem A aktiv; P7 trägt den bestätigten Nachfolger um 03:35.
   if(pair.id==='P7')expected.b=[1793673300,3943.16];
-  if(pair.id==='P11')expected.b='pending';
   expect(dob.direction).toBe(first.dir===1?'long':'short');
   expect(dob.firstReaction.recognizedAt).toBeLessThanOrEqual(dob.secondRetest.candleTime);
   expect(dob.recognizedAt).toBe(dob.secondReaction.recognizedAt);
@@ -88,13 +92,12 @@ describe('double order blocks from native candles',()=>{
     stopPrice:want[2]??(first.dir===1?dob.secondOrderBlock.bottom:dob.secondOrderBlock.top)});
    expect(entry.targetPrice).toBeCloseTo(entry.entryPrice+first.dir*2*Math.abs(entry.entryPrice-entry.stopPrice),8);
   }
-  if(pair.id==='P7'||pair.id==='P11'){
+  if(pair.id==='P7'){
    const fixture=days.get(first.day),at=fixture.candles.m1.at(-1).time+60;
    const r=evaluateOrderBlockReaction(createOrderBlockReactionContext(fixture.candles.m1,at,'XAUUSD'),dob.secondOrderBlock);
    expect(r.routes.b.attempts).toHaveLength(2);
-   expect(r.routes.b.attempts[0]).toMatchObject({status:'rejected',knownAt:pair.id==='P7'?1793672760:1792691760});
-   expect(r.routes.b.attempts[1]).toMatchObject({status:pair.id==='P7'?'entry':'pending',
-    fvg:{candleTime:pair.id==='P7'?1793673000:1792692000,recognizedAt:pair.id==='P7'?1793673120:1792692120}});
+   expect(r.routes.b.attempts[0]).toMatchObject({status:'rejected',knownAt:1793672760});
+   expect(r.routes.b.attempts[1]).toMatchObject({status:'entry',fvg:{candleTime:1793673000,recognizedAt:1793673120}});
   }
  });
  it.each(manifest.pairs)('keeps $id at its causal confirmation without later candles changing OB1',pair=>{
@@ -151,7 +154,7 @@ describe('double order blocks from native candles',()=>{
   const result=detectDoubleOrderBlocks({instrument:'XAUUSD',m5Candles:fixture.candles.m5,m1Candles:changed,evaluatedAt:fixture.provenance.query.to});
   expect(result.pairs.some(p=>p.id===ref.id)).toBe(false);
  });
- it('keeps all confirmed pairs in the asserted direction and order, with independent entry variants',()=>{
+ it('keeps all confirmed pairs in the asserted direction and order, with explicit entry variants',()=>{
   for(const day of manifest.days)for(const pair of run(day).pairs){
    const {firstOrderBlock:a,secondOrderBlock:b}=pair,sign=pair.direction==='long'?1:-1;
    expect(a.startTime).toBeLessThan(b.startTime);expect(a.dir).toBe(b.dir);

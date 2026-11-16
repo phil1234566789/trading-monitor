@@ -131,7 +131,7 @@ function opposingFvgs(context,orderBlock,contact,reactionAt) {
  return result;
 }
 
-// Route a steht mit der FVG fest; Route b läuft einmal vorwärts bis Entry, Bruch, zu tiefem M1-OB oder Lücke.
+// A wird bei FVG-Bestätigung entschieden; nur ohne A-Entry läuft B bis Entry, Bruch, zu tiefem M1-OB oder Lücke.
 function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
  const direction=sideOf(orderBlock.dir),routes={};
  const settle=(route,entry)=>{
@@ -148,6 +148,11 @@ function evaluateRoutes(context,orderBlock,contact,fvg,opponents) {
  else if(active.length)routes.a={status:'rejected',reason:'opposingFvgOpen',knownAt:fvg.recognizedAt};
  else if(opponents.some(x=>x.openAtReaction===null))routes.a={status:'unknown',reason:'opposingFvgHistoryMissing',knownAt:fvg.recognizedAt};
  else if(immediate.status==='ready')settle('a',immediate);else routes.a={status:'unknown',reason:'entryUnavailable',knownAt:fvg.recognizedAt};
+ // Ein vollständiger Entry beendet die Reaktion (Philip/P14); spätere B-Ereignisse wären ein zweiter Einstieg.
+ if(routes.a.status==='entry'){
+  routes.b={status:'skipped',reason:'entryAlreadyFound',knownAt:routes.a.entryTime};
+  return routes;
+ }
  let entryFvg=fvg,sequence=m1FvgEntrySequence(fvg,'retestReaction',context.instrument),fullFill=false;
  const attempts=[];
  const finish=(status,reason,c)=>{

@@ -4,11 +4,10 @@ import {useRoute,useRouter} from 'vue-router';
 import {createSeriesMarkers,LineStyle} from 'lightweight-charts';
 import {createPriceChart} from '../priceChartSetup.js';
 import {OrderBlockPrimitive,renderPersistedZones} from '../orderBlocks.js';
-import {renderDoubleOrderBlocks,doubleOrderBlockDetails} from '../doubleOrderBlockRendering.js';
+import {renderDoubleOrderBlocks} from '../doubleOrderBlockRendering.js';
 import {tintM1FvgCandidates} from '../fvgCandleTint.js';
 import {cssColor,cssColorScaled} from '../chartColors.js';
-import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
-import {fmtPrice} from '../format.js';
+import {formatDatedTime} from '../berlinTime.js';
 import {CHART_DEBUGGER_CASES,CASE_GROUPS,expectedText,productMatches,loadCaseFixture,evaluateCase,caseSteps} from '../chartDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOrderBlocks.js';
 import {obReactionGraph,graphChangeTimes,structuralState} from '../obReactionGraph.js';
@@ -71,16 +70,9 @@ function onKey(e){
  (e.shiftKey?jump:step)(e.key==='ArrowLeft'?-1:1);
 }
 
-const sideText=dir=>dir===1?'Long':'Short';
-const price=p=>p==null?'–':fmtPrice(p,2);
-const time=t=>t==null?'–':formatBerlinTime(t);
 // Marker sitzen auf der Kerze, deren Schluss das Wissen liefert (knownAt = Kerzenzeit + 60).
 const bar=knownAt=>knownAt-60;
 
-function pairEntryText(e){
- if(e.status!=='ready')return `${e.status}${e.reason?' · '+e.reason:''}`;
- return `ready ${time(e.entryTime)} @ ${price(e.entryPrice)} · SL ${price(e.stopPrice)} · TP ${price(e.targetPrice)} · ${e.outcome?.status??'–'}`;
-}
 
 function draw(){
  if(!series||!result.value)return;
@@ -162,29 +154,11 @@ watch(tf,()=>{fitPending=true;draw();});
    <div ref="chartEl" class="chart"></div>
    <div class="graph">
     <label v-if="current.orderBlocks.length===2">Knotenplan für <select v-model="graphRole"><option value="first">OB1</option><option value="second">OB2</option></select></label>
-    <ObReactionGraph v-if="graph" :graph="graph" :dir="current.dir" :scope="caseId+graphRole"/>
+    <p v-if="error" class="err" role="alert">{{ error }}</p>
+    <p v-else-if="!result" role="status">Lade Fixture …</p>
+    <ObReactionGraph v-else-if="graph" :graph="graph" :dir="current.dir" :scope="caseId+graphRole"/>
    </div>
-   <aside class="panel">
-    <p v-if="error" class="err">{{ error }}</p>
-    <p v-else-if="!result">Lade Fixture …</p>
-    <template v-else>
-     <section v-if="current.orderBlocks.length===2">
-      <h3>DOB {{ sideText(current.dir) }}</h3>
-      <template v-if="result.pair">
-       <p>{{ doubleOrderBlockDetails(result.pair,evaluatedAt) }}</p>
-       <p v-for="(e,name) in result.pair.entries" :key="name"><b>{{ name }}</b> {{ pairEntryText(e) }}</p>
-      </template>
-      <p v-else class="muted">Noch kein DOB erkannt.</p>
-     </section>
-     <section v-for="o in result.orderBlocks" :key="o.startTime">
-      <h3>{{ current.orderBlocks.length===2?(o.role==='first'?'OB1':'OB2'):'OB' }} · M5 {{ formatDatedTime(o.startTime) }}</h3>
-      <p v-if="!o.orderBlock" class="muted">Noch nicht bekannt.</p>
-      <template v-else>
-       <p>{{ price(o.orderBlock.bottom) }}–{{ price(o.orderBlock.top) }} · bekannt {{ time(o.orderBlock.recognizedAt) }}</p>
-      </template>
-     </section>
-    </template>
-   </aside>
+
   </div>
  </div>
 </template>
@@ -196,10 +170,6 @@ watch(tf,()=>{fitPending=true;draw();});
 .at{font-variant-numeric:tabular-nums;white-space:nowrap}
 .main{flex:1;display:flex;gap:8px;min-height:0}
 .chart{flex:1;min-width:0}
-.panel{width:380px;overflow:auto;font-size:13px}
 .graph{width:460px;flex:none;overflow:auto;padding-right:4px}
-.panel h3{margin:8px 0 4px;font-size:14px}
-.panel p{margin:2px 0}
-.muted{opacity:.6}
 .err{color:#ef5350}
 </style>

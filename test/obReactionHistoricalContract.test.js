@@ -159,7 +159,8 @@ describe('Historischer OB-Reaktionsvertrag: native Quellen statt Produkt-Goldens
   expect(changed.result.fvg).toMatchObject({candleTime:baseline.result.fvg.candleTime,recognizedAt:e.reactionAt});
   expect(baseline.result.routes.a).toMatchObject({status:'rejected',knownAt:e.reactionAt});
   expect(changed.result).toMatchObject({state:'true',structuralState:'true',knownAt:e.reactionAt,
-   verdict:{state:'true',knownAt:e.reactionAt},routes:{a:{status:'entry',entryTime:e.reactionAt},b:{status:'pending'}}});
+   verdict:{state:'true',knownAt:e.reactionAt},routes:{a:{status:'entry',entryTime:e.reactionAt},
+    b:{status:'skipped',reason:'entryAlreadyFound',knownAt:e.reactionAt}}});
   expect(changed.result.routes.a.entryPrice).toBeCloseTo(dir===1?4120.27:10000-4120.27,8);
   expect(changed.result.routes.a.stopLoss).toBeCloseTo(dir===1?4112.95:10000-4112.95,8);
  });

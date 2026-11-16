@@ -4,7 +4,7 @@ import {doubleOrderBlockDisplay} from './doubleOrderBlocks.js';
 import {formatDatedTime} from './berlinTime.js';
 import {fmtPrice,pricePrecisionForInstrument} from './format.js';
 
-const labels={pending:'wartet',invalid:'ungültig',unknown:'unbekannt',open:'offen',loss:'Loss',success:'2R',ambiguous:'unklar'};
+const labels={skipped:'nicht geprüft',pending:'wartet',invalid:'ungültig',unknown:'unbekannt',open:'offen',loss:'Loss',success:'2R',ambiguous:'unklar'};
 export function renderDoubleOrderBlocks(series,pairs,candles,evaluatedAt,{selectedPairId,pinnedPairIds=new Set(),pairEvaluatedAt=new Map()}={}) {
   const zones=new Map(),items=[];
   for(const pair of pairs) {

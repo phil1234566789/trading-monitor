@@ -109,10 +109,10 @@ describe('native reaction references',()=>{
  it('Pin 502: Entry a stops at the bullish M5 lower edge while the old internal FVG is still open',()=>{
   expect(react('2026-10-21',1792552500,1).routes.a).toMatchObject({status:'entry',entryTime:1792556100,entryPrice:4123.01,stopLoss:4112.95,stopAnchor:'m5-edge'});
  });
- it('Pin 500: both routes stop at the bearish M5 upper edge, independent of what happens after the entry',()=>{
+ it('Pin 500: A stops at the bearish M5 upper edge and terminates B, independent of later candles',()=>{
   const full=react('2026-10-16',1792150200,-1);
   expect(full.routes.a).toMatchObject({status:'entry',entryTime:1792151400,entryPrice:4176.29,stopLoss:4181.98});
-  expect(full.routes.b).toMatchObject({status:'entry',entryTime:1792151580,entryPrice:4175.75,stopLoss:4181.98});
+  expect(full.routes.b).toEqual({status:'skipped',reason:'entryAlreadyFound',knownAt:1792151400});
   expect(react('2026-10-16',1792150200,-1,{evaluatedAt:1792151580}).routes).toEqual(full.routes);
  });
  it('Pin 501: the 05:37 high 1.15 % below the far edge makes the reaction false from 05:38 Berlin, no entry',()=>{
@@ -128,14 +128,14 @@ describe('native reaction references',()=>{
   const m1=fixture('2026-10-21').candles.m1.filter(c=>c.time!==1792555500);
   expect(react('2026-10-21',1792552500,1,{m1})).toMatchObject({state:'unknown',reason:'missingHistory'});
  });
- it('P8 OB2: both routes stop at the retest high; a later M5 break does not relabel them',()=>{
+ it('P8 OB2: A stops at the retest high and skips B; a later M5 break does not relabel it',()=>{
   const r=react('2026-11-02',1793604600,-1);
   expect(r.routes.a).toMatchObject({status:'entry',entryTime:1793606700,stopLoss:3905.28,stopAnchor:'retestExtreme'});
-  expect(r.routes.b).toMatchObject({status:'entry',entryTime:1793606880,stopLoss:3905.28,stopAnchor:'retestExtreme'});
-  expect(react('2026-11-02',1793604600,-1,{evaluatedAt:r.routes.b.entryTime}).routes).toEqual(r.routes);
+  expect(r.routes.b).toEqual({status:'skipped',reason:'entryAlreadyFound',knownAt:1793606700});
+  expect(react('2026-11-02',1793604600,-1,{evaluatedAt:r.routes.a.entryTime}).routes).toEqual(r.routes);
   const ob=nativeOrderBlock('2026-11-02',1793604600,-1);
-  // Der Bruch liegt nach beiden Entry-Zeitpunkten und darf keine der Routen nachträglich umetikettieren.
-  expect(fixture('2026-11-02').candles.m1.some(c=>c.time>r.routes.b.entryTime&&c.high>ob.top)).toBe(true);
+  // Der spätere Bruch darf weder den A-Entry noch das dadurch endgültig übersprungene B umetikettieren.
+  expect(fixture('2026-11-02').candles.m1.some(c=>c.time>r.routes.a.entryTime&&c.high>ob.top)).toBe(true);
  });
  it('decides every reaction of a day identically with the previous fixture day prepended',()=>{
   const day=fixture('2026-10-21'),previous=fixture('2026-10-16'),at=day.candles.m1.at(-1).time+60;

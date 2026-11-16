@@ -47,9 +47,9 @@ describe('Knotenplan = v7-Entscheidungsbaum aus dem Produktergebnis',()=>{
  });
  it('P14: Reaktion true, SL ohne offene interne FVG → Retest-Extrem; 504 lehnt Entry b ab',async()=>{
   const g=await graphAt('P14');
-  expect(g.head).toBe('Intern: true · Routen: a entry, b entry');
-  expect(status(g)).toMatchObject({reaction:'visited',stop:'visited',routeA:'visited',bCheck:'visited',entryB:'visited',result:'visited'});
-  expect(g.nodes.stop.sub).toBe('4.181,45\nkeine offen → Retest-Extrem');
+  expect(g.head).toBe('Intern: true · Routen: a entry, b nicht geprüft · Entry a bereits gefunden');
+  expect(status(g)).toMatchObject({reaction:'visited',stop:'visited',routeA:'visited',bCheck:'not-visited',entryB:'not-visited',result:'visited'});
+  expect(g.nodes.stop.sub).toContain('● nein → Retest-Extrem · 4.181,45');
   const g504=await graphAt('504');
   expect(g504.head).toBe('Intern: true · Routen: a rejected, b rejected');
   expect(g504.nodes.result.headline).toBe('Reaktion: false');
@@ -144,7 +144,7 @@ describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
   expect(g.nodes.counter.detail.join(' ')).toContain('jetzt gefüllt');
   expect(g.nodes.counter.detail.join(' ')).toContain('bekannt');
   expect(g.nodes.routeA.sub).toContain('Gegen-FVG');
-  expect(g.edges).toMatchObject({reactionCounter:'visited',counterStop:'visited'});
+  expect(g.edges).toMatchObject({reactionCounter:'visited',counterStop:'visited',aResult:'not-visited'});
  });
  it.each(['true','false','pending','unknown'])('verwendet Verdict %s ohne Routen neu zu aggregieren',state=>{
   expect(graph({...reaction,verdict:{state,reason:null,knownAt:900}}).nodes.result.headline).toBe('Reaktion: '+state);
@@ -189,6 +189,37 @@ describe('öffentlicher Verdict und Gegen-FVG-Quellen',()=>{
   expect(g.nodes.bCheck.detail.join(' ')).toContain('Versuch 2');
   const times=graphChangeTimes({entry:{role:'second',orderBlock:ob,reaction:r,internalFvgs:[]},context:createOrderBlockReactionContext([],1800,'XAUUSD')});
   expect(times).toEqual(expect.arrayContaining([1020,1200,1380]));
+ });
+ it('Entry a beendet die Suche: b skipped bleibt unbesucht, ohne eigene Historie oder Sprung',()=>{
+  const r={...reaction,verdict:{state:'true',knownAt:900},routes:{a:{status:'entry',entryTime:900,entryPrice:114,stopLoss:99,stopAnchor:'retestExtreme'},
+   b:{status:'skipped',reason:'entryAlreadyFound',knownAt:1200}}};
+  const g=graph(r);
+  for(const node of [g.nodes.bCheck,g.nodes.entryB])expect(node).toMatchObject({status:'not-visited',sub:'nicht geprüft · Entry a bereits gefunden'});
+  expect(g.nodes.result.sub).toContain('b: nicht geprüft · Entry a bereits gefunden');
+  expect(g.edges).toMatchObject({aResult:'visited',stopB:'not-visited',bEntry:'not-visited',bResult:'not-visited'});
+  expect(g.history.some(h=>h.text.startsWith('Route b'))).toBe(false);
+  const times=graphChangeTimes({entry:{role:'second',orderBlock:ob,reaction:r,internalFvgs:[]},context:createOrderBlockReactionContext([],1800,'XAUUSD')});
+  expect(times).not.toContain(1200);
+ });
+ it.each([['m5-edge','ja → ferne M5-Kante'],['retestExtreme','nein → Retest-Extrem']])('SL-Ast %s bleibt am Entry eingefroren trotz heute gefüllter Quelle',(anchor,branch)=>{
+  const internal={direction:'long',bottom:102,top:103,candleTime:480,recognizedAt:600};
+  const rows=Array.from({length:20},(_,i)=>({time:600+i*60,open:104,close:104,high:105,low:101}));
+  const r={...reaction,routes:{a:{status:'entry',entryTime:900,entryPrice:114,stopLoss:100,stopAnchor:anchor},b:{status:'skipped',reason:'entryAlreadyFound',knownAt:900}}};
+  const g=graph(r,[internal],rows);
+  expect(g.nodes.fvgList.meters[0].label).toBe('gefüllt');
+  expect(g.nodes.fvgList.description).toBe('SL-Quelle · aktueller Füllstand');
+  expect(g.nodes.stop.label).toBe('Interne M1-FVG beim Entry noch offen?');
+  expect(g.nodes.stop.sub).toContain('● '+branch+' · 100');
+  expect(g.nodes.stop.sub).toContain('beim Entry eingefroren');
+  expect(g.nodes.stop.sub).toContain('ja → ferne M5-Kante');
+  expect(g.nodes.stop.sub).toContain('nein → Retest-Extrem');
+ });
+ it('SL bleibt bei partieller Überlappung unbekannt, statt einen Ja-/Nein-Ast zu erfinden',()=>{
+  const g=graph({...reaction,routes:{a:{status:'unknown',reason:'partialOverlapOpen',knownAt:900},b:{status:'pending',reason:'entryBPending'}}});
+  expect(g.nodes.stop.status).toBe('unknown');
+  expect(g.nodes.stop.sub).toContain('SL unknown');
+  expect(g.nodes.stop.sub).not.toContain('● ja');
+  expect(g.nodes.stop.sub).not.toContain('● nein');
  });
  it('nimmt Gegnerfüllung nach Reaktion in die Änderungssprünge auf',()=>{
   const rows=Array.from({length:20},(_,i)=>({time:660+i*60,open:107,close:107,high:i>=7?110:107,low:106}));

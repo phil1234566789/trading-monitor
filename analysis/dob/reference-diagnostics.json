@@ -1,5 +1,5 @@
 {
-  "version": "m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-opponent-v10",
+  "version": "m1-reaction-exact-session-entry-sl-hold-sameday-xau-gap2-retest-extreme-touch2-opponent-terminal-entry-v11",
   "scope": "16 selected positive examples; no general win-rate or trading approval",
   "nativeManifestSha256": "164cce65b708c22169c90dd58f010b503fde2d199f2d38d6883582f5234e9d8a",
   "sourceBaseline": "a52832884d68ae2dc436a30c63ab8141993fc91a",
@@ -606,21 +606,9 @@
         },
         "b": {
           "variant": "b",
-          "status": "ready",
-          "entryTime": 1794218520,
-          "entryPrice": 4098.01,
-          "stopPrice": 4091.43,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1794218460,
-          "targetPrice": 4111.170000000001,
-          "outcome": {
-            "status": "success",
-            "recognizedAt": 1794224400,
-            "exitPrice": 4111.170000000001,
-            "targetPrice": 4111.170000000001,
-            "checkedThrough": 1794224400,
-            "reason": null
-          }
+          "status": "skipped",
+          "reason": "entryAlreadyFound",
+          "knownAt": 1794217980
         }
       }
     },
@@ -685,21 +673,9 @@
         },
         "b": {
           "variant": "b",
-          "status": "ready",
-          "entryTime": 1793997000,
-          "entryPrice": 4063.99,
-          "stopPrice": 4055.06,
-          "stopAnchor": "m5-edge",
-          "confirmationCandleTime": 1793996940,
-          "targetPrice": 4081.8499999999995,
-          "outcome": {
-            "status": "open",
-            "recognizedAt": null,
-            "exitPrice": null,
-            "targetPrice": 4081.8499999999995,
-            "checkedThrough": 1794006120,
-            "reason": null
-          }
+          "status": "skipped",
+          "reason": "entryAlreadyFound",
+          "knownAt": 1793988960
         }
       }
     },
@@ -1008,21 +984,9 @@
         },
         "b": {
           "variant": "b",
-          "status": "ready",
-          "entryTime": 1793606880,
-          "entryPrice": 3900.06,
-          "stopPrice": 3905.28,
-          "stopAnchor": "retestExtreme",
-          "confirmationCandleTime": 1793606820,
-          "targetPrice": 3889.6199999999994,
-          "outcome": {
-            "status": "loss",
-            "recognizedAt": 1793609460,
-            "exitPrice": 3905.28,
-            "targetPrice": 3889.6199999999994,
-            "checkedThrough": 1793609460,
-            "reason": null
-          }
+          "status": "skipped",
+          "reason": "entryAlreadyFound",
+          "knownAt": 1793606700
         }
       }
     },
@@ -1087,9 +1051,9 @@
         },
         "b": {
           "variant": "b",
-          "status": "pending",
-          "reason": "entryBPending",
-          "knownAt": null
+          "status": "skipped",
+          "reason": "entryAlreadyFound",
+          "knownAt": 1793363880
         }
       }
     },
@@ -1221,9 +1185,9 @@
         },
         "b": {
           "variant": "b",
-          "status": "pending",
-          "reason": "entryBPending",
-          "knownAt": 1792692120
+          "status": "skipped",
+          "reason": "entryAlreadyFound",
+          "knownAt": 1792691460
         }
       }
     },
@@ -1343,9 +1307,9 @@
         },
         "b": {
           "variant": "b",
-          "status": "invalid",
-          "reason": "entryBOrderBlockBroken",
-          "knownAt": 1792609260
+          "status": "skipped",
+          "reason": "entryAlreadyFound",
+          "knownAt": 1792578000
         }
       }
     },
@@ -1410,21 +1374,9 @@
         },
         "b": {
           "variant": "b",
-          "status": "ready",
-          "entryTime": 1792158360,
-          "entryPrice": 4175.33,
-          "stopPrice": 4181.45,
-          "stopAnchor": "retestExtreme",
-          "confirmationCandleTime": 1792158300,
-          "targetPrice": 4163.09,
-          "outcome": {
-            "status": "loss",
-            "recognizedAt": 1792158720,
-            "exitPrice": 4181.45,
-            "targetPrice": 4163.09,
-            "checkedThrough": 1792158720,
-            "reason": null
-          }
+          "status": "skipped",
+          "reason": "entryAlreadyFound",
+          "knownAt": 1792154280
         }
       }
     },

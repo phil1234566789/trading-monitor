@@ -31,7 +31,7 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
   // P14/Pin 500: ohne offene interne FVG ist der SL das Retest-Hoch (M1 16.10. 14:35 Berlin).
   const p14=await at('P14');
   expect(p14.pair.entries).toMatchObject({a:{status:'ready',entryTime:1792154280,entryPrice:4177.28,stopPrice:4181.45,stopAnchor:'retestExtreme'},
-   b:{status:'ready',entryTime:1792158360,entryPrice:4175.33,stopPrice:4181.45,stopAnchor:'retestExtreme'}});
+   b:{status:'skipped',reason:'entryAlreadyFound',knownAt:1792154280}});
   // 504: Kontakt 07:43 liegt 1,4 % vor der Kante, also Touch; Entry b scheitert am M1-OB-Einstich um 07:54.
   expect(ob2(await at('504'))).toMatchObject({state:'false',structuralState:'true',contact:{status:'touch',knownAt:1792561440},knownAt:1792561620,
    routes:{a:{status:'rejected',reason:'opposingFvgOpen',knownAt:1792561620},
@@ -45,16 +45,13 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
  });
  it('the near-touch switch restores the near-touch reactions of OB2',async()=>{
   expect((await at('P14',undefined,NEAR)).pair.entries).toMatchObject({a:{status:'ready',entryTime:1792151400,entryPrice:4176.29,stopPrice:4181.98},
-   b:{status:'ready',entryTime:1792151580,entryPrice:4175.75,stopPrice:4181.98}});
+   b:{status:'skipped',reason:'entryAlreadyFound',knownAt:1792151400}});
   expect(ob2(await at('504',undefined,NEAR))).toMatchObject({contact:{status:'touch',knownAt:1792561440},knownAt:1792561620,
    routes:{b:{status:'rejected',reason:'entryBOrderBlockTooDeep',knownAt:1792562040}}});
   expect((await at('P16',undefined,NEAR)).pair.entries).toMatchObject({a:{status:'ready',entryPrice:4123.01},
-   b:{status:'ready',entryTime:1792557540,entryPrice:4117.62,stopPrice:4112.95}});
-  // Near-Route b verwirft ihren ersten OB um 06:28; die erst danach bekannte FVG 06:32 trägt den bestätigten Entry 06:39.
-  expect(ob2(await at('P16',undefined,NEAR)).routes.b.attempts).toMatchObject([
-   {status:'rejected',reason:'entryBOrderBlockBroken',knownAt:1792556880},
-   {status:'entry',entryTime:1792557540,fvg:{candleTime:1792557000,recognizedAt:1792557120}},
-  ]);
+   b:{status:'skipped',reason:'entryAlreadyFound',knownAt:1792556100}});
+  // Der Near-A-Entry 06:15 beendet die Auswertung, daher weder erster B-Versuch noch Retry 06:39.
+  expect(ob2(await at('P16',undefined,NEAR)).routes.b).toEqual({status:'skipped',reason:'entryAlreadyFound',knownAt:1792556100});
  });
  // Portiert aus dem Prototyp: Wissen kommt erst mit der schließenden Kerze, Rückspulen nimmt es wieder weg.
  it('reveals OB, reaction, Entry-b rejection and DOB only once known',async()=>{
