@@ -14,9 +14,9 @@ const SYMBOL = 'XAUUSD', START_DAY = flag('--from') ?? '2026-01-01', DRY = proce
 // Ein Lauf = ein Eintrag im Dropdown der Seite. v1 (Quelle der Kraft) kommt als weiterer Eintrag mit eigenem Trade-Filter dazu.
 // pick: welche Setups von checkDobTradeSetup() der Lauf zählt. v0 = jedes DOB-Setup, v1 = nur mit Quelle der Kraft.
 const RUNS = {
-  'dob-setup-v0': { label: 'v0 · nur DOB', description: 'DOB + TP 2R, ohne Quelle der Kraft', sort: 0, pick: r => [...r.setups, ...r.rejected] },
+  'dob-setup-v0': { label: 'v0 · nur DOB', description: 'DOB + TP 2R, ohne Quelle der Kraft', sort: 0, version: 'dob-setup-v0', pick: r => [...r.setups, ...r.rejected] },
   'dob-setup-v1': { label: 'v1 · Quelle der Kraft (G 1,5 ATR)', description: 'DOB + TP 2R, aktive H1/H4-OB-Zone höchstens 1,5 H1-ATR von OB1',
-    sort: 1, pick: r => r.setups },
+    sort: 1, version: 'dob-setup-v1', pick: r => r.setups },
 };
 const RUN_ID = flag('--run') ?? 'dob-setup-v0';
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
@@ -27,7 +27,7 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
-  const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput, DOB_TRADE_SETUP_VERSION },
+  const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { dobSourceContext }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js'].map(load));
@@ -67,11 +67,11 @@ try {
 
   const total = aggregateDobByMonth(unique.map(t => ({ recognizedAt: t.recognizedAt, entries: { [t.route]: { status: 'ready', outcome: t.outcome } } })),
     p => berlinDateStrFor(p.recognizedAt).slice(0, 7)).total;
-  console.log(`${DOB_TRADE_SETUP_VERSION} · ${START_DAY} → ${berlinDateStrFor(dataEnd)} · ${trades.length} Trades mit Entry · ${rows.length} einmalig`);
+  console.log(`${RUNS[RUN_ID].version} · ${START_DAY} → ${berlinDateStrFor(dataEnd)} · ${trades.length} Trades mit Entry · ${rows.length} einmalig`);
   console.table(Object.entries(total.routes).map(([route, c]) => ({ route, success: c.success, loss: c.loss, ambiguous: c.ambiguous,
     open: c.open, unknown: c.unknown, winrate: c.winrate == null ? '–' : `${(c.winrate * 100).toFixed(1)}%`, sumR: c.sumR })));
   if (DRY) process.exit(0);
-  const { data, error } = await supabase.rpc('replace_dob_trade_setups', { p_run: { id: RUN_ID, label: RUNS[RUN_ID].label, description: RUNS[RUN_ID].description, sort: RUNS[RUN_ID].sort, setup_version: DOB_TRADE_SETUP_VERSION, data_end: dataEnd },
+  const { data, error } = await supabase.rpc('replace_dob_trade_setups', { p_run: { id: RUN_ID, label: RUNS[RUN_ID].label, description: RUNS[RUN_ID].description, sort: RUNS[RUN_ID].sort, setup_version: RUNS[RUN_ID].version, data_end: dataEnd },
     p_instrument: SYMBOL, p_rows: rows });
   if (error) throw error;
   console.log(`dob_trade_setups: ${data} Zeilen für Lauf ${RUN_ID} geschrieben`);
