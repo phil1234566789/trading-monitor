@@ -1,12 +1,14 @@
 import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
+import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed} from './dobSourceOfStrength.js';
 
-// v0 = DOB + TP 2R. Quelle der Kraft fehlt bewusst (eigener Task), Guardrail 22:00–02:00 setzt der Indikator selbst.
-export const DOB_TRADE_SETUP_VERSION='dob-setup-v0';
+// v1 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ 1,5 H1-ATR von OB1, dobSourceOfStrength.js) + DOB + TP 2R.
+// Einziger Guardrail bleibt das Entry-Verbot 22:00–02:00, das der Indikator selbst setzt. Die LS-Quelle kommt später.
+export const DOB_TRADE_SETUP_VERSION='dob-setup-v1';
 
-// Phase je Setup für Alarm-Zeitpunkt und Dedup (id+phase): ob2Recognized = Route b wartet auf den Entry (Alarm vor dem Entry, Q3),
-// entry = Trade läuft, danach der Ausgang. Frühere Phasen (OB1 berührt/reagiert) kennt v0 nicht, ein Setup entsteht erst mit dem OB2-Paar.
+// Phasen für Alarm-Zeitpunkt und Dedup (pairId+phase): ob2Retest = OB2 berührt, Reaktion steht aus (Alarm, Q3);
+// ob2Recognized = OB2-Reaktion da, Route b wartet auf den Entry; entry = Trade läuft, danach der Ausgang.
 // invalid/skipped/unknown-Routen tragen keinen Trade.
 const OUTCOME_PHASE={success:'win',loss:'loss',open:'entry',ambiguous:'ambiguous',unknown:'unknown'};
 function phaseOf(pair,entry){
@@ -15,6 +17,8 @@ function phaseOf(pair,entry){
  return {phase,phaseSince:phase==='entry'?entry.entryTime:entry.outcome.recognizedAt??entry.outcome.unavailableAt??entry.entryTime};
 }
 
+const chartOf=(pair,time)=>({firstOrderBlockStart:pair.firstOrderBlock.startTime,secondOrderBlockStart:pair.secondOrderBlock.startTime,
+ firstRetestTime:pair.firstRetest.candleTime,secondRetestTime:pair.secondRetest.candleTime,time});
 function setupOf(pair,route,entry){
  const ready=entry.status==='ready';
  return {id:`${pair.id}:${route}`,pairId:pair.id,instrument:pair.instrument,direction:pair.direction,route,...phaseOf(pair,entry),
@@ -22,17 +26,37 @@ function setupOf(pair,route,entry){
   entryTime:ready?entry.entryTime:null,entryPrice:ready?entry.entryPrice:null,stopPrice:ready?entry.stopPrice:null,
   stopAnchor:ready?entry.stopAnchor:null,targetPrice:ready?entry.targetPrice:null,
   outcome:ready?{status:entry.outcome.status,recognizedAt:entry.outcome.recognizedAt,exitPrice:entry.outcome.exitPrice,reason:entry.outcome.reason}:null,
-  chart:{firstOrderBlockStart:pair.firstOrderBlock.startTime,secondOrderBlockStart:pair.secondOrderBlock.startTime,
-   firstRetestTime:pair.firstRetest.candleTime,secondRetestTime:pair.secondRetest.candleTime,time:ready?entry.entryTime:pair.recognizedAt}};
+  chart:chartOf(pair,ready?entry.entryTime:pair.recognizedAt)};
 }
+const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.instrument,direction:pair.direction,route:null,
+ phase:'ob2Retest',phaseSince:pair.recognizedAt,recognizedAt:pair.recognizedAt,entryTime:null,entryPrice:null,stopPrice:null,
+ stopAnchor:null,targetPrice:null,outcome:null,chart:chartOf(pair,pair.recognizedAt)});
 
-// Eingabe wie detectDoubleOrderBlocks (über doubleOrderBlockInput gebaut); Ausgang und 2R kommen aus evaluateDoubleOrderBlockOutcome.
+// Eingabe wie detectDoubleOrderBlocks (über doubleOrderBlockInput gebaut) plus htfCandles {'1h','4h'} (markHtfObCandles) oder ein
+// vorberechneter sourceContext (Statistik: einmal über die ganze Historie). Ausgang und 2R kommen aus evaluateDoubleOrderBlockOutcome.
+// setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 export function checkDobTradeSetup(input){
- const dob=detectDoubleOrderBlocks(input);
+ const dob=detectDoubleOrderBlocks({...input,options:{...input.options,retests:true}});
+ const context=input.sourceContext??(input.htfCandles?dobSourceContext({htfCandles:input.htfCandles,instrument:input.instrument}):null);
+ const sources=new Map();
+ const sourceOf=pair=>{
+  const key=`${pair.direction}:${pair.firstOrderBlock.startTime}`;
+  if(!sources.has(key))sources.set(key,context&&nearestHtfSource(context,{firstOrderBlock:pair.firstOrderBlock,direction:pair.direction,m5Candles:input.m5Candles}));
+  return sources.get(key);
+ };
  // liveFrom (dobLiveWindowInput): Paare aus dem Vorlauf vor dem Schluss gehören zur Vorsession.
- const setups=dob.pairs.filter(pair=>pair.recognizedAt>=(input.liveFrom??-Infinity)).flatMap(pair=>Object.entries(pair.entries)
-  .filter(([,entry])=>entry.status==='ready'||entry.status==='pending').map(([route,entry])=>setupOf(pair,route,entry)));
- return {version:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,stats:dob.stats};
+ const live=pair=>pair.recognizedAt>=(input.liveFrom??-Infinity);
+ const candidates=[
+  ...(dob.retests??[]).filter(live).map(pair=>[pair,retestOf(pair)]),
+  ...dob.pairs.filter(live).flatMap(pair=>Object.entries(pair.entries)
+   .filter(([,entry])=>entry.status==='ready'||entry.status==='pending').map(([route,entry])=>[pair,setupOf(pair,route,entry)]))];
+ const setups=[],rejected=[];
+ for(const [pair,setup] of candidates){
+  const sourceOfStrength=sourceOf(pair);
+  if(sourceOfStrengthPassed(sourceOfStrength))setups.push({...setup,sourceOfStrength});
+  else rejected.push({...setup,sourceOfStrength,reason:context?'noSourceOfStrength':'missingHtfCandles'});
+ }
+ return {version:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,rejected,stats:dob.stats};
 }
 
 // Erste M1-Zeit nach dem letzten XAU-Marktschluss vor evaluatedAt (evaluatedAt selbst, solange der Markt zu ist).

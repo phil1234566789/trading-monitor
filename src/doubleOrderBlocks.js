@@ -68,8 +68,22 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
    firstHoldRejected:0,firstHoldUnknown:0,differentRetestDays:0,priceGapRejected:0,pairsWithoutEntry:0}};
  if(!Number.isFinite(evaluatedAt)||!m5.length||!m1.length)return result;
  const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(instrument,'5m'));
- const context=createOrderBlockReactionContext(m1,evaluatedAt,instrument),qualified=[];
+ const context=createOrderBlockReactionContext(m1,evaluatedAt,instrument),qualified=[],awaiting=[];
  const holdHistory=(first,secondRetestAt)=>firstRetestHoldHistory(context,first,secondRetestAt,m1,evaluatedAt,roles.first.bridgeClosures);
+ // Paar-Gates in fester Reihenfolge; Detektor-Paare und Retest-Kandidaten teilen sie, nur der Hold-Zeitpunkt unterscheidet sich.
+ const pairGates=(a,b,sign,holdAt)=>{
+  if(!a||!b||a.orderBlock.dir!==sign||a.orderBlock.startTime>=b.orderBlock.startTime
+   ||(b.orderBlock.top-a.orderBlock.top)*sign<=0||(b.orderBlock.bottom-a.orderBlock.bottom)*sign<=0
+   ||a.reaction.fvg.recognizedAt>b.reaction.contact.candleTime)return {status:'geometry'};
+  const priceGap=evaluateDoubleOrderBlockPriceGap(a.orderBlock,b.orderBlock,sign,instrument);
+  if(priceGap.status!=='passed')return {status:'priceGap'};
+  if(evaluateDoubleOrderBlockRetestDay(a.reaction.contact.candleTime,b.reaction.contact.candleTime).status!=='passed')return {status:'retestDay'};
+  const firstRetestHold=orderBlockRetestHoldAt(holdHistory(a,b.reaction.contact.candleTime),holdAt);
+  if(firstRetestHold.status!=='passed')return {status:firstRetestHold.status==='failed'?'holdFailed':'holdUnknown'};
+  return {status:'passed',priceGap,firstRetestHold};
+ };
+ // Unter mehreren gültigen OB1 zählen nur die mit der spätesten OB1-Reaktion (gleichzeitige bleiben getrennte Partner).
+ const latestPartners=list=>{const latest=Math.max(...list.map(p=>p.a.reaction.fvg.recognizedAt));return list.filter(p=>p.a.reaction.fvg.recognizedAt===latest);};
  result.stats.orderBlocks=zones.length;
  for(const zone of zones){
   const orderBlock={...zone,recognizedAt:recognition.get(zone.startTime),timeframe:'5M'};
@@ -81,6 +95,8 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   // OB1 braucht die Strukturreaktion, keinen eigenen Entry; OB2 behält während offener Route seinen Kandidaten.
   const asFirst=firstReaction.structuralState==='true'?{orderBlock,reaction:firstReaction}:null;
   const asSecond=secondReaction.structuralState==='true'?{orderBlock,reaction:secondReaction}:null;
+  // Opt-in für den Alarm vor dem Entry (DOB-Setup v1, Phase ob2Retest): OB2 ist berührt, die Reaktions-FVG steht noch aus.
+  if(options.retests&&!asSecond&&secondReaction.reason==='awaitingFvg')awaiting.push({orderBlock,reaction:secondReaction});
   if(!asFirst&&!asSecond)continue;
   const m5Invalidation=m5.find(c=>!c.ignored&&c.time>=orderBlock.recognizedAt&&candleInvalidatesOrderBlock(c,orderBlock));
   // Ein späterer Bruch löscht den vorher bestätigten Vergleichsbeleg nicht aus dem Verlauf.
@@ -94,19 +110,13 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
   for(let first=0;first<second;first++){
   result.stats.pairChecks++;
   const a=qualified[first].asFirst,b=qualified[second].asSecond,sign=qualified[second].orderBlock.dir;
-  if(!a||!b||a.orderBlock.dir!==sign||a.orderBlock.startTime>=b.orderBlock.startTime
-   ||(b.orderBlock.top-a.orderBlock.top)*sign<=0||(b.orderBlock.bottom-a.orderBlock.bottom)*sign<=0
-   ||a.reaction.fvg.recognizedAt>b.reaction.contact.candleTime)continue;
-  const priceGap=evaluateDoubleOrderBlockPriceGap(a.orderBlock,b.orderBlock,sign,instrument);
-  if(priceGap.status!=='passed'){result.stats.priceGapRejected++;continue;}
-  if(evaluateDoubleOrderBlockRetestDay(a.reaction.contact.candleTime,b.reaction.contact.candleTime).status!=='passed'){
-   result.stats.differentRetestDays++;continue;
-  }
-  const firstRetestHold=orderBlockRetestHoldAt(holdHistory(a,b.reaction.contact.candleTime),b.reaction.fvg.recognizedAt);
-  if(firstRetestHold.status!=='passed'){
-   result.stats[firstRetestHold.status==='failed'?'firstHoldRejected':'firstHoldUnknown']++;
+  const gate=pairGates(a,b,sign,b?.reaction.fvg.recognizedAt);
+  if(gate.status!=='passed'){
+   const stat={priceGap:'priceGapRejected',retestDay:'differentRetestDays',holdFailed:'firstHoldRejected',holdUnknown:'firstHoldUnknown'}[gate.status];
+   if(stat)result.stats[stat]++;
    continue;
   }
+  const {priceGap,firstRetestHold}=gate;
   const firstReactionAt=a.reaction.fvg.recognizedAt;
   if(firstReactionAt<latestReaction)continue;
   if(firstReactionAt>latestReaction){partners.length=0;latestReaction=firstReactionAt;}
@@ -125,6 +135,16 @@ export function detectDoubleOrderBlocks({m5Candles=[],m1Candles=[],instrument='X
    result.stats.pairsWithoutEntry+=partners.length;
   else result.pairs.push(...partners);
  }
+ // Retest-Kandidat: dieselben Gates, der OB1-Hold muss bis jetzt halten (die Reaktion, an der ihn das Paar prüft, fehlt noch).
+ if(options.retests)result.retests=awaiting.flatMap(b=>{
+  const sign=b.orderBlock.dir,passed=[];
+  for(const q of qualified){const gate=pairGates(q.asFirst,b,sign,evaluatedAt);if(gate.status==='passed')passed.push({a:q.asFirst,gate});}
+  return passed.length?latestPartners(passed).map(({a,gate})=>({id:`dob:${instrument}:${sign}:${a.orderBlock.startTime}:${b.orderBlock.startTime}`,
+   instrument,direction:sign===1?'long':'short',firstOrderBlock:a.orderBlock,secondOrderBlock:b.orderBlock,
+   firstRetest:{candleTime:a.reaction.contact.candleTime,recognizedAt:a.reaction.contact.knownAt,contact:a.reaction.contact.status},
+   secondRetest:{candleTime:b.reaction.contact.candleTime,recognizedAt:b.reaction.contact.knownAt,contact:b.reaction.contact.status},
+   firstReaction:a.reaction.fvg,firstRetestHold:gate.firstRetestHold,priceGap:gate.priceGap,recognizedAt:b.reaction.contact.knownAt})):[];
+ });
  return result;
 }
 

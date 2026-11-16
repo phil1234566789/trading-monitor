@@ -20,11 +20,14 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
-  const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput, DOB_TRADE_SETUP_VERSION },
+  const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { m1GapCovered }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
     '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/goldWeekendGap.js'].map(load));
 
+  // Basismessung = jedes DOB-Setup ohne Quelle der Kraft (v0); die Quelle misst dobSourceMeasurement.mjs auf dieser Datei.
+  const BASE_VERSION = 'dob-setup-v0';
+  const allDob = input => { const r = checkDobTradeSetup(input); return { setups: [...r.setups, ...r.rejected] }; };
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
   // Ein Tag Vorlauf: das erste Live-Fenster beginnt am Marktschluss davor.
   const cache = dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
@@ -62,12 +65,12 @@ try {
   const mismatches = [];
   for (const at of sessionEnds) {
     const wide = inputAt(at, 3 * 86400), live = dobLiveWindowInput(wide);
-    const liveSetups = new Map(checkDobTradeSetup(live).setups.map(s => [s.id, key(s)]));
-    const reference = checkDobTradeSetup(wide).setups.filter(s => s.recognizedAt >= live.liveFrom);
+    const liveSetups = new Map(allDob(live).setups.map(s => [s.id, key(s)]));
+    const reference = allDob(wide).setups.filter(s => s.recognizedAt >= live.liveFrom);
     for (const s of reference) if (liveSetups.get(s.id) !== key(s)) mismatches.push({ at, id: s.id, wide: key(s), live: liveSetups.get(s.id) ?? null });
     for (const id of liveSetups.keys()) if (!reference.some(r => r.id === id)) mismatches.push({ at, id, onlyLive: true });
   }
-  const { setups, durations, bars, waitedFirst } = collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup, dobLiveWindowInput });
+  const { setups, durations, bars, waitedFirst } = collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup: allDob, dobLiveWindowInput });
   const trades = dobGridTrades(setups, grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   // Aggregat erwartet Paare mit Routen; je Setup ein Pseudo-Paar mit genau seiner Route.
   const asPairs = list => list.map(t => ({ recognizedAt: t.recognizedAt, entries: { [t.route]: { status: 'ready', outcome: t.outcome } } }));
@@ -76,7 +79,7 @@ try {
   const sorted = [...durations].sort((a, b) => a - b), q = f => +sorted[Math.floor(f * (sorted.length - 1))].toFixed(1);
   const gitHash = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
     + (execSync('git status --porcelain', { cwd: root }).toString().trim() ? '-dirty' : '');
-  const report = { version: DOB_TRADE_SETUP_VERSION, git: gitHash, symbol: SYMBOL, from: START_DAY, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
+  const report = { version: BASE_VERSION, git: gitHash, symbol: SYMBOL, from: START_DAY, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
     methodology: [
       'Kerzen: native forex_candles über fetchInitialCandles wie das Dashboard, gecacht in .debug/dob-setup; Session-Ignore wie markIgnored.',
       'Raster: jeder M5-Schluss ab Start, Eingabe = dobLiveWindowInput (Live-Fenster seit letztem Marktschluss + 1 h Vorlauf) wie der spätere Watcher.',
@@ -95,10 +98,10 @@ try {
       stopPrice: t.stopPrice, targetPrice: t.outcome.targetPrice, outcome: t.outcome.status, outcomeReason: t.outcome.reason })) };
   const outDir = path.join(root, 'analysis', 'dob-setup');
   await fs.mkdir(outDir, { recursive: true });
-  await fs.writeFile(path.join(outDir, `winrate-xau-2026-${DOB_TRADE_SETUP_VERSION}.json`), JSON.stringify(report, null, 2));
+  await fs.writeFile(path.join(outDir, `winrate-xau-2026-${BASE_VERSION}.json`), JSON.stringify(report, null, 2));
 
   const pct = v => v == null ? '–' : `${(v * 100).toFixed(1)}%`;
-  console.log(`${DOB_TRADE_SETUP_VERSION} · ${START_DAY} → ${berlinDateStrFor(dataEnd)} · ${sessionEnds.length} Sessions · ${report.evaluations} M5-Läufe · Live-Fenster ${JSON.stringify(report.liveWindow.runtimeMs)} ms · Abweichungen breit/live ${mismatches.length}`);
+  console.log(`${BASE_VERSION} · ${START_DAY} → ${berlinDateStrFor(dataEnd)} · ${sessionEnds.length} Sessions · ${report.evaluations} M5-Läufe · Live-Fenster ${JSON.stringify(report.liveWindow.runtimeMs)} ms · Abweichungen breit/live ${mismatches.length}`);
   console.log(JSON.stringify(report.setupsSeen), JSON.stringify(report.liveWindow.bars));
   for (const [name, agg] of [['perSetup', report.perSetup], ['uniqueTrades', report.uniqueTrades]])
     console.table(Object.entries({ gesamt: agg.total, ...agg.months }).flatMap(([scope, s]) => Object.entries(s.routes).map(([route, c]) =>

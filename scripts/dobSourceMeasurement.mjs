@@ -30,10 +30,10 @@ const server = await createServer({ root, envDir, server: { middlewareMode: true
 try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { markIgnoredCandles, htfObCandles, sessionOccurrences }, { berlinDayRangeUtcMs, berlinOffsetMinutes, berlinDateStrFor },
-    { detectOrderBlocks, candleTouchesOrderBlock, candleInvalidatesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
-    { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }] = await Promise.all(['/src/forexCandles.js',
+    { detectOrderBlocks, candleTouchesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
+    { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }, { dobSourceContext, nearestHtfSource, h1AtrAt }] = await Promise.all(['/src/forexCandles.js',
     '/src/supabaseClient.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/orderBlockDetection.js', '/src/liquidityDetection.js',
-    '/src/orderBlockRecognitionTime.js', '/src/instrumentConfig.js', '/src/dobTradeSetup.js'].map(load));
+    '/src/orderBlockRecognitionTime.js', '/src/instrumentConfig.js', '/src/dobTradeSetup.js', '/src/dobSourceOfStrength.js'].map(load));
   const sec = day => berlinDayRangeUtcMs(day).startUtcMs / 1000;
   const cacheOf = from => dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: SYMBOL, refresh: false,
     defaultStartSec: sec(from), startSec: sec(from), fetchInitialCandles, supabase });
@@ -48,15 +48,12 @@ try {
   const firstM5 = (from, to, hit) => { for (let i = lowerBound(m5, from); i < m5.length && m5[i].time < to; i++) if (!m5[i].ignored && hit(m5[i])) return m5[i].time; return null; };
 
   // Ereignisse: {kind, tf, side (long = Quelle für Long), time, ...}
-  const events = [], htfZones = [];
+  const events = [];
   for (const [bar, tf] of [['1h', 'H1'], ['4h', 'H4']]) {
     const input = htfObCandles(frames[bar], sessions, offset), recognized = orderBlockRecognitionTimes(input, bar);
     for (const zone of detectOrderBlocks(input, bar === '1h' ? '1H' : '4H', false, obMinimum(SYMBOL, bar === '1h' ? '1H' : '4H'))) {
       const at = recognized.get(zone.startTime), time = at && firstM5(at, Infinity, c => candleTouchesOrderBlock(c, zone));
       if (time) events.push({ kind: 'ob', tf, side: zone.dir === 1 ? 'long' : 'short', time, top: zone.top, bottom: zone.bottom, startTime: zone.startTime });
-      // G: aktive Zone = erkannt und auf M5 noch nicht invalidiert, egal wie alt oder wie oft berührt.
-      if (at) htfZones.push({ tf, side: zone.dir === 1 ? 'long' : 'short', top: zone.top, bottom: zone.bottom, recognizedAt: at,
-        invalidatedAt: firstM5(at, Infinity, c => candleInvalidatesOrderBlock(c, zone)) ?? Infinity });
     }
   }
   for (const [rows, tf, dur] of [[frames['1h'], 'H1', HOUR], [frames['4h'], 'H4', 4 * HOUR], [m5, 'M5', 300]]) {
@@ -210,26 +207,17 @@ try {
   printFilters('Kombi', combos);
 
   // DOB-QUELLE-G: Abstand OB1 ↔ nächste aktive H1/H4-OB-Zone in Trade-Richtung, beliebig alt (Philip: maßgeblich ist der Preisabstand).
-  // H1-ATR(14) (Wilder) zum OB1-Start nur als Info-Spalte; im Repo gibt es keine ATR-Funktion.
-  const h1Traded = frames['1h'].filter(c => !c.ignored), atrSeries = [];
-  for (let i = 1, atr = null, sum = 0; i < h1Traded.length; i++) {
-    const c = h1Traded[i], prev = h1Traded[i - 1].close;
-    const tr = Math.max(c.high - c.low, Math.abs(c.high - prev), Math.abs(c.low - prev));
-    if (i <= 14) { sum += tr; if (i === 14) atr = sum / 14; } else atr = (atr * 13 + tr) / 14;
-    if (atr != null) atrSeries.push({ closedAt: c.time + HOUR, atr });
-  }
-  const atrAt = t => { let lo = 0, hi = atrSeries.length; while (lo < hi) { const m = (lo + hi) >> 1; if (atrSeries[m].closedAt <= t) lo = m + 1; else hi = m; } return atrSeries[lo - 1]?.atr ?? null; };
+  // Zonen, Bruch und H1-ATR(14) aus dem gemeinsamen Modul, damit Messung und checkDobTradeSetup() nie auseinanderlaufen.
+  const sourceContext = dobSourceContext({ instrument: SYMBOL,
+    htfCandles: Object.fromEntries(['1h', '4h'].map(bar => [bar, htfObCandles(frames[bar], sessions, offset)])) });
+  const atrAt = t => h1AtrAt(sourceContext, t);
   const G_BUCKETS = [[0, 'in Zone'], [1, '≤ 1 OB1-Höhe'], [2, '≤ 2'], [5, '≤ 5'], [Infinity, 'weiter']];
   const nearestZone = (r, tfs) => {
     const ob1 = zones.get(r.ob1), dayStart = r.byOb1.dayStart;
     if (!ob1) return null;
     const height = ob1.top - ob1.bottom;
-    let best = null;
-    for (const z of htfZones) {
-      if (!tfs.includes(z.tf) || z.side !== r.direction || z.recognizedAt > r.ob1 || z.invalidatedAt <= r.ob1) continue;
-      const units = Math.max(0, z.bottom - ob1.top, ob1.bottom - z.top) / height;
-      if (!best || units < best.units) best = { units, z };
-    }
+    const source = nearestHtfSource(sourceContext, { firstOrderBlock: ob1, direction: r.direction, m5Candles: m5, timeframes: tfs });
+    const best = source && { units: source.distanceUsd / height, z: { recognizedAt: source.zoneRecognizedAt } };
     if (!best) return { bucket: 'keine aktive Zone', age: null };
     const ageSec = r.ob1 - best.z.recognizedAt;
     return { bucket: G_BUCKETS.find(([max]) => best.units <= max)[1], units: best.units, usd: best.units * height,
