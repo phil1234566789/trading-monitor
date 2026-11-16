@@ -43,6 +43,8 @@ it('der Vorfilter auf geschlossene Kerzen ändert die Paare nicht, auch mit lauf
 });
 
 it('das Dashboard baut seine Worker-Eingabe über dieselbe Funktion',()=>{
- const source=readFileSync(new URL('../src/composables/useDoubleOrderBlockChart.js',import.meta.url),'utf8');
- expect(source).toContain('postMessage(doubleOrderBlockInput(');
+ const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
+ expect(read('../src/doubleOrderBlockData.js')).toContain('postMessage(doubleOrderBlockInput(');
+ for(const user of ['../src/composables/useDoubleOrderBlockChart.js','../src/composables/useJournalDobEntryFinder.js'])
+  expect(read(user)).toContain('runDoubleOrderBlockWorker(');
 });

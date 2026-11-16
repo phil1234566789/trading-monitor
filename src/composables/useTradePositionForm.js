@@ -35,6 +35,7 @@ export function useTradePositionForm(trade, { saved, created }) {
     if(saving.value||createdPositionId.value!=null)return false;
     if(prefill.entryPrice!=null)fields.entryPrice.value=prefill.entryPrice;
     if(prefill.entryTime!=null)fields.entryTimeInput.value=berlinDatetimeInput(prefill.entryTime);
+    if(prefill.stopLoss!=null)fields.stopLoss.value=prefill.stopLoss;
     return true;
   }
   function entryValues() {

@@ -19,6 +19,7 @@ import SessionsModal from "../components/SessionsModal.vue";
 import NewsModal from "../components/NewsModal.vue";
 import TradeEditModal from "../components/TradeEditModal.vue";
 import {m1FvgCardPrefill} from '../m1FvgEntrySelection.js';
+import {useJournalDobEntryFinder} from '../composables/useJournalDobEntryFinder.js';
 import {formatDatedTime} from '../berlinTime.js';
 import {useJournalRoute} from '../composables/useJournalRoute.js';
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
@@ -376,6 +377,7 @@ const entryFvgPreview=ref(null);
 let entryFvgToken=0;
 function onPositionDraftStarted() {
   tpFinder.clear();
+  dobEntryFinder.clear();
   disarmChartClick();
   entryFvgMessage.value='';
   entryFvgPreview.value=null;
@@ -408,6 +410,7 @@ function onEditRequest(t) {
 // hängen, ein Phantom-Highlight im Chart, das sich nie mehr von selbst löst.
 function closeTradeEditModal() {
   tpFinder.clear();
+  dobEntryFinder.clear();
   entryFvgPreview.value=null;
   if(entryFvgSelection.value)disarmChartClick();
   editingTradeId.value = null;
@@ -547,6 +550,8 @@ const armedTscSection = computed(() => (armedAction.value?.payload?.isTsc ? (TSC
 const armedTradeAction = computed(() => (armedAction.value && !armedAction.value.payload?.isTsc ? armedAction.value.key : null));
 const entryFvgSelection=computed(()=>armedAction.value?.key.startsWith('entryFvg')?armedAction.value.payload:null);
 function onRequestEntryFvg({variant,cardKey}){
+  if(variant==='dob'){entryFvgPreview.value=null;void dobEntryFinder.request({cardKey});return;}
+  dobEntryFinder.clear();
   const trade=tradeEditModalRef.value?.resolveExecutionTarget(cardKey);
   if(!trade||trade.dealingRangeId!==editingTrade.value?.dealingRangeId||trade.instrument!==currentSymbol.value)return;
   entryFvgMessage.value='';
@@ -1591,6 +1596,8 @@ const { data: trades, refresh: refreshTrades } = usePolledFetch(() => fetchTrade
 const tpFinder=useJournalTpFinder({modal:tradeEditModalRef,bar:currentBar,symbol:currentSymbol,editing:editingTrade,
   replay:replayUntil,armed:armedAction,arm:armChartClick,disarm:disarmChartClick});
 const {selection:tpSelection,message:tpMessage,choices:tpChoices}=tpFinder;
+const dobEntryFinder=useJournalDobEntryFinder({modal:tradeEditModalRef,editing:editingTrade,symbol:currentSymbol,message:entryFvgMessage,disarm:disarmChartClick});
+const {choices:dobEntryChoices,chosenKey:dobEntryChosenKey,preview:dobEntryPreview}=dobEntryFinder;
 useJournalRoute(()=>route.query,{trades,currentSymbol,selectedTradingAccountId,showTrades,replayActive,replayTime,open:onEditRequest,select:onSelectTrade});
 // "Isolieren"-Modus (Task trade-journal-dr-im-chart-isolieren-zeilen-button, 2026-08-28): Philip
 // tat sich schwer, Journal-Zeilen den richtigen Chart-Objekten zuzuordnen, wenn mehrere Trades im
@@ -1626,7 +1633,7 @@ const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch((
 // gemeinsame Quelle statt den Toggle in jedem der ~10 abgeleiteten Computeds einzeln zu prüfen.
 const visiblePinContextEntries = computed(() => (showPinHighlights.value ? pinContextEntries.value : []));
 const pinnedDoubleOrderBlocks=computed(()=>visiblePinContextEntries.value.filter(e=>e.kind==='double_order_block'&&e.dobContext?.pair.instrument===currentSymbol.value).map(e=>e.dobContext));
-const hoveredDoubleOrderBlockPin=computed(()=>hoveredPinEntry.value?.kind==='double_order_block'&&hoveredPinEntry.value.dobContext?.pair.instrument===currentSymbol.value?hoveredPinEntry.value.dobContext:null);
+const hoveredDoubleOrderBlockPin=computed(()=>hoveredPinEntry.value?.kind==='double_order_block'&&hoveredPinEntry.value.dobContext?.pair.instrument===currentSymbol.value?hoveredPinEntry.value.dobContext:dobEntryPreview.value);
 // 1H/4H-OB-Zonen (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7) —
 // anders als trades/pinContextEntries oben ändert sich das hier NICHT nur durch explizite
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als
@@ -2275,6 +2282,7 @@ watch(selectedTradingAccountId, () => {
     :armed-action="armedTradeAction"
     :entry-fvg-message="entryFvgMessage"
     :current-bar="currentBar" :tp-message="tpMessage" :tp-choices="tpChoices"
+    :dob-choices="dobEntryChoices" :dob-chosen-key="dobEntryChosenKey" @choose-entry-dob="dobEntryFinder.choose"
     @request-tp="tpFinder.request" @choose-tp="tpFinder.choose"
     :current-symbol="currentSymbol"
     @close="closeTradeEditModal"

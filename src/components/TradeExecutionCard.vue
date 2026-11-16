@@ -14,8 +14,8 @@ import JournalTpControls from './JournalTpControls.vue';
 import TradeJournalComments from './TradeJournalComments.vue';
 
 const props=defineProps({trade:{type:Object,required:true},number:Number,draft:Boolean,draftActive:Boolean,draftKey:Number,selected:Boolean,
- currentSymbol:String,currentBar:String,armedAction:String,entryFvgMessage:String,tpMessage:String,tpChoices:Array,rangeTrade:Object,canDelete:{type:Boolean,default:true}});
-const emit=defineEmits(['saved','created','cancel','deleted','request-entry-fvg','request-tp','choose-tp','finder-opened','finder-closed','add-evidence','remove-evidence','hover-evidence']);
+ currentSymbol:String,currentBar:String,armedAction:String,entryFvgMessage:String,dobChoices:Array,dobChosenKey:String,tpMessage:String,tpChoices:Array,rangeTrade:Object,canDelete:{type:Boolean,default:true}});
+const emit=defineEmits(['saved','created','cancel','deleted','request-entry-fvg','choose-entry-dob','request-tp','choose-tp','finder-opened','finder-closed','add-evidence','remove-evidence','hover-evidence']);
 const finderOpen=ref(false);
 const tpOpen=ref(false);
 const cardKey=computed(()=>journalExecutionCardKey(props.trade,props.draft?props.draftKey:null));
@@ -70,7 +70,8 @@ defineExpose({applyPrefill,entryTarget,closeFinder});
      @choose="key=>emit('choose-tp',key)" @cancel="closeFinder" />
     <M1FvgEntryControls v-if="finderOpen" :range-id="trade.dealingRangeId" :instrument="trade.instrument" :direction="trade.direction" :execution-number="number" :position-id="positionId" :draft="draft"
      :armed-action="armedAction" :message="entryFvgMessage" :disabled="saving||currentSymbol!==trade.instrument||createdPositionId!=null"
-     @request="variant=>emit('request-entry-fvg',{variant,cardKey})" />
+     :dob-choices="dobChoices" :dob-chosen-key="dobChosenKey"
+     @request="variant=>emit('request-entry-fvg',{variant,cardKey})" @choose-dob="key=>emit('choose-entry-dob',key)" />
     <template v-if="!draft">
      <CrudListSection v-for="category in categories" :key="category.key" :title="category.title" :icon="category.icon"
       add-title="Beleg für diese Ausführung im Chart anklicken" :items="evidence(category.key)" :item-key="item=>item.id"

@@ -36,7 +36,7 @@ const props = defineProps({
   // armedTradeAction, z.B. "rangeConfirmation"/"target"), sonst null — nur fürs Highlight.
   armedAction: { type: String, default: null },
   entryFvgMessage: {type:String,default:''},
-  currentBar:String,tpMessage:String,tpChoices:Array,
+  currentBar:String,tpMessage:String,tpChoices:Array,dobChoices:Array,dobChosenKey:String,
 });
 // Zwei getrennte "Bestätigung hinzufügen"-Anfragen (Chat 2026-07-31: "wir haben die gesamte Basis
 // um alles per Klick übernehmen zu können" — kurz zuvor per Formular ausprobiert, dann wieder
@@ -53,7 +53,7 @@ const emit = defineEmits([
   "created",
   "position-draft-started",
   'position-draft-cancelled',
-  'request-entry-fvg',
+  'request-entry-fvg','choose-entry-dob',
   'request-tp','choose-tp',
   'entry-finder-changed',
   "deleted",
@@ -367,6 +367,7 @@ function confirmationLabel(confirmation) {
         :selected="position.id===trade.id" :current-symbol="currentSymbol" :current-bar="currentBar" :range-trade="trade" :tp-message="activeEntryCardKey===journalExecutionCardKey(position)?tpMessage:''" :tp-choices="activeEntryCardKey===journalExecutionCardKey(position)?tpChoices:[]" :armed-action="journalCardArmedAction(armedAction,armedPositionId,activeEntryCardKey,position)"
         @request-tp="payload=>emit('request-tp',payload)" @choose-tp="key=>emit('choose-tp',key)"
         :entry-fvg-message="activeEntryCardKey===journalExecutionCardKey(position)?entryFvgMessage:''"
+        :dob-choices="activeEntryCardKey===journalExecutionCardKey(position)?dobChoices:[]" :dob-chosen-key="dobChosenKey" @choose-entry-dob="key=>emit('choose-entry-dob',key)"
         @finder-opened="entryFinder.open" @finder-closed="entryFinder.close" @request-entry-fvg="payload=>emit('request-entry-fvg',payload)"
         :draft-active="draftKey!=null" :can-delete="draftKey==null" @saved="onExecutionSaved" @created="onExecutionCreated" @deleted="id=>emit('deleted',id)"
         @add-evidence="addEntryEvidence" @remove-evidence="onRemoveConfirmation" @hover-evidence="item=>emit('hover-evidence',item)" />
@@ -374,6 +375,7 @@ function confirmationLabel(confirmation) {
         draft :draft-key="draftKey" :current-symbol="currentSymbol" :current-bar="currentBar" :range-trade="trade" :tp-message="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?tpMessage:''" :tp-choices="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?tpChoices:[]" :armed-action="journalCardArmedAction(armedAction,armedPositionId,activeEntryCardKey,draftBase,draftKey)" :entry-fvg-message="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?entryFvgMessage:''"
         @request-tp="payload=>emit('request-tp',payload)" @choose-tp="key=>emit('choose-tp',key)"
         @saved="onExecutionSaved" @created="onExecutionCreated" @cancel="cancelDraft" @finder-opened="entryFinder.open" @finder-closed="entryFinder.close"
+        :dob-choices="activeEntryCardKey===journalExecutionCardKey(draftBase,draftKey)?dobChoices:[]" :dob-chosen-key="dobChosenKey" @choose-entry-dob="key=>emit('choose-entry-dob',key)"
         @request-entry-fvg="payload=>emit('request-entry-fvg',payload)" />
     </section>
   </MetadataPanel>
