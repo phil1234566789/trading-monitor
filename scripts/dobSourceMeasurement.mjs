@@ -208,7 +208,7 @@ try {
 
   // DOB-QUELLE-G: Abstand OB1 ↔ nächste aktive H1/H4-OB-Zone in Trade-Richtung, beliebig alt (Philip: maßgeblich ist der Preisabstand).
   // Zonen, Bruch und H1-ATR(14) aus dem gemeinsamen Modul, damit Messung und checkDobTradeSetup() nie auseinanderlaufen.
-  const sourceContext = dobSourceContext({ instrument: SYMBOL,
+  const sourceContext = dobSourceContext({ instrument: SYMBOL, m5Candles: m5,
     htfCandles: Object.fromEntries(['1h', '4h'].map(bar => [bar, htfObCandles(frames[bar], sessions, offset)])) });
   const atrAt = t => h1AtrAt(sourceContext, t);
   const G_BUCKETS = [[0, 'in Zone'], [1, '≤ 1 OB1-Höhe'], [2, '≤ 2'], [5, '≤ 5'], [Infinity, 'weiter']];
@@ -307,26 +307,11 @@ try {
     [`G≤${k} ∪ F1(OB) ∪ C'(OB)`, x => within(k)(x) || f1Ob(x) || cOb(x)]])), gFlags);
   const SESSION_FILTERS = Object.fromEntries([['Basis', () => true], ['G$≤10', usdLe(10)], ['G$≤15', usdLe(15)], ['G$≤20', usdLe(20)], ['G ≤ 1,5 ATR', x => atrOf(x) != null && atrOf(x) <= 1.5],
     ["C' ∪ F1 ∪ G(in Zone)", x => cPrime(x) || x.latestInZone || inZone(x)], ['A ∪ F1', x => x.A || x.latestInZone]].map(([n, f]) => [n, sessionTable(f)]));
-  // DOB-QUELLE-RETEST (Philip, Q17): die H1/H4-Zone muss vor OB1 berührt worden sein. Touch-Episoden je Zone exakt auf M5
-  // (aufeinanderfolgende berührende Kerzen = ein Touch) nur für die Zeitfenster; „beliebig“ ist die Modul-Logik des Produkts.
-  const episodes = new Map();
-  const episodesOf = zone => {
-    if (!episodes.has(zone)) {
-      const list = []; let prev = false;
-      for (let i = lowerBound(m5, zone.recognizedAt); i < m5.length; i++) {
-        const c = m5[i]; if (c.ignored) continue;
-        const touch = candleTouchesOrderBlock(c, zone);
-        if (touch && !prev) list.push(c.time);
-        prev = touch;
-        if (candleInvalidatesOrderBlock(c, zone)) break;
-      }
-      episodes.set(zone, list);
-    }
-    return episodes.get(zone);
-  };
+  // DOB-QUELLE-RETEST (Philip, Q17): die H1/H4-Zone muss vor OB1 berührt worden sein. Touch-Episoden (aufeinanderfolgende berührende
+  // Kerzen = ein Touch) aus dem Modul, mit voller M5-Historie exakt; „beliebig“ ist die Retest-Prüfung des Produkts.
   const LIMIT = 1.5;
   const passing = x => x.cands.filter(c => c.distanceAtr != null && c.distanceAtr <= LIMIT);
-  const touchesBefore = c => episodesOf(c.contextZone).filter(t => t < c.at);
+  const touchesBefore = c => c.contextZone.touches.filter(t => t < c.at);
   const lastTouch = c => touchesBefore(c).at(-1) ?? -Infinity;
   const anyPass = (x, f) => passing(x).some(f);
   const RETEST = {

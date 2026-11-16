@@ -41,7 +41,7 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 // setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 export function checkDobTradeSetup(input){
  const dob=detectDoubleOrderBlocks({...input,options:{...input.options,retests:true}});
- const context=input.sourceContext??(input.htfCandles?dobSourceContext({htfCandles:input.htfCandles,instrument:input.instrument}):null);
+ const context=input.sourceContext??(input.htfCandles?dobSourceContext({htfCandles:input.htfCandles,m5Candles:input.m5Candles,instrument:input.instrument}):null);
  const sources=new Map(),maxAtr=sourceMaxDistanceAtr(input.instrument);
  const sourceOf=pair=>{
   const key=`${pair.direction}:${pair.firstOrderBlock.startTime}`;

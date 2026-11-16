@@ -15,10 +15,12 @@ const price=v=>Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigit
 const zone=z=>`${price(z.bottom)}–${price(z.top)}`;
 const side=direction=>direction==='long'?'Long':'Short';
 export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=1m&replay=${at}`;
+const age=sec=>sec<3600?`${Math.round(sec/60)} min`:sec<86400?`${(sec/3600).toLocaleString('de-DE',{maximumFractionDigits:1})} h`:`${Math.round(sec/86400)} Tg`;
 function sourceLine({sourceOfStrength:s}){
  if(!s)return 'Quelle der Kraft: –';
  const label=dobSourceLabel({source_kind:`ob_${s.timeframe.toLowerCase()}`,source_distance_atr:s.distanceAtr});
- return `Quelle der Kraft: ${label} · Zone ${zone(s.zone)}${s.retested?' · retestet':''}`;
+ const retest=s.retestKind?` · ${s.retestKind==='first'?'erster':`${s.retestCount}.`} Touch vor ${age(s.retestAgeSeconds)}`:s.retested?' · retestet':'';
+ return `Quelle der Kraft: ${label} · Zone ${zone(s.zone)}${retest}`;
 }
 const obLines=({chart})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} · ${zone(chart.firstOrderBlock)}`,
  `OB2 ${formatBerlinTime(chart.secondOrderBlockStart)} · ${zone(chart.secondOrderBlock)}`];

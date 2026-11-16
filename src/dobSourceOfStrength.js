@@ -14,8 +14,9 @@ const lowerBound=(rows,t)=>{let lo=0,hi=rows.length;while(lo<hi){const m=(lo+hi)
 // htfCandles: {'1h','4h'} wie markHtfObCandles (Session-Ignore + Session-Extreme), beliebig lange Historie.
 // Zonen sind beliebig alt; ihr Bruch wird einmal auf H1 vorberechnet, damit Live keine Monate M5 laden muss.
 // Die Invalidierung ist dochtbasiert, eine H1-Kerze bricht also genau dann, wenn eine ihrer M5-Kerzen bricht.
-export function dobSourceContext({htfCandles,instrument='XAUUSD'}){
- const h1=(htfCandles?.['1h']??[]).filter(c=>!c.ignored),zones=[];
+// m5Candles (optional, session-markiert): Touch-Episoden ab dem ersten M5 genau, davor auf H1 (retestKind/retestAgeSeconds).
+export function dobSourceContext({htfCandles,m5Candles=[],instrument='XAUUSD'}){
+ const h1=(htfCandles?.['1h']??[]).filter(c=>!c.ignored),m5=m5Candles.filter(c=>!c.ignored),zones=[];
  for(const [bar,tf,label] of TIMEFRAMES){
   const rows=htfCandles?.[bar]??[];
   const recognized=orderBlockRecognitionTimes(rows,bar);
@@ -27,7 +28,8 @@ export function dobSourceContext({htfCandles,instrument='XAUUSD'}){
     if(touchedH1===Infinity&&candleTouchesOrderBlock(h1[i],zone))touchedH1=h1[i].time;
     if(candleInvalidatesOrderBlock(h1[i],zone)){brokenH1=h1[i].time;break;}
    }
-   zones.push({tf,dir:zone.dir,side:zone.dir===1?'long':'short',top:zone.top,bottom:zone.bottom,startTime:zone.startTime,recognizedAt,brokenH1,touchedH1});
+   zones.push({tf,dir:zone.dir,side:zone.dir===1?'long':'short',top:zone.top,bottom:zone.bottom,startTime:zone.startTime,recognizedAt,brokenH1,touchedH1,
+    touches:touchEpisodes(zone,recognizedAt,h1,m5)});
   }
  }
  // ATR(14) nach Wilder über die gehandelten H1-Kerzen; im Repo gab es keine ATR-Funktion.
@@ -38,6 +40,22 @@ export function dobSourceContext({htfCandles,instrument='XAUUSD'}){
   if(value!=null)atr.push({time:c.time+HOUR,value});
  }
  return {zones,atr};
+}
+
+// Touch-Episode = aufeinanderfolgende berührende Kerzen (Docht reicht), gespeichert als Startzeit; bis zum Bruch der Zone.
+// Vor dem ersten verfügbaren M5 zählen volle H1-Stunden, danach M5 (eine über die Grenze laufende Episode bleibt eine).
+function touchEpisodes(zone,recognizedAt,h1,m5){
+ const m5Start=m5[0]?.time??Infinity,starts=[];
+ let touching=false;
+ const step=(c,time)=>{
+  const touch=candleTouchesOrderBlock(c,zone);
+  if(touch&&!touching)starts.push(time);
+  touching=touch;
+  return candleInvalidatesOrderBlock(c,zone);
+ };
+ for(let i=lowerBound(h1,recognizedAt);i<h1.length&&h1[i].time+HOUR<=m5Start;i++)if(step(h1[i],h1[i].time))return starts;
+ for(let i=lowerBound(m5,Math.max(recognizedAt,m5Start));i<m5.length;i++)if(step(m5[i],m5[i].time))return starts;
+ return starts;
 }
 
 // Letzter abgeschlossener H1-ATR vor at.
@@ -74,11 +92,19 @@ export function htfSourceCandidates(context,{firstOrderBlock:ob1,direction,m5Can
   if(zone.side!==direction||!timeframes.includes(zone.tf)||!zoneActiveAt(zone,at,m5Candles))continue;
   const distanceUsd=Math.max(0,zone.bottom-ob1.top,ob1.bottom-zone.top);
   result.push({kind:'htfOb',timeframe:zone.tf,zone:{top:zone.top,bottom:zone.bottom},zoneStartTime:zone.startTime,zoneRecognizedAt:zone.recognizedAt,
-   distanceUsd,atr,distanceAtr:atr?distanceUsd/atr:null,retested:zoneRetestedBefore(zone,at,m5Candles),
+   distanceUsd,atr,distanceAtr:atr?distanceUsd/atr:null,retested:zoneRetestedBefore(zone,at,m5Candles),...retestInfo(zone,at),
    wrongSide:direction==='short'?ob1.top>zone.top:ob1.bottom<zone.bottom,contextZone:zone});
  }
  return result;
 }
+
+// Für spätere Guardrails (Folge-Touch, frischer Retest): Art und Alter des letzten Touchs vor OB1, Alter ab Episodenstart.
+function retestInfo(zone,at){
+ const before=zone.touches.slice(0,lowerBoundValue(zone.touches,at));
+ return before.length?{retestKind:before.length===1?'first':'followUp',retestCount:before.length,retestAgeSeconds:at-before.at(-1)}
+  :{retestKind:null,retestCount:0,retestAgeSeconds:null};
+}
+const lowerBoundValue=(values,t)=>{let lo=0,hi=values.length;while(lo<hi){const m=(lo+hi)>>1;if(values[m]<t)lo=m+1;else hi=m;}return lo;};
 
 // Nächste aktive Zone; mit requireRetest nur unter den retesteten (v2).
 export function nearestHtfSource(context,args,{requireRetest=false}={}){

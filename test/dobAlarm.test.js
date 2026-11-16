@@ -13,6 +13,7 @@ describe('DOB-Alarme',()=>{
   expect(events[0].text).toContain('OB2-Retest');
   expect(events[0].text).toContain('H1-OB');
   expect(events[0].text).toContain('3.954,74–3.964,91');
+  expect(events[0].text).toContain('erster Touch vor');
   expect(events[0].text).toContain('#/?dob=');
  });
  it('meldet den Entry mit Preis, SL und TP 2R',()=>{

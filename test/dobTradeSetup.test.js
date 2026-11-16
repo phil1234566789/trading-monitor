@@ -123,6 +123,12 @@ describe('checkDobTradeSetup: Quelle der Kraft',()=>{
   if(sample.v2){
    expect(result.setups).toContainEqual(setup);
    expect(setup.sourceOfStrength).toMatchObject({...sourceOf(sample.v2),retested:true});
+   // Art und Alter des letzten Touchs vor OB1 für spätere Guardrails (Folge-Touch, frischer Retest).
+   expect(['first','followUp']).toContain(setup.sourceOfStrength.retestKind);
+   expect(setup.sourceOfStrength.retestAgeSeconds).toBeGreaterThan(0);
+   // Messung (exakte M5-Episoden): #134 erster Touch, #141 zwölfter Touch.
+   if(sample.trade==='#134')expect(setup.sourceOfStrength.retestKind).toBe('first');
+   if(sample.trade==='#141')expect(setup.sourceOfStrength.retestKind).toBe('followUp');
    expect(setup.sourceOfStrength.distanceAtr).toBeLessThanOrEqual(SOURCE_MAX_DISTANCE_ATR);
   }else{
    expect(result.rejected).toContainEqual(setup);
