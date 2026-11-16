@@ -10176,21 +10176,27 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/source-measurement-xau-2026.json": {
-    "mtime": 1794856892.7128897,
-    "seen": 1794856957.1487772,
-    "ast_hash": "866bbe6c19ad188986a61d382299ffd3",
+    "mtime": 1794858639.9872854,
+    "seen": 1794858708.5124705,
+    "ast_hash": "afa2ab217e8f32a6182ee3798fc3095c",
     "semantic_hash": ""
   },
   "scripts/dobSourceMeasurement.mjs": {
-    "mtime": 1794856886.5774386,
-    "seen": 1794856957.1702967,
-    "ast_hash": "3eedad8c1bf02e5f86a606466b82a22e",
+    "mtime": 1794858633.6015015,
+    "seen": 1794858708.5329833,
+    "ast_hash": "1d8b9410e1b63d51b9d1f37094721011",
     "semantic_hash": ""
   },
   "analysis/dob-setup/source-combos-xau-2026.json": {
-    "mtime": 1794856892.8044963,
-    "seen": 1794856957.1487772,
-    "ast_hash": "3311c509fee4994d7836cf655bc46183",
+    "mtime": 1794858640.120839,
+    "seen": 1794858708.5124705,
+    "ast_hash": "7cca06a6e055ea151e4d34f32562a507",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/source-g-xau-2026.json": {
+    "mtime": 1794858640.3244615,
+    "seen": 1794858708.5124705,
+    "ast_hash": "c181cedbae52cb791ffe4c83b5a4aedd",
     "semantic_hash": ""
   }
 }
