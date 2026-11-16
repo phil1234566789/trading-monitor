@@ -3,7 +3,6 @@ import {computed,ref,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {DOB_TRADE_SETUP_VERSION} from '../dobTradeSetup.js';
 import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,DOB_BREAK_EVEN_WINRATE} from '../dobTradeStatistics.js';
 import {formatDatedTime} from '../berlinTime.js';
 import {fmtPrice,fmtR,pnlClass} from '../format.js';
@@ -14,20 +13,34 @@ const INSTRUMENTS=['XAUUSD'],ROUTES=['a','b'],PAGE=200;
 const route=useRoute(),router=useRouter();
 const instrument=ref(INSTRUMENTS.includes(route.query.instrument)?route.query.instrument:'XAUUSD');
 const year=ref(String(route.query.year??new Date().getFullYear()));
-const rows=ref([]),sessions=ref([]),loading=ref(false),error=ref(''),shown=ref(PAGE);
+const run=ref(typeof route.query.run==='string'?route.query.run:'');
+const runs=ref([]),rows=ref([]),sessions=ref([]),loading=ref(false),error=ref(''),shown=ref(PAGE);
+const selectedRun=computed(()=>runs.value.find(r=>r.id===run.value));
 
+// Läufe wie auf /statistik per Dropdown und ?run=; ohne gültige Auswahl der erste nach sort.
+async function loadRuns(){
+ const {data,error:e}=await supabase.from('dob_trade_setup_runs').select('*').order('sort').order('id').limit(200);
+ if(e){error.value=e.message;return false;}
+ runs.value=data;
+ if(!data.some(r=>r.id===run.value))run.value=data[0]?.id??'';
+ return true;
+}
 async function load(){
+ if(!run.value)return;
  loading.value=true;error.value='';
  const [trades,sessionRows]=await Promise.all([
-  fetchAllRows((from,to)=>supabase.from('dob_trade_setups').select('*').eq('instrument',instrument.value).eq('version',DOB_TRADE_SETUP_VERSION)
+  fetchAllRows((from,to)=>supabase.from('dob_trade_setups').select('*').eq('instrument',instrument.value).eq('run_id',run.value)
    .order('entry_time',{ascending:false}).order('id').range(from,to)),
   supabase.from('sessions').select('label,from_minutes,to_minutes,days').eq('instrument',instrument.value).order('from_minutes').limit(200)]);
  loading.value=false;
  if(trades.error||sessionRows.error){error.value=(trades.error??sessionRows.error).message;return;}
  rows.value=trades.data;sessions.value=sessionRows.data;
 }
-watch(instrument,load,{immediate:true});
-watch([instrument,year],([i,y])=>{shown.value=PAGE;router.replace({query:{instrument:i,year:y}});});
+// Setzt loadRuns den Lauf erst, lädt der watch; sonst hier, damit „Aktualisieren“ auch ohne Wechsel neu liest.
+async function refresh(){const before=run.value;if(await loadRuns()&&run.value===before)await load();}
+refresh();
+watch([instrument,run],load);
+watch([instrument,year,run],([i,y,r])=>{shown.value=PAGE;router.replace({query:{run:r,instrument:i,year:y}});});
 
 const years=computed(()=>[...new Set([year.value,...rows.value.map(r=>dobTradeMonth(r).slice(0,4))])].sort().reverse());
 const inYear=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(year.value)));
@@ -36,7 +49,7 @@ const sessionsOf=r=>{const s=dobTradeSessions(r,sessions.value);return s.length?
 const sessionOrder=computed(()=>[...sessions.value.map(s=>s.label),'ohne Session']);
 const bySession=computed(()=>dobGroups(inYear.value,sessionsOf).sort((a,b)=>sessionOrder.value.indexOf(a.key)-sessionOrder.value.indexOf(b.key)));
 const byMonth=computed(()=>dobGroups(inYear.value,r=>[dobTradeMonth(r)]).sort((a,b)=>a.key.localeCompare(b.key)));
-const computedAt=computed(()=>rows.value[0]?.computed_at);
+const computedAt=computed(()=>selectedRun.value?.computed_at);
 
 const pct=v=>v==null?'–':`${(v*100).toFixed(1)} %`;
 const winTone=v=>v==null?'':v>DOB_BREAK_EVEN_WINRATE?'positive':v<DOB_BREAK_EVEN_WINRATE?'negative':'';
@@ -47,16 +60,18 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
 <template>
   <main class="dob-stats" :style="{'--positive':cssColor('candleUp'),'--negative':cssColor('candleDown')}">
     <header>
-      <div><h1>DOB-Setup Statistik</h1><p>{{ DOB_TRADE_SETUP_VERSION }} · DOB + TP 2R · einmalige Trades (gleiche Richtung, Entry und SL zählen einmal)</p></div>
+      <div><h1>DOB-Setup Statistik</h1><p>{{ selectedRun?.description??'Lauf wählen' }} · einmalige Trades (gleiche Richtung, Entry und SL zählen einmal)</p></div>
       <div class="controls">
+        <label>Lauf <select v-model="run"><option value="" disabled>Lauf wählen</option><option v-for="r in runs" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
         <label>Instrument <select v-model="instrument"><option v-for="i in INSTRUMENTS" :key="i">{{ i }}</option></select></label>
         <label>Jahr <select v-model="year"><option v-for="y in years" :key="y">{{ y }}</option></select></label>
-        <button type="button" :disabled="loading" @click="load">{{ loading?'Wird geladen…':'Aktualisieren' }}</button>
+        <button type="button" :disabled="loading" @click="refresh">{{ loading?'Wird geladen…':'Aktualisieren' }}</button>
       </div>
     </header>
-    <p v-if="error" role="alert" class="error">{{ error }} <button @click="load">Erneut versuchen</button></p>
+    <p v-if="error" role="alert" class="error">{{ error }} <button @click="refresh">Erneut versuchen</button></p>
     <p v-else-if="loading" role="status" class="note">Trades werden geladen…</p>
-    <p v-else-if="!inYear.length" role="status" class="note">Keine berechneten Trades für {{ instrument }} {{ year }}.</p>
+    <p v-else-if="!runs.length" role="status" class="note">Noch keine berechneten DOB-Läufe.</p>
+    <p v-else-if="!inYear.length" role="status" class="note">Keine berechneten Trades für {{ selectedRun?.label }} · {{ instrument }} {{ year }}.</p>
     <template v-else>
       <section class="tiles" aria-label="Gesamt je Route">
         <article v-for="r in ROUTES" :key="r" class="tile">

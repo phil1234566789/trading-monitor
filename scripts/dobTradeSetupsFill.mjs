@@ -1,6 +1,6 @@
 // Befüllt dob_trade_setups (Statistikseite /dob-statistik) mit den einmaligen v0-Trades ab --from (Berlin), gleiche Zählweise wie
 // dobSetupWinrate.mjs: jeder M5-Schluss im Live-Fenster, letzte Sichtung je Setup-ID, Ausgang neu bis Datenende, Dedup Richtung/Entry/SL.
-// Flags: --refresh (Kerzen neu holen), --from YYYY-MM-DD, --dry (nichts schreiben, nur Kennzahlen).
+// Flags: --refresh (Kerzen neu holen), --from YYYY-MM-DD, --dry (nichts schreiben, nur Kennzahlen), --run <Lauf-ID aus RUNS>.
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,10 @@ import { dobCandleCache } from './dobCandleCache.mjs';
 
 const flag = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const SYMBOL = 'XAUUSD', START_DAY = flag('--from') ?? '2026-01-01', DRY = process.argv.includes('--dry');
+// Ein Lauf = ein Eintrag im Dropdown der Seite. v1 (Quelle der Kraft) kommt als weiterer Eintrag mit eigenem Trade-Filter dazu.
+const RUNS = { 'dob-setup-v0': { label: 'v0 · nur DOB', description: 'DOB + TP 2R, ohne Quelle der Kraft', sort: 0 } };
+const RUN_ID = flag('--run') ?? 'dob-setup-v0';
+if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 let envDir = root;
 while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir) envDir = path.dirname(envDir);
@@ -52,7 +56,7 @@ try {
   // Gleicher Map-Dedup wie die Messung: der letzte Träger gibt Route und Paar vor.
   const unique = [...new Map(trades.map(t => [keyOf(t), t])).values()];
 
-  const rows = unique.map(t => ({ id: `${DOB_TRADE_SETUP_VERSION}:${t.id}`, version: DOB_TRADE_SETUP_VERSION, instrument: SYMBOL,
+  const rows = unique.map(t => ({ id: `${RUN_ID}:${t.id}`, run_id: RUN_ID, instrument: SYMBOL,
     direction: t.direction, route: t.route, setup_id: t.id, carrying_setups: carrying.get(keyOf(t)), recognized_at: t.recognizedAt,
     entry_time: t.entryTime, entry_price: t.entryPrice, stop_price: t.stopPrice, target_price: t.outcome.targetPrice,
     outcome: t.outcome.status, outcome_reason: t.outcome.reason ?? null, exit_time: t.outcome.recognizedAt ?? null,
@@ -64,9 +68,10 @@ try {
   console.table(Object.entries(total.routes).map(([route, c]) => ({ route, success: c.success, loss: c.loss, ambiguous: c.ambiguous,
     open: c.open, unknown: c.unknown, winrate: c.winrate == null ? '–' : `${(c.winrate * 100).toFixed(1)}%`, sumR: c.sumR })));
   if (DRY) process.exit(0);
-  const { data, error } = await supabase.rpc('replace_dob_trade_setups', { p_instrument: SYMBOL, p_version: DOB_TRADE_SETUP_VERSION, p_rows: rows });
+  const { data, error } = await supabase.rpc('replace_dob_trade_setups', { p_run: { id: RUN_ID, ...RUNS[RUN_ID], setup_version: DOB_TRADE_SETUP_VERSION, data_end: dataEnd },
+    p_instrument: SYMBOL, p_rows: rows });
   if (error) throw error;
-  console.log(`dob_trade_setups: ${data} Zeilen geschrieben`);
+  console.log(`dob_trade_setups: ${data} Zeilen für Lauf ${RUN_ID} geschrieben`);
 } finally {
   await server.close();
 }
