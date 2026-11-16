@@ -41,11 +41,12 @@ try {
 
   // Zwei Rasterläufe wie die Statistik: ohne Retest-Pflicht (v0 = alle, v1 = mit Quelle) und mit (v2).
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
-  const pass = (requireRetest, pick) => uniqueDobTrades(dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, dobLiveWindowInput,
+  const pass = (requireRetest, pick) => dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, dobLiveWindowInput,
     checkDobTradeSetup: live => ({ setups: pick(checkDobTradeSetup({ ...live, sourceContext, sourceOptions: { requireRetest } })) }) }).setups,
-    grid, dataEnd, evaluateDoubleOrderBlockOutcome));
+    grid, dataEnd, evaluateDoubleOrderBlockOutcome);
+  // Erst nach Quelle filtern, dann deduplizieren: ein Trade zählt, sobald irgendein tragendes Paar eine Quelle hat (wie der v1-Lauf).
   const passA = pass(false, r => [...r.setups.map(s => ({ ...s, sourced: true })), ...r.rejected.map(s => ({ ...s, sourced: false }))]);
-  const runs = { v0: passA, v1: passA.filter(t => t.sourced), v2: pass(true, r => r.setups) };
+  const runs = { v0: uniqueDobTrades(passA), v1: uniqueDobTrades(passA.filter(t => t.sourced)), v2: uniqueDobTrades(pass(true, r => r.setups)) };
 
   // EMA-Reihen. M15 gibt es im Archiv nicht; aus je drei nativen M5 (Zeitraster 15 min) zusammengesetzt.
   const m15 = [...Map.groupBy(m5All, c => Math.floor(c.time / 900) * 900)].map(([time, rows]) => ({ time,
