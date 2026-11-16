@@ -119,8 +119,10 @@ function opposingFvgs(context,orderBlock,contact,reactionAt) {
   if(rows[i].ignored)continue;
   low=Math.min(low,rows[i].low);high=Math.max(high,rows[i].high);
  }
- const result=[];
- for(const fvg of context.byDirection[sideOf(-orderBlock.dir)]){
+ const list=context.byDirection[sideOf(-orderBlock.dir)],result=[];
+ // Philip: Gegen-FVGs sind die, die sich seit der M5-OB gebildet haben; ältere (über Spread Hour/Marktschluss) zählen nicht.
+ for(let i=firstIndex(list,f=>f.candleTime>=orderBlock.startTime);i<list.length;i++){
+  const fvg=list[i];
   if(fvg.recognizedAt>reactionAt)break;
   if(fvg.top<low||fvg.bottom>high)continue;
   const fill=fvgFill(context,fvg),openAtReaction=openAt(fill,reactionAt);

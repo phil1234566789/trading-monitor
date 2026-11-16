@@ -122,6 +122,13 @@ describe('native reaction references',()=>{
   expect(react('2026-11-09',1794192300,-1,{evaluatedAt:1794199080,options:{}}).state).toBe('false');
   expect(react('2026-11-09',1794192300,-1,{evaluatedAt:1794199020,options:{}}).state).not.toBe('false');
  });
+ // Philip: Gegen-FVGs sind nur die seit der M5-OB gebildeten. Vorher lehnte die alte FVG (04.11. 02:45, 03.11. 16:40 Berlin) Entry a ab.
+ it.each([['2026-11-04',1793767500,1,1793769540,3953.11],['2026-11-03',1793722500,-1,1793723460,3932.91]])(
+  '%s: an opposing FVG formed before the M5 OB neither blocks Entry a nor appears as opponent',(day,startTime,dir,entryTime,entryPrice)=>{
+  const r=react(day,startTime,dir,{options:{}});
+  expect(r.opponentFvgs.filter(x=>x.fvg.candleTime<startTime)).toEqual([]);
+  expect(r.routes.a).toMatchObject({status:'entry',entryTime,entryPrice});
+ });
  it('stays unknown before contact, before the FVG and across a missing minute',()=>{
   expect(react('2026-10-21',1792552500,1,{evaluatedAt:1792555200}).reason).toBe('noContact');
   expect(react('2026-10-21',1792552500,1,{evaluatedAt:1792556040})).toMatchObject({state:'unknown',reason:'awaitingFvg'});
