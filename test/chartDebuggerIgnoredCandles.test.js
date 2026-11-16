@@ -1,4 +1,5 @@
-import {afterEach,expect,it} from 'vitest';
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+import {berlinOffsetMinutes} from '../src/berlinTime.js';
 import {readFileSync} from 'node:fs';
 import {sessions} from '../src/sessions.js';
 import {doubleOrderBlockInput} from '../src/doubleOrderBlockInput.js';
@@ -9,7 +10,9 @@ import {detectDoubleOrderBlocks} from '../src/doubleOrderBlocks.js';
 const SPREAD_HOUR={id:'spread',instrument:'XAUUSD',fromMinutes:1380,toMinutes:0,days:[1,2,3,4,5],ignoreLiquidity:true};
 // Short-OB 09.11. 22:35 Berlin: ihre Reaktions-FVG entsteht in der Spread Hour (23:01).
 const c={id:'ignored',day:'2026-11-09',dir:-1,orderBlocks:[1794260100]};
-afterEach(()=>sessions.splice(0));
+// markIgnored rechnet bewusst in Browser-Lokalzeit (wie das Session-Band); der Test stellt Philips Berliner Browser nach, sonst kippt er auf UTC-CI.
+beforeEach(()=>{vi.spyOn(Date.prototype,'getTimezoneOffset').mockImplementation(function(){return -berlinOffsetMinutes(this.getTime());});});
+afterEach(()=>{sessions.splice(0);vi.restoreAllMocks();});
 
 it('Debugger und Dashboard-Worker bekommen dieselben ignorierten Kerzen',async()=>{
  sessions.splice(0,0,SPREAD_HOUR);
