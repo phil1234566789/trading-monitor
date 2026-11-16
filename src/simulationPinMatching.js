@@ -13,6 +13,14 @@ export function simulationDrIdentity(snapshot) {
   return JSON.stringify([snapshot.instrument,snapshot.direction,sweep.timeframe.toUpperCase(),...numbers]);
 }
 
+// Gemeinsame Regel für laufübergreifende Entry-Pins (/statistik und /dob-statistik): Zuordnung über Instrument, Richtung und exakte
+// Entry-Zeit; der Entry-Preis entscheidet nur zwischen mehreren zeitgleichen Treffern.
+export function narrowByEntryPrice(candidates,price,priceOf) {
+  if(candidates.length<2 || !Number.isFinite(price))return candidates;
+  const precise=candidates.filter(c=>priceOf(c)===price);
+  return precise.length?precise:candidates;
+}
+
 function matchEntry(pin,groups,origin,native) {
   const saved=pin.simulationContext, time=saved?.entry?.time?.unix ?? origin?.entry?.recognizedAt;
   const instrument=saved?.instrument ?? origin?.instrument, direction=saved?.direction ?? origin?.direction;
@@ -22,11 +30,7 @@ function matchEntry(pin,groups,origin,native) {
       && (entry.instrument ?? group.snapshot.instrument)===instrument
       && (entry.direction ?? group.snapshot.direction)===direction && entry.entry?.recognizedAt===time);
   // Ein Entry überlebt korrigierte Eltern-DRs und Stops. Der Preis hilft nur bei mehreren zeitgleichen Treffern.
-  const price=saved?.entry?.price ?? origin?.entry?.price;
-  if(candidates.length>1 && Number.isFinite(price)) {
-    const precise=candidates.filter(({entry})=>entry.entry?.price===price);
-    if(precise.length)candidates=precise;
-  }
+  candidates=narrowByEntryPrice(candidates,saved?.entry?.price ?? origin?.entry?.price,({entry})=>entry.entry?.price);
   return candidates.length===1?candidates[0]:{reason:candidates.length>1
     ?'Mehrere Entries passen; eine eindeutige Zuordnung ist nicht möglich.'
     :!native && (!instrument || !['long','short'].includes(direction) || !Number.isFinite(time))

@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -32,5 +32,14 @@ describe('dobTradeStatistics',()=>{
   const trade={instrument:'XAUUSD',direction:'short',entry_time:at,entry_price:3867.93,stop_price:3875.6};
   expect(dobTradePinKey({...trade,id:'dob-setup-v1:x',run_id:'dob-setup-v1'})).toBe(dobTradePinKey({...trade,id:'dob-setup-v2:x',run_id:'dob-setup-v2'}));
   expect(dobTradePinKey(trade)).toBe(`XAUUSD:short:${at}:3867.93:3875.6`);
+ });
+ it('ordnet Pins laufübergreifend wie /statistik zu: Zeit, Preis nur als Tiebreak, mehrdeutig = keiner',()=>{
+  const base={instrument:'XAUUSD',direction:'short',entry_time:at};
+  const pin=ctx=>({dobTradeContext:{...base,...ctx}});
+  const rows=[{...base,id:'v2:a',entry_price:10,stop_price:12},{...base,id:'v2:b',entry_price:11,stop_price:13},{...base,id:'v2:c',entry_time:at+60,entry_price:9,stop_price:99}];
+  const m=matchDobTradePins([pin({entry_price:11,stop_price:20}),pin({entry_time:at+60,entry_price:5})],rows);
+  expect(m.get('v2:b')).toBeTruthy();
+  expect(m.get('v2:c')).toBeTruthy();
+  expect(matchDobTradePins([pin({entry_price:99})],rows).size).toBe(0);
  });
 });

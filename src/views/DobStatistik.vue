@@ -3,7 +3,7 @@ import {computed,ref,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,dobTradePinKey,DOB_OUTCOME_LABELS,DOB_BREAK_EVEN_WINRATE} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,DOB_OUTCOME_LABELS,DOB_BREAK_EVEN_WINRATE} from '../dobTradeStatistics.js';
 import {fetchDobTradePins,addDobTradePin,removePinEntry,updatePinNote} from '../pinContext.js';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinFlag from '../components/SimulationPinFlag.vue';
@@ -46,10 +46,10 @@ watch([instrument,run],load);
 // Links mit anderem ?run= bei schon offener Seite (gleiche Route, keine Neuinitialisierung).
 watch(()=>route.query.run,value=>{if(typeof value==='string'&&value&&value!==run.value)run.value=value;});
 
-// Pins je Trade wie auf /statistik (pin_context, Pin-Typ + Notiz); laufunabhängig über die Trade-Identität, Zuordnung über den
-// eingefrorenen Kontext, damit auch Pins mit dem früheren Schlüssel (Lauf + Setup) passen.
+// Pins je Trade wie auf /statistik (pin_context, Pin-Typ + Notiz), laufübergreifend nach derselben Regel (matchDobTradePins).
 const pins=ref([]),pinTarget=ref(null),pinSaving=ref(false),pinError=ref(''),onlyPinned=ref(false);
-const pinOf=row=>pins.value.find(p=>p.dobTradeContext&&dobTradePinKey(p.dobTradeContext)===dobTradePinKey(row));
+const pinMatches=computed(()=>matchDobTradePins(pins.value,rows.value));
+const pinOf=row=>pinMatches.value.get(row.id);
 async function loadPins(){
  pinError.value='';
  try{pins.value=await fetchDobTradePins(instrument.value);}catch(e){pinError.value=e.message||'Pins konnten nicht geladen werden.';}

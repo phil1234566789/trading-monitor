@@ -1,6 +1,7 @@
 import {aggregateDobRoutes} from '../scripts/dobWinrateAggregate.mjs';
 import {sessionOccurrences} from './sessionOccurrences.js';
 import {berlinDateStrFor,berlinOffsetMinutes} from './berlinTime.js';
+import {narrowByEntryPrice} from './simulationPinMatching.js';
 
 // Gleiche Zählung wie die Messung (dobWinrateAggregate): je Route Win/Loss/offen, Winrate nur aus Win+Loss, R = 2·Win − Loss.
 const asPairs=rows=>rows.map(r=>({entries:{[r.route]:{status:'ready',outcome:{status:r.outcome}}}}));
@@ -26,6 +27,19 @@ export const dobChartLink=row=>({path:'/',query:{dob:row.id,instrument:row.instr
 // Laufunabhängige Trade-Identität für Pins (wie uniqueDobTrades, plus Instrument): ein Pin aus v1 erscheint in jedem Lauf mit demselben Trade.
 // Gilt für Tabellenzeilen und den eingefrorenen Pin-Kontext gleichermaßen (gleiche Feldnamen).
 export const dobTradePinKey=t=>`${t.instrument}:${t.direction}:${t.entry_time}:${t.entry_price}:${t.stop_price}`;
+// Pins laufübergreifend wie /statistik (simulationPinMatching): Instrument, Richtung, exakte Entry-Zeit aus dem eingefrorenen Kontext,
+// Entry-Preis nur als Tiebreak; bleibt es mehrdeutig, wird nichts zugeordnet. SL zählt bewusst nicht, ein Lauf darf ihn verschieben.
+export function matchDobTradePins(pins,rows){
+ const byTime=new Map();
+ for(const row of rows){const key=`${row.instrument}:${row.direction}:${row.entry_time}`;byTime.set(key,[...byTime.get(key)??[],row]);}
+ const matched=new Map();
+ for(const pin of pins){
+  const c=pin.dobTradeContext;if(!c)continue;
+  const candidates=narrowByEntryPrice(byTime.get(`${c.instrument}:${c.direction}:${c.entry_time}`)??[],c.entry_price,row=>row.entry_price);
+  if(candidates.length===1&&!matched.has(candidates[0].id))matched.set(candidates[0].id,pin);
+ }
+ return matched;
+}
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
 // Kraftquelle aus den v1-Feldern, z.B. „H1-OB · 0,8 ATR“; v0 hat keine und zeigt „–“.
 export function dobSourceLabel(row){
