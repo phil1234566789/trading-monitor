@@ -9,6 +9,7 @@ import { execSync } from 'node:child_process';
 import { createServer } from 'vite';
 import { aggregateDobByMonth } from './dobWinrateAggregate.mjs';
 import { dobCandleCache } from './dobCandleCache.mjs';
+import { collectDobSetups, dobGridInputAt, dobGridTrades, uniqueDobTrades } from './dobSetupGrid.mjs';
 
 const flag = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
 const SYMBOL = 'XAUUSD', START_DAY = flag('--from') ?? '2026-01-01', FIXTURE_DAY = flag('--fixture');
@@ -54,10 +55,8 @@ try {
   }
   if (dataEnd > (sessionEnds.at(-1) ?? 0)) sessionEnds.push(dataEnd);
 
-  const lowerBound = (rows, t) => { let lo = 0, hi = rows.length; while (lo < hi) { const m = (lo + hi) >> 1; if (rows[m].time < t) lo = m + 1; else hi = m; } return lo; };
-  const slice = (rows, from, to) => rows.slice(lowerBound(rows, from), lowerBound(rows, to));
-  const inputAt = (at, lookbackSec) => ({ instrument: SYMBOL, evaluatedAt: at,
-    m5Candles: slice(m5Marked, at - lookbackSec, at), m1Candles: slice(m1Marked, at - lookbackSec, at) });
+  const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
+  const inputAt = (at, lookbackSec) => dobGridInputAt(grid, at, lookbackSec);
   const key = s => JSON.stringify([s.phase, s.entryTime, s.entryPrice, s.stopPrice]);
   // Gegenprobe je Sessionende: mehr Vorlauf (3 Tage) darf kein Setup der Session ändern.
   const mismatches = [];
@@ -68,34 +67,12 @@ try {
     for (const s of reference) if (liveSetups.get(s.id) !== key(s)) mismatches.push({ at, id: s.id, wide: key(s), live: liveSetups.get(s.id) ?? null });
     for (const id of liveSetups.keys()) if (!reference.some(r => r.id === id)) mismatches.push({ at, id, onlyLive: true });
   }
-  // Raster wie der spätere Watcher: jeder M5-Schluss, Live-Fenster. Letzte Sichtung je ID gewinnt (Entry kommt nach dem Warten).
-  const durations = [], bars = [], setups = new Map(), waitedFirst = new Set();
-  for (const c of m5All) {
-    const at = c.time + 300;
-    if (at <= startSec || at > dataEnd) continue;
-    const live = dobLiveWindowInput(inputAt(at, 2 * 86400));
-    if (!live.m1Candles.length) continue;
-    const t0 = performance.now();
-    const result = checkDobTradeSetup(live);
-    durations.push(performance.now() - t0);
-    bars.push([live.m5Candles.length, live.m1Candles.length]);
-    for (const s of result.setups) if (s.recognizedAt >= startSec) {
-      if (!setups.has(s.id) && s.phase === 'ob2Recognized') waitedFirst.add(s.id);
-      setups.set(s.id, s);
-    }
-  }
-
-  // Ausgang aller Entries bis Datenende neu (Trades laufen über Nacht weiter), wie dobWinrate.
-  const trades = [...setups.values()].filter(s => s.entryTime != null).map(s => {
-    const outcome = evaluateDoubleOrderBlockOutcome({ direction: s.direction, entryTime: s.entryTime, entryPrice: s.entryPrice,
-      stopPrice: s.stopPrice, candles: m1Marked, evaluatedAt: dataEnd, instrument: SYMBOL });
-    return { ...s, outcome };
-  });
+  const { setups, durations, bars, waitedFirst } = collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup, dobLiveWindowInput });
+  const trades = dobGridTrades(setups, grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   // Aggregat erwartet Paare mit Routen; je Setup ein Pseudo-Paar mit genau seiner Route.
   const asPairs = list => list.map(t => ({ recognizedAt: t.recognizedAt, entries: { [t.route]: { status: 'ready', outcome: t.outcome } } }));
   const month = p => berlinDateStrFor(p.recognizedAt).slice(0, 7);
-  // Mehrere OB1-Partner können denselben Trade (Richtung, Entry, SL) tragen; einmal gezählt = echte Trades.
-  const unique = [...new Map(trades.map(t => [`${t.direction}:${t.entryTime}:${t.entryPrice}:${t.stopPrice}`, t])).values()];
+  const unique = uniqueDobTrades(trades);
   const sorted = [...durations].sort((a, b) => a - b), q = f => +sorted[Math.floor(f * (sorted.length - 1))].toFixed(1);
   const gitHash = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
     + (execSync('git status --porcelain', { cwd: root }).toString().trim() ? '-dirty' : '');
