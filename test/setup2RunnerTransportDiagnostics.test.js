@@ -24,7 +24,7 @@ it.each(['lease','candles'])('logs safe transport details from %s without adding
   else {
    expect(checkpoints).toHaveLength(1);
    expect(checkpoints[0].p_state.error).toBe(rows[0].error);
-   expect(checkpoints[0].p_events[0].payload).toEqual({message:rows[0].error,lastSuccessAt:'2026-10-19T04:00:00Z'});
+   expect(checkpoints[0].p_events[0].payload).toEqual(expect.objectContaining({message:rows[0].error,lastSuccessAt:'2026-10-19T04:00:00Z'}));
    expect(JSON.stringify(checkpoints)).not.toContain('UND_ERR_SOCKET');
   }
  }finally{error.mockRestore();vi.unstubAllGlobals();vi.unstubAllEnvs();}

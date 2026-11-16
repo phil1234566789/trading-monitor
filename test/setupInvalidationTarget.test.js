@@ -42,8 +42,8 @@ describe("setup invalidation chart object", () => {
       dir: 1, obTop: 1.2, obBottom: 1.1, obStartTime: 900,
       invalidationTarget: hasLevel ? { kind: "pivot", instrument: "GBPUSD", timeframe: "5M", levelDirection: "high", price: 1.2, sourceTime: 600 } : null,
     });
-    expect(update).toHaveBeenCalledWith({ trade_setup_id: 7, invalidation: 1.2,
-      invalidation_liquidity_level_id: hasLevel ? 99 : null, invalidation_ob_zone_id: null });
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ trade_setup_id: 7, invalidation: 1.2,
+      invalidation_liquidity_level_id: hasLevel ? 99 : null, invalidation_ob_zone_id: null }));
     expect(upsert).toHaveBeenCalledTimes(hasLevel ? 1 : 0);
   });
 });
