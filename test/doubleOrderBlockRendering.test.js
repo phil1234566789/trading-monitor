@@ -42,3 +42,14 @@ it('uses independent DOB tokens for fill, outline, labels, pair hover and pins',
  const items=renderDoubleOrderBlocks(series,[pair],[],1700,{selectedPairId:pair.id,pinnedPairIds:new Set([pair.id])});
  for(const {primitive} of items)expect(primitive.options).toMatchObject({fillColor:'dobConfirmed:0.12',borderColor:'dobConfirmed',textColor:'dobConfirmed',hoverColor:'dobHover',pinColor:'dobPin',isSelectedPin:true,inPinContext:true});
 });
+
+it('geteilte OB mit verschiedenen Outcomes (507 gewinnt, 508 verliert) färbt sich nicht nach dem späteren Paar',()=>{
+ const win={...pair,id:'507',entries:{a:{status:'ready',entryTime:1000,outcome:{status:'success',recognizedAt:1500}},b:{status:'skipped'}}};
+ const loss={...pair,id:'508',recognizedAt:1100,firstOrderBlock:pair.secondOrderBlock,secondOrderBlock:{dir:1,startTime:700,top:16,bottom:14},
+  entries:{a:{status:'ready',entryTime:1100,outcome:{status:'loss',recognizedAt:1600}},b:{status:'skipped'}}};
+ const boxes=options=>renderDoubleOrderBlocks(series,[win,loss],[],1700,options).map(i=>[i.primitive.options.label,i.primitive.options.borderColor]);
+ expect(boxes({})).toEqual([['DOB1 L','dobConfirmed'],['DOB1✗/2 L','dobConfirmed'],['DOB2 L','dobLoss']]);
+ // Hover zeigt die geteilte OB in der Farbe des gewählten Paars.
+ expect(boxes({selectedPairId:'507'})[1]).toEqual(['DOB2 L','dobConfirmed']);
+ expect(boxes({selectedPairId:'508'})[1]).toEqual(['DOB1 L','dobLoss']);
+});

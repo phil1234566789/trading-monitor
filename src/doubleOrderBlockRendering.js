@@ -21,8 +21,11 @@ export function renderDoubleOrderBlocks(series,pairs,candles,evaluatedAt,{select
   // Gemeinsame Zonen werden einmal gezeichnet; a/b-Details gehören in die Hover-Statuszeile.
   for(const {ob,endTime,roles,pair,pairs:associated} of zones.values()) {
     const selected=associated.find(p=>p.id===selectedPairId);
-    const role=selected?(selected.firstOrderBlock.startTime===ob.startTime?'1':'2'):[...roles].sort().join('/');
-    const color=doubleOrderBlockDisplay(pair,pairEvaluatedAt.get(pair.id)??evaluatedAt).tone==='red'?'dobLoss':'dobConfirmed';
+    const roleOf=p=>p.firstOrderBlock.startTime===ob.startTime?'1':'2',red=p=>doubleOrderBlockDisplay(p,pairEvaluatedAt.get(p.id)??evaluatedAt).tone==='red';
+    // Geteilte OB (z.B. OB2 von 507 = OB1 von 508): rot nur, wenn alle Paare rot sind; sonst trägt das Label das ✗ des Verlustpaars.
+    const mixed=!selected&&new Set(associated.map(red)).size>1;
+    const role=selected?roleOf(selected):mixed?associated.map(p=>roleOf(p)+(red(p)?'✗':'')).sort().join('/'):[...roles].sort().join('/');
+    const color=(selected?red(selected):associated.every(red))?'dobLoss':'dobConfirmed';
     const primitive=new OrderBlockPrimitive({...ob,touched:true,endTime},
       {fillColor:cssColorScaled(color,.12),borderColor:cssColor(color),textColor:cssColor(color),borderWidth:1,
         label:`DOB${role} ${pair.direction==='long'?'L':'S'}`,
