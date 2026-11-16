@@ -12,6 +12,7 @@ const INSTRUMENT='XAUUSD';
 const FIXTURES={
  '2026-10-16':()=>import('../test/fixtures/dob-native/2026-10-16.json'),
  '2026-10-21':()=>import('../test/fixtures/dob-native/2026-10-21.json'),
+ '2026-11-03':()=>import('../test/fixtures/dob-native/2026-11-03.json'),
  '2026-11-09':()=>import('../test/fixtures/dob-native/2026-11-09.json'),
  '2026-10-20-p17':()=>import('../test/fixtures/dob-native/2026-10-20-p17.json'),
 };
@@ -21,6 +22,7 @@ export const loadCaseFixture=async c=>(await FIXTURES[c.day]()).default;
 export const CHART_DEBUGGER_CASES=[
  {id:'P14',label:'P14 · DOB Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792147500,1792150200]},
  {id:'P16',label:'P16 · DOB Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792545900,1792552500]},
+ {id:'P7',label:'P7 · DOB Short · 03.11. · Pins 451/452',day:'2026-11-03',dir:-1,orderBlocks:[1793669400,1793671200]},
  {id:'500',label:'Pin 500 · Short · 16.10.',day:'2026-10-16',dir:-1,orderBlocks:[1792150200]},
  {id:'501',label:'Pin 501 · Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794192300]},
  {id:'502',label:'Pin 502 · Long · 21.10.',day:'2026-10-21',dir:1,orderBlocks:[1792552500]},
