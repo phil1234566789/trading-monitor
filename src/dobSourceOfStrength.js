@@ -1,4 +1,4 @@
-import {detectOrderBlocks,candleInvalidatesOrderBlock} from './orderBlockDetection.js';
+import {detectOrderBlocks,candleInvalidatesOrderBlock,candleTouchesOrderBlock} from './orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {obMinimum,instrumentConfig} from './instrumentConfig.js';
 
@@ -22,9 +22,12 @@ export function dobSourceContext({htfCandles,instrument='XAUUSD'}){
   for(const zone of detectOrderBlocks(rows,label,false,obMinimum(instrument,label))){
    const recognizedAt=recognized.get(zone.startTime);
    if(!recognizedAt)continue;
-   let brokenH1=Infinity;
-   for(let i=lowerBound(h1,recognizedAt);i<h1.length;i++)if(candleInvalidatesOrderBlock(h1[i],zone)){brokenH1=h1[i].time;break;}
-   zones.push({tf,dir:zone.dir,side:zone.dir===1?'long':'short',top:zone.top,bottom:zone.bottom,startTime:zone.startTime,recognizedAt,brokenH1});
+   let brokenH1=Infinity,touchedH1=Infinity;
+   for(let i=lowerBound(h1,recognizedAt);i<h1.length;i++){
+    if(touchedH1===Infinity&&candleTouchesOrderBlock(h1[i],zone))touchedH1=h1[i].time;
+    if(candleInvalidatesOrderBlock(h1[i],zone)){brokenH1=h1[i].time;break;}
+   }
+   zones.push({tf,dir:zone.dir,side:zone.dir===1?'long':'short',top:zone.top,bottom:zone.bottom,startTime:zone.startTime,recognizedAt,brokenH1,touchedH1});
   }
  }
  // ATR(14) nach Wilder über die gehandelten H1-Kerzen; im Repo gab es keine ATR-Funktion.
@@ -53,19 +56,37 @@ function zoneActiveAt(zone,at,m5Candles){
  return true;
 }
 
-// Nächste aktive Zone in Trade-Richtung zum OB1-Start; Abstand = kürzester Preisabstand der Kanten, 0 bei Überlappung.
-export function nearestHtfSource(context,{firstOrderBlock:ob1,direction,m5Candles,timeframes=['H1','H4']}){
- const at=ob1.startTime;
- let best=null;
+// Retest (Philip, Q17): der Preis hat die Zone nach ihrer Erkennung und vor dem OB1-Start mindestens einmal berührt (Docht reicht).
+// Gleiche Aufteilung wie der Bruch: volle Stunden auf H1, die angebrochene Stunde auf M5 bis vor den OB1-Start.
+function zoneRetestedBefore(zone,at,m5Candles){
+ const hourStart=Math.floor(at/HOUR)*HOUR;
+ if(zone.touchedH1<hourStart)return true;
+ for(let i=lowerBound(m5Candles,Math.max(zone.recognizedAt,hourStart));i<m5Candles.length&&m5Candles[i].time<at;i++)
+  if(!m5Candles[i].ignored&&candleTouchesOrderBlock(m5Candles[i],zone))return true;
+ return false;
+}
+
+// Alle aktiven Zonen in Trade-Richtung zum OB1-Start. Abstand = kürzester Preisabstand der einander zugewandten Kanten
+// (Short: Zone unten − OB1 oben), 0 bei Überlappung. wrongSide: OB1 ragt über die Seite hinaus, von der der Preis abprallen soll.
+export function htfSourceCandidates(context,{firstOrderBlock:ob1,direction,m5Candles,timeframes=['H1','H4']}){
+ const at=ob1.startTime,atr=h1AtrAt(context,at),result=[];
  for(const zone of context.zones){
   if(zone.side!==direction||!timeframes.includes(zone.tf)||!zoneActiveAt(zone,at,m5Candles))continue;
   const distanceUsd=Math.max(0,zone.bottom-ob1.top,ob1.bottom-zone.top);
-  if(!best||distanceUsd<best.distanceUsd)best={zone,distanceUsd};
+  result.push({kind:'htfOb',timeframe:zone.tf,zone:{top:zone.top,bottom:zone.bottom},zoneStartTime:zone.startTime,zoneRecognizedAt:zone.recognizedAt,
+   distanceUsd,atr,distanceAtr:atr?distanceUsd/atr:null,retested:zoneRetestedBefore(zone,at,m5Candles),
+   wrongSide:direction==='short'?ob1.top>zone.top:ob1.bottom<zone.bottom,contextZone:zone});
  }
+ return result;
+}
+
+// Nächste aktive Zone; mit requireRetest nur unter den retesteten (v2).
+export function nearestHtfSource(context,args,{requireRetest=false}={}){
+ const best=htfSourceCandidates(context,args).filter(c=>!requireRetest||c.retested)
+  .reduce((a,c)=>!a||c.distanceUsd<a.distanceUsd?c:a,null);
  if(!best)return null;
- const atr=h1AtrAt(context,at),{zone}=best;
- return {kind:'htfOb',timeframe:zone.tf,zone:{top:zone.top,bottom:zone.bottom},zoneStartTime:zone.startTime,zoneRecognizedAt:zone.recognizedAt,
-  distanceUsd:best.distanceUsd,atr,distanceAtr:atr?best.distanceUsd/atr:null};
+ const {contextZone,...source}=best;
+ return source;
 }
 
 export const sourceOfStrengthPassed=(source,maxAtr)=>maxAtr!=null&&source?.distanceAtr!=null&&source.distanceAtr<=maxAtr;

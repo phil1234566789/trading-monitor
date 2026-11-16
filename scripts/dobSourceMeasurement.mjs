@@ -30,8 +30,8 @@ const server = await createServer({ root, envDir, server: { middlewareMode: true
 try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { markIgnoredCandles, htfObCandles, sessionOccurrences }, { berlinDayRangeUtcMs, berlinOffsetMinutes, berlinDateStrFor },
-    { detectOrderBlocks, candleTouchesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
-    { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }, { dobSourceContext, nearestHtfSource, h1AtrAt }] = await Promise.all(['/src/forexCandles.js',
+    { detectOrderBlocks, candleTouchesOrderBlock, candleInvalidatesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
+    { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }, { dobSourceContext, htfSourceCandidates, h1AtrAt }] = await Promise.all(['/src/forexCandles.js',
     '/src/supabaseClient.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/orderBlockDetection.js', '/src/liquidityDetection.js',
     '/src/orderBlockRecognitionTime.js', '/src/instrumentConfig.js', '/src/dobTradeSetup.js', '/src/dobSourceOfStrength.js'].map(load));
   const sec = day => berlinDayRangeUtcMs(day).startUtcMs / 1000;
@@ -73,7 +73,7 @@ try {
   for (const s of base.setups) {
     const [, , , ob1, ob2] = s.id.split(':').map(Number), key = `${s.direction}:${s.entryTime}:${s.entryPrice}:${s.stopPrice}`;
     const t = trades.get(key) ?? { ...s, ob1: -Infinity, ob2: -Infinity, pairs: 0 };
-    Object.assign(t, { ob1: Math.max(t.ob1, ob1), ob2: Math.max(t.ob2, ob2), pairs: t.pairs + 1, outcome: s.outcome });
+    Object.assign(t, { ob1: Math.max(t.ob1, ob1), ob2: Math.max(t.ob2, ob2), pairs: t.pairs + 1, outcome: s.outcome, ob1s: [...(t.ob1s ?? []), ob1] });
     trades.set(key, t);
   }
 
@@ -212,20 +212,26 @@ try {
     htfCandles: Object.fromEntries(['1h', '4h'].map(bar => [bar, htfObCandles(frames[bar], sessions, offset)])) });
   const atrAt = t => h1AtrAt(sourceContext, t);
   const G_BUCKETS = [[0, 'in Zone'], [1, '≤ 1 OB1-Höhe'], [2, '≤ 2'], [5, '≤ 5'], [Infinity, 'weiter']];
+  // Wie das Produkt (checkDobTradeSetup): ein Trade hat eine Quelle, sobald irgendein tragendes Paar eine hat. Je Kennzahl zählt
+  // deshalb der kleinste Abstand über alle OB1 der Paare dieses Trades (eine Definition für Messung und Produkt).
+  const candidatesOf = (r, tfs) => r.ob1s.flatMap(o => { const ob1 = m5Zones.get(o); return ob1 ? htfSourceCandidates(sourceContext,
+    { firstOrderBlock: ob1, direction: r.direction, m5Candles: m5, timeframes: tfs }).map(c => ({ ...c, at: o, height: ob1.top - ob1.bottom })) : []; });
+  const minBy = (list, f) => list.reduce((a, c) => a == null || f(c) < f(a) ? c : a, null);
   const nearestZone = (r, tfs) => {
-    const ob1 = zones.get(r.ob1), dayStart = r.byOb1.dayStart;
-    if (!ob1) return null;
-    const height = ob1.top - ob1.bottom;
-    const source = nearestHtfSource(sourceContext, { firstOrderBlock: ob1, direction: r.direction, m5Candles: m5, timeframes: tfs });
-    const best = source && { units: source.distanceUsd / height, z: { recognizedAt: source.zoneRecognizedAt } };
+    const best = minBy(candidatesOf(r, tfs), c => c.distanceUsd / c.height);
     if (!best) return { bucket: 'keine aktive Zone', age: null };
-    const ageSec = r.ob1 - best.z.recognizedAt;
-    return { bucket: G_BUCKETS.find(([max]) => best.units <= max)[1], units: best.units, usd: best.units * height,
-      age: best.z.recognizedAt >= dayStart ? 'selber Tag' : ageSec <= 3 * 86400 ? '1–3 Tage' : 'älter' };
+    const units = best.distanceUsd / best.height, ageSec = best.at - best.zoneRecognizedAt;
+    return { bucket: G_BUCKETS.find(([max]) => units <= max)[1], units, usd: best.distanceUsd,
+      age: best.zoneRecognizedAt >= r.byOb1.dayStart ? 'selber Tag' : ageSec <= 3 * 86400 ? '1–3 Tage' : 'älter' };
   };
   const gCache = new Map();
   const gFlags = r => {
-    if (!gCache.has(r)) gCache.set(r, { ...flags(r), gH1: nearestZone(r, ['H1']), gH4: nearestZone(r, ['H4']), g: nearestZone(r, ['H1', 'H4']), atr: atrAt(r.ob1) });
+    if (!gCache.has(r)) {
+      const cands = candidatesOf(r, ['H1', 'H4']);
+      gCache.set(r, { ...flags(r), gH1: nearestZone(r, ['H1']), gH4: nearestZone(r, ['H4']), g: nearestZone(r, ['H1', 'H4']), cands,
+        dayStart: r.byOb1.dayStart, gUsd: minBy(cands, c => c.distanceUsd)?.distanceUsd ?? null,
+        gAtr: minBy(cands.filter(c => c.distanceAtr != null), c => c.distanceAtr)?.distanceAtr ?? null });
+    }
     return gCache.get(r);
   };
   const bucketFilters = key => Object.fromEntries([...G_BUCKETS.map(([, b]) => b), 'keine aktive Zone']
@@ -274,8 +280,8 @@ try {
     const res = evaluateFilters({ k: x => value(x) != null && value(x) <= k, rest: x => value(x) != null && value(x) > k }, gFlags);
     return { k, bisK: res.k, weiterAlsK: res.rest };
   });
-  const usdOf = x => x.g?.usd ?? null;
-  const atrOf = x => x.g?.usd == null || !x.atr ? null : x.g.usd / x.atr;
+  const usdOf = x => x.gUsd;
+  const atrOf = x => x.gAtr;
   const sweepUsd = sweepBy(usdOf, [0, 1, 2, 3, 5, 7, 10, 15, 20, 30]);
   const sweepAtr = sweepBy(atrOf, [0, 0.25, 0.5, 0.75, 1, 1.5, 2, 3]);
   // Philip: warum genau 1,5? Feines Raster um den gewählten Wert, um Plateau statt Spitze zu belegen.
@@ -301,6 +307,47 @@ try {
     [`G≤${k} ∪ F1(OB) ∪ C'(OB)`, x => within(k)(x) || f1Ob(x) || cOb(x)]])), gFlags);
   const SESSION_FILTERS = Object.fromEntries([['Basis', () => true], ['G$≤10', usdLe(10)], ['G$≤15', usdLe(15)], ['G$≤20', usdLe(20)], ['G ≤ 1,5 ATR', x => atrOf(x) != null && atrOf(x) <= 1.5],
     ["C' ∪ F1 ∪ G(in Zone)", x => cPrime(x) || x.latestInZone || inZone(x)], ['A ∪ F1', x => x.A || x.latestInZone]].map(([n, f]) => [n, sessionTable(f)]));
+  // DOB-QUELLE-RETEST (Philip, Q17): die H1/H4-Zone muss vor OB1 berührt worden sein. Touch-Episoden je Zone exakt auf M5
+  // (aufeinanderfolgende berührende Kerzen = ein Touch) nur für die Zeitfenster; „beliebig“ ist die Modul-Logik des Produkts.
+  const episodes = new Map();
+  const episodesOf = zone => {
+    if (!episodes.has(zone)) {
+      const list = []; let prev = false;
+      for (let i = lowerBound(m5, zone.recognizedAt); i < m5.length; i++) {
+        const c = m5[i]; if (c.ignored) continue;
+        const touch = candleTouchesOrderBlock(c, zone);
+        if (touch && !prev) list.push(c.time);
+        prev = touch;
+        if (candleInvalidatesOrderBlock(c, zone)) break;
+      }
+      episodes.set(zone, list);
+    }
+    return episodes.get(zone);
+  };
+  const LIMIT = 1.5;
+  const passing = x => x.cands.filter(c => c.distanceAtr != null && c.distanceAtr <= LIMIT);
+  const touchesBefore = c => episodesOf(c.contextZone).filter(t => t < c.at);
+  const lastTouch = c => touchesBefore(c).at(-1) ?? -Infinity;
+  const anyPass = (x, f) => passing(x).some(f);
+  const RETEST = {
+    'G gesamt (≤ 1,5 ATR)': x => passing(x).length > 0,
+    'G mit Retest (beliebig, Modul)': x => anyPass(x, c => c.retested),
+    'G ohne Retest': x => passing(x).length > 0 && !anyPass(x, c => c.retested),
+    'G ∩ erster Touch': x => anyPass(x, c => touchesBefore(c).length === 1),
+    'G ∩ Folge-Touch': x => anyPass(x, c => touchesBefore(c).length >= 2),
+    'G ∩ Touch selber Handelstag': x => anyPass(x, c => lastTouch(c) >= x.dayStart),
+    ...Object.fromEntries([1, 3, 6, 24].map(h => [`G ∩ Touch ≤ ${h} h vor OB1`, x => anyPass(x, c => lastTouch(c) >= c.at - h * HOUR)])),
+    'G, OB1 auf richtiger Seite': x => anyPass(x, c => !c.wrongSide),
+    'G nur mit OB1 auf falscher Seite': x => passing(x).length > 0 && passing(x).every(c => c.wrongSide),
+    'G mit Retest und richtiger Seite': x => anyPass(x, c => c.retested && !c.wrongSide),
+  };
+  const retest = evaluateFilters(RETEST, gFlags);
+  // Gegenprobe: Modul-Retest (H1 + angebrochene Stunde M5) gegen exakte M5-Episoden.
+  const retestMismatch = rows.flatMap(r => gFlags(r).cands.filter(c => c.retested !== touchesBefore(c).length > 0)
+    .map(c => ({ trade: r.id, at: c.at, zoneStart: c.zoneStartTime })));
+  const retestSamples = sampleRows.map(([trade, r]) => ({ trade, zones: r ? passing(gFlags(r)).map(c => ({ timeframe: c.timeframe, zone: c.zone,
+    distanceAtr: c.distanceAtr, retested: c.retested, touchesBefore: touchesBefore(c).length, lastTouch: touchesBefore(c).at(-1) ?? null,
+    wrongSide: c.wrongSide })) : [] }));
   const gReport = { measurement: 'dob-quelle-g-v1', git: gitHash, base: baseSummary,
     methodology: ['Basis, Anker OB1, Mustertrades wie source-combos-xau-2026.json.',
       'Aktive Zone: H1/H4-OB in Trade-Richtung (htfObCandles + detectOrderBlocks), erkannt vor OB1-Start, bis OB1-Start auf M5 nicht invalidiert (candleInvalidatesOrderBlock); Alter und frühere Touches egal.',
@@ -308,7 +355,7 @@ try {
       'Zonen-Alter (Info): Erkennung der nächsten Zone am selben Handelstag / bis 3 Tage / älter.',
       "Kombis: A/C'/F1 wie in source-combos; A ∩ C' ∩ F1 ist gleich C' ∩ F1, weil C' A enthält.",
       'halves: Jan–Jun und Jul–Nov 2026 nach Berliner Entry-Monat; Overfitting-Check = Vorsprung zur Basis in beiden Hälften.'],
-    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos, sweep, obCombos, sweepUsd, sweepAtr, sweepAtrFine, usdCombos, pureOb, lsShare,
+    distance: gTables, zoneAgeByDistance: gAge, combos: gCombos, sweep, obCombos, sweepUsd, sweepAtr, sweepAtrFine, usdCombos, retest: { filters: retest, mismatchModuleVsM5: retestMismatch.length, mismatches: retestMismatch.slice(0, 20), samples: retestSamples }, pureOb, lsShare,
     sessionsByFilter: SESSION_FILTERS,
     sampleGroups: { ob: 'alle Mustertrade-Positionen außer #137 (K05)', ls: '#137 (K05)' } };
   await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-g-xau-2026.json'), JSON.stringify(gReport, null, 2));
@@ -326,6 +373,10 @@ try {
     for (const { k, bisK: a, weiterAlsK: b } of list) console.log(String(k).padStart(4), `bis: n=${a.n} ${a.winrate}% ${a.sumR}R H ${half(a, 'Jan–Jun')} / ${half(a, 'Jul–Nov')} | weiter: n=${b.n} ${b.winrate}% ${b.sumR}R H ${half(b, 'Jan–Jun')} / ${half(b, 'Jul–Nov')} | OB ${a.samples.filter(s => s.kept && s.trade !== '#137').length}/10 LS ${a.samples.find(s => s.trade === '#137').kept ? 'ja' : 'nein'}`);
   }
   printFilters('USD-ODER', usdCombos);
+  printFilters('Retest (1,5 ATR)', retest);
+  console.log('Retest Modul vs. M5:', retestMismatch.length);
+  for (const s of retestSamples) console.log(s.trade, JSON.stringify(s.zones.map(z => [z.timeframe, z.zone.bottom, z.zone.top, +z.distanceAtr.toFixed(2), z.retested, z.touchesBefore, z.wrongSide])));
+
   printFilters('reine OB-Variante', pureOb);
   console.log('LS-Anteil', JSON.stringify(lsShare));
   console.log('Sessions', JSON.stringify(SESSION_FILTERS, null, 0));
