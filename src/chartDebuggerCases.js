@@ -13,6 +13,7 @@ const FIXTURES={
  '2026-10-16':()=>import('../test/fixtures/dob-native/2026-10-16.json'),
  '2026-10-21':()=>import('../test/fixtures/dob-native/2026-10-21.json'),
  '2026-11-03':()=>import('../test/fixtures/dob-native/2026-11-03.json'),
+ '2026-11-04':()=>import('../test/fixtures/dob-native/2026-11-04.json'),
  '2026-11-09':()=>import('../test/fixtures/dob-native/2026-11-09.json'),
  '2026-10-20-p17':()=>import('../test/fixtures/dob-native/2026-10-20-p17.json'),
 };
@@ -33,6 +34,7 @@ export const CHART_DEBUGGER_CASES=[
  {id:'508',label:'Pin 508 · DOB Short · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794205800,1794207000]},
  {id:'U1',label:'unknown · opposingFvgSelectionUnresolved · 03.11.',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
  {id:'U2',label:'unknown · partialOverlapOpen · 09.11.',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
+ {id:'U3',label:'Marktschluss nach Reaktion · Entry b danach · 04.11.',day:'2026-11-04',dir:-1,orderBlocks:[1793824800]},
 ];
 // Fachliches Soll (Philip), nicht das Produkt: Referenzpaare aus dem Manifest, übrige Fälle aus der kleinen Tabelle.
 const REFERENCE_PAIRS=new Set(references.pairs.map(p=>p.id));
@@ -40,7 +42,7 @@ export const expectationOf=c=>EXPECTATIONS.cases[c.id]??(REFERENCE_PAIRS.has(c.i
 export function expectedText(c){
  const e=expectationOf(c);
  if(!e)return 'kein Soll';
- if(e.verdict==='offen')return `Offen · ${e.reason}`;
+ if(e.verdict==='offen')return `Offen · ${e.reason??e.note}`;
  const routes=Object.entries(e.routes??{}),rejected=routes.filter(([,x])=>x==='rejected').map(([k])=>k);
  const detail=e.dob?'DOB':e.reaction==='false'?'Reaktion false, kein Entry':rejected.length?`Entry ${rejected.join('+')} abgelehnt`:`Reaktion ${e.reaction}`;
  return `${e.verdict==='positive'?'Positiv':'Negativ'} · ${detail}`;
@@ -49,8 +51,8 @@ export function expectedText(c){
 export function productMatches(c,result){
  const e=expectationOf(c),r=result.orderBlocks.at(-1).reaction;
  if(!e)return null;
- // Offen = Philip klärt noch; ✓ heißt nur: die Engine weicht hier weiter mit genau diesem Grund aus.
- if(e.verdict==='offen')return r?.verdict?.state==='unknown'&&r.verdict.reason===e.reason;
+ // Offen = Philip klärt noch; ✓ heißt nur: das Produkt liefert hier weiter denselben Zustand (bei unknown: denselben Grund).
+ if(e.verdict==='offen')return r?.verdict?.state===e.state&&(e.state!=='unknown'||r.verdict.reason===e.reason);
  if(e.dob&&!result.pair)return false;
  if(e.reaction&&r?.state!==e.reaction)return false;
  if(e.verdict==='negative'&&Object.values(r?.routes??{}).some(route=>route.status==='entry'))return false;
