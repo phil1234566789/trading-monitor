@@ -20,7 +20,7 @@ const { visible: drawingsVisible } = useDrawings({load:false});
 
 const FRESH_MS = 30_000;
 const route = useRoute();
-const statisticsView=computed(()=>route.path==='/statistik');
+const statisticsView=computed(()=>['/statistik','/dob-statistik'].includes(route.path));
 const snapshotView = computed(() => route.path === '/' && isTradeSetup2SnapshotView({
   tradeSetup2RunId: route.query.run, selectedTradeSetup2Id: route.query.setup2,
 }));
@@ -65,6 +65,7 @@ const lastUpdateText = computed(() =>
         <RouterLink to="/" exact-active-class="active">Dashboard</RouterLink>
         <RouterLink to="/protokoll" exact-active-class="active">Protokoll</RouterLink>
         <RouterLink to="/statistik" exact-active-class="active">Statistik</RouterLink>
+        <RouterLink to="/dob-statistik" exact-active-class="active">DOB-Statistik</RouterLink>
         <RouterLink to="/setup-regeln" exact-active-class="active">Setup-Regeln</RouterLink>
         <RouterLink to="/alarme" exact-active-class="active">Alarme</RouterLink>
         <RouterLink to="/handelszeiten" exact-active-class="active">Handelszeiten</RouterLink>

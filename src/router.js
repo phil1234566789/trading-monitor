@@ -14,6 +14,7 @@ export const router = createRouter({
     { path: "/", name: "dashboard", component: () => import("./views/Dashboard.vue") },
     { path: "/protokoll", name: "protokoll", component: () => import("./views/Protokoll.vue") },
     { path: "/statistik", name: "statistik", component: () => import("./views/Statistik.vue") },
+    { path: "/dob-statistik", name: "dob-statistik", component: () => import("./views/DobStatistik.vue") },
     { path: "/setup-regeln", name: "setup-regeln", component: () => import("./views/TradeSetup2Rules.vue") },
     { path: "/alarme", name: "alarme", component: () => import("./views/Alarme.vue") },
     { path: "/handelszeiten", name: "handelszeiten", component: () => import("./views/Handelszeiten.vue") },

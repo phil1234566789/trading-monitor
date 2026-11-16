@@ -22,6 +22,7 @@ import {m1FvgCardPrefill} from '../m1FvgEntrySelection.js';
 import {useJournalDobEntryFinder} from '../composables/useJournalDobEntryFinder.js';
 import {formatDatedTime} from '../berlinTime.js';
 import {useJournalRoute} from '../composables/useJournalRoute.js';
+import {useDobChartRoute} from '../composables/useDobChartRoute.js';
 import TradingAccountSwitcher from "../components/TradingAccountSwitcher.vue";
 import MetadataPanel from "../components/MetadataPanel.vue";
 import ContextMenu from "../components/ContextMenu.vue";
@@ -1464,6 +1465,7 @@ useTradeSetup2Route(() => route.query, {
   showTradeSetup2, showTradeSetupChecklist, tradeSetup2Variant,
   currentSymbol, currentBar, replayTime, replayActive,
 }, SYMBOLS);
+useDobChartRoute(() => route.query, {currentSymbol, currentBar, showDoubleOrderBlocks, replayTime, replayActive}, SYMBOLS);
 function toDatetimeLocal(unixSeconds) {
   const d = new Date(unixSeconds * 1000);
   const pad = (n) => String(n).padStart(2, "0");

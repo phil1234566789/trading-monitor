@@ -1,0 +1,26 @@
+import {describe,expect,it} from 'vitest';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink} from '../src/dobTradeStatistics.js';
+
+// 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
+const at=Date.UTC(2026,10,12,13,10)/1000;
+const row=(route,outcome,extra={})=>({route,outcome,recognized_at:at,entry_time:at,instrument:'XAUUSD',setup_id:'x:a',exit_time:null,...extra});
+
+describe('dobTradeStatistics',()=>{
+ it('zählt je Route wie die Messung, offene außerhalb der Winrate',()=>{
+  const r=dobRouteStats([row('a','success'),row('a','loss'),row('a','loss'),row('a','open'),row('b','loss')]);
+  expect(r.a).toMatchObject({success:1,loss:2,open:1,sumR:0});
+  expect(r.a.winrate).toBeCloseTo(1/3);
+  expect(r.b).toMatchObject({success:0,loss:1,sumR:-1});
+ });
+ it('ordnet Sessions nach Berliner Entry-Zeit zu, auch mehrere',()=>{
+  const sessions=[{label:'NY',from_minutes:14*60,to_minutes:22*60,days:null},{label:'MMM',from_minutes:14*60,to_minutes:15*60,days:[1,2,3,4,5]},{label:'Asia',from_minutes:1*60,to_minutes:9*60,days:null}];
+  expect(dobTradeSessions(row('a','success'),sessions)).toEqual(['NY','MMM']);
+  const groups=dobGroups([row('a','success'),row('a','loss',{entry_time:at-16*3600})],r=>{const s=dobTradeSessions(r,sessions);return s.length?s:['ohne Session'];});
+  expect(groups.map(g=>[g.key,g.count])).toEqual([['NY',1],['MMM',1],['ohne Session',1]]);
+ });
+ it('Monat nach Berliner Erkennung, Chart-Link am Ausgang',()=>{
+  expect(dobTradeMonth({recognized_at:Date.UTC(2026,0,31,23,30)/1000})).toBe('2026-02');
+  expect(dobChartLink(row('a','success',{exit_time:at+600})).query).toEqual({dob:'x:a',instrument:'XAUUSD',bar:'1m',replay:String(at+600)});
+  expect(dobChartLink(row('a','open')).query.replay).toBe(String(at+300));
+ });
+});
