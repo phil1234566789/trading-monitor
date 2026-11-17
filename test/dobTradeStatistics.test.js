@@ -63,8 +63,18 @@ describe('dobTradeStatistics',()=>{
   // CET (UTC+1): Berlin = UTC + 1h
   const at=(h,m)=>({entry_time:Date.UTC(2026,10,12,h-1,m)/1000,route:'a',outcome:'success'});
   const groups=dobTimeSlotGroups([at(10,15),at(10,45),at(8,5),at(15,0)],sessions);
-  expect(groups.map(g=>[g.title,g.slots.map(s=>s.label)])).toEqual([['07:00–10:30',['08:00–09:00','10:00–10:30']],['MMM',['10:30–11:00']],['NY',['15:00–16:00']]]);
-  expect(dobTotalStats(groups[0].rows,2)).toMatchObject({success:2,sumR:4});
+  expect(groups.map(g=>[g.title,g.slots.map(s=>s.label)])).toEqual([['08:00–09:00 · Frankfurt-Open',['08:00–09:00']],
+   ['09:00–10:30 · London-Open',['10:00–10:30']],['MMM',['10:30–11:00']],['NY',['15:00–16:00']]]);
+  expect(dobTotalStats(groups[1].rows,2)).toMatchObject({success:1,sumR:2});
+  // Lücke vor der ersten Öffnung und Lücke ohne Öffnung
+  const titles=dobTimeSlotGroups([at(7,10),at(13,30)],sessions).map(g=>g.title);
+  expect(titles).toEqual(['07:00–08:00 · vor Frankfurt','13:00–14:00']);
+ });
+ it('folgt einer geänderten Session-Grenze (MMM ab 09:30)',()=>{
+  const sessions=[{label:'Asia',from_minutes:0,to_minutes:420},{label:'MMM',from_minutes:570,to_minutes:780},{label:'NY',from_minutes:840,to_minutes:1320}];
+  const at=(h,m)=>({entry_time:Date.UTC(2026,10,12,h-1,m)/1000,route:'a',outcome:'success'});
+  expect(dobTimeSlotGroups([at(9,10),at(9,45),at(10,15)],sessions).map(g=>[g.title,g.slots.map(s=>s.label)]))
+   .toEqual([['09:00–09:30 · London-Open',['09:00–09:30']],['MMM',['09:30–10:00','10:00–11:00']]]);
  });
  it('Zonenalter-Buckets',()=>{
   expect([3600,2*86400,10*86400,40*86400,null].map(v=>dobZoneAgeBucket({source_zone_age_seconds:v}))).toEqual(['< 1 Tag','1–3 Tage','1–4 Wochen','> 4 Wochen',null]);

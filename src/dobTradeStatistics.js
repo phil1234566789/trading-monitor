@@ -68,15 +68,22 @@ export function dobMaxRShares(rows){
 export const dobTotalStats=(rows,k=2)=>dobRouteStats(rows.map(r=>({...r,route:'a'})),k).a;
 export const DOB_RETEST_KINDS={first:'erster Touch',followUp:'Folge-Touch'};
 
+// Börsenöffnungen in Berlin-Zeit, ganzjährig gleich, weil Frankfurt und London die Sommerzeit wie Berlin wechseln (gängige Forex-Angabe:
+// Frankfurt 07:00 GMT, London 08:00 GMT, jeweils lokale Winterzeit). Bewusst nicht in der sessions-Tabelle: sie benennen nur Lücken zwischen Sessions.
+export const DOB_EXCHANGE_OPENS=[{minutes:8*60,name:'Frankfurt'},{minutes:9*60,name:'London'}];
+
 // Tageszeit-Slots (Berlin, Entry-Zeit): volle Stunden, an Session-Grenzen auf halber Stunde geteilt (z.B. 10:00–10:30 / 10:30–11:00).
-// Gruppiert unter der Session, in der der Slot beginnt; Lücken zwischen Sessions sind eigene Gruppen mit ihrer Uhrzeit als Titel,
-// weil die Liquidität mit den Börsenöffnungen kommt. Sessions nach Uhrzeit, Wochentage spielen für die Gruppierung keine Rolle.
+// Gruppiert unter der Session, in der der Slot beginnt (aus der sessions-Tabelle, folgt also Änderungen im Sessions-Modal). Lücken zwischen
+// Sessions sind eigene Gruppen mit ihrer Uhrzeit als Titel, geteilt an Börsenöffnungen („vor Frankfurt“, „Frankfurt-Open“, „London-Open“),
+// weil die Liquidität mit den Börsenöffnungen kommt. Wochentage der Sessions spielen für die Gruppierung keine Rolle.
 const hhmm=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
 const inSession=(s,m)=>s.from_minutes<=s.to_minutes?m>=s.from_minutes&&m<s.to_minutes:m>=s.from_minutes||m<s.to_minutes;
-export function dobTimeSlotGroups(rows,sessions){
- const cuts=[...new Set([...Array.from({length:25},(_,h)=>h*60),...sessions.flatMap(s=>[s.from_minutes%1440,s.to_minutes%1440])])].sort((a,b)=>a-b);
+export function dobTimeSlotGroups(rows,sessions,opens=DOB_EXCHANGE_OPENS){
+ const cuts=[...new Set([...Array.from({length:25},(_,h)=>h*60),...sessions.flatMap(s=>[s.from_minutes%1440,s.to_minutes%1440]),
+  ...opens.map(o=>o.minutes)])].sort((a,b)=>a-b);
+ const ordered=[...sessions].sort((a,b)=>a.from_minutes-b.from_minutes);
  const slots=cuts.slice(0,-1).map((start,i)=>({start,end:cuts[i+1],label:`${hhmm(start)}–${hhmm(cuts[i+1])}`,rows:[],
-  session:[...sessions].sort((a,b)=>a.from_minutes-b.from_minutes).find(s=>inSession(s,start))?.label??null}));
+  session:ordered.find(s=>inSession(s,start))?.label??null,open:opens.find(o=>o.minutes===start)??null}));
  for(const row of rows){
   const m=Math.floor(((row.entry_time+berlinOffsetMinutes(row.entry_time*1000)*60)%86400+86400)%86400/60);
   slots.find(s=>m>=s.start&&m<s.end).rows.push(row);
@@ -84,10 +91,16 @@ export function dobTimeSlotGroups(rows,sessions){
  const groups=[];
  for(const slot of slots){
   const last=groups.at(-1);
-  if(last&&last.session===slot.session)last.slots.push(slot);else groups.push({session:slot.session,slots:[slot]});
+  if(last&&last.session===slot.session&&!(slot.session==null&&slot.open))last.slots.push(slot);
+  else groups.push({session:slot.session,open:slot.session==null?slot.open:null,slots:[slot]});
  }
- return groups.map(g=>({title:g.session??`${g.slots[0].label.slice(0,5)}–${g.slots.at(-1).label.slice(6)}`,
-  slots:g.slots.filter(s=>s.rows.length),rows:g.slots.flatMap(s=>s.rows)})).filter(g=>g.rows.length);
+ // Lückenteil vor der ersten Öffnung derselben Lücke heißt „vor <Börse>“.
+ groups.forEach((g,i)=>{if(g.session==null&&!g.open&&groups[i+1]?.session==null&&groups[i+1]?.open)g.before=groups[i+1].open;});
+ return groups.map(g=>{
+  const range=`${g.slots[0].label.slice(0,5)}–${g.slots.at(-1).label.slice(6)}`;
+  const phase=g.open?`${g.open.name}-Open`:g.before?`vor ${g.before.name}`:null;
+  return {title:g.session??(phase?`${range} · ${phase}`:range),slots:g.slots.filter(s=>s.rows.length),rows:g.slots.flatMap(s=>s.rows)};
+ }).filter(g=>g.rows.length);
 }
 
 // Alter der H1/H4-Zone von ihrer Entstehung bis zum Retest (Start der letzten Touch-Episode vor OB1), nur v1/v2.
