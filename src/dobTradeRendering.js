@@ -33,7 +33,7 @@ export function dobTradeFrame(row){
  return {from:Math.min(row.entry_time,retest),to:row.exit_time??row.entry_time};
 }
 
-export function renderDobTrade(series,row,primitives,candles,currentBar){
+export function renderDobTrade(series,row,primitives,candles,currentBar,targetLabel='TP 2R'){
  for(const p of primitives)series.detachPrimitive(p);
  primitives.length=0;
  if(!row||!candles.length)return;
@@ -41,7 +41,7 @@ export function renderDobTrade(series,row,primitives,candles,currentBar){
  const endTime=row.exit_time??candles.at(-1).time;
  const add=p=>{series.attachPrimitive(p);primitives.push(p);};
  add(new TradeMarkerPrimitive(position,{...tradeOptions(position,true,false,false),eventBarSeconds},candles));
- for(const [price,styleKey,label] of [[row.stop_price,'tradeLoss','SL'],[row.target_price,'tradeWin','TP 2R']])
+ for(const [price,styleKey,label] of [[row.stop_price,'tradeLoss','SL'],[row.target_price,'tradeWin',targetLabel]])
   if(Number.isFinite(price))add(new LiquidityLinePrimitive({price,pivotTime:row.entry_time,endTime},
    {color:cssColor(styleKey),lineWidth:1,label,labelSide:'end-above',forceLabel:true,eventBarSeconds},candles));
  const spec=entryRiskSpec(entryRiskScale(row.entry_price,row.stop_price,[{label:'TP',price:row.target_price}],row.instrument,row.direction),

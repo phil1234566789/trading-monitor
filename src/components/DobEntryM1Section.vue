@@ -9,7 +9,7 @@ import {supabase} from '../supabaseClient.js';
 import {cssColor,cssColorScaled} from '../chartColors.js';
 import {dobChartLink,dobMaxRLabel} from '../dobTradeStatistics.js';
 import {formatDatedTime} from '../berlinTime.js';
-import {DOB_ENTRY_M1_CASES,dobEntryM1Window,dobEntryM1Zones} from '../dobEntryM1Cases.js';
+import {DOB_ENTRY_M1_CASES,dobEntryM1Window,dobEntryM1Zones,dobEntryM1Display} from '../dobEntryM1Cases.js';
 
 // Nur Ansicht, keine Erkennung: Trade-Zeile aus dob_trade_setups, Kerzen live aus dem Archiv wie im Dashboard.
 const route=useRoute(),router=useRouter();
@@ -17,7 +17,7 @@ const GROUPS=[['Losses',DOB_ENTRY_M1_CASES.filter(c=>c.kind==='loss')],['Wins (m
 const tradeId=ref(DOB_ENTRY_M1_CASES.some(c=>c.id===route.query.trade)?route.query.trade:DOB_ENTRY_M1_CASES[0].id);
 const tf=ref(route.query.tf==='m5'?'m5':'m1');
 const rows=shallowRef(new Map()),data=shallowRef(null),error=ref('');
-const row=computed(()=>rows.value.get(tradeId.value)??null);
+const row=computed(()=>rows.value.get(tradeId.value)??null),kind=computed(()=>DOB_ENTRY_M1_CASES.find(c=>c.id===tradeId.value).kind);
 const chartEl=ref(null);
 let chart=null,series=null,primitives=[];
 
@@ -31,18 +31,18 @@ watch(row,async r=>{
  data.value=null;error.value='';
  if(!r)return;
  try{
-  const w=dobEntryM1Window(r),toMs=w.loadTo*1000;
+  const w=dobEntryM1Window(r,kind.value),toMs=w.loadTo*1000;
   const [m1,m5]=await Promise.all([fetchInitialCandles(r.instrument,'1m',w.count['1m'],toMs),fetchInitialCandles(r.instrument,'5m',w.count['5m'],toMs)]);
   if(r!==row.value)return;
-  data.value={row:r,m1,m5,view:w.view,zones:dobEntryM1Zones(r,m5,m1)};
+  data.value={...dobEntryM1Display(r,kind.value,m1,w),m1,m5,zones:dobEntryM1Zones(r,m5,m1)};
  }catch(e){error.value=e.message;}
 });
 
 function draw(){
  if(!series||!data.value)return;
- const {row:r,m1,m5,view,zones}=data.value,candles=tf.value==='m1'?m1:m5;
+ const {row:r,m1,m5,view,zones,targetLabel}=data.value,candles=tf.value==='m1'?m1:m5;
  series.setData(candles);
- renderDobTrade(series,r,primitives,candles,tf.value==='m1'?'1m':'5m');
+ renderDobTrade(series,r,primitives,candles,tf.value==='m1'?'1m':'5m',targetLabel);
  const end=r.exit_time??candles.at(-1).time;
  for(const {label,zone} of zones){
   if(!zone)continue;
@@ -70,7 +70,7 @@ const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.la
     <option v-for="c in cases" :key="c.id" :value="c.id">{{ c.label }}</option></optgroup></select>
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
    <RouterLink v-if="row" :to="dobChartLink(row)">Im Chart öffnen</RouterLink>
-   <span v-if="row" class="info">Entry {{ formatDatedTime(row.entry_time) }} @ {{ row.entry_price }} · SL {{ row.stop_price }} · Ausgang
+   <span v-if="row" class="info">{{ data?.targetLabel==='TP 5R' ? '5R erreicht '+formatDatedTime(data.row.exit_time)+' · ' : '' }}Entry {{ formatDatedTime(row.entry_time) }} @ {{ row.entry_price }} · SL {{ row.stop_price }} · Ausgang
     {{ row.exit_time ? formatDatedTime(row.exit_time) : 'offen' }} · max R {{ dobMaxRLabel(row.max_r) }} · SL getroffen {{ row.sl_hit ? 'ja' : 'nein' }}</span>
   </div>
   <p v-if="error" class="err" role="alert">{{ error }}</p>

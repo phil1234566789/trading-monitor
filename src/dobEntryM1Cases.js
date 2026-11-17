@@ -1,6 +1,7 @@
 import {detectOrderBlocks} from './orderBlockDetection.js';
 import {doubleOrderBlockInput} from './doubleOrderBlockInput.js';
 import {obMinimum} from './instrumentConfig.js';
+import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 
 // Sektion „DOB-Entry M1“: Philip sieht sich M1 rund um DOB-Entries an, bevor es eine Erkennungslogik gibt.
 // Auswahl aus dob-setup-v3 (XAUUSD, Kombi = counter_dob_status ≠ live): 10 Losses (sl_hit, max_r < 2, also Loss bei jedem
@@ -24,10 +25,12 @@ export const DOB_ENTRY_M1_CASES=[
  {id:'dob-setup-v3:dob:XAUUSD:-1:1792417200:1792418400:b',kind:'win',label:'19.10. 16:38 Short b'},
 ];
 
-const LEAD_SECONDS=3600,TAIL_SECONDS=15*60;
+const LEAD_SECONDS=3600,TAIL_SECONDS=15*60,WIN_R=5,WIN_HORIZON_SECONDS=5*24*3600;
 // Sichtfenster 60 min vor Entry bis Ausgang; der Ladebereich beginnt bei OB1, damit beide Zonen erkannt werden können.
-export function dobEntryM1Window(row){
- const view={from:row.entry_time-LEAD_SECONDS,to:(row.exit_time??row.entry_time+LEAD_SECONDS)+TAIL_SECONDS};
+// Wins laufen bis 5R statt bis zum gespeicherten 2R-Exit; der 5R-Zeitpunkt ist nicht gespeichert, er kann Tage nach Entry liegen, daher Ladebereich bis 5 Tage.
+export function dobEntryM1Window(row,kind){
+ const end=kind==='win'?row.entry_time+WIN_HORIZON_SECONDS:row.exit_time??row.entry_time+LEAD_SECONDS;
+ const view={from:row.entry_time-LEAD_SECONDS,to:end+TAIL_SECONDS};
  const loadFrom=Math.min(view.from,row.first_ob_start-2*3600);
  // Zählbasierter Abruf: Wochenend-/Nachtlücken holen nur mehr Vorlauf, nie zu wenig.
  return {view,loadTo:view.to,count:{'1m':Math.ceil((view.to-loadFrom)/60)+30,'5m':Math.ceil((view.to-loadFrom)/300)+30}};
@@ -38,4 +41,14 @@ export function dobEntryM1Zones(row,m5,m1){
  const input=doubleOrderBlockInput({m5,m1,symbol:row.instrument,evaluatedAt:row.exit_time??row.entry_time});
  const dir=row.direction==='long'?1:-1,zones=detectOrderBlocks(input.m5Candles,'5m',true,obMinimum(row.instrument,'5m'));
  return [['OB1',row.first_ob_start],['OB2',row.second_ob_start]].map(([label,start])=>({label,zone:zones.find(z=>z.startTime===start&&z.dir===dir)??null}));
+}
+
+// Anzeige-Zeile: Wins bekommen Ziel, Ausgang und Fensterende bei 5R, gerechnet mit derselben Ausgangslogik wie max_r.
+export function dobEntryM1Display(row,kind,m1,window){
+ if(kind!=='win')return {row,view:window.view,targetLabel:'TP 2R'};
+ const o=evaluateDoubleOrderBlockOutcome({direction:row.direction,entryTime:row.entry_time,entryPrice:row.entry_price,stopPrice:row.stop_price,
+  candles:m1,evaluatedAt:window.loadTo,instrument:row.instrument,rMultiple:WIN_R});
+ if(o.status!=='success')return {row,view:window.view,targetLabel:'TP 2R'};
+ return {row:{...row,target_price:o.targetPrice,exit_time:o.recognizedAt,exit_price:o.exitPrice,outcome:'success'},
+  view:{from:window.view.from,to:o.recognizedAt+TAIL_SECONDS},targetLabel:'TP '+WIN_R+'R'};
 }
