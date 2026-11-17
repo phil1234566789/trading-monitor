@@ -4,7 +4,7 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian,dobTradesPerWeek} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobAccountTile from '../components/DobAccountTile.vue';
@@ -105,8 +105,9 @@ const configTp=r=>dobRowConfigTpR(guardrailDraft.value,r);
 // Simulationskonto in R ganz oben: „Standard“ = alle Trades des Jahres mit TP 2R, ohne Sperren und Regeln, Route a+b zusammen;
 // „Mit Konfig“ = Entwurf, wenn „Sperren anwenden“ an ist, sonst die gespeicherte Konfig. Gleiche Rechnung wie überall (dobRouteStats).
 const accountConfig=computed(()=>applyGuardrails.value?guardrailDraft.value:guardrails.value);
-const accountColumns=(list,k)=>[...DOB_HALVES.map(h=>({label:h,stats:dobTotalStats(list.filter(r=>dobTradeHalf(r)===h),k)})),
- {label:'Gesamt',total:true,stats:dobTotalStats(list,k)}];
+const accountColumn=(label,list,k)=>({label,stats:dobTotalStats(list,k),perWeek:dobTradesPerWeek(list)});
+const accountColumns=(list,k)=>[...DOB_HALVES.map(h=>accountColumn(h,list.filter(r=>dobTradeHalf(r)===h),k)),
+ {...accountColumn('Gesamt',list,k),total:true}];
 const accountStandard=computed(()=>accountColumns(yearRows.value,2));
 const accountWithConfig=computed(()=>{
  const cfg=accountConfig.value;

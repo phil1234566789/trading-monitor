@@ -33,6 +33,15 @@ export const dobTradeMonth=row=>berlinDateStrFor(row.recognized_at).slice(0,7);
 // Halbjahr und Wochentag nach Berliner Entry-Datum (Sperren-Gegenprobe, Tabelle je Wochentag).
 export const DOB_HALVES=['Jan–Jun','Jul–Dez'];
 export const dobTradeHalf=row=>Number(berlinDateStrFor(row.entry_time).slice(5,7))<=6?DOB_HALVES[0]:DOB_HALVES[1];
+// Ø Trades je Kalenderwoche (Montag–Sonntag, Berliner Entry-Datum): Wochen von der ersten bis zur letzten Woche mit Trades, leere
+// Wochen dazwischen zählen mit. Eine Nachkommastelle in der Anzeige.
+const berlinWeek=row=>{const [y,m,d]=berlinDateStrFor(row.entry_time).split('-').map(Number);return Math.floor((Date.UTC(y,m-1,d)/86400000+3)/7);};
+export function dobTradesPerWeek(rows){
+ if(!rows.length)return {n:0,weeks:0,perWeek:null};
+ const weeks=rows.map(berlinWeek),span=Math.max(...weeks)-Math.min(...weeks)+1;
+ return {n:rows.length,weeks:span,perWeek:rows.length/span};
+}
+export const dobPerWeekText=w=>w.perWeek==null?'–':w.perWeek.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1});
 export const DOB_WEEKDAYS=[[1,'Montag'],[2,'Dienstag'],[3,'Mittwoch'],[4,'Donnerstag'],[5,'Freitag'],[6,'Samstag'],[0,'Sonntag']];
 export const dobTradeWeekday=row=>new Date(`${berlinDateStrFor(row.entry_time)}T12:00:00Z`).getUTCDay();
 const offset=sec=>berlinOffsetMinutes(sec*1000);

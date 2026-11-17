@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker,dobTradeWeekday,dobTradeHalf} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker,dobTradeWeekday,dobTradeHalf,dobTradesPerWeek,dobPerWeekText} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -99,5 +99,13 @@ describe('dobTradeStatistics',()=>{
   expect(dobTradeWeekday(row)).toBe(1);
   expect(dobTradeHalf(row)).toBe('Jul–Dez');
   expect(dobTradeHalf({entry_time:Date.UTC(2026,5,30,12)/1000})).toBe('Jan–Jun');
+ });
+ it('Ø Trades je Kalenderwoche nach Berlin, Wochenwechsel Sonntag/Montag, leere Wochen zählen mit',()=>{
+  const t=(y,mo,d,h)=>({entry_time:Date.UTC(y,mo-1,d,h)/1000});
+  // So 08.11. 23:30 Berlin = 22:30 UTC: noch KW 45; Mo 09.11. 00:30 Berlin = So 23:30 UTC: schon KW 46.
+  expect(dobTradesPerWeek([t(2026,11,8,22),t(2026,11,8,23)])).toEqual({n:2,weeks:2,perWeek:1});
+  expect(dobTradesPerWeek([t(2026,11,2,10),t(2026,11,3,10),t(2026,11,4,10),t(2026,11,18,10)])).toEqual({n:4,weeks:3,perWeek:4/3});
+  expect(dobPerWeekText(dobTradesPerWeek([t(2026,11,2,10),t(2026,11,3,10),t(2026,11,4,10),t(2026,11,18,10)]))).toBe('1,3');
+  expect(dobTradesPerWeek([])).toEqual({n:0,weeks:0,perWeek:null});
  });
 });

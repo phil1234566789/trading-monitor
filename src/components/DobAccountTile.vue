@@ -1,7 +1,7 @@
 <script setup>
-import {dobPct,dobSignedR} from '../dobTradeStatistics.js';
+import {dobPct,dobSignedR,dobPerWeekText} from '../dobTradeStatistics.js';
 // Simulationskonto in R: je Spalte (Halbjahre, gesamt) ΣR groß, darunter Trades/Wins/Losses/Winrate, offen und unklar klein.
-// columns: [{label, stats (dobTotalStats), delta?: {sumR, winratePp}}]
+// columns: [{label, stats (dobTotalStats), perWeek (dobTradesPerWeek), delta?: {sumR, winratePp}}]
 defineProps({title:String,subtitle:String,columns:Array});
 const pp=v=>v==null?'–':`${v>0?'+':v<0?'−':'±'}${Math.abs(v).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})} Pkt`;
 const tone=v=>v>0?'positive':v<0?'negative':'';
@@ -15,6 +15,7 @@ const tone=v=>v>0?'positive':v<0?'negative':'';
         <p class="label">{{ c.label }}</p>
         <p class="sum" :class="tone(c.stats.sumR)">{{ dobSignedR(c.stats.sumR) }} R</p>
         <p>{{ c.stats.success+c.stats.loss }} Trades · {{ c.stats.success }} W / {{ c.stats.loss }} L · {{ dobPct(c.stats.winrate) }}</p>
+        <p v-if="c.perWeek" class="small" :title="`${c.perWeek.n} Trades in ${c.perWeek.weeks} Kalenderwochen (erste bis letzte Woche mit Trades, Berlin)`">Ø {{ dobPerWeekText(c.perWeek) }} Trades/Woche</p>
         <p class="small">offen {{ c.stats.open }} · unklar {{ c.stats.ambiguous+c.stats.unknown }}</p>
         <p v-if="c.delta" class="delta" title="gegen Standard"><span :class="tone(c.delta.sumR)">{{ dobSignedR(c.delta.sumR) }} R</span> · {{ pp(c.delta.winratePp) }}</p>
       </div>

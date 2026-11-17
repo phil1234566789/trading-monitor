@@ -4,7 +4,7 @@ import {supabase} from '../supabaseClient.js';
 import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRowConfigTpR,dobRuleActive,dobGuardrailsSummary,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS,DOB_COUNTER_CANDLES_MODES,DOB_COUNTER_CANDLES_MODE_LABELS} from '../dobGuardrails.js';
 import {dobFeaturesOf,dobFeature} from '../dobTradeFeatures.js';
 import {dobSignedR} from '../dobTradeStatistics.js';
-import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf} from '../dobTradeStatistics.js';
+import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf,dobTradesPerWeek,dobPerWeekText} from '../dobTradeStatistics.js';
 import {DOB_MAX_R_STEPS} from '../dobMaxR.js';
 import {minutesToTimeInput,timeInputToMinutes} from '../chartTimeUtils.js';
 import DobStatCell from './DobStatCell.vue';
@@ -49,7 +49,7 @@ const robustness=computed(()=>{
  for(const row of props.rows)groups.get(dobRowGuardrailReason(draft.value,row)??'allowed').push(row);
  return [...groups].filter(([key,list])=>key==='allowed'||list.length).map(([key,list])=>({key,label:REASONS[key]??'erlaubt',
   halves:DOB_HALVES.map(h=>{const part=list.filter(r=>dobTradeHalf(r)===h);
-   return {n:part.length,config:dobTotalStats(part,configTp),targets:props.targets.map(t=>({...t,s:dobTotalStats(part,t.k)}))};})}));
+   return {n:part.length,perWeek:dobTradesPerWeek(part),config:dobTotalStats(part,configTp),targets:props.targets.map(t=>({...t,s:dobTotalStats(part,t.k)}))};})}));
 });
 // Was eine Regel allein bringt: ΣR nach Konfig (erlaubte Trades, TP je Fenster) mit gegen ohne diese Regel; bei abgeschalteten Regeln
 // „mit eingeschaltet“ gegen den aktuellen Stand. Alle Routen, alle Trades des Jahres.
@@ -114,10 +114,10 @@ const ruleImpacts=computed(()=>{
     <h3>Halbjahre zur Konfig{{ dirty?' (Entwurf)':'' }}</h3>
     <p class="note">Sperren aus denselben Daten schönen die Winrate. Trägt eine Sperrgruppe nur in einem Halbjahr, ist sie eher Zufall; kleine n sagen wenig. „Konfig“ = TP aus der Regel des Entry-Fensters, sonst Default-TP.</p>
     <div class="scroll"><table>
-      <thead><tr><th scope="col" rowspan="2">Gruppe</th><th v-for="h in ['Jan–Jun','Jul–Dez']" :key="h" scope="colgroup" :colspan="2+targets.length">{{ h }}</th></tr>
-        <tr><template v-for="h in 2" :key="h"><th scope="col">n</th><th scope="col">Konfig · Σ R</th><th v-for="t in targets" :key="t.name" scope="col">{{ t.k }}R · Σ R</th></template></tr></thead>
+      <thead><tr><th scope="col" rowspan="2">Gruppe</th><th v-for="h in ['Jan–Jun','Jul–Dez']" :key="h" scope="colgroup" :colspan="3+targets.length">{{ h }}</th></tr>
+        <tr><template v-for="h in 2" :key="h"><th scope="col">n</th><th scope="col" title="Ø Trades je Kalenderwoche (erste bis letzte Woche mit Trades im Halbjahr, Berlin)">Ø/Wo</th><th scope="col">Konfig · Σ R</th><th v-for="t in targets" :key="t.name" scope="col">{{ t.k }}R · Σ R</th></template></tr></thead>
       <tbody><tr v-for="g in robustness" :key="g.key"><th scope="row">{{ g.label }}</th>
-        <template v-for="(part,h) in g.halves" :key="h"><td>{{ part.n }}</td><td class="config"><DobStatCell :stats="part.config" /></td><td v-for="t in part.targets" :key="t.name"><DobStatCell :stats="t.s" :k="t.k" /></td></template></tr></tbody>
+        <template v-for="(part,h) in g.halves" :key="h"><td>{{ part.n }}</td><td :title="`${part.perWeek.weeks} Kalenderwochen`">{{ dobPerWeekText(part.perWeek) }}</td><td class="config"><DobStatCell :stats="part.config" /></td><td v-for="t in part.targets" :key="t.name"><DobStatCell :stats="t.s" :k="t.k" /></td></template></tr></tbody>
     </table></div>
   </details>
 </template>
