@@ -68,7 +68,8 @@ try {
     ...(RUN_ID === 'dob-setup-v0' ? {} : { source_kind: `ob_${t.sourceOfStrength.timeframe.toLowerCase()}`, source_distance_usd: t.sourceOfStrength.distanceUsd,
       source_atr: t.sourceOfStrength.atr, source_distance_atr: t.sourceOfStrength.distanceAtr,
       source_gap_seconds: t.chart.firstOrderBlockStart - t.sourceOfStrength.zoneRecognizedAt,
-      source_retest_kind: t.sourceOfStrength.retestKind, source_retest_age_seconds: t.sourceOfStrength.retestAgeSeconds,
+      source_zone_top: t.sourceOfStrength.zone.top, source_zone_bottom: t.sourceOfStrength.zone.bottom,
+      source_zone_start: t.sourceOfStrength.zoneStartTime, source_retest_kind: t.sourceOfStrength.retestKind, source_retest_age_seconds: t.sourceOfStrength.retestAgeSeconds,
       source_zone_age_seconds: dobSourceZoneAgeSeconds(t.sourceOfStrength, t.chart.firstOrderBlockStart) }) }));
 
   const total = aggregateDobByMonth(unique.map(t => ({ recognizedAt: t.recognizedAt, entries: { [t.route]: { status: 'ready', outcome: t.outcome } } })),

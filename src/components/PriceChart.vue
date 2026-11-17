@@ -17,7 +17,7 @@ import { isGoldInstrument } from '../goldChartPolicy.js';
 import { goldWeekendClosed } from '../fxcmGoldCalendar.js';
 import { useGoldChartHistory } from '../composables/useGoldChartHistory.js';
 import {useDoubleOrderBlockChart} from '../composables/useDoubleOrderBlockChart.js';
-import {renderDobTrade} from '../dobTradeRendering.js';
+import {renderDobTrade,dobTradeFrame} from '../dobTradeRendering.js';
 import DoubleOrderBlockStatus from './DoubleOrderBlockStatus.vue';
 import TradeSetup11Status from './TradeSetup11Status.vue';
 import {tradeSetupSourceDetails,tradeSetupInteractionRows} from '../tradeSetupSourcePresentation.js';
@@ -622,7 +622,7 @@ function renderDobTradeOverlay(){
   const trade=props.dobTrade?.instrument===props.symbol?props.dobTrade:null;
   renderDobTrade(candleSeries,trade,dobTradePrimitives,clipReplay(allCandles),props.currentBar);
   if(trade&&dobTradeFramed!==trade.id&&candlesReady&&loadedCandleKey===`${props.symbol}:${props.currentBar}`){
-    dobTradeFramed=trade.id;void jumpToTimeRange(trade.entry_time,trade.exit_time??trade.entry_time);
+    dobTradeFramed=trade.id;const frame=dobTradeFrame(trade);void jumpToTimeRange(frame.from,frame.to);
   }
 }
 const dobDetails=doubleOrderBlocks.details;

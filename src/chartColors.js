@@ -86,6 +86,8 @@ export const DEFAULT_CHART_COLORS = {
   dobLoss: { hex: "#e57373", alpha: 1 },
   dobHover: { hex: "#ffe082", alpha: 0.95 },
   dobPin: { hex: "#ec407a", alpha: 0.9 },
+  // Kraftquelle (H1/H4-Zone) beim DOB-Sprung aus der Statistik: kräftigeres Gold als dobConfirmed, damit sie von OB1/OB2 abhebt.
+  dobSource: { hex: "#ffb300", alpha: 0.95 },
   tradeSetupShort: { hex: "#ffd700", alpha: 0.9 },
   tradeSetupLong: { hex: "#2196f3", alpha: 0.9 },
   tradeSetupProtected: { hex: "#ffffff", alpha: 0.95 },

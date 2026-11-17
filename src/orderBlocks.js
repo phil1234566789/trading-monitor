@@ -96,7 +96,8 @@ class ZoneRenderer {
       // Chat 2026-07-25: "wenn ich im 1h den chart etwas herauszoome, dann verdecken mir die
       // Labels die Sicht" — Zone selbst bleibt, nur das Timeframe-Tag verschwindet bei zu dünnen
       // Kerzen.
-      if (this._options.label && canShowLabels(this._chart, this._candles)) {
+      // forceLabel wie bei LiquidityLinePrimitive: einzelne, ausdrücklich gesuchte Zonen (Kraftquelle beim DOB-Sprung) bleiben beschriftet.
+      if (this._options.label && (this._options.forceLabel || canShowLabels(this._chart, this._candles))) {
         const fontSizePx = Math.round(11 * scope.verticalPixelRatio);
         ctx.fillStyle = this._options.textColor;
         // Mehrzeilig per "\n" (Chat 2026-07-27: Trade-Setup-OB-Box zeigt im Debug-Modus zusätzlich
