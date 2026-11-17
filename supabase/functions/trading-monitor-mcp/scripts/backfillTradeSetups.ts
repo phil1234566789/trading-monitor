@@ -55,7 +55,7 @@ import {
   type SetupSweep,
 } from "../../_shared/tradeSetup.ts";
 
-import { replaySetup1, M5_CANDLE_LIMIT, H1_LOOKBACK_CANDLES,
+import { replaySetup1, M5_CANDLE_LIMIT, H1_LOOKBACK_CANDLES, obMinimum, strategyDistance,
   TRADE_SETUP_M5_FRACTAL_PERIOD, TRADE_SETUP_H1_FRACTAL_PERIOD } from "./setup1Replay.ts";
 import { setup1Configuration, tradeSetupProvenance } from '../../_shared/tradeSetupProvenance.js';
 
@@ -125,14 +125,18 @@ for (const instrument of instrumente) {
   console.log(`${instrument}: ${m5Alle.length} M5-Kerzen, ${h1Alle.length} 1H-Kerzen geladen, Fenster ${fensterVon}-${fensterBis} Min Berlin`);
   if (m5Alle.length === 0) continue;
 
-  const configuration = { ...DEFAULT_TRADE_SETUP_PARAMS, closeCheckMaxAgeSec };
+  // Abstände und OB-Minimum je Instrument wie poi-watcher — mit den Forex-Pips fand Gold nie ein Setup.
+  const configuration = { ...DEFAULT_TRADE_SETUP_PARAMS, closeCheckMaxAgeSec,
+    maxDistanceM5: strategyDistance(DEFAULT_TRADE_SETUP_PARAMS.maxDistanceM5, instrument),
+    maxSweepDistance: strategyDistance(DEFAULT_TRADE_SETUP_PARAMS.maxSweepDistance, instrument) };
+  const minimum = obMinimum(instrument, "5m");
   const { rows: zeilen, ticks } = replaySetup1({ instrument, m5Alle, h1Alle, startSec, endeSec,
-    configuration, alarmFenster,
+    configuration, minimum, alarmFenster,
     // Bestehende Backfill-Aufrufe behalten ihre bisherige Zeitsemantik.
     recognitionDelaySec: 0,
   });
   const setupProvenance = await tradeSetupProvenance({ source: 'backfill', detectorVersion: TRADE_SETUP_DETECTOR_VERSION,
-    configuration: setup1Configuration({ instrument, params: configuration, sessions: ignoreSessions,
+    configuration: setup1Configuration({ instrument, params: configuration, minGap: minimum, sessions: ignoreSessions,
       m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD, h1FractalPeriod: TRADE_SETUP_H1_FRACTAL_PERIOD,
       m5Window: M5_CANDLE_LIMIT, h1Window: H1_LOOKBACK_CANDLES, h1Source: 'h1Fractals',
       recognitionDelaySec: 0, alarmWindows: alarmFenster }) });
