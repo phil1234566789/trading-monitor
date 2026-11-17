@@ -10212,9 +10212,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeStatistics.js": {
-    "mtime": 1794901075.2634149,
-    "seen": 1794901128.2327485,
-    "ast_hash": "c1d4364b1bd79b71669da75707c66806",
+    "mtime": 1794901482.420171,
+    "seen": 1794901616.6878667,
+    "ast_hash": "05b187b601be24f66e03a03556c6d1cd",
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
@@ -10224,9 +10224,9 @@
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
-    "mtime": 1794901075.2644174,
-    "seen": 1794901128.2337484,
-    "ast_hash": "cad571ef9177820161c1b3255b0351d5",
+    "mtime": 1794901482.420171,
+    "seen": 1794901616.8201606,
+    "ast_hash": "a3692d7310131adb50d2d25889dec53c",
     "semantic_hash": ""
   },
   "scripts/dobSetupGrid.mjs": {
