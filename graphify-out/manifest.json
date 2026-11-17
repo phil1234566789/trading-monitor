@@ -10356,39 +10356,39 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/m5-trend-gate-xau-2026.json": {
-    "mtime": 1794902419.0722816,
-    "seen": 1794902475.5389307,
-    "ast_hash": "67dfb9da31e105c06b282180d4044bff",
+    "mtime": 1794903175.5351932,
+    "seen": 1794903280.6482985,
+    "ast_hash": "475f0a92dc84bcf0b035991401f3cf2c",
     "semantic_hash": ""
   },
   "scripts/dobTrendGate.mjs": {
-    "mtime": 1794902418.9868617,
-    "seen": 1794902475.5389307,
-    "ast_hash": "eb18d293189d9e2b5515b291cf03988d",
+    "mtime": 1794903016.2750862,
+    "seen": 1794903280.6743767,
+    "ast_hash": "95bc93a0ad93f71434c5aa9e1c2fb0ab",
     "semantic_hash": ""
   },
   "scripts/dobTrendPinFixtures.mjs": {
-    "mtime": 1794902418.8378248,
-    "seen": 1794902475.5389307,
-    "ast_hash": "f7f4f28349e27a6539f66569c5eeafda",
+    "mtime": 1794902701.1367774,
+    "seen": 1794903280.6743767,
+    "ast_hash": "6532367380a1cc79ab1e23ee21e3fbad",
     "semantic_hash": ""
   },
   "src/dobM5Trend.js": {
-    "mtime": 1794902418.8388247,
-    "seen": 1794902475.5389307,
-    "ast_hash": "c3d33f7cf21ae4dfbf3bcd39d19b44a4",
+    "mtime": 1794902701.1357777,
+    "seen": 1794903280.7519593,
+    "ast_hash": "381cde1004519d12efe6e04cf242cb99",
     "semantic_hash": ""
   },
   "test/dobM5Trend.test.js": {
-    "mtime": 1794902418.8398244,
-    "seen": 1794902475.5399308,
-    "ast_hash": "5f6d25a4883952a9f6634d60ca534fce",
+    "mtime": 1794902800.774743,
+    "seen": 1794903280.8801079,
+    "ast_hash": "84da0e576beb1e64cde9358de388b989",
     "semantic_hash": ""
   },
   "test/fixtures/dob-native/m5-trend-pins.json": {
-    "mtime": 1794902418.8398244,
-    "seen": 1794902475.5399308,
-    "ast_hash": "d0a712df2d9e0f7707b6a665e0fc8f07",
+    "mtime": 1794902704.1402571,
+    "seen": 1794903280.894128,
+    "ast_hash": "5c443509cbc5e0a55704d9c3d870632e",
     "semantic_hash": ""
   }
 }
