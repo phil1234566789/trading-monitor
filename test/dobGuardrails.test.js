@@ -68,7 +68,9 @@ describe('dobGuardrails',()=>{
   expect(['none','dead'].map(s=>dobRowConfigTpR(c('live_block_dead_5r'),row(s)))).toEqual([2,5]);
   expect(dobRowConfigTpR(c('block_all'),row('dead'))).toBe(2);
   expect(dobGuardrailsFromRow(dobGuardrailsToRow('XAUUSD',c('off'))).counterDobMode).toBe('off');
-  expect(dobGuardrailsFromRow({counter_dob_mode:'quatsch'}).counterDobMode).toBe('block_all');
+  // Default (Philip): lebende sperren, nur tote TP 5R.
+  expect(dobGuardrailsFromRow({counter_dob_mode:'quatsch'}).counterDobMode).toBe('live_block_dead_5r');
+  expect(dobRowConfigTpR(DOB_GUARDRAILS_DEFAULT,row('dead'))).toBe(5);
  });
  it('Kurzbeschreibung der Konfig',()=>{
   const rules=dobGuardrailsFromRow({entry_windows:[{from:630,to:660,action:'block'},{from:1260,to:1320,action:'block'},{from:540,to:600,action:'tp',tpR:2},

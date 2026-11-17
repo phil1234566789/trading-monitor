@@ -7,13 +7,14 @@ import {berlinOffsetMinutes,berlinDateStrFor} from './berlinTime.js';
 // erlaubt (bis < von), Wochentage egal; das erste passende Fenster gilt. Weitere Felder je Fenster können ohne Umbau dazukommen.
 // enabled:false schaltet eine Regel ab, ohne ihre Werte zu verlieren (fehlt = an); abgeschaltete Regeln wirken nirgends.
 // minZoneAgeSeconds ist der wirksame Wert (null = aus), minZoneAgeSavedSeconds der gemerkte Wert für das Wiedereinschalten.
-// counterDobMode (v3, Gegen-DOB seit Quellen-Retest, Status none/dead/live je Trade): block_all = jeder sperrt (Philips Default),
-// live_block_dead_5r = lebende sperren, nur tote mit TP 5R, off = Gegen-DOBs ignorieren. TP-Regeln sind Konfig, keine Läufe.
+// counterDobMode (v3, Gegen-DOB seit Quellen-Retest, Status none/dead/live je Trade): live_block_dead_5r = lebende sperren, nur tote
+// mit TP 5R (Philips Default), block_all = jeder sperrt, off = Gegen-DOBs ignorieren. TP-Regeln sind Konfig, keine Läufe.
 export const DOB_DEFAULT_TP_R=2;
 export const DOB_COUNTER_DOB_MODES=['block_all','live_block_dead_5r','off'];
 export const DOB_COUNTER_DOB_DEAD_TP_R=5;
+export const DOB_COUNTER_DOB_DEFAULT_MODE='live_block_dead_5r';
 export const DOB_GUARDRAILS_DEFAULT=Object.freeze({entryWindows:[],defaultTpR:DOB_DEFAULT_TP_R,blockedMonths:[],minZoneAgeSeconds:null,
- minZoneAgeSavedSeconds:null,counterDobMode:'block_all'});
+ minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE});
 
 export const dobRuleActive=w=>w.enabled!==false;
 export function dobGuardrailsFromRow(row){
@@ -24,11 +25,11 @@ export function dobGuardrailsFromRow(row){
   minZoneAgeSeconds:Number.isFinite(row.min_zone_age_seconds)?row.min_zone_age_seconds:null,
   minZoneAgeSavedSeconds:Number.isFinite(row.min_zone_age_saved_seconds)?row.min_zone_age_saved_seconds
    :Number.isFinite(row.min_zone_age_seconds)?row.min_zone_age_seconds:null,
-  counterDobMode:DOB_COUNTER_DOB_MODES.includes(row.counter_dob_mode)?row.counter_dob_mode:'block_all'};
+  counterDobMode:DOB_COUNTER_DOB_MODES.includes(row.counter_dob_mode)?row.counter_dob_mode:DOB_COUNTER_DOB_DEFAULT_MODE};
 }
 export const dobGuardrailsToRow=(instrument,config)=>({instrument,entry_windows:config.entryWindows,default_tp_r:config.defaultTpR,
  blocked_months:config.blockedMonths,min_zone_age_seconds:config.minZoneAgeSeconds,
- min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds,counter_dob_mode:config.counterDobMode??'block_all'});
+ min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds,counter_dob_mode:config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE});
 
 // Monat in Berlin (1–12). Der Watcher prüft ihn als Erstes und rechnet in gesperrten Monaten gar nicht.
 export const dobMonthBlocked=(config,atSec)=>config.blockedMonths.includes(Number(berlinDateStrFor(atSec).slice(5,7)));
@@ -44,9 +45,9 @@ export function dobEntryRule(config,entryTimeSec){
  return {action:'tp',tpR,window};
 }
 // Gegen-DOB nach Modus: sperrt der Status? Bzw. fester TP für nur tote (sonst null). Status null (Läufe ohne Gate) wirkt nie.
-export const dobCounterDobBlocked=(config,status)=>{const mode=config.counterDobMode??'block_all';
+export const dobCounterDobBlocked=(config,status)=>{const mode=config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE;
  return mode!=='off'&&(status==='live'||(status==='dead'&&mode==='block_all'));};
-export const dobCounterDobTpR=(config,status)=>config.counterDobMode==='live_block_dead_5r'&&status==='dead'?DOB_COUNTER_DOB_DEAD_TP_R:null;
+export const dobCounterDobTpR=(config,status)=>(config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE)==='live_block_dead_5r'&&status==='dead'?DOB_COUNTER_DOB_DEAD_TP_R:null;
 // TP für einen Entry nach Konfig; gesperrte Fenster bekommen den Default (Statistik rechnet auch gesperrte Trades zur Gegenprobe).
 // Nur tote Gegen-DOBs im Modus live_block_dead_5r gewinnen vor der Fensterregel.
 export const dobConfigTpR=(config,entryTimeSec,counterDobStatus=null)=>{
@@ -86,8 +87,8 @@ export function dobGuardrailsSummary(config){
   ...active.filter(w=>w.action==='tp').map(w=>`${span(w)} TP ${rText(w.tpR)}`),
   `${active.some(w=>w.action==='tp')?'sonst ':'TP '}${rText(config.defaultTpR)}`,
   config.minZoneAgeSeconds!=null?`Zone ≥ ${ageText(config.minZoneAgeSeconds)}`:null,
-  // Default block_all bleibt still (gilt nur im v3-Lauf, das Panel zeigt den Schalter dort); Abweichungen stehen im Kopf.
-  (config.counterDobMode??'block_all')!=='block_all'?DOB_COUNTER_DOB_MODE_LABELS[config.counterDobMode]:null,
+  // Der Default-Modus bleibt still (gilt nur im v3-Lauf, das Panel zeigt den Schalter dort); Abweichungen stehen im Kopf.
+  (config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE)!==DOB_COUNTER_DOB_DEFAULT_MODE?DOB_COUNTER_DOB_MODE_LABELS[config.counterDobMode]:null,
   config.entryWindows.length>active.length?`${config.entryWindows.length-active.length} Regel${config.entryWindows.length-active.length>1?'n':''} aus`:null];
  return parts.filter(Boolean).join(' · ');
 }
