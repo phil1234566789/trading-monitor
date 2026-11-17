@@ -3660,9 +3660,9 @@
     "semantic_hash": ""
   },
   "src/instrumentConfig.js": {
-    "mtime": 1794948283.9345007,
-    "seen": 1794948405.402834,
-    "ast_hash": "4e38aaab9588a0df800534fbeae919ea",
+    "mtime": 1794949994.3659935,
+    "seen": 1794950064.7419474,
+    "ast_hash": "d6f1e1258873739f89bfcbc7070fcf6c",
     "semantic_hash": ""
   },
   "src/replayCandleStep.js": {
@@ -3672,9 +3672,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/instrumentConfig.js": {
-    "mtime": 1794948283.9385045,
-    "seen": 1794948405.402834,
-    "ast_hash": "4e38aaab9588a0df800534fbeae919ea",
+    "mtime": 1794949994.369985,
+    "seen": 1794950064.8379724,
+    "ast_hash": "d6f1e1258873739f89bfcbc7070fcf6c",
     "semantic_hash": ""
   },
   "test/dashboardHandlers.test.js": {
@@ -10122,9 +10122,9 @@
     "semantic_hash": ""
   },
   "test/dobTradeSetup.test.js": {
-    "mtime": 1794948283.940505,
-    "seen": 1794948405.4038336,
-    "ast_hash": "9ca869ee2082c2132375ecd2a497f8a6",
+    "mtime": 1794949994.3729863,
+    "seen": 1794950064.9327092,
+    "ast_hash": "e9a22a3fd03829b8e5566df3bec98705",
     "semantic_hash": ""
   },
   "test/fixtures/dob-native/2026-11-12.json": {
@@ -10206,9 +10206,9 @@
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
-    "mtime": 1794949073.6735613,
-    "seen": 1794949181.3795657,
-    "ast_hash": "0b0b2e70bd610c738dc7253668b727ee",
+    "mtime": 1794949994.3689876,
+    "seen": 1794950064.8309705,
+    "ast_hash": "db737d26b917c25de439d1ae136bac97",
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
@@ -10368,9 +10368,9 @@
     "semantic_hash": ""
   },
   "src/components/DobGuardrailsPanel.vue": {
-    "mtime": 1794947384.5739884,
-    "seen": 1794948405.4018319,
-    "ast_hash": "0b0acccb592cfd9fef982347b2df73b1",
+    "mtime": 1794949994.2999885,
+    "seen": 1794950064.6684144,
+    "ast_hash": "d5046df786eeb5e358212bb33c299ddf",
     "semantic_hash": ""
   },
   "src/dobGuardrails.js": {
@@ -10779,6 +10779,30 @@
     "mtime": 1794948283.9415061,
     "seen": 1794948405.4038336,
     "ast_hash": "9d7ed473ff82bf8fb5a2ab358ad11b08",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/lab-weekday-2026.json": {
+    "mtime": 1794949994.2499895,
+    "seen": 1794950064.567391,
+    "ast_hash": "20ec84a11c1a0d9af601a7c4dac77ef2",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/source-g-eurusd-2026.json": {
+    "mtime": 1794949994.3629856,
+    "seen": 1794950064.5678947,
+    "ast_hash": "271348c24393bd2d25781d24339ecb30",
+    "semantic_hash": ""
+  },
+  "scripts/dobLabWeekday.mjs": {
+    "mtime": 1794949994.2509873,
+    "seen": 1794950064.6038349,
+    "ast_hash": "2e9d935a077f596f9c0b0c2124350773",
+    "semantic_hash": ""
+  },
+  "test/dobGuardrailsPanelNewWindow.test.js": {
+    "mtime": 1794949994.3009882,
+    "seen": 1794950064.9297082,
+    "ast_hash": "f85c78d697c291044cfa3d514c211109",
     "semantic_hash": ""
   }
 }
