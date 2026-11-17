@@ -30,9 +30,11 @@ const RUNS = Object.fromEntries([
   ['v3', { label: 'v3 · Gegen-DOB', description: 'wie v2 mit Gegen-DOB-Status seit dem Retest des POI; Sperre bzw. TP über die Setup-Konfiguration',
     sort: 3, pick: r => r.setups, poiOptions: { requireRetest: true }, counterDob: true }],
 ].map(([v, run]) => [runId(v), { ...run, version: `dob-setup-${v}`, poiType: 'htf_ob' }]));
-// LQ-Sweep v0: POI = TS1.1-Setup mit gleicher Kante an OB1/OB2 (Philip). Der Lauf nimmt auch Überlappung und ≤ 1 USD daneben
-// auf (features.poi_match), welche Stufe zählt, entscheidet die Konfig (poiMatchMode, Default gleiche Kante). Nur XAU.
-if (SYMBOL === 'XAUUSD') RUNS['dob-lq-sweep-v0'] = { label: 'v0 · TS1.1 an OB1/OB2', description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
+// LQ-Sweep v0: POI = TS1.1-Setup mit gleicher Kante an OB1/OB2 (Philip). Der Lauf nimmt auch Überlappung und knapp daneben
+// auf (features.poi_match), welche Stufe zählt, entscheidet die Konfig (poiMatchMode, Default gleiche Kante). Lauf-ID wie oben:
+// XAU dob-lq-sweep-v0, sonst mit Instrument (dob-lq-sweep-gbpusd-v0).
+RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`] = { label: 'v0 · TS1.1 an OB1/OB2',
+  description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
   sort: 10, version: 'dob-lq-sweep-v0', poiType: 'lq_sweep', pick: r => r.setups, poiOptions: { match: 'adjacent' }, counterDob: true };
 const RUN_ID = flag('--run') ?? runId('v0');
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);

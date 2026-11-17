@@ -1,7 +1,8 @@
 import {formatBerlinTime,berlinDateStrFor} from './berlinTime.js';
 import {dobPoiLabel,dobRetestLabel,dobTs11Label} from './dobPoiLabel.js';
 import {m1GapCovered} from './goldWeekendGap.js';
-import {dobMonthBlocked} from './dobGuardrails.js';
+import {dobMonthBlocked,dobConfigTpR,dobPartialPlan} from './dobGuardrails.js';
+import {instrumentConfig} from './instrumentConfig.js';
 import {DOB_DEFAULT_POI_TYPE,dobPoiTypeLabel} from './dobPoiType.js';
 
 // Alarme des DOB-Live-Watchers (supabase/functions/dob-watcher) aus dem Ergebnis von checkDobTradeSetup(). Rein, damit Vitest
@@ -21,26 +22,36 @@ export const DOB_COUNTER_DOB_ALARM='warn';
 export const DOB_COUNTER_CANDLES_ALARM='warn';
 const WARN_TEXT={blockedEntryHour:'Entry in Sperrzeit',counterDob:'Gegen-DOB seit Retest, Entry',counterCandles:'3 Gegenkerzen vor Entry'};
 
-const price=v=>Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}):'–';
-const zone=z=>`${price(z.bottom)}–${price(z.top)}`;
+// Preise mit der Nachkommazahl des Instruments (XAU 2, Forex 5).
+const price=(v,instrument='XAUUSD')=>{const d=instrumentConfig(instrument).precision;return Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';};
+const zone=(z,instrument)=>`${price(z.bottom,instrument)}–${price(z.top,instrument)}`;
+const rText=k=>`${k.toLocaleString('de-DE')}R`;
+// TP nach Konfig wie die Statistik (dobConfigTpR: Gegen-DOB tot → 5R, Zeitfenster-TP, sonst Default) samt Teilprofit; Preise aus dem
+// Risiko Entry ↔ SL. Ohne Konfig keine Zeile.
+function tpLine(s,guardrails){
+ if(!guardrails)return null;
+ const tp=dobConfigTpR(guardrails,s.entryTime,s.counterDob?.status??null),plan=dobPartialPlan(guardrails,tp);
+ const at=k=>price(s.entryPrice+(s.direction==='long'?1:-1)*k*Math.abs(s.entryPrice-s.stopPrice),s.instrument);
+ return plan?`TP1 ${rText(plan.atR)} @ ${at(plan.atR)} (${plan.pct} %${plan.be?', danach SL auf Entry':''}) · TP2 ${rText(tp)} @ ${at(tp)}`:`TP ${rText(tp)} @ ${at(tp)}`;
+}
 const side=direction=>direction==='long'?'Long':'Short';
 export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=5m&replay=${at}`;
 // Die POI-Zeile nennt die Art (H1-OB/H4-OB bei HTF-OB, sonst den Namen der POI-Art); die Kopfzeile bleibt ohne Art.
-function poiLine({poi:s},poiType){
- if(poiType!==DOB_DEFAULT_POI_TYPE)return `POI: ${dobPoiTypeLabel(poiType)}${s?.kind==='ts11'?` · ${dobTs11Label(s)}`:''}`;
+function poiLine({poi:s,instrument},poiType){
+ if(poiType!==DOB_DEFAULT_POI_TYPE)return `POI: ${dobPoiTypeLabel(poiType)}${s?.kind==='ts11'?` · ${dobTs11Label({...s,instrument})}`:''}`;
  if(!s)return 'POI: –';
  const label=dobPoiLabel({poi_kind:`ob_${s.timeframe.toLowerCase()}`,poi_distance_atr:s.distanceAtr});
  const touch=dobRetestLabel({kind:s.retestKind,count:s.retestCount,ageSeconds:s.retestAgeSeconds});
  const retest=touch?` · ${touch}`:s.retested?' · retestet':'';
- return `POI: ${label} · Zone ${zone(s.zone)}${retest}`;
+ return `POI: ${label} · Zone ${zone(s.zone,instrument)}${retest}`;
 }
-const obLines=({chart})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} · ${zone(chart.firstOrderBlock)}`,
- `OB2 ${formatBerlinTime(chart.secondOrderBlockStart)} · ${zone(chart.secondOrderBlock)}`];
+const obLines=({chart,instrument})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} · ${zone(chart.firstOrderBlock,instrument)}`,
+ `OB2 ${formatBerlinTime(chart.secondOrderBlockStart)} · ${zone(chart.secondOrderBlock,instrument)}`];
 
 // Dedup: mehrere OB1-Partner tragen oft dasselbe OB2 bzw. denselben Trade, deshalb Schlüssel über OB2 bzw. Entry/SL statt Setup-ID.
 // Erlaubte Setups zuerst: trägt irgendein Paar den Alarm ungesperrt, gewinnt es den Schlüssel (wie die Statistik-Dedup).
 // suppressed = nur Protokoll, nicht senden.
-export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED_ENTRY_ALARM,counterDobAlarm=DOB_COUNTER_DOB_ALARM,counterCandlesAlarm=DOB_COUNTER_CANDLES_ALARM,poiType=DOB_DEFAULT_POI_TYPE}={}){
+export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED_ENTRY_ALARM,counterDobAlarm=DOB_COUNTER_DOB_ALARM,counterCandlesAlarm=DOB_COUNTER_CANDLES_ALARM,poiType=DOB_DEFAULT_POI_TYPE,guardrails=null}={}){
  const events=new Map();
  // HTF-OB behält die bisherigen IDs (Dedup gegen die Alarm-Historie), jede andere POI-Art bekommt ihren Schlüssel davor.
  const key=rest=>poiType===DOB_DEFAULT_POI_TYPE?`dob:${rest}`:`dob:${poiType}:${rest}`;
@@ -59,8 +70,8 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    if(!events.has(id))events.set(id,{id,poiType,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
     text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${WARN_TEXT[guardrail]} ${formatBerlinTime(s.entryTime)}, kein Trade`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
-     // Die POI-Zeile zeigt auch hier die Art (Philip); OB-Zonen stehen im Retest-Alarm, ein Ziel gibt der Alarm bewusst nicht vor.
-     poiLine(s,poiType),`Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)}`,
+     // Die POI-Zeile zeigt auch hier die Art (Philip); OB-Zonen stehen im Retest-Alarm. TP nach Konfig nur beim echten Entry, nie bei ⛔.
+     poiLine(s,poiType),`Entry ${price(s.entryPrice,instrument)} · SL ${price(s.stopPrice,instrument)}`,...(warn?[]:[tpLine({...s,instrument},guardrails)].filter(Boolean)),
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
   }
  }
@@ -73,7 +84,7 @@ export const dobActivePoiTypes=(poiTypes,evaluatedAt)=>poiTypes.filter(f=>!dobMo
 export function dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt,check}){
  return dobActivePoiTypes(poiTypes,evaluatedAt).map(({poiType,guardrails})=>{
   const result=check({...input,poiType,guardrails});
-  return {poiType,guardrails,result,events:dobAlarmEvents(result,evaluatedAt,{poiType})};
+  return {poiType,guardrails,result,events:dobAlarmEvents(result,evaluatedAt,{poiType,guardrails})};
  });
 }
 

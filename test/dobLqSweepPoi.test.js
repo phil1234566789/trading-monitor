@@ -1,7 +1,8 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {load,run,berlin,directory} from './dobFixtures.js';
-import {dobTs11FromRow,dobLqSweepMatch} from '../src/dobLqSweepPoi.js';
+import {dobTs11FromRow,dobLqSweepMatch,dobLqAdjacentMax} from '../src/dobLqSweepPoi.js';
+import {dobTs11Label} from '../src/dobPoiLabel.js';
 
 // POI-Art LQ-Sweep (Philip): POI = TS1.1-Setup, GO wenn OB1 oder OB2 des DOB mindestens eine Kante mit dem TS1.1-OB teilt.
 // Positivfälle = Philips Mustertrades (Konto 8); Erwartung je Fall: welches TS1.1 trägt, an welchem OB, mit welcher Stufe.
@@ -63,5 +64,21 @@ describe('dobLqSweepMatch',()=>{
   expect(dobLqSweepMatch(pair,ts(11.5,10.5),0.01)).toMatchObject({match:'adjacent',gapUsd:0.5});
   expect(dobLqSweepMatch(pair,ts(12.5,11.01),0.01)).toBeNull();
   expect(dobLqSweepMatch(pair,ts(6.5,6),0.01)).toMatchObject({match:'overlap',matchedOb:'ob2'});
+ });
+});
+
+describe('LQ-Sweep auf Forex',()=>{
+ const pair={firstOrderBlock:{top:1.31234,bottom:1.31100},secondOrderBlock:{top:1.31050,bottom:1.30980}};
+ const ts=(top,bottom)=>({top,bottom,rawTop:null,rawBottom:null});
+ it('Toleranz 1 Pipette, „daneben“ bis 3 Pips',()=>{
+  expect(dobLqSweepMatch(pair,ts(1.31300,1.31235),0.00001,dobLqAdjacentMax('GBPUSD'))).toMatchObject({match:'edge',matchedEdge:'top'});
+  expect(dobLqSweepMatch(pair,ts(1.31300,1.31236),0.00001,dobLqAdjacentMax('GBPUSD'))).toMatchObject({match:'adjacent',gapUsd:0.00002});
+  expect(dobLqSweepMatch(pair,ts(1.31300,1.31200),0.00001,dobLqAdjacentMax('GBPUSD'))).toMatchObject({match:'overlap'});
+  expect(dobLqSweepMatch(pair,ts(1.31400,1.31264),0.00001,dobLqAdjacentMax('GBPUSD'))).toMatchObject({match:'adjacent',gapUsd:0.0003});
+  expect(dobLqSweepMatch(pair,ts(1.31400,1.31265),0.00001,dobLqAdjacentMax('GBPUSD'))).toBeNull();
+ });
+ it('Label zeigt den Abstand in Pips',()=>{
+  expect(dobTs11Label({tradeSetupId:7,match:'adjacent',gapUsd:0.00012,instrument:'EURUSD'})).toBe('TS1.1 #7 · 1,2 Pips daneben');
+  expect(dobTs11Label({tradeSetupId:7,match:'adjacent',gapUsd:0.84,instrument:'XAUUSD'})).toBe('TS1.1 #7 · 0,84 USD daneben');
  });
 });

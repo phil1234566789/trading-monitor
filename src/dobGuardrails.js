@@ -22,7 +22,7 @@ export const DOB_COUNTER_CANDLES_MODES=['off','3of3','3of5'];
 // poiMatchMode (nur POI-Art LQ-Sweep): schwächste Verbindung TS1.1 ↔ DOB, die noch zählt; edge = gleiche Kante (Philips Regel),
 // overlap/adjacent zeigen in der Statistik, ob auch Überlappung bzw. knapp daneben trägt. alarmEnabled: Alarme dieser POI-Art
 // werden gesendet (aus = nur Protokoll, LQ-Sweep startet aus bis zu Philips Go).
-export const DOB_POI_MATCH_MODE_LABELS={edge:'gleiche Kante',overlap:'Kante oder Überlappung',adjacent:'Kante, Überlappung oder ≤ 1 USD daneben'};
+export const DOB_POI_MATCH_MODE_LABELS={edge:'gleiche Kante',overlap:'Kante oder Überlappung',adjacent:'Kante, Überlappung oder knapp daneben (XAU ≤ 1 USD, Forex ≤ 3 Pips)'};
 export const DOB_GUARDRAILS_DEFAULT=Object.freeze({entryWindows:[],defaultTpR:DOB_DEFAULT_TP_R,blockedMonths:[],minZoneAgeSeconds:null,
  minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE,counterCandlesMode:'off',partialAtR:null,partialPct:50,partialBe:true,
  poiMatchMode:'edge',alarmEnabled:true});
