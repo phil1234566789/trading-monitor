@@ -10510,5 +10510,17 @@
     "seen": 1794916640.3388321,
     "ast_hash": "6b76355645fc3bf02a5391e0011f5c35",
     "semantic_hash": ""
+  },
+  "analysis/dob-setup/lab-idea-xau-2026.json": {
+    "mtime": 1794920108.1040497,
+    "seen": 1794920173.073362,
+    "ast_hash": "9ff0c3d252165550c68a860e783a2a60",
+    "semantic_hash": ""
+  },
+  "scripts/dobLabIdea.mjs": {
+    "mtime": 1794919949.5427022,
+    "seen": 1794920173.0968785,
+    "ast_hash": "bf5d02bf321fa1abf15d20143c799aeb",
+    "semantic_hash": ""
   }
 }
