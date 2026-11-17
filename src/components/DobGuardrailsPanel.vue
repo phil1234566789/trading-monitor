@@ -1,7 +1,7 @@
 <script setup>
 import {computed,ref,watch} from 'vue';
 import {supabase} from '../supabaseClient.js';
-import {dobGuardrailsToRow,dobGuardrailsFromRow,dobGuardrailReason,dobConfigTpR,dobRuleActive} from '../dobGuardrails.js';
+import {dobGuardrailsToRow,dobGuardrailsFromRow,dobGuardrailReason,dobConfigTpR,dobRuleActive,dobGuardrailsSummary} from '../dobGuardrails.js';
 import {dobSignedR} from '../dobTradeStatistics.js';
 import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf} from '../dobTradeStatistics.js';
 import {DOB_MAX_R_STEPS} from '../dobMaxR.js';
@@ -50,8 +50,6 @@ const robustness=computed(()=>{
   halves:DOB_HALVES.map(h=>{const part=list.filter(r=>dobTradeHalf(r)===h);
    return {n:part.length,config:dobTotalStats(part,configTp),targets:props.targets.map(t=>({...t,s:dobTotalStats(part,t.k)}))};})}));
 });
-const ruleCount=computed(()=>{const on=draft.value.entryWindows.filter(dobRuleActive);
- return {block:on.filter(w=>w.action==='block').length,tp:on.filter(w=>w.action==='tp').length,off:draft.value.entryWindows.length-on.length};});
 // Was eine Regel allein bringt: ΣR nach Konfig (erlaubte Trades, TP je Fenster) mit gegen ohne diese Regel; bei abgeschalteten Regeln
 // „mit eingeschaltet“ gegen den aktuellen Stand. Alle Routen, alle Trades des Jahres.
 const configSumR=cfg=>dobTotalStats(props.rows.filter(r=>!dobGuardrailReason(cfg,{entryTime:r.entry_time,zoneAgeSeconds:r.source_zone_age_seconds})),
@@ -69,7 +67,7 @@ const ruleImpacts=computed(()=>{
   <details class="guardrails" :open="open" @toggle="emit('toggle',$event.target.open)">
     <summary><h2>Sperren und Regeln ({{ instrument }})</h2>
       <label class="apply" @click.stop><input type="checkbox" :checked="apply" @change="emit('update:apply',$event.target.checked)"> Sperren anwenden (nur Ansicht)</label>
-      <span class="note">{{ ruleCount.block }} Sperrfenster · {{ ruleCount.tp }} TP-Fenster{{ ruleCount.off?` · ${ruleCount.off} aus`:'' }} · sonst TP {{ draft.defaultTpR.toLocaleString('de-DE') }}R · {{ draft.blockedMonths.length }} Monate · Zonenalter {{ draft.minZoneAgeSeconds==null?'egal':AGE_OPTIONS.find(o=>o[0]===draft.minZoneAgeSeconds)?.[1]??'eigener Wert' }}</span>
+      <span class="note">{{ dobGuardrailsSummary(draft) }}</span>
       <span v-if="dirty" class="unsaved">nicht gespeichert</span></summary>
     <div class="editor">
       <fieldset class="windows"><legend>Entry-Zeitfenster (Berlin, bis exklusiv, erstes passendes gilt)</legend>

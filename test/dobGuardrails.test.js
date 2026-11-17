@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {readFileSync} from 'node:fs';
-import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailsToRow,dobGuardrailReason,dobEntryTimeBlocked,dobMonthBlocked,dobEntryRule}
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailsToRow,dobGuardrailReason,dobEntryTimeBlocked,dobMonthBlocked,dobEntryRule,dobGuardrailsSummary}
  from '../src/dobGuardrails.js';
 
 // Berlin-Zeit: Januar = CET (UTC+1), August = CEST (UTC+2).
@@ -58,5 +58,11 @@ describe('dobGuardrails',()=>{
   expect(off).toMatchObject({minZoneAgeSeconds:null,minZoneAgeSavedSeconds:86400});
   expect(dobGuardrailReason(off,{entryTime:berlin(2026,8,3,15,0,2),zoneAgeSeconds:60})).toBe(null);
   expect(dobGuardrailsToRow('XAUUSD',off)).toMatchObject({min_zone_age_seconds:null,min_zone_age_saved_seconds:86400});
+ });
+ it('Kurzbeschreibung der Konfig',()=>{
+  const rules=dobGuardrailsFromRow({entry_windows:[{from:630,to:660,action:'block'},{from:1260,to:1320,action:'block'},{from:540,to:600,action:'tp',tpR:2},
+   {from:480,to:540,action:'block',enabled:false}],default_tp_r:2.5,blocked_months:[1],min_zone_age_seconds:86400});
+  expect(dobGuardrailsSummary(rules)).toBe('Sperren 10:30–11:00, 21:00–22:00 · Jan · 09:00–10:00 TP 2R · sonst 2,5R · Zone ≥ 1 Tag · 1 Regel aus');
+  expect(dobGuardrailsSummary(DOB_GUARDRAILS_DEFAULT)).toBe('TP 2R');
  });
 });

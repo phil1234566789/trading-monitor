@@ -53,3 +53,21 @@ export function dobGuardrailReason(config,{entryTime,zoneAgeSeconds}){
  if(dobEntryTimeBlocked(config,entryTime))return 'blockedEntryHour';
  return null;
 }
+
+// Kurzbeschreibung einer Konfig für Panel-Kopf und Konto-Kachel, z.B. „Sperren 10:30–11:00, 21:00–22:00 · Jan · 09:00–10:00 TP 2R ·
+// sonst 2,5R · Zone ≥ 1 Tag“. Nur wirksame Regeln; abgeschaltete zählen als „aus“ am Ende.
+const MONTH_NAMES=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const clock=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+const rText=r=>`${r.toLocaleString('de-DE')}R`;
+const ageText=sec=>sec%(7*86400)===0?`${sec/(7*86400)} Wo`:sec%86400===0?`${sec/86400} ${sec===86400?'Tag':'Tage'}`:`${Math.round(sec/3600)} h`;
+export function dobGuardrailsSummary(config){
+ const active=config.entryWindows.filter(dobRuleActive),span=w=>`${clock(w.from)}–${clock(w.to)}`;
+ const blocks=active.filter(w=>w.action==='block').map(span);
+ const parts=[blocks.length?`Sperren ${blocks.join(', ')}`:null,
+  config.blockedMonths.length?config.blockedMonths.map(m=>MONTH_NAMES[m-1]).join(', '):null,
+  ...active.filter(w=>w.action==='tp').map(w=>`${span(w)} TP ${rText(w.tpR)}`),
+  `${active.some(w=>w.action==='tp')?'sonst ':'TP '}${rText(config.defaultTpR)}`,
+  config.minZoneAgeSeconds!=null?`Zone ≥ ${ageText(config.minZoneAgeSeconds)}`:null,
+  config.entryWindows.length>active.length?`${config.entryWindows.length-active.length} Regel${config.entryWindows.length-active.length>1?'n':''} aus`:null];
+ return parts.filter(Boolean).join(' · ');
+}
