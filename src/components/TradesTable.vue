@@ -131,8 +131,9 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
              bearbeiten" (siehe TradeEditModal.vue), da trade.id === die trade_position-Id. -->
         <td class="trade-position-cell">#{{ t.id }}</td>
         <td>{{ fmtDate(t.entryTime) }}</td>
-        <td>{{ t.entryPrice != null ? fmtPrice(t.entryPrice, pricePrecisionForInstrument(t.instrument)) : "–" }}</td>
-        <td v-if="t.exitPrice != null">{{ fmtPrice(t.exitPrice, pricePrecisionForInstrument(t.instrument)) }} ({{ fmtTime(t.exitTime) }})</td>
+        <td v-if="t.entryPrice != null">{{ fmtPrice(t.entryPrice, pricePrecisionForInstrument(t.instrument)) }} ({{ fmtTime(t.entryTime) }})</td>
+        <td v-else>–</td>
+        <td v-if="t.exitPrice != null">{{ fmtPrice(t.exitPrice, pricePrecisionForInstrument(t.instrument)) }}</td>
         <td v-else>–</td>
         <td>{{ t.size ?? "–" }}</td>
         <td>
