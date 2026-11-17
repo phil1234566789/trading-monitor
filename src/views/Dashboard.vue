@@ -1968,7 +1968,7 @@ watch(selectedTradingAccountId, () => {
                siehe PriceChart.vue: refreshTradeMarkersInternal/-TradeSetupLinksInternal/
                -TradeTargetLinksInternal, die auf BEIDE Props prüfen. -->
           <ToggleButton variant="menu" :class="{ active: showTrades }" @click="showTrades = !showTrades">
-            Trades
+            Trade-Journal
           </ToggleButton>
           <ToggleButton variant="menu" :class="{active:showMmt}" :aria-pressed="showMmt" @click="showMmt=!showMmt">MMT</ToggleButton>
           <ToggleButton variant="menu" :class="{active:showMmtPositions}" :aria-pressed="showMmtPositions" @click="showMmtPositions=!showMmtPositions">MMT-Positionen</ToggleButton>
@@ -2481,7 +2481,7 @@ watch(selectedTradingAccountId, () => {
 
   <aside v-if="!snapshotView" ref="tradesPanelRef" class="trades-panel" :style="{ height: tradesPanelHeight + 'px' }">
     <div class="trades-panel-header">
-      <h2 class="trades-panel-title">Trades</h2>
+      <h2 class="trades-panel-title">Trade-Journal</h2>
       <TradingAccountSwitcher />
     </div>
     <div class="trades-list">
