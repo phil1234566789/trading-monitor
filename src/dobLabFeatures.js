@@ -1,4 +1,4 @@
-import {pivotTimeOf} from './marketStructureAnalysis';
+import {pivotTimeOf,collectNestedChain} from './marketStructureAnalysis';
 import {structureInWindow,dobTrendVerdict} from './dobM5Trend.js';
 export {dobCounterDobs} from './dobCounterDob.js';
 
@@ -31,17 +31,32 @@ function bosPivotOf(state){
 export function dobOuterTrendClass(outer,direction,candles,entryTime,barSeconds=300){
  if(outer.verdict==='with')return {cls:'1a'};
  if(outer.verdict!=='against'||!outer.bosPivot)return {cls:'unknown'};
- const {price,time}=outer.bosPivot,long=direction==='long';
+ const {close,wick}=dobPivotBroken(outer.bosPivot.price,direction,candles,outer.bosPivot.time,entryTime,barSeconds);
+ return {cls:close?'1c':'1b',clsWick:wick?'1c':'1b',closeBroken:close,wickBroken:wick};
+}
+
+// Bruch eines Preises in Trade-Richtung (Long: darüber) auf Kerzen, die nach fromTime beginnen und bis toTime geschlossen sind.
+export function dobPivotBroken(price,direction,candles,fromTime,toTime,barSeconds=300){
+ const long=direction==='long';
  let close=false,wick=false,lo=0,hi=candles.length;
- while(lo<hi){const m=(lo+hi)>>1;if(candles[m].time<=time)lo=m+1;else hi=m;}
+ while(lo<hi){const m=(lo+hi)>>1;if(candles[m].time<=fromTime)lo=m+1;else hi=m;}
  for(let i=lo;i<candles.length;i++){
   const c=candles[i];
-  if(c.time+barSeconds>entryTime)break;
+  if(c.time+barSeconds>toTime)break;
   if(c.ignored)continue;
   if(long?c.high>price:c.low<price)wick=true;
   if(long?c.close>price:c.close<price){close=true;break;}
  }
- return {cls:close?'1c':'1b',clsWick:wick?'1c':'1b',closeBroken:close,wickBroken:wick};
+ return {close,wick};
+}
+
+// Gegnerischer BOS-Pivot (Philip): in der M5-Struktur zum Zeitpunkt at die innerste Ebene GEGEN die Trade-Richtung und deren
+// BOS-Pivot (Long: protected-high des Abwärtstrends, dessen Bruch ihn beendet). null = keine Gegen-Ebene (Struktur läuft mit).
+export function dobOpposingBosPivot(m5Candles,at,direction,{windowDays=5}={}){
+ const state=structureInWindow(m5Candles,at,windowDays*86400)?.state;
+ if(!state||state.trend==='unknown')return {trend:'unknown',pivot:null};
+ const against=direction==='long'?'downtrend':'uptrend',level=collectNestedChain(state).filter(l=>l.trend===against).at(-1);
+ return {trend:collectNestedChain(state).at(-1).trend,pivot:level?bosPivotOf(level):null};
 }
 
 // 2. M5-Struktur bestätigt die Trade-Richtung: Phasenwechsel (CHoCH/BOS/Trendwechsel/Fortsetzung) in Trade-Richtung,
