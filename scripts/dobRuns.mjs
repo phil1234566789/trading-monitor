@@ -37,7 +37,8 @@ export async function loadDobRuns(server, root, startDay = '2026-01-01') {
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   // Erst nach Quelle filtern, dann deduplizieren: ein Trade zählt, sobald irgendein tragendes Paar eine Quelle hat (wie der v1-Lauf).
   const passA = pass(false, r => [...r.setups.map(s => ({ ...s, sourced: true })), ...r.rejected.map(s => ({ ...s, sourced: false }))]);
-  const runs = { v0: uniqueDobTrades(passA), v1: uniqueDobTrades(passA.filter(t => t.sourced)), v2: uniqueDobTrades(pass(true, r => r.setups)) };
+  const v2Carriers = pass(true, r => r.setups);
+  const runs = { v0: uniqueDobTrades(passA), v1: uniqueDobTrades(passA.filter(t => t.sourced)), v2: uniqueDobTrades(v2Carriers) };
 
   const berlin = (day, hhmm) => { const utc = Date.parse(`${day}T${hhmm}:00Z`) / 1000; return utc - berlinOffsetMinutes(utc * 1000) * 60; };
   const month = t => berlinDateStrFor(t.entryTime).slice(0, 7);
@@ -52,6 +53,7 @@ export async function loadDobRuns(server, root, startDay = '2026-01-01') {
     .reduce((b, t) => Math.abs(t.entryTime - berlin(day, at)) <= 1800 && (!b || Math.abs(t.entryTime - berlin(day, at)) < Math.abs(b.entryTime - berlin(day, at))) ? t : b, null);
   const gitHash = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
     + (execSync('git status --porcelain -- . ":!analysis/dob-setup"', { cwd: root }).toString().trim() ? '-dirty' : '');
-  return { runs, m1All, m5All, h1All, h4All, m1Marked, dataEnd, sourceContext, evaluateDoubleOrderBlockOutcome, h1AtrAt,
+  // v2Carriers: v2-Trades vor der Dedup, für Filter, die je tragendem Paar entscheiden (z. B. das M5-Trend-Gate).
+  return { runs, v2Carriers, uniqueDobTrades, m5Marked, m1All, m5All, h1All, h4All, m1Marked, dataEnd, sourceContext, evaluateDoubleOrderBlockOutcome, h1AtrAt,
     berlinDateStrFor, stats, summary, sampleTrade, gitHash };
 }

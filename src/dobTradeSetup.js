@@ -37,7 +37,8 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 
 // Eingabe wie detectDoubleOrderBlocks (über doubleOrderBlockInput gebaut) plus htfCandles {'1h','4h'} (markHtfObCandles) oder ein
 // vorberechneter sourceContext (Statistik: einmal über die ganze Historie). Ausgang und 2R kommen aus evaluateDoubleOrderBlockOutcome.
-// sourceOptions: {requireRetest} (Standard true).
+// sourceOptions: {requireRetest} (Standard true). trendGate (optional, v3-Experiment): Funktion setup → {trend, verdict, rejectReason}
+// aus createDobM5TrendGate; wird vom Aufrufer hereingereicht, damit der Trend-Algo nicht im Watcher-Bundle landet.
 // setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 export function checkDobTradeSetup(input){
  const dob=detectDoubleOrderBlocks({...input,options:{...input.options,retests:true}});
@@ -58,7 +59,12 @@ export function checkDobTradeSetup(input){
  const setups=[],rejected=[];
  for(const [pair,setup] of candidates){
   const sourceOfStrength=sourceOf(pair);
-  if(sourceOfStrengthPassed(sourceOfStrength,maxAtr))setups.push({...setup,sourceOfStrength});
+  if(sourceOfStrengthPassed(sourceOfStrength,maxAtr)){
+   // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
+   const m5Trend=input.trendGate?.({...setup,sourceOfStrength});
+   if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});
+   else setups.push({...setup,sourceOfStrength,...(m5Trend?{m5Trend}:{})});
+  }
   else rejected.push({...setup,sourceOfStrength,reason:maxAtr==null?'noSourceOfStrengthConfig':context?'noSourceOfStrength':'missingHtfCandles'});
  }
  return {version:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,rejected,stats:dob.stats};
