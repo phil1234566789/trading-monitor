@@ -10666,5 +10666,17 @@
     "seen": 1794933372.1280608,
     "ast_hash": "eaa9ca1a931f599767918c207d6f318c",
     "semantic_hash": ""
+  },
+  "analysis/dob-setup/lab-drawdown-xau-2026.json": {
+    "mtime": 1794933651.1013367,
+    "seen": 1794933741.6983814,
+    "ast_hash": "8a37a7f571cdda021e0e3aba316373c6",
+    "semantic_hash": ""
+  },
+  "scripts/dobLabDrawdown.mjs": {
+    "mtime": 1794933648.1365871,
+    "seen": 1794933741.7228937,
+    "ast_hash": "e2c3a7c5dffad57084a31debbc6a9b09",
+    "semantic_hash": ""
   }
 }
