@@ -3,10 +3,9 @@ import {computed,ref,watch} from 'vue';
 import {supabase} from '../supabaseClient.js';
 import {dobGuardrailsToRow,dobGuardrailsFromRow,dobGuardrailReason,dobConfigTpR,dobRuleActive} from '../dobGuardrails.js';
 import {dobSignedR} from '../dobTradeStatistics.js';
-import {dobTotalStats,DOB_ZONE_AGE_BUCKETS} from '../dobTradeStatistics.js';
+import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf} from '../dobTradeStatistics.js';
 import {DOB_MAX_R_STEPS} from '../dobMaxR.js';
 import {minutesToTimeInput,timeInputToMinutes} from '../chartTimeUtils.js';
-import {berlinDateStrFor} from '../berlinTime.js';
 import DobStatCell from './DobStatCell.vue';
 
 // Sperren und Regeln je Instrument bearbeiten (Tabelle dob_guardrails). Der Entwurf wirkt sofort als Vorschau auf die Seite
@@ -42,14 +41,13 @@ async function save(){
 }
 
 const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit'};
-const half=row=>Number(berlinDateStrFor(row.entry_time).slice(5,7))<=6?'h1':'h2';
 const configTp=row=>dobConfigTpR(draft.value,row.entry_time);
 // Erlaubt und je Sperrgrund getrennt, jeweils Jan–Jun / Jul–Dez, alle Routen, feste Ziele und TP nach Konfig.
 const robustness=computed(()=>{
  const groups=new Map([['allowed',[]],...Object.keys(REASONS).map(r=>[r,[]])]);
  for(const row of props.rows)groups.get(dobGuardrailReason(draft.value,{entryTime:row.entry_time,zoneAgeSeconds:row.source_zone_age_seconds})??'allowed').push(row);
  return [...groups].filter(([key,list])=>key==='allowed'||list.length).map(([key,list])=>({key,label:REASONS[key]??'erlaubt',
-  halves:['h1','h2'].map(h=>{const part=list.filter(r=>half(r)===h);
+  halves:DOB_HALVES.map(h=>{const part=list.filter(r=>dobTradeHalf(r)===h);
    return {n:part.length,config:dobTotalStats(part,configTp),targets:props.targets.map(t=>({...t,s:dobTotalStats(part,t.k)}))};})}));
 });
 const ruleCount=computed(()=>{const on=draft.value.entryWindows.filter(dobRuleActive);

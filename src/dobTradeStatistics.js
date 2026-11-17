@@ -30,6 +30,11 @@ export const dobWinTone=(v,k)=>v==null?'':v>dobBreakEven(k)?'positive':v<dobBrea
 
 // Jahr und Monat nach Erkennung des Paars (Berlin), wie die Messung zählt; die Session nach Entry-Zeit.
 export const dobTradeMonth=row=>berlinDateStrFor(row.recognized_at).slice(0,7);
+// Halbjahr und Wochentag nach Berliner Entry-Datum (Sperren-Gegenprobe, Tabelle je Wochentag).
+export const DOB_HALVES=['Jan–Jun','Jul–Dez'];
+export const dobTradeHalf=row=>Number(berlinDateStrFor(row.entry_time).slice(5,7))<=6?DOB_HALVES[0]:DOB_HALVES[1];
+export const DOB_WEEKDAYS=[[1,'Montag'],[2,'Dienstag'],[3,'Mittwoch'],[4,'Donnerstag'],[5,'Freitag'],[6,'Samstag'],[0,'Sonntag']];
+export const dobTradeWeekday=row=>new Date(`${berlinDateStrFor(row.entry_time)}T12:00:00Z`).getUTCDay();
 const offset=sec=>berlinOffsetMinutes(sec*1000);
 export function dobTradeSessions(row,sessions){
  return sessions.filter(s=>sessionOccurrences(s.from_minutes,s.to_minutes,row.entry_time,row.entry_time+1,offset,s.days).length).map(s=>s.label);

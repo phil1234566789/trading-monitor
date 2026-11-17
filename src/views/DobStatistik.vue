@@ -4,7 +4,7 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
@@ -147,7 +147,9 @@ const listed=computed(()=>{
 });
 watch([maxRFilter,maxRSort,retestFilter],()=>{shown.value=PAGE;});
 const totals=computed(()=>Object.fromEntries(targets.value.map(t=>[t.name,dobRouteStats(inYear.value,t.k)])));
-const statsOf=list=>Object.fromEntries(targets.value.map(t=>[t.name,dobRouteStats(list,t.k)]));
+// Tabellen zeigen zusätzlich „Konfig“ (TP je Entry-Fenster), solange die Sperren angewendet werden; die Kacheln haben dafür ihre eigene.
+const tableTargets=computed(()=>applyGuardrails.value?[...targets.value,{name:'config',label:'Konfig',k:configTp}]:targets.value);
+const statsOf=list=>Object.fromEntries(tableTargets.value.map(t=>[t.name,dobRouteStats(list,t.k)]));
 const sessionsOf=r=>{const s=dobTradeSessions(r,sessions.value);return s.length?s:['ohne Session'];};
 // Winrate je Retest-Art der Kraftquelle (nur v2 befüllt), alle Routen zusammen, beide R-Ziele.
 const retestTiles=computed(()=>Object.entries(DOB_RETEST_KINDS).map(([kind,label])=>{
@@ -163,7 +165,11 @@ const tables=computed(()=>{
   {key:'time',title:'Je Session und Stunde',firstCol:'Entry (Berlin)',sections:dobTimeSlotGroups(inYear.value,sessions.value).map(g=>({title:g.title,
    stats:statsOf(g.rows),rows:g.slots.map(slot=>({key:slot.label,label:slot.label,stats:statsOf(slot.rows)}))}))},
   {key:'month',title:'Je Monat',firstCol:'Monat',sections:[{rows:dobGroups(inYear.value,r=>[dobTradeMonth(r)]).sort((a,b)=>a.key.localeCompare(b.key))
-   .map(g=>({key:g.key,label:monthLabel(g.key),stats:statsOf(g.rows)}))}]}];
+   .map(g=>({key:g.key,label:monthLabel(g.key),stats:statsOf(g.rows)}))}]},
+  // Je Wochentag mit den Halbjahren darunter: die Gruppen sind klein, ein Effekt sollte in beiden Halbjahren tragen.
+  {key:'weekday',title:'Je Wochentag',firstCol:'Entry-Tag (Berlin)',sections:DOB_WEEKDAYS.map(([day,label])=>({label,list:inYear.value.filter(r=>dobTradeWeekday(r)===day)}))
+   .filter(d=>d.list.length).map(d=>({title:`${d.label} (${d.list.length})`,stats:statsOf(d.list),
+    rows:DOB_HALVES.map(h=>{const part=d.list.filter(r=>dobTradeHalf(r)===h);return {key:h,label:`${h} (${part.length})`,stats:statsOf(part)};})}))}];
  if(inYear.value.some(dobZoneAgeBucket)){
   const aged=inYear.value.filter(r=>dobZoneAgeBucket(r)&&(!zoneTimeframe.value||r.source_kind===zoneTimeframe.value));
   list.push({key:'zoneAge',title:'Je Kraftquelle-OB-Alter',firstCol:'Zone bis Retest',sections:[{rows:DOB_ZONE_AGE_BUCKETS
@@ -235,7 +241,7 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
       <p class="note">Ziel k: Win, wenn k vor dem SL erreicht wurde (+k R), Loss, wenn der SL vorher kam (−1 R), offen, wenn bis Datenende keins von beiden; Break-even = 1/(1+k). Winrate = Win / (Win + Loss). Zellen: Winrate · Σ R, Details im Tooltip. Ziel 2R entspricht dem bisherigen Ausgang. Jahr und Monat nach Erkennung des Paars, Session und Stunde nach Entry-Zeit (Europe/Berlin).<template v-if="computedAt"> Stand der Berechnung: {{ formatDatedTime(Date.parse(computedAt)/1000) }}.</template></p>
 
       <template v-for="table in tables" :key="table.key">
-        <DobStatsTable :title="table.title" :first-col="table.firstCol" :sections="table.sections" :targets="targets"
+        <DobStatsTable :title="table.title" :first-col="table.firstCol" :sections="table.sections" :targets="tableTargets"
           :open="tablesOpen[table.key]??true" @toggle="open=>{if((tablesOpen[table.key]??true)!==open)tablesOpen={...tablesOpen,[table.key]:open};}">
           <template v-if="table.key==='zoneAge'" #controls><label>Zeitrahmen der Zone <select v-model="zoneTimeframe"><option value="">H1 + H4</option><option value="ob_h1">H1</option><option value="ob_h4">H4</option></select></label></template>
         </DobStatsTable>

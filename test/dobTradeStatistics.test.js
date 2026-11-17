@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker,dobTradeWeekday,dobTradeHalf} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -92,5 +92,12 @@ describe('dobTradeStatistics',()=>{
  it('Ziel je Trade (Konfig-TP): Win/Loss und ΣR mit dem k des jeweiligen Trades',()=>{
   const rows=[{route:'a',max_r:2.5,sl_hit:true,tp:2},{route:'a',max_r:2.5,sl_hit:true,tp:3},{route:'a',max_r:5,sl_hit:false,tp:4}];
   expect(dobRouteStats(rows,r=>r.tp).a).toMatchObject({success:2,loss:1,sumR:2-1+4});
+ });
+ it('Wochentag und Halbjahr nach Berliner Entry-Datum, auch kurz nach Mitternacht',()=>{
+  // Mo 02.11.2026 00:30 Berlin (CET) = So 01.11. 23:30 UTC
+  const row={entry_time:Date.UTC(2026,10,1,23,30)/1000};
+  expect(dobTradeWeekday(row)).toBe(1);
+  expect(dobTradeHalf(row)).toBe('Jul–Dez');
+  expect(dobTradeHalf({entry_time:Date.UTC(2026,5,30,12)/1000})).toBe('Jan–Jun');
  });
 });
