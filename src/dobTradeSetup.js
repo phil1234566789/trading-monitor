@@ -2,7 +2,8 @@ import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed,sourceMaxDistanceAtr,dobSourceZoneAgeSeconds} from './dobSourceOfStrength.js';
-import {dobZoneAgeBlocked,dobEntryTimeBlocked} from './dobGuardrails.js';
+import {dobZoneAgeBlocked,dobEntryRule,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
+import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 
 // v2 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ k H1-ATR von OB1, k je Instrument, vor OB1 retestet; dobSourceOfStrength.js)
 // + DOB + TP 2R. Den Retest verlangt Philip fachlich (Q17), auch wenn er die Winrate nicht hebt; sourceOptions.requireRetest=false
@@ -41,7 +42,17 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 // sourceOptions: {requireRetest} (Standard true). trendGate (optional, v3-Experiment): Funktion setup → {trend, verdict, rejectReason}
 // aus createDobM5TrendGate; wird vom Aufrufer hereingereicht, damit der Trend-Algo nicht im Watcher-Bundle landet.
 // guardrails (optional, dobGuardrailsFromRow): Zonenalter und Entry-Stunde → rejected 'blockedZoneAge'/'blockedEntryHour'; den Monat
-// prüft der Watcher vorab. setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
+// prüft der Watcher vorab. Ein Entry außerhalb der Sperre bekommt tpRule {tpR, window} und Ziel/Ausgang zu diesem R. setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
+// Der Indikator rechnet Ziel und Ausgang mit 2R; ein anderes R aus der Fensterregel rechnet dieselbe Ausgangslogik nach.
+function withTarget(pair,setup,rule,{m1Candles,evaluatedAt}){
+ const tpRule={tpR:rule.tpR,window:rule.window};
+ if(rule.tpR===DOB_DEFAULT_TP_R)return {tpRule};
+ const outcome=evaluateDoubleOrderBlockOutcome({direction:setup.direction,entryTime:setup.entryTime,entryPrice:setup.entryPrice,stopPrice:setup.stopPrice,
+  candles:m1Candles,evaluatedAt,instrument:setup.instrument,rMultiple:rule.tpR});
+ return {tpRule,targetPrice:outcome.targetPrice,...phaseOf(pair,{status:'ready',entryTime:setup.entryTime,outcome}),
+  outcome:{status:outcome.status,recognizedAt:outcome.recognizedAt,exitPrice:outcome.exitPrice,reason:outcome.reason}};
+}
+
 export function checkDobTradeSetup(input){
  const dob=detectDoubleOrderBlocks({...input,options:{...input.options,retests:true}});
  const context=input.sourceContext??(input.htfCandles?dobSourceContext({htfCandles:input.htfCandles,m5Candles:input.m5Candles,instrument:input.instrument}):null);
@@ -70,9 +81,9 @@ export function checkDobTradeSetup(input){
   if(guardrails&&dobZoneAgeBlocked(guardrails,dobSourceZoneAgeSeconds(sourceOfStrength,pair.firstOrderBlock.startTime))){
    rejected.push({...setup,sourceOfStrength,reason:'blockedZoneAge'});continue;
   }
-  if(guardrails&&setup.entryTime!=null&&dobEntryTimeBlocked(guardrails,setup.entryTime)){
-   rejected.push({...setup,sourceOfStrength,reason:'blockedEntryHour'});continue;
-  }
+  const rule=guardrails&&setup.entryTime!=null?dobEntryRule(guardrails,setup.entryTime):null;
+  if(rule?.action==='block'){rejected.push({...setup,sourceOfStrength,reason:'blockedEntryHour'});continue;}
+  if(rule)Object.assign(setup,withTarget(pair,setup,rule,input));
   // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
   const m5Trend=input.trendGate?.({...setup,sourceOfStrength});
   if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});

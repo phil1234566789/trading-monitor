@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {dobAlarmEvents,dobStaleAlarm,DOB_STALE_SECONDS} from '../src/dobAlarm.js';
 import {load,run,berlin} from './dobFixtures.js';
+import {DOB_GUARDRAILS_DEFAULT} from '../src/dobGuardrails.js';
 
 describe('DOB-Alarme',()=>{
  // #134: Retest-Alarm ab dem OB2-Kontakt, Entry-Alarm beim Entry; mehrere OB1-Partner ergeben je einen Alarm.
@@ -15,6 +16,8 @@ describe('DOB-Alarme',()=>{
   expect(events[0].text).toContain('3.954,74–3.964,91');
   expect(events[0].text).toContain('erster Touch vor');
   expect(events[0].text).toContain('#/?dob=');
+  // Entry-Zeit ist beim Retest offen, also auch das Fenster-Ziel.
+  expect(events[0].text).not.toContain('TP 2R');
  });
  it('meldet den Entry mit Preis, SL und TP 2R',()=>{
   const at=done.entryTime+60,entry=dobAlarmEvents(run(fixture,at),at).find(e=>e.phase==='entry');
@@ -39,9 +42,9 @@ describe('DOB-Alarme',()=>{
 describe('DOB-Sperren (dob_guardrails) im Alarm',()=>{
  const fixture=load('2026-11-12');
  const done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
- const withGuardrails=(at,config)=>run(fixture,at,true,undefined,{guardrails:{blockedEntryWindows:[],blockedMonths:[],minZoneAgeSeconds:null,...config}});
+ const withGuardrails=(at,config)=>run(fixture,at,true,undefined,{guardrails:{...DOB_GUARDRAILS_DEFAULT,...config}});
  // Entry 14:10 Berlin liegt im gesperrten Fenster 14:00–15:00.
- const hour={blockedEntryWindows:[[840,900]]};
+ const hour={entryWindows:[{from:840,to:900,action:'block'}]};
  it('Entry-Stunde: Retest-Alarm geht normal raus, der Entry wird als Sperrzeit gemeldet',()=>{
   const retestAt=done.chart.secondRetestTime+60;
   expect(dobAlarmEvents(withGuardrails(retestAt,hour),retestAt).find(e=>e.phase==='ob2Retest')).toMatchObject({guardrail:null,suppressed:false});
@@ -61,8 +64,18 @@ describe('DOB-Sperren (dob_guardrails) im Alarm',()=>{
   expect(result.setups.filter(s=>s.phase==='ob2Retest')).toEqual([]);
   expect(dobAlarmEvents(result,at).find(e=>e.phase==='ob2Retest')).toMatchObject({guardrail:'blockedZoneAge',suppressed:true});
  });
- it('ohne Sperre unverändert',()=>{
-  const at=done.entryTime+60;
-  expect(dobAlarmEvents(withGuardrails(at,{}),at)).toEqual(dobAlarmEvents(run(fixture,at),at));
+ it('ohne Regel: Standard-TP 2R wie ohne Konfig, nur mit Herkunft im Text',()=>{
+  const at=done.entryTime+60,plain=dobAlarmEvents(run(fixture,at),at);
+  const events=dobAlarmEvents(withGuardrails(at,{}),at);
+  expect(events.map(e=>({...e,text:e.text.replace('TP 2R (Standard)','TP 2R')}))).toEqual(plain);
+  expect(events.find(e=>e.phase==='entry').text).toContain('TP 2R (Standard) 3.893,05');
+ });
+ it('TP-Fensterregel: Ziel und Ausgang zum R des Entry-Fensters',()=>{
+  const at=done.entryTime+60,rule={entryWindows:[{from:840,to:900,action:'tp',tpR:3}]};
+  const setup=withGuardrails(at,rule).setups.find(s=>s.entryTime===done.entryTime);
+  expect(setup).toMatchObject({tpRule:{tpR:3},targetPrice:expect.closeTo(3874.75,2)});
+  expect(dobAlarmEvents(withGuardrails(at,rule),at).find(e=>e.phase==='entry').text).toContain('TP 3R (Fensterregel 14:00–15:00) 3.874,75');
+  // Default-TP greift außerhalb jedes Fensters.
+  expect(dobAlarmEvents(withGuardrails(at,{defaultTpR:2.5}),at).find(e=>e.phase==='entry').text).toContain('TP 2,5R (Standard)');
  });
 });

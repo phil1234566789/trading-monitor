@@ -26,6 +26,9 @@ function sourceLine({sourceOfStrength:s}){
  const retest=touch?` · ${touch}`:s.retested?' · retestet':'';
  return `Quelle der Kraft: ${label} · Zone ${zone(s.zone)}${retest}`;
 }
+const hhmm=m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+// Ohne Konfig (tpRule fehlt) bleibt es beim festen 2R des Setups.
+const tpLabel=({tpRule:r})=>!r?'TP 2R':`TP ${String(r.tpR).replace('.',',')}R (${r.window?.action==='tp'?`Fensterregel ${hhmm(r.window.from)}–${hhmm(r.window.to)}`:'Standard'})`;
 const obLines=({chart})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} · ${zone(chart.firstOrderBlock)}`,
  `OB2 ${formatBerlinTime(chart.secondOrderBlockStart)} · ${zone(chart.secondOrderBlock)}`];
 
@@ -40,7 +43,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    const id=`dob:retest:${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`;
    if(!events.has(id))events.set(id,{id,phase:'ob2Retest',setupId:s.id,instrument,direction:s.direction,signalAt:s.phaseSince,guardrail,suppressed:!!guardrail,
     text:[`🟡 DOB ${instrument} ${side(s.direction)} · OB2-Retest ${formatBerlinTime(s.phaseSince)}`,sourceLine(s),...obLines(s),
-     `Entry-Zone: OB2 ${zone(s.chart.secondOrderBlock)} · Entry nach der OB2-Reaktion (Route a/b), SL laut Indikator, TP 2R`,
+     `Entry-Zone: OB2 ${zone(s.chart.secondOrderBlock)} · Entry nach der OB2-Reaktion (Route a/b), SL laut Indikator, TP je nach Entry-Fensterregel`,
      dobChartUrl(id,instrument,s.phaseSince)].join('\n')});
   }
   if(ENTERED.has(s.phase)&&s.entryTime>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){
@@ -49,7 +52,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    if(!events.has(id))events.set(id,{id,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
     text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · Entry in Sperrzeit ${formatBerlinTime(s.entryTime)}, kein Trade`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
-     `Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)} · TP 2R ${price(s.targetPrice)}`,sourceLine(s),...obLines(s),
+     `Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)} · ${tpLabel(s)} ${price(s.targetPrice)}`,sourceLine(s),...obLines(s),
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
   }
  }
