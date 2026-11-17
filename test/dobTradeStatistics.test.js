@@ -20,8 +20,11 @@ describe('dobTradeStatistics',()=>{
  });
  it('Monat nach Berliner Erkennung, Chart-Link am Ausgang',()=>{
   expect(dobTradeMonth({recognized_at:Date.UTC(2026,0,31,23,30)/1000})).toBe('2026-02');
-  expect(dobChartLink(row('a','success',{exit_time:at+600})).query).toEqual({dob:'run:x:a',instrument:'XAUUSD',bar:'5m',replay:String(at+600)});
-  expect(dobChartLink(row('a','open')).query.replay).toBe(String(at+300));
+  const later=at+86400;
+  expect(dobChartLink(row('a','success',{exit_time:at+600}),later).query).toEqual({dob:'run:x:a',instrument:'XAUUSD',bar:'5m',replay:String(at+600+4*3600)});
+  expect(dobChartLink(row('a','open'),later).query.replay).toBe(String(at+300+4*3600));
+  // Nachlauf, den es live noch nicht gibt: auf jetzt (volle Minute) begrenzt.
+  expect(dobChartLink(row('a','success',{exit_time:at+600}),at+3600+30).query.replay).toBe(String(at+3600));
  });
  it('POI aus den v1-Feldern, v0 ohne',()=>{
   expect(dobPoiLabel({poi_kind:null})).toBe('–');
