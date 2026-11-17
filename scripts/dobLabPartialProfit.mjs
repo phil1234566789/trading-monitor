@@ -21,11 +21,8 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const g = await server.ssrLoadModule('/src/dobGuardrails.js');
-  const { cases, priceAction, m1Marked, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
-  // Träger (b) filtert ohne features; Gegenkerzen 3 von 3 hier wie in lab-reeval (Abnahme DOB-GEGENKERZEN: 267 T, +143R).
-  const c = cases.find(x => x.name.startsWith('(b)'));
-  if (c.cfg.counterCandlesMode !== '3of3') throw new Error(`Philips Konfig hat counterCandlesMode=${c.cfg.counterCandlesMode}`);
-  const trades = c.trades.filter(t => priceAction(t, 3).counterCandles < 3);
+  const { philips: c, m1Marked, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
+  const trades = c.trades;
   const lowerBound = t => { let lo = 0, hi = m1Marked.length; while (lo < hi) { const m = (lo + hi) >> 1; if (m1Marked[m].time < t) lo = m + 1; else hi = m; } return lo; };
   const memo = new Map();
   const outcome = (t, r, be = null) => { const k = `${dobTradeKey(t)}:${r}:${be}`;

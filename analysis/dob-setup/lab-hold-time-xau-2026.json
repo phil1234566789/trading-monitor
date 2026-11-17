@@ -1,0 +1,357 @@
+{
+  "measurement": "dob-lab-hold-time-v1",
+  "git": "fd8ed23c-dirty",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "methodology": [
+    "Träger: Philips gespeicherte Konfig (Kombi, Gegenkerzen nach Modus, Fenster, Monate), TP je Trade nach Konfig.",
+    "Haltedauer = Entry bis Ende der M1-Kerze, die SL oder TP berührt. Wochenende = ein Berlin-Samstag liegt dazwischen.",
+    "Zeitstopp: Close der letzten bis zur Frist geschlossenen M1-Kerze; Ausgang davor bleibt. Winrate 3R = Anteil mit R > 0 bei festem 3R und gleichem Zeitstopp.",
+    "Mit Teilprofit: 50 % bei 3R, Rest zum Konfig-TP, beide Teile mit Original-SL und gleichem Zeitstopp (TP ≤ 3R: alles beim TP)."
+  ],
+  "holding": {
+    "trades": 266,
+    "medianH": 1.07,
+    "p75H": 3.35,
+    "p90H": 9.1,
+    "over8h": 11.3,
+    "over24h": 3.4,
+    "overWeekend": 1.1,
+    "over24hList": [
+      {
+        "entry": "2026-02-19 15:40",
+        "direction": "long",
+        "window": "tot 5R",
+        "tpR": 5,
+        "outcome": "success",
+        "exit": "2026-02-20 21:58",
+        "hours": 30.3,
+        "weekend": false
+      },
+      {
+        "entry": "2026-03-10 19:16",
+        "direction": "short",
+        "window": "14:00–21:00 4R",
+        "tpR": 4,
+        "outcome": "success",
+        "exit": "2026-03-11 23:57",
+        "hours": 28.7,
+        "weekend": false
+      },
+      {
+        "entry": "2026-03-20 19:23",
+        "direction": "short",
+        "window": "tot 5R",
+        "tpR": 5,
+        "outcome": "success",
+        "exit": "2026-03-23 01:36",
+        "hours": 54.2,
+        "weekend": true
+      },
+      {
+        "entry": "2026-03-30 03:22",
+        "direction": "long",
+        "window": "02:00–07:00 4R",
+        "tpR": 4,
+        "outcome": "success",
+        "exit": "2026-03-31 03:34",
+        "hours": 24.2,
+        "weekend": false
+      },
+      {
+        "entry": "2026-05-04 19:53",
+        "direction": "long",
+        "window": "14:00–21:00 4R",
+        "tpR": 4,
+        "outcome": "success",
+        "exit": "2026-05-06 02:21",
+        "hours": 30.5,
+        "weekend": false
+      },
+      {
+        "entry": "2026-06-16 17:31",
+        "direction": "long",
+        "window": "14:00–21:00 4R",
+        "tpR": 4,
+        "outcome": "success",
+        "exit": "2026-06-17 19:34",
+        "hours": 26.1,
+        "weekend": false
+      },
+      {
+        "entry": "2026-10-02 20:24",
+        "direction": "long",
+        "window": "14:00–21:00 4R",
+        "tpR": 4,
+        "outcome": "loss",
+        "exit": "2026-10-05 06:28",
+        "hours": 58.1,
+        "weekend": true
+      },
+      {
+        "entry": "2026-10-19 16:38",
+        "direction": "short",
+        "window": "14:00–21:00 4R",
+        "tpR": 4,
+        "outcome": "success",
+        "exit": "2026-10-21 03:06",
+        "hours": 34.5,
+        "weekend": false
+      },
+      {
+        "entry": "2026-11-06 19:16",
+        "direction": "long",
+        "window": "14:00–21:00 4R",
+        "tpR": 4,
+        "outcome": "loss",
+        "exit": "2026-11-09 00:59",
+        "hours": 53.7,
+        "weekend": true
+      }
+    ]
+  },
+  "timeStops": {
+    "ohne Zeitstopp": {
+      "trades": 267,
+      "closed": 266,
+      "ambiguous": 0,
+      "open": 1,
+      "sumR": 143,
+      "winrate3R": 32.3,
+      "timeStops": 0,
+      "rPerTimeStop": null,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 148,
+        "ambiguous": 0,
+        "open": 1,
+        "sumR": 59,
+        "winrate3R": 28.4,
+        "timeStops": 0,
+        "rPerTimeStop": null
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 84,
+        "winrate3R": 37.3,
+        "timeStops": 0,
+        "rPerTimeStop": null
+      }
+    },
+    "(a) 22:00 Berlin": {
+      "trades": 267,
+      "closed": 267,
+      "ambiguous": 0,
+      "open": 0,
+      "sumR": 107.3,
+      "winrate3R": 33.3,
+      "timeStops": 32,
+      "rPerTimeStop": 1.1,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 149,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 29.6,
+        "winrate3R": 29.5,
+        "timeStops": 21,
+        "rPerTimeStop": 1.03
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 77.8,
+        "winrate3R": 38.1,
+        "timeStops": 11,
+        "rPerTimeStop": 1.25
+      }
+    },
+    "(b) 8 h": {
+      "trades": 267,
+      "closed": 267,
+      "ambiguous": 0,
+      "open": 0,
+      "sumR": 106.3,
+      "winrate3R": 34.1,
+      "timeStops": 31,
+      "rPerTimeStop": 1.66,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 149,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 40.8,
+        "winrate3R": 30.9,
+        "timeStops": 15,
+        "rPerTimeStop": 1.52
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 65.5,
+        "winrate3R": 38.1,
+        "timeStops": 16,
+        "rPerTimeStop": 1.78
+      }
+    },
+    "(c) 24 h": {
+      "trades": 267,
+      "closed": 267,
+      "ambiguous": 0,
+      "open": 0,
+      "sumR": 131.2,
+      "winrate3R": 33,
+      "timeStops": 10,
+      "rPerTimeStop": 1.62,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 149,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 48.4,
+        "winrate3R": 28.9,
+        "timeStops": 7,
+        "rPerTimeStop": 2.21
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 82.8,
+        "winrate3R": 38.1,
+        "timeStops": 3,
+        "rPerTimeStop": 0.26
+      }
+    }
+  },
+  "timeStopsWithPartial": {
+    "ohne Zeitstopp": {
+      "trades": 267,
+      "closed": 266,
+      "ambiguous": 0,
+      "open": 1,
+      "sumR": 115,
+      "winrate3R": 32.3,
+      "timeStops": 0,
+      "rPerTimeStop": null,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 148,
+        "ambiguous": 0,
+        "open": 1,
+        "sumR": 42.5,
+        "winrate3R": 28.4,
+        "timeStops": 0,
+        "rPerTimeStop": null
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 72.5,
+        "winrate3R": 37.3,
+        "timeStops": 0,
+        "rPerTimeStop": null
+      }
+    },
+    "(a) 22:00 Berlin": {
+      "trades": 267,
+      "closed": 267,
+      "ambiguous": 0,
+      "open": 0,
+      "sumR": 87.3,
+      "winrate3R": 33.3,
+      "timeStops": 32,
+      "rPerTimeStop": 1.2,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 149,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 23.7,
+        "winrate3R": 29.5,
+        "timeStops": 21,
+        "rPerTimeStop": 1.17
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 63.7,
+        "winrate3R": 38.1,
+        "timeStops": 11,
+        "rPerTimeStop": 1.24
+      }
+    },
+    "(b) 8 h": {
+      "trades": 267,
+      "closed": 267,
+      "ambiguous": 0,
+      "open": 0,
+      "sumR": 87.5,
+      "winrate3R": 34.1,
+      "timeStops": 31,
+      "rPerTimeStop": 1.73,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 149,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 28.8,
+        "winrate3R": 30.9,
+        "timeStops": 15,
+        "rPerTimeStop": 1.59
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 58.7,
+        "winrate3R": 38.1,
+        "timeStops": 16,
+        "rPerTimeStop": 1.85
+      }
+    },
+    "(c) 24 h": {
+      "trades": 267,
+      "closed": 267,
+      "ambiguous": 0,
+      "open": 0,
+      "sumR": 108.3,
+      "winrate3R": 33,
+      "timeStops": 10,
+      "rPerTimeStop": 1.88,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 149,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 37,
+        "winrate3R": 28.9,
+        "timeStops": 7,
+        "rPerTimeStop": 2.36
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 71.3,
+        "winrate3R": 38.1,
+        "timeStops": 3,
+        "rPerTimeStop": 0.76
+      }
+    }
+  }
+}

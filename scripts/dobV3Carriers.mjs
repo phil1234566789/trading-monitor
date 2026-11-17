@@ -59,5 +59,8 @@ export async function loadDobV3Lab(server, root) {
       counterCandles: candles.filter(c => candleDirection(c) === against).length, patterns };
   };
   const fmt = s => `${s.trades} T · ${s.n} ${s.winrate}% ${s.sumR}R (${s['Jan–Jun'].sumR}/${s['Jul–Nov'].sumR})`;
-  return { ...runs, config, cases, outcome, block, fmt, ideasOf, ideaRules, priceAction };
+  // Philips gespeicherte Konfig komplett: Fall (b) filtert ohne features, Gegenkerzen nach seinem Modus hier (Abnahme 267 T, +143R).
+  const b = cases[1], candleN = { '3of3': 3, '3of5': 5 }[b.cfg.counterCandlesMode];
+  const philips = { ...b, name: 'Philips Konfig', trades: candleN ? b.trades.filter(t => priceAction(t, candleN).counterCandles < 3) : b.trades };
+  return { ...runs, config, cases, philips, outcome, block, fmt, ideasOf, ideaRules, priceAction };
 }
