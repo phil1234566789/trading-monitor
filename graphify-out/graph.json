@@ -4700,7 +4700,7 @@
       "file_type": "code",
       "norm_label": "openchart()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L76"
+      "source_location": "L79"
     },
     {
       "id": "src_annotations_renderannotations",
@@ -6920,7 +6920,7 @@
       "file_type": "code",
       "norm_label": "accountcolumn()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L119"
+      "source_location": "L122"
     },
     {
       "id": "src_views_dobstatistik_accountcolumns",
@@ -6932,7 +6932,7 @@
       "file_type": "code",
       "norm_label": "accountcolumns()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L120"
+      "source_location": "L123"
     },
     {
       "id": "src_views_dobstatistik_blockedof",
@@ -6944,7 +6944,7 @@
       "file_type": "code",
       "norm_label": "blockedof()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L110"
+      "source_location": "L113"
     },
     {
       "id": "src_views_dobstatistik_comparelabel",
@@ -6956,7 +6956,7 @@
       "file_type": "code",
       "norm_label": "comparelabel()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L177"
+      "source_location": "L180"
     },
     {
       "id": "src_views_dobstatistik_comparestats",
@@ -6968,7 +6968,7 @@
       "file_type": "code",
       "norm_label": "comparestats()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L176"
+      "source_location": "L179"
     },
     {
       "id": "src_views_dobstatistik_configdelta",
@@ -6980,7 +6980,7 @@
       "file_type": "code",
       "norm_label": "configdelta()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L133"
+      "source_location": "L136"
     },
     {
       "id": "src_views_dobstatistik_configtp",
@@ -6992,7 +6992,7 @@
       "file_type": "code",
       "norm_label": "configtp()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L115"
+      "source_location": "L118"
     },
     {
       "id": "src_views_dobstatistik_cyclemaxrsort",
@@ -7004,7 +7004,7 @@
       "file_type": "code",
       "norm_label": "cyclemaxrsort()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L147"
+      "source_location": "L150"
     },
     {
       "id": "src_views_dobstatistik_deltaof",
@@ -7016,7 +7016,7 @@
       "file_type": "code",
       "norm_label": "deltaof()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L138"
+      "source_location": "L141"
     },
     {
       "id": "src_views_dobstatistik_deltatext",
@@ -7028,7 +7028,7 @@
       "file_type": "code",
       "norm_label": "deltatext()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L137"
+      "source_location": "L140"
     },
     {
       "id": "src_views_dobstatistik_fmtusd",
@@ -7040,7 +7040,7 @@
       "file_type": "code",
       "norm_label": "fmtusd()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L175"
+      "source_location": "L178"
     },
     {
       "id": "src_views_dobstatistik_islast",
@@ -7052,7 +7052,7 @@
       "file_type": "code",
       "norm_label": "islast()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L74"
+      "source_location": "L77"
     },
     {
       "id": "src_views_dobstatistik_load",
@@ -7088,7 +7088,7 @@
       "file_type": "code",
       "norm_label": "monthlabel()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L207"
+      "source_location": "L210"
     },
     {
       "id": "src_views_dobstatistik_refresh",
@@ -7112,7 +7112,7 @@
       "file_type": "code",
       "norm_label": "resetseen()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L83"
+      "source_location": "L86"
     },
     {
       "id": "src_views_dobstatistik_reveallast",
@@ -7124,7 +7124,7 @@
       "file_type": "code",
       "norm_label": "reveallast()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L86"
+      "source_location": "L89"
     },
     {
       "id": "src_views_dobstatistik_rlabel",
@@ -7136,7 +7136,7 @@
       "file_type": "code",
       "norm_label": "rlabel()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L205"
+      "source_location": "L208"
     },
     {
       "id": "src_views_dobstatistik_sessionsof",
@@ -7148,7 +7148,7 @@
       "file_type": "code",
       "norm_label": "sessionsof()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L161"
+      "source_location": "L164"
     },
     {
       "id": "src_views_dobstatistik_setpoitype",
@@ -7172,7 +7172,7 @@
       "file_type": "code",
       "norm_label": "statsof()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L160"
+      "source_location": "L163"
     },
     {
       "id": "src_views_dobstatistik_wintone",
@@ -7184,7 +7184,7 @@
       "file_type": "code",
       "norm_label": "wintone()",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L204"
+      "source_location": "L207"
     },
     {
       "id": "src_views_statistik_refreshall",
@@ -53856,7 +53856,7 @@
       "file_type": "code",
       "norm_label": "accountconfig",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L118"
+      "source_location": "L121"
     },
     {
       "id": "src_views_dobstatistik_accountstandard",
@@ -53867,7 +53867,7 @@
       "file_type": "code",
       "norm_label": "accountstandard",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L122"
+      "source_location": "L125"
     },
     {
       "id": "src_views_dobstatistik_accountwithconfig",
@@ -53878,7 +53878,7 @@
       "file_type": "code",
       "norm_label": "accountwithconfig",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L123"
+      "source_location": "L126"
     },
     {
       "id": "src_views_dobstatistik_applyguardrails",
@@ -53889,7 +53889,7 @@
       "file_type": "code",
       "norm_label": "applyguardrails",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L107"
+      "source_location": "L110"
     },
     {
       "id": "src_views_dobstatistik_chartreturn",
@@ -53900,7 +53900,7 @@
       "file_type": "code",
       "norm_label": "chartreturn",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L75"
+      "source_location": "L78"
     },
     {
       "id": "src_views_dobstatistik_computedat",
@@ -53911,7 +53911,7 @@
       "file_type": "code",
       "norm_label": "computedat",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L202"
+      "source_location": "L205"
     },
     {
       "id": "src_views_dobstatistik_configbaseline",
@@ -53922,7 +53922,7 @@
       "file_type": "code",
       "norm_label": "configbaseline",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L132"
+      "source_location": "L135"
     },
     {
       "id": "src_views_dobstatistik_configtotals",
@@ -53933,7 +53933,7 @@
       "file_type": "code",
       "norm_label": "configtotals",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L131"
+      "source_location": "L134"
     },
     {
       "id": "src_views_dobstatistik_draftunsaved",
@@ -53944,7 +53944,7 @@
       "file_type": "code",
       "norm_label": "draftunsaved",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L109"
+      "source_location": "L112"
     },
     {
       "id": "src_views_dobstatistik_error",
@@ -53966,7 +53966,7 @@
       "file_type": "code",
       "norm_label": "guardraildraft",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L106"
+      "source_location": "L109"
     },
     {
       "id": "src_views_dobstatistik_guardrails",
@@ -53977,7 +53977,7 @@
       "file_type": "code",
       "norm_label": "guardrails",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L106"
+      "source_location": "L109"
     },
     {
       "id": "src_views_dobstatistik_guardrailsopen",
@@ -53988,7 +53988,7 @@
       "file_type": "code",
       "norm_label": "guardrailsopen",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L107"
+      "source_location": "L110"
     },
     {
       "id": "src_views_dobstatistik_hasmaxr",
@@ -53999,7 +53999,7 @@
       "file_type": "code",
       "norm_label": "hasmaxr",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L145"
+      "source_location": "L148"
     },
     {
       "id": "src_views_dobstatistik_hasretest",
@@ -54010,7 +54010,7 @@
       "file_type": "code",
       "norm_label": "hasretest",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L144"
+      "source_location": "L147"
     },
     {
       "id": "src_views_dobstatistik_haswide",
@@ -54021,7 +54021,7 @@
       "file_type": "code",
       "norm_label": "haswide",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L178"
+      "source_location": "L181"
     },
     {
       "id": "src_views_dobstatistik_instrument",
@@ -54054,7 +54054,7 @@
       "file_type": "code",
       "norm_label": "inyear",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L111"
+      "source_location": "L114"
     },
     {
       "id": "src_views_dobstatistik_lastopened",
@@ -54065,7 +54065,7 @@
       "file_type": "code",
       "norm_label": "lastopened",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L72"
+      "source_location": "L75"
     },
     {
       "id": "src_views_dobstatistik_listed",
@@ -54076,7 +54076,7 @@
       "file_type": "code",
       "norm_label": "listed",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L148"
+      "source_location": "L151"
     },
     {
       "id": "src_views_dobstatistik_loading",
@@ -54098,7 +54098,7 @@
       "file_type": "code",
       "norm_label": "maxrfilter",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L143"
+      "source_location": "L146"
     },
     {
       "id": "src_views_dobstatistik_maxrshares",
@@ -54109,7 +54109,7 @@
       "file_type": "code",
       "norm_label": "maxrshares",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L146"
+      "source_location": "L149"
     },
     {
       "id": "src_views_dobstatistik_maxrsort",
@@ -54120,7 +54120,7 @@
       "file_type": "code",
       "norm_label": "maxrsort",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L143"
+      "source_location": "L146"
     },
     {
       "id": "src_views_dobstatistik_months",
@@ -54131,7 +54131,7 @@
       "file_type": "code",
       "norm_label": "months",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L206"
+      "source_location": "L209"
     },
     {
       "id": "src_views_dobstatistik_onlypinned",
@@ -54142,7 +54142,7 @@
       "file_type": "code",
       "norm_label": "onlypinned",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L68"
+      "source_location": "L71"
     },
     {
       "id": "src_views_dobstatistik_pins_pintarget_pinsaving_pinerror_pinof_openpin_savepin_removepin",
@@ -54153,7 +54153,7 @@
       "file_type": "code",
       "norm_label": "{pins,pintarget,pinsaving,pinerror,pinof,openpin,savepin,removepin}",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L69"
+      "source_location": "L72"
     },
     {
       "id": "src_views_dobstatistik_poiruns",
@@ -54186,7 +54186,7 @@
       "file_type": "code",
       "norm_label": "retestfilter",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L143"
+      "source_location": "L146"
     },
     {
       "id": "src_views_dobstatistik_retesttiles",
@@ -54197,7 +54197,7 @@
       "file_type": "code",
       "norm_label": "retesttiles",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L163"
+      "source_location": "L166"
     },
     {
       "id": "src_views_dobstatistik_route",
@@ -54274,7 +54274,7 @@
       "file_type": "code",
       "norm_label": "seen",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L72"
+      "source_location": "L75"
     },
     {
       "id": "src_views_dobstatistik_seenkeys",
@@ -54285,7 +54285,7 @@
       "file_type": "code",
       "norm_label": "seenkeys",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L73"
+      "source_location": "L76"
     },
     {
       "id": "src_views_dobstatistik_selectedrun",
@@ -54318,7 +54318,7 @@
       "file_type": "code",
       "norm_label": "showdelta",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L136"
+      "source_location": "L139"
     },
     {
       "id": "src_views_dobstatistik_shown",
@@ -54340,7 +54340,7 @@
       "file_type": "code",
       "norm_label": "sl_compare_targets",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L174"
+      "source_location": "L177"
     },
     {
       "id": "src_views_dobstatistik_slcompare",
@@ -54351,7 +54351,7 @@
       "file_type": "code",
       "norm_label": "slcompare",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L173"
+      "source_location": "L176"
     },
     {
       "id": "src_views_dobstatistik_tables",
@@ -54362,7 +54362,7 @@
       "file_type": "code",
       "norm_label": "tables",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L186"
+      "source_location": "L189"
     },
     {
       "id": "src_views_dobstatistik_tablesopen",
@@ -54373,7 +54373,7 @@
       "file_type": "code",
       "norm_label": "tablesopen",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L169"
+      "source_location": "L172"
     },
     {
       "id": "src_views_dobstatistik_tabletargets",
@@ -54384,7 +54384,7 @@
       "file_type": "code",
       "norm_label": "tabletargets",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L159"
+      "source_location": "L162"
     },
     {
       "id": "src_views_dobstatistik_targets",
@@ -54395,7 +54395,7 @@
       "file_type": "code",
       "norm_label": "targets",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L98"
+      "source_location": "L101"
     },
     {
       "id": "src_views_dobstatistik_timetable",
@@ -54406,7 +54406,7 @@
       "file_type": "code",
       "norm_label": "timetable",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L179"
+      "source_location": "L182"
     },
     {
       "id": "src_views_dobstatistik_totals",
@@ -54417,7 +54417,7 @@
       "file_type": "code",
       "norm_label": "totals",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L157"
+      "source_location": "L160"
     },
     {
       "id": "src_views_dobstatistik_unfiltered",
@@ -54428,7 +54428,7 @@
       "file_type": "code",
       "norm_label": "unfiltered",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L135"
+      "source_location": "L138"
     },
     {
       "id": "src_views_dobstatistik_year",
@@ -54450,7 +54450,7 @@
       "file_type": "code",
       "norm_label": "yearrows",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L102"
+      "source_location": "L105"
     },
     {
       "id": "src_views_dobstatistik_years",
@@ -54461,7 +54461,7 @@
       "file_type": "code",
       "norm_label": "years",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L101"
+      "source_location": "L104"
     },
     {
       "id": "src_views_dobstatistik_zonetimeframe",
@@ -54472,7 +54472,7 @@
       "file_type": "code",
       "norm_label": "zonetimeframe",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L170"
+      "source_location": "L173"
     },
     {
       "id": "test_dobtradestatistics_test",
@@ -77052,7 +77052,7 @@
       "file_type": "code",
       "norm_label": "accountconfiglabel",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L129"
+      "source_location": "L132"
     },
     {
       "id": "test_dobchartpositions_test",
@@ -144291,7 +144291,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L119",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -144303,7 +144303,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L119",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -144315,7 +144315,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L120",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -144327,7 +144327,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L120",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -144339,7 +144339,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L129",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -144351,7 +144351,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L122",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -144363,7 +144363,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L125",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -144375,7 +144375,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L126",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -144387,7 +144387,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L126",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -144399,7 +144399,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L110",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -144411,7 +144411,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L177",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -144423,7 +144423,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L177",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -144435,7 +144435,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L176",
+      "source_location": "L179",
       "weight": 1.0
     },
     {
@@ -144447,7 +144447,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L132",
+      "source_location": "L135",
       "weight": 1.0
     },
     {
@@ -144459,7 +144459,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L133",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -144471,7 +144471,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L131",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -144483,7 +144483,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L115",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -144495,7 +144495,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L140",
+      "source_location": "L143",
       "weight": 1.0
     },
     {
@@ -144507,7 +144507,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L137",
+      "source_location": "L140",
       "weight": 1.0
     },
     {
@@ -144519,7 +144519,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L111",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -144531,7 +144531,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L74",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -144543,7 +144543,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L150",
+      "source_location": "L153",
       "weight": 1.0
     },
     {
@@ -144591,7 +144591,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L146",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -144603,7 +144603,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L77",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -144615,7 +144615,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L81",
+      "source_location": "L84",
       "weight": 1.0
     },
     {
@@ -144651,7 +144651,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L165",
+      "source_location": "L168",
       "weight": 1.0
     },
     {
@@ -144663,7 +144663,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L161",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -144675,7 +144675,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L160",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -144687,48 +144687,12 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L189",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
       "source": "src_views_dobstatistik_tables",
       "target": "src_dobtradestatistics_dobtrademonth",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L189",
-      "weight": 1.0
-    },
-    {
-      "source": "src_views_dobstatistik_tables",
-      "target": "src_views_dobstatistik_monthlabel",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L190",
-      "weight": 1.0
-    },
-    {
-      "source": "src_views_dobstatistik_tables",
-      "target": "src_views_dobstatistik_statsof",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L190",
-      "weight": 1.0
-    },
-    {
-      "source": "src_views_dobstatistik_tables",
-      "target": "src_dobtradestatistics_dobtradeweekday",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -144740,6 +144704,42 @@
     },
     {
       "source": "src_views_dobstatistik_tables",
+      "target": "src_views_dobstatistik_monthlabel",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/views/DobStatistik.vue",
+      "source_location": "L193",
+      "weight": 1.0
+    },
+    {
+      "source": "src_views_dobstatistik_tables",
+      "target": "src_views_dobstatistik_statsof",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/views/DobStatistik.vue",
+      "source_location": "L193",
+      "weight": 1.0
+    },
+    {
+      "source": "src_views_dobstatistik_tables",
+      "target": "src_dobtradestatistics_dobtradeweekday",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/views/DobStatistik.vue",
+      "source_location": "L195",
+      "weight": 1.0
+    },
+    {
+      "source": "src_views_dobstatistik_tables",
       "target": "src_dobtradestatistics_dobtradehalf",
       "relation": "calls",
       "_origin": "ast",
@@ -144747,7 +144747,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L194",
+      "source_location": "L197",
       "weight": 1.0
     },
     {
@@ -144759,7 +144759,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L181",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -144771,7 +144771,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L181",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -144783,7 +144783,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L183",
+      "source_location": "L186",
       "weight": 1.0
     },
     {
@@ -144795,7 +144795,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L183",
+      "source_location": "L186",
       "weight": 1.0
     },
     {
@@ -144807,7 +144807,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L157",
+      "source_location": "L160",
       "weight": 1.0
     },
     {
@@ -144819,7 +144819,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L135",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -144831,7 +144831,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L204",
+      "source_location": "L207",
       "weight": 1.0
     },
     {
@@ -144843,7 +144843,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L102",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -144855,7 +144855,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L101",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -309254,7 +309254,7 @@
     },
     {
       "source": "src_views_dobstatistik",
-      "target": "src_views_dobstatistik_years",
+      "target": "src_views_dobstatistik_targets",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -309265,13 +309265,24 @@
     },
     {
       "source": "src_views_dobstatistik",
+      "target": "src_views_dobstatistik_years",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/views/DobStatistik.vue",
+      "source_location": "L104",
+      "weight": 1.0
+    },
+    {
+      "source": "src_views_dobstatistik",
       "target": "src_views_dobstatistik_yearrows",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L102",
+      "source_location": "L105",
       "weight": 1.0
     },
     {
@@ -309282,7 +309293,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L106",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -309293,7 +309304,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L106",
+      "source_location": "L109",
       "weight": 1.0
     },
     {
@@ -309304,7 +309315,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L107",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
@@ -309315,7 +309326,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L107",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
@@ -309326,7 +309337,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L109",
+      "source_location": "L112",
       "weight": 1.0
     },
     {
@@ -309337,7 +309348,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L110",
+      "source_location": "L113",
       "weight": 1.0
     },
     {
@@ -309348,7 +309359,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L111",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -309359,7 +309370,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L115",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -309370,7 +309381,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L118",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -309381,7 +309392,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L119",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -309392,7 +309403,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L120",
+      "source_location": "L123",
       "weight": 1.0
     },
     {
@@ -309403,7 +309414,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L122",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -309414,7 +309425,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L123",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -309425,7 +309436,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L129",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -309436,7 +309447,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L131",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -309447,7 +309458,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L132",
+      "source_location": "L135",
       "weight": 1.0
     },
     {
@@ -309458,7 +309469,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L133",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -309469,7 +309480,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L135",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -309480,7 +309491,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L136",
+      "source_location": "L139",
       "weight": 1.0
     },
     {
@@ -309491,7 +309502,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L137",
+      "source_location": "L140",
       "weight": 1.0
     },
     {
@@ -309502,7 +309513,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L138",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -309513,7 +309524,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L143",
+      "source_location": "L146",
       "weight": 1.0
     },
     {
@@ -309524,7 +309535,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L143",
+      "source_location": "L146",
       "weight": 1.0
     },
     {
@@ -309535,7 +309546,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L143",
+      "source_location": "L146",
       "weight": 1.0
     },
     {
@@ -309546,7 +309557,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L144",
+      "source_location": "L147",
       "weight": 1.0
     },
     {
@@ -309557,7 +309568,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L145",
+      "source_location": "L148",
       "weight": 1.0
     },
     {
@@ -309568,7 +309579,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L146",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -309579,7 +309590,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L147",
+      "source_location": "L150",
       "weight": 1.0
     },
     {
@@ -309590,7 +309601,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L148",
+      "source_location": "L151",
       "weight": 1.0
     },
     {
@@ -309601,7 +309612,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L157",
+      "source_location": "L160",
       "weight": 1.0
     },
     {
@@ -309612,7 +309623,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L159",
+      "source_location": "L162",
       "weight": 1.0
     },
     {
@@ -309623,7 +309634,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L160",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -309634,7 +309645,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L161",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -309645,7 +309656,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L163",
+      "source_location": "L166",
       "weight": 1.0
     },
     {
@@ -309656,7 +309667,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L169",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
@@ -309667,7 +309678,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L170",
+      "source_location": "L173",
       "weight": 1.0
     },
     {
@@ -309678,7 +309689,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L173",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -309689,7 +309700,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L174",
+      "source_location": "L177",
       "weight": 1.0
     },
     {
@@ -309700,7 +309711,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L175",
+      "source_location": "L178",
       "weight": 1.0
     },
     {
@@ -309711,7 +309722,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L176",
+      "source_location": "L179",
       "weight": 1.0
     },
     {
@@ -309722,7 +309733,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L177",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -309733,7 +309744,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L178",
+      "source_location": "L181",
       "weight": 1.0
     },
     {
@@ -309744,7 +309755,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L179",
+      "source_location": "L182",
       "weight": 1.0
     },
     {
@@ -309755,7 +309766,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L186",
+      "source_location": "L189",
       "weight": 1.0
     },
     {
@@ -309766,7 +309777,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L202",
+      "source_location": "L205",
       "weight": 1.0
     },
     {
@@ -309777,7 +309788,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L204",
+      "source_location": "L207",
       "weight": 1.0
     },
     {
@@ -309788,7 +309799,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L205",
+      "source_location": "L208",
       "weight": 1.0
     },
     {
@@ -309799,7 +309810,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L206",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -309810,7 +309821,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L207",
+      "source_location": "L210",
       "weight": 1.0
     },
     {
@@ -310030,7 +310041,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L68",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -310041,7 +310052,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L69",
+      "source_location": "L72",
       "weight": 1.0
     },
     {
@@ -310052,7 +310063,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L72",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -310063,7 +310074,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L72",
+      "source_location": "L75",
       "weight": 1.0
     },
     {
@@ -310074,7 +310085,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L73",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -310085,7 +310096,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L74",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -310096,7 +310107,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L75",
+      "source_location": "L78",
       "weight": 1.0
     },
     {
@@ -310107,7 +310118,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L76",
+      "source_location": "L79",
       "weight": 1.0
     },
     {
@@ -310118,7 +310129,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L83",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -310129,18 +310140,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L86",
-      "weight": 1.0
-    },
-    {
-      "source": "src_views_dobstatistik",
-      "target": "src_views_dobstatistik_targets",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L98",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -342271,7 +342271,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L176",
+      "source_location": "L179",
       "weight": 1.0
     },
     {
@@ -342283,7 +342283,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L131",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -342295,7 +342295,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L178",
+      "source_location": "L181",
       "weight": 1.0
     },
     {
@@ -342307,7 +342307,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L88",
+      "source_location": "L91",
       "weight": 1.0
     },
     {
@@ -342319,7 +342319,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L195",
+      "source_location": "L198",
       "weight": 1.0
     },
     {
@@ -342331,7 +342331,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L183",
+      "source_location": "L186",
       "weight": 1.0
     },
     {
@@ -345079,7 +345079,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/views/DobStatistik.vue",
-      "source_location": "L159",
+      "source_location": "L162",
       "weight": 1.0
     },
     {
@@ -349009,5 +349009,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "9aacbd0e277a70f1b007b7b8177ba6d6acf0dbdb"
+  "built_at_commit": "20ef932594418f4fdc61b566ba6f294abedd9652"
 }

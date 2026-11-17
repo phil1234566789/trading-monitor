@@ -1,7 +1,7 @@
 # Graph Report - adoring-ritchie-bd6ab2  (2026-11-17)
 
 ## Corpus Check
-- 1843 files · ~1,715,600 words
+- 1843 files · ~1,715,621 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9aacbd0e`
+- Built from commit: `20ef9325`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1418,7 +1418,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `Trading-Steps-Ablauf Diagram` and `calc_rr Tool Idea (Deterministic RR Calc)`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
 - **Why does `cssColor()` connect `fmtPrice` to `ObReactionGraph.vue`, `PriceChart.vue`, `DobStatistik.vue`, `newsMarkers.js`, `sessions.js`, `TradeSetupCockpit.vue`, `src/rsi.js`, `mmtTargetDrafts.js`, `fetchAllRows`, `MilkyMetaTrader.vue`, `LiquidityLinePrimitive`, `SimulationEntryTable.vue`, `marketStructureRendering.ts`, `doubleOrderBlockRendering.js`, `ChartDebugger.vue`, `lineWidth`, `Statistik.vue`, `liquidity.js`, `useTradeSetup2History.js`, `priceChartConstants.js`, `dailyPivotMarkers.js`, `DobEntryM1Section.vue`, `useMmtTargetDrawing`, `PinAddPopup.vue`, `orderBlocks.js`, `dob-watcher/index.ts`, `mmtBrokerPositions.test.js`, `MilkyMetaTraderEquityChart.vue`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
 - **Why does `formatDatedTime()` connect `berlinTime.js` to `Dashboard.vue`, `TradeExecutionCard.vue`, `computeRangesPivots`, `DobStatistik.vue`, `m1Checklist.js`, `journalTpSelection.js`, `fmtPrice`, `tradeSetup2Review.js`, `simulationRunComparison.js`, `tradeSetup2DealingRange.js`, `chartMeasure.js`, `tradeSetupSimulationStatistics.js`, `countertrendLifecycle.js`, `dobAutoPin.js`, `SimulationEntryTable.vue`, `tradeIdeas.js`, `tradeSetup2Scan.js`, `ChecklistReplayHistory.vue`, `orderBlockReaction.js`, `SimulationComparisonFilters.vue`, `doubleOrderBlockRendering.js`, `ChartDebugger.vue`, `countertrendScan.js`, `useTradePositionForm.js`, `tradeSetup2Configuration.js`, `useTradeSetup2History.js`, `priceChartConstants.js`, `DobEntryM1Section.vue`, `dob-watcher/index.ts`, `TradeSetupChecklist.vue`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **Why does `closedChecklistCandles()` connect `closedChecklistCandles` to `candleTouchesOrderBlock`, `computeRangesPivots`, `dobTradeSetup.js`, `dealingRangePriceObservation.js`, `m1Checklist.js`, `tradeSetupChecklistSweeps.js`, `sessions.js`, `journalTpSelection.js`, `fmtPrice`, `countertrendLifecycle.js`, `src/orderBlockDetection.js`, `candleCache.js`, `berlinOffsetMinutes`, `orderBlockReaction.js`, `doubleOrderBlockRendering.js`, `tradeSetupChecklist.js`, `countertrendScan.js`, `doubleOrderBlocks.js`, `m1FvgEntrySelection.js`, `liquidity.js`, `tradeSetup11.js`, `tradeSetup2Configuration.js`, `tradeSetup.js`, `goldWeekendGap.js`, `useTradeSetup2History.js`, `tradeSetupChecklistH1Sweeps.js`?**

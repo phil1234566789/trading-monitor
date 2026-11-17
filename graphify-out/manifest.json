@@ -10200,20 +10200,20 @@
     "semantic_hash": ""
   },
   "src/dobTradeStatistics.js": {
-    "mtime": 1794948757.4820485,
-    "seen": 1794948897.851398,
+    "mtime": 1794949073.7135966,
+    "seen": 1794949181.3089652,
     "ast_hash": "da1ce99864601c8d2216e0936b729109",
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
-    "mtime": 1794948283.9375043,
-    "seen": 1794948405.402834,
-    "ast_hash": "71ccff514c0f85a1fb9f8a7db6e860c2",
+    "mtime": 1794949073.6735613,
+    "seen": 1794949181.3795657,
+    "ast_hash": "0b0b2e70bd610c738dc7253668b727ee",
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
-    "mtime": 1794948757.4850655,
-    "seen": 1794948897.971644,
+    "mtime": 1794949073.7155957,
+    "seen": 1794949181.4375944,
     "ast_hash": "da6f65cc93061b59ba0eb64a29514ccd",
     "semantic_hash": ""
   },
