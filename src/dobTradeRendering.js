@@ -4,8 +4,12 @@ import {ScalePrimitive} from './scaleRendering.js';
 import {entryRiskScale,entryRiskSpec} from './entryRisk.js';
 import {cssColor,cssColorScaled} from './chartColors.js';
 import {OrderBlockPrimitive} from './orderBlocks.js';
-import {dobPoiLabel} from './dobPoiLabel.js';
+import {dobPoiLabel,dobTs11Label} from './dobPoiLabel.js';
 import {barSecondsFor} from './timeframes.js';
+import {lineWidth} from './chartLineWidths.js';
+import {fmtPrice,pricePrecisionForInstrument} from './format.js';
+import {formatBerlinTime} from './berlinTime.js';
+import {TRADE_SETUP_OB_WIDTH_SEC,TRADE_SETUP_OB_FILL_RATIO,TRADE_SETUP_OB_BORDER_RATIO} from './priceChartConstants.js';
 
 // Ein DOB-Statistik-Trade (Zeile aus dob_trade_setups) im Chart: Entry→Exit-Marke wie Journal-Trades, SL/TP nur vom Entry bis
 // zum Exit (keine Linien über den ganzen Chart) und die R-Skala am Entry. Offene Trades laufen bis zur letzten Kerze.
@@ -30,7 +34,9 @@ class DobTradeAutoscale {
 // Ausschnitt beim Sprung: ab Retest des POI (falls vorhanden), sonst ab Entry, bis Exit.
 export function dobTradeFrame(row){
  const retest=Number.isFinite(row.poi_retest_age_seconds)?row.first_ob_start-row.poi_retest_age_seconds:Infinity;
- return {from:Math.min(row.entry_time,retest),to:row.exit_time??row.entry_time};
+ // LQ-Sweep: ab dem gesweepten Level des TS1.1, damit Pivot und Sweep im Bild sind.
+ const lsPivot=row.ts11?Date.parse(row.ts11.ls_pivot_time)/1000:Infinity;
+ return {from:Math.min(row.entry_time,retest,lsPivot),to:row.exit_time??row.entry_time};
 }
 
 // Entry→Exit-Marke plus SL/TP vom Entry bis endTime; geteilt von Detail-Sprung (renderDobTrade) und Lauf-Positionen im Hauptchart.
@@ -55,9 +61,10 @@ export function renderDobTrade(series,row,primitives,candles,currentBar,targetLa
  const spec=entryRiskSpec(entryRiskScale(row.entry_price,row.stop_price,[{label:'TP',price:row.target_price}],row.instrument,row.direction),
   'SL','rScale',row.instrument);
  if(spec)add(new ScalePrimitive({...spec,startTime:row.entry_time},candles));
+ if(row.poi_kind==='ts11'){if(row.ts11)addTs11Poi(add,row,candles,eventBarSeconds);}
  // POI (v1/v2): H1/H4-Zone golden ab Zonenstart bis Exit, dazu der Retest (Start der letzten Touch-Episode vor OB1)
  // als kurze Marke an der Kante, an der der Preis die Zone berührt. Vor dem Kerzenfenster beginnende Zonen starten am Fensterrand.
- if([row.poi_zone_top,row.poi_zone_bottom,row.poi_zone_start].every(Number.isFinite)){
+ else if([row.poi_zone_top,row.poi_zone_bottom,row.poi_zone_start].every(Number.isFinite)){
   add(new OrderBlockPrimitive({top:row.poi_zone_top,bottom:row.poi_zone_bottom,startTime:row.poi_zone_start,
    drawStartTime:Math.max(row.poi_zone_start,candles[0].time),endTime,touched:true},
    {fillColor:cssColorScaled('dobPoi',.18),borderColor:cssColor('dobPoi'),textColor:cssColor('dobPoi'),borderWidth:2,
@@ -69,4 +76,24 @@ export function renderDobTrade(series,row,primitives,candles,currentBar,targetLa
   }
  }
  add(new DobTradeAutoscale(row,candles));
+}
+
+// LQ-Sweep-POI (Philip: der goldene „POI … Überlappung“-Kasten sagt nichts): stattdessen das TS1.1-Setup wie im Chart sonst,
+// gesweepte LS-Linie vom Pivot bis zum Sweep plus kurze Sweep-Marke und die TS1.1-OB-Box, Farben/Breiten wie
+// usePriceChartTradeSetupDrawing (tradeSetupShort/-Long). ts11 = trade_setups-Zeile, geladen in useDobChartRoute.
+function addTs11Poi(add,row,candles,eventBarSeconds){
+ const ts=row.ts11,key=ts.direction==='short'?'tradeSetupShort':'tradeSetupLong',sec=t=>Date.parse(t)/1000;
+ const lsPivot=sec(ts.ls_pivot_time),swept=sec(ts.ls_touched_time),obStart=sec(ts.ob_start_time);
+ const price=v=>fmtPrice(Number(v),pricePrecisionForInstrument(row.instrument));
+ if([lsPivot,swept].every(Number.isFinite)&&ts.ls_price!=null){
+  add(new LiquidityLinePrimitive({price:Number(ts.ls_price),pivotTime:Math.max(lsPivot,candles[0].time),endTime:swept},
+   {color:cssColor(key),lineWidth:lineWidth(key),label:`LS ${price(ts.ls_price)}`,labelSide:'end-above',forceLabel:true,eventBarSeconds},candles));
+  add(new LiquidityLinePrimitive({price:Number(ts.ls_price),pivotTime:swept,endTime:swept+3*eventBarSeconds},
+   {color:cssColor(key),lineWidth:4,label:`Sweep ${formatBerlinTime(swept)}`,labelSide:'end-below',forceLabel:true,eventBarSeconds},candles));
+ }
+ if(Number.isFinite(obStart))add(new OrderBlockPrimitive({top:Number(ts.ob_top),bottom:Number(ts.ob_bottom),startTime:obStart,
+  drawStartTime:Math.max(obStart,candles[0].time),endTime:obStart+TRADE_SETUP_OB_WIDTH_SEC,touched:true},
+  {fillColor:cssColorScaled(key,TRADE_SETUP_OB_FILL_RATIO),borderColor:cssColorScaled(key,TRADE_SETUP_OB_BORDER_RATIO),borderWidth:lineWidth(key),
+   textColor:'rgba(255, 255, 255, 0.9)',forceLabel:true,eventBarSeconds,
+   label:dobTs11Label({tradeSetupId:ts.id,match:row.features?.poi_match,gapUsd:row.features?.poi_gap_usd})},candles));
 }
