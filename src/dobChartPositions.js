@@ -1,7 +1,10 @@
-import {dobRowGuardrailReason,dobRowConfigTpR} from './dobGuardrails.js';
+import {dobRowGuardrailReason,dobRowConfigTpR,DOB_GUARDRAILS_DEFAULT} from './dobGuardrails.js';
 import {dobTargetOutcome} from './dobTradeStatistics.js';
 import {entryRiskScale} from './entryRisk.js';
 import {candleTouchesPrice} from './structurePivotTime.ts';
+
+// Roher Lauf wie die Kachel „Standard“: TP 2R, nichts gesperrt. Der Default sperrt lebende Gegen-DOBs, deshalb hier ausdrücklich aus.
+export const DOB_RAW_CONFIG=Object.freeze({...DOB_GUARDRAILS_DEFAULT,counterDobMode:'off'});
 
 // Ein Lauf-Trade (dob_trade_setups) als Position im Hauptchart: TP und Ausgang nach der Konfig wie auf /dob-statistik
 // (dobRowConfigTpR, dobTargetOutcome), gesperrte nur mit showBlocked. null = nicht zeichnen.

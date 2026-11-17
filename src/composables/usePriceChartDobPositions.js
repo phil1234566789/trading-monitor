@@ -2,7 +2,7 @@ import {ref,onMounted} from 'vue';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
 import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow} from '../dobGuardrails.js';
-import {dobChartPosition} from '../dobChartPositions.js';
+import {dobChartPosition,DOB_RAW_CONFIG} from '../dobChartPositions.js';
 import {addDobPosition} from '../dobTradeRendering.js';
 import {barSecondsFor} from '../timeframes.js';
 
@@ -21,7 +21,7 @@ export function useDobRunOptions(){
 
 // Alle Trades eines DOB-Laufs als Positionen im Hauptchart. Lauf + Instrument werden einmal geladen (Paging, PostgREST-Deckel)
 // samt gespeicherter Sperr-Konfig; gezeichnet wird nur, was in den geladenen Kerzen liegt.
-// context(): {series, candles, enabled, run, symbol, currentBar, showBlocked}
+// context(): {series, candles, enabled, run, symbol, currentBar, showBlocked, withConfig}
 export function usePriceChartDobPositions(context){
  const status=ref('');
  let primitives=[],series=null,key=null,data=null,request=0;
@@ -34,9 +34,10 @@ export function usePriceChartDobPositions(context){
   if(!series||!data||!c.candles.length)return;
   const add=p=>{series.attachPrimitive(p);primitives.push(p);};
   const eventBarSeconds=barSecondsFor(c.currentBar);
+  const config=c.withConfig===false?DOB_RAW_CONFIG:data.config;
   let shown=0;
   for(const row of data.rows){
-   const p=dobChartPosition(row,data.config,c.candles,c.showBlocked);
+   const p=dobChartPosition(row,config,c.candles,c.showBlocked);
    if(!p)continue;
    shown++;
    addDobPosition(add,{...p,targetLabel:`TP ${p.k.toLocaleString('de-DE')}R`},c.candles,eventBarSeconds,{muted:p.blocked});

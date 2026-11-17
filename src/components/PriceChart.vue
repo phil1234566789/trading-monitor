@@ -230,7 +230,7 @@ const props = defineProps({
   showDoubleOrderBlocks: {type:Boolean,default:false},
   pinnedDoubleOrderBlocks:{type:Array,default:()=>[]},
   dobTrade:{type:Object,default:null},
-  // Alle Trades eines DOB-Laufs als Positionen: {enabled, run, showBlocked}.
+  // Alle Trades eines DOB-Laufs als Positionen: {enabled, run, showBlocked, withConfig}.
   dobPositions:{type:Object,default:null},
   hoveredDoubleOrderBlockPin:{type:Object,default:null},
   showObs1h: { type: Boolean, default: true },
@@ -630,7 +630,7 @@ function renderDobTradeOverlay(){
 }
 const dobDetails=doubleOrderBlocks.details;
 const dobPositions=usePriceChartDobPositions(()=>({series:candleSeries,candles:clipReplay(allCandles),currentBar:props.currentBar,symbol:props.symbol,
-  enabled:!!props.dobPositions?.enabled&&props.showTradeSetups&&!snapshotView.value,run:props.dobPositions?.run,showBlocked:!!props.dobPositions?.showBlocked}));
+  enabled:!!props.dobPositions?.enabled&&props.showTradeSetups&&!snapshotView.value,run:props.dobPositions?.run,showBlocked:!!props.dobPositions?.showBlocked,withConfig:props.dobPositions?.withConfig!==false}));
 const dobPositionsStatus=dobPositions.status;
 onUnmounted(dobPositions.dispose);
 let candlesReady = false;

@@ -174,9 +174,10 @@ const showMmtPositions=useLocalStorageRef("showMmtPositions",showMmt.value);
 const showDobPositions=useLocalStorageRef("showDobPositions",false);
 const dobPositionsRun=useLocalStorageRef("dobPositionsRun","");
 const dobPositionsShowBlocked=useLocalStorageRef("dobPositionsShowBlocked",false);
+const dobPositionsWithConfig=useLocalStorageRef("dobPositionsWithConfig",true);
 const dobRunOptions=useDobRunOptions();
 watch(dobRunOptions,list=>{if(list.length&&!list.some(r=>r.id===dobPositionsRun.value))dobPositionsRun.value=list.at(-1).id;});
-const dobPositions=computed(()=>({enabled:showDobPositions.value,run:dobPositionsRun.value,showBlocked:dobPositionsShowBlocked.value}));
+const dobPositions=computed(()=>({enabled:showDobPositions.value,run:dobPositionsRun.value,showBlocked:dobPositionsShowBlocked.value,withConfig:dobPositionsWithConfig.value}));
 const brokerPositions=ref([]);
 const showTrades = useLocalStorageRef("showTrades", true);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
@@ -1991,7 +1992,8 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{active:showDobPositions}" :aria-pressed="showDobPositions" title="Alle Trades des Laufs auf diesem Instrument, TP und Ausgang nach gespeicherter DOB-Konfig" @click="showDobPositions=!showDobPositions">DOB-Setup-Positionen</ToggleButton>
           <div v-if="showDobPositions" class="dob-positions-options">
             <label>Lauf <select v-model="dobPositionsRun"><option v-for="r in dobRunOptions" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
-            <label><input v-model="dobPositionsShowBlocked" type="checkbox"> gesperrte zeigen</label>
+            <label title="aus: roher Lauf mit TP 2R und ohne Sperren, wie die Kachel „Standard“ auf /dob-statistik"><input v-model="dobPositionsWithConfig" type="checkbox"> mit Konfig</label>
+            <label v-if="dobPositionsWithConfig"><input v-model="dobPositionsShowBlocked" type="checkbox"> gesperrte zeigen</label>
           </div>
 
           <div class="toggle-dropdown-divider"></div>

@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobChartPosition} from '../src/dobChartPositions.js';
+import {dobChartPosition,DOB_RAW_CONFIG} from '../src/dobChartPositions.js';
 import {dobGuardrailsFromRow,DOB_GUARDRAILS_DEFAULT} from '../src/dobGuardrails.js';
 
 // Long, Entry 100, SL 99 (1R = 1): Ziel 2R bei 102 um t=600 erreicht, später 3R (103) bei t=1200.
@@ -23,6 +23,10 @@ describe('dobChartPosition',()=>{
   const p=dobChartPosition(row,DOB_GUARDRAILS_DEFAULT,candles.slice(0,2));
   expect(p).toMatchObject({endTime:300,position:{outcome:null}});
   expect(dobChartPosition({...row,entry_time:900},DOB_GUARDRAILS_DEFAULT,candles.slice(0,2))).toBe(null);
+ });
+ it('roher Lauf: TP 2R, auch ein lebender Gegen-DOB bleibt sichtbar',()=>{
+  expect(dobChartPosition({...row,counter_dob_status:'live'},DOB_GUARDRAILS_DEFAULT,candles)).toBe(null);
+  expect(dobChartPosition({...row,counter_dob_status:'live'},DOB_RAW_CONFIG,candles)).toMatchObject({k:2,blocked:false,position:{outcome:'win'}});
  });
  it('gesperrte nur mit showBlocked, dann markiert',()=>{
   const blocked=dobGuardrailsFromRow({blocked_months:[1]}); // t=300 ist Januar 1970
