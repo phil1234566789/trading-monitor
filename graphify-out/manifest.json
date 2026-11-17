@@ -10104,9 +10104,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeSetup.js": {
-    "mtime": 1794922860.6501029,
-    "seen": 1794931635.0215724,
-    "ast_hash": "c3cc413a720bbaa444bc72357c07cf9b",
+    "mtime": 1794932560.5356565,
+    "seen": 1794933372.0191436,
+    "ast_hash": "7d21bccc51b624400e01a2e3cc78e2da",
     "semantic_hash": ""
   },
   "src/doubleOrderBlockData.js": {
@@ -10200,9 +10200,9 @@
     "semantic_hash": ""
   },
   "scripts/dobTradeSetupsFill.mjs": {
-    "mtime": 1794922860.651103,
-    "seen": 1794931635.0205724,
-    "ast_hash": "c40232604f9e79d579aaff586f1de80f",
+    "mtime": 1794932589.4820857,
+    "seen": 1794933371.9532483,
+    "ast_hash": "86fe2ef635f90a37185ed96e5391bf7f",
     "semantic_hash": ""
   },
   "src/composables/useDobChartRoute.js": {
@@ -10212,15 +10212,15 @@
     "semantic_hash": ""
   },
   "src/dobTradeStatistics.js": {
-    "mtime": 1794930676.5700474,
-    "seen": 1794931635.0215724,
-    "ast_hash": "41fc931d1bc0ca31d4589e2d6e0ebc52",
+    "mtime": 1794932522.7218943,
+    "seen": 1794933372.0191436,
+    "ast_hash": "690edf86797284d1251555e13012219d",
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
-    "mtime": 1794930676.5720472,
-    "seen": 1794931635.0215724,
-    "ast_hash": "22277ae88dae1289d2470b69d9dce66e",
+    "mtime": 1794932543.9795604,
+    "seen": 1794933372.0771775,
+    "ast_hash": "7a23abc6a813519a70e63da4f1867fd5",
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
@@ -10260,21 +10260,21 @@
     "semantic_hash": ""
   },
   "src/dobAlarm.js": {
-    "mtime": 1794922860.6501029,
-    "seen": 1794931635.0215724,
-    "ast_hash": "878bc5179bcf5c5dd8e6d2739631d115",
+    "mtime": 1794932560.5366564,
+    "seen": 1794933372.0171432,
+    "ast_hash": "185ea4a95b790d373b8f65c64b1d280d",
     "semantic_hash": ""
   },
   "supabase/functions/dob-watcher/index.ts": {
-    "mtime": 1794922860.651103,
-    "seen": 1794931635.0215724,
-    "ast_hash": "ccf62fed167a0383889dd1bd1765cc4e",
+    "mtime": 1794932560.5376587,
+    "seen": 1794933372.0871775,
+    "ast_hash": "0852e3f5db05fd6ab58db715f854c6ab",
     "semantic_hash": ""
   },
   "test/dobAlarm.test.js": {
-    "mtime": 1794922893.4015126,
-    "seen": 1794931635.0215724,
-    "ast_hash": "4d932f8c72845c275dd3bfc2bbddbe07",
+    "mtime": 1794932620.5616016,
+    "seen": 1794933372.1255462,
+    "ast_hash": "9049a1bc475ac5a6eca43d759d79c29e",
     "semantic_hash": ""
   },
   "test/dobFixtures.js": {
@@ -10314,9 +10314,9 @@
     "semantic_hash": ""
   },
   "src/dobMaxR.js": {
-    "mtime": 1794913690.6119418,
-    "seen": 1794931635.0215724,
-    "ast_hash": "8cb7ac508fc67546ecb4e36137b3e7d0",
+    "mtime": 1794932504.842678,
+    "seen": 1794933372.0181444,
+    "ast_hash": "a90304054cba19b0c6360263938d20b2",
     "semantic_hash": ""
   },
   "test/dobMaxR.test.js": {
@@ -10392,15 +10392,15 @@
     "semantic_hash": ""
   },
   "src/components/DobGuardrailsPanel.vue": {
-    "mtime": 1794930676.5640478,
-    "seen": 1794931635.0215724,
-    "ast_hash": "fc193a59175f3696ed5d5a2dee28cf0e",
+    "mtime": 1794932543.9795604,
+    "seen": 1794933371.9842525,
+    "ast_hash": "f73f56753b404958cf6202f2fbd8bad0",
     "semantic_hash": ""
   },
   "src/dobGuardrails.js": {
-    "mtime": 1794922860.6491034,
-    "seen": 1794931635.0215724,
-    "ast_hash": "a01177ac259d6d9010e44dcdab37848c",
+    "mtime": 1794932504.8436806,
+    "seen": 1794933372.0181444,
+    "ast_hash": "580479968fff00211572edd0046770b8",
     "semantic_hash": ""
   },
   "test/dobGuardrails.test.js": {
@@ -10590,9 +10590,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeFeatures.js": {
-    "mtime": 1794922859.5504184,
-    "seen": 1794931635.0215724,
-    "ast_hash": "4cdcb6f6513ec0a157916d307d64a95f",
+    "mtime": 1794932504.842678,
+    "seen": 1794933372.0191436,
+    "ast_hash": "d505de0ff0b227152b8d169f9e445e9a",
     "semantic_hash": ""
   },
   "test/dobTradeFeatures.test.js": {
@@ -10620,9 +10620,9 @@
     "semantic_hash": ""
   },
   "src/dobChartPositions.js": {
-    "mtime": 1794931575.8335025,
-    "seen": 1794931635.0215724,
-    "ast_hash": "bb32cad93323828ea25ac91c47e33272",
+    "mtime": 1794932572.8434958,
+    "seen": 1794933372.0171432,
+    "ast_hash": "2fd42c7d7ad250903dd32c257ca6dfc5",
     "semantic_hash": ""
   },
   "test/dobChartPositions.test.js": {
@@ -10632,9 +10632,9 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/lab-partial-profit-xau-2026.json": {
-    "mtime": 1794931984.3004186,
-    "seen": 1794932046.4603071,
-    "ast_hash": "be3c08d27a8bdae8289acb9145963bca",
+    "mtime": 1794933039.6751366,
+    "seen": 1794933371.9282482,
+    "ast_hash": "fbdc360933d017d24923a7280eea9a84",
     "semantic_hash": ""
   },
   "scripts/dobLabPartialProfit.mjs": {
@@ -10653,6 +10653,18 @@
     "mtime": 1794931575.880156,
     "seen": 1794931635.0205724,
     "ast_hash": "655d703027c3378cd6b628caadd42478",
+    "semantic_hash": ""
+  },
+  "src/dobPartialProfit.js": {
+    "mtime": 1794932522.0074687,
+    "seen": 1794933372.0181444,
+    "ast_hash": "b9926cd86e4d057846cefe825956b7c9",
+    "semantic_hash": ""
+  },
+  "test/dobPartialProfit.test.js": {
+    "mtime": 1794932620.592425,
+    "seen": 1794933372.1280608,
+    "ast_hash": "eaa9ca1a931f599767918c207d6f318c",
     "semantic_hash": ""
   }
 }
