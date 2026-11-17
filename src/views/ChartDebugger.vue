@@ -15,8 +15,12 @@ import {chartDebuggerFvgZones,chartDebuggerReactionZones,chartDebuggerOpponentZo
 import ObReactionGraph from '../components/ObReactionGraph.vue';
 import DobPairGraph from '../components/DobPairGraph.vue';
 import {dobPairGraph,dobChangeTimes} from '../dobPairGraph.js';
+import DobEntryM1Section from '../components/DobEntryM1Section.vue';
 
 const route=useRoute(),router=useRouter();
+// Sektion DOB-Entry M1 ist eine reine Ansicht ohne Fixture; die Fall-Sektion bleibt per v-show montiert, ihr Chart braucht chartEl.
+const section=ref(route.query.sektion==='dob-entry-m1'?'dob-entry-m1':'cases');
+watch(section,s=>router.replace({query:s==='cases'?{fall:caseId.value}:{sektion:s}}));
 const caseId=ref(CHART_DEBUGGER_CASES.some(c=>c.id===route.query.fall)?route.query.fall:CHART_DEBUGGER_CASES[0].id);
 const current=computed(()=>CHART_DEBUGGER_CASES.find(c=>c.id===caseId.value));
 const fixture=shallowRef(null),steps=ref({from:0,through:0}),evaluatedAt=ref(0),error=ref('');
@@ -149,7 +153,9 @@ watch(tf,()=>{fitPending=true;draw();});
 
 <template>
  <div class="chart-debugger">
-  <div class="bar">
+  <label class="section">Sektion <select v-model="section"><option value="cases">OB-Reaktion / DOB</option><option value="dob-entry-m1">DOB-Entry M1</option></select></label>
+  <DobEntryM1Section v-if="section==='dob-entry-m1'"/>
+  <div v-show="section==='cases'" class="bar">
    <select v-model="caseId"><optgroup v-for="[group,cases] in CASE_GROUPS" :key="group" :label="group">
     <option v-for="c in cases" :key="c.id" :value="c.id">{{ c.label }} · erwartet: {{ expectedText(c) }}{{ checkMark(c.id) }}</option></optgroup></select>
    <button @click="jump(-1)" :disabled="jumpTarget(-1)==null" title="Zur vorigen Änderung im Knotenplan (Shift+←)">◀ vorige Änderung</button>
@@ -162,7 +168,7 @@ watch(tf,()=>{fitPending=true;draw();});
    <label><input type="checkbox" v-model="bridgeClosures"> Marktschluss überbrücken</label>
    <span class="at">evaluatedAt {{ evaluatedAt ? formatDatedTime(evaluatedAt) : '–' }}</span>
   </div>
-  <div class="main">
+  <div v-show="section==='cases'" class="main">
    <div ref="chartEl" class="chart"></div>
    <div class="graph">
     <label v-if="isPair">Ebene <select v-model="level"><option value="reaction">OB-Reaktion</option><option value="dob">DOB</option></select></label>
