@@ -1,0 +1,1434 @@
+{
+  "measurement": "dob-sl-varianten-v1",
+  "git": "e84de58f",
+  "symbol": "XAUUSD",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "rTargets": [
+    2,
+    2.5,
+    3,
+    4,
+    5
+  ],
+  "methodology": [
+    "Trades: einmalige Trades der Statistikläufe v1/v2 (dobRuns.mjs = dobSetupGrid, Dedup Richtung/Entry/SL).",
+    "Teilmenge: stopAnchor = retestExtreme (heutige Regel, keine interne FVG offen). Vergleich SL Retest-Extrem (heute) gegen SL ferne M5-Kante von OB2 (Long Unterkante, Short Oberkante).",
+    "Entry unverändert; Ziel = Entry ± R·Risiko der jeweiligen Variante; Ausgang evaluateDoubleOrderBlockOutcome mit rMultiple bis Datenende.",
+    "n = Win + Loss; ΣR = R·Win − Loss; Halbjahre nach Berliner Entry-Monat; Risiko = |Entry − SL| in USD.",
+    "Kreuzvergleich je R: weit überlebt, eng gestoppt = enge Variante Loss und weite Variante Win (und umgekehrt), Anteil an der Teilmenge.",
+    "Gesamtbild: alle Trades des Laufs, heutige Regel gegen „immer M5-Kante“ (bei Trades mit SL an der M5-Kante ändert sich nichts)."
+  ],
+  "runs": {
+    "v1": {
+      "trades": 984,
+      "extremeTrades": 386,
+      "m5EdgeTrades": 598,
+      "medianRiskUsd": {
+        "extreme": 4.87,
+        "m5Edge": 7.17
+      },
+      "byR": {
+        "2": {
+          "extreme": {
+            "n": 385,
+            "win": 132,
+            "loss": 253,
+            "winrate": 34.3,
+            "sumR": 11,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 213,
+                "win": 77,
+                "loss": 136,
+                "winrate": 36.2,
+                "sumR": 18,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 55,
+                "loss": 117,
+                "winrate": 32,
+                "sumR": -7,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 383,
+            "win": 124,
+            "loss": 259,
+            "winrate": 32.4,
+            "sumR": -11,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 211,
+                "win": 64,
+                "loss": 147,
+                "winrate": 30.3,
+                "sumR": -19,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 60,
+                "loss": 112,
+                "winrate": 34.9,
+                "sumR": 8,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 22,
+            "share": 5.7
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 28,
+            "share": 7.3
+          }
+        },
+        "3": {
+          "extreme": {
+            "n": 384,
+            "win": 98,
+            "loss": 286,
+            "winrate": 25.5,
+            "sumR": 8,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 212,
+                "win": 55,
+                "loss": 157,
+                "winrate": 25.9,
+                "sumR": 8,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 43,
+                "loss": 129,
+                "winrate": 25,
+                "sumR": 0,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 383,
+            "win": 100,
+            "loss": 283,
+            "winrate": 26.1,
+            "sumR": 17,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 211,
+                "win": 56,
+                "loss": 155,
+                "winrate": 26.5,
+                "sumR": 13,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 44,
+                "loss": 128,
+                "winrate": 25.6,
+                "sumR": 4,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 20,
+            "share": 5.2
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 18,
+            "share": 4.7
+          }
+        },
+        "4": {
+          "extreme": {
+            "n": 384,
+            "win": 86,
+            "loss": 298,
+            "winrate": 22.4,
+            "sumR": 46,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 212,
+                "win": 51,
+                "loss": 161,
+                "winrate": 24.1,
+                "sumR": 43,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 35,
+                "loss": 137,
+                "winrate": 20.3,
+                "sumR": 3,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 383,
+            "win": 87,
+            "loss": 296,
+            "winrate": 22.7,
+            "sumR": 52,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 211,
+                "win": 51,
+                "loss": 160,
+                "winrate": 24.2,
+                "sumR": 44,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 36,
+                "loss": 136,
+                "winrate": 20.9,
+                "sumR": 8,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 18,
+            "share": 4.7
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 17,
+            "share": 4.4
+          }
+        },
+        "5": {
+          "extreme": {
+            "n": 384,
+            "win": 76,
+            "loss": 308,
+            "winrate": 19.8,
+            "sumR": 72,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 212,
+                "win": 46,
+                "loss": 166,
+                "winrate": 21.7,
+                "sumR": 64,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 30,
+                "loss": 142,
+                "winrate": 17.4,
+                "sumR": 8,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 382,
+            "win": 76,
+            "loss": 306,
+            "winrate": 19.9,
+            "sumR": 74,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 210,
+                "win": 43,
+                "loss": 167,
+                "winrate": 20.5,
+                "sumR": 48,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 33,
+                "loss": 139,
+                "winrate": 19.2,
+                "sumR": 26,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 15,
+            "share": 3.9
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 14,
+            "share": 3.6
+          }
+        },
+        "2.5": {
+          "extreme": {
+            "n": 384,
+            "win": 116,
+            "loss": 268,
+            "winrate": 30.2,
+            "sumR": 22,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 212,
+                "win": 66,
+                "loss": 146,
+                "winrate": 31.1,
+                "sumR": 19,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 50,
+                "loss": 122,
+                "winrate": 29.1,
+                "sumR": 3,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 383,
+            "win": 112,
+            "loss": 271,
+            "winrate": 29.2,
+            "sumR": 9,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 211,
+                "win": 59,
+                "loss": 152,
+                "winrate": 28,
+                "sumR": -4.5,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 172,
+                "win": 53,
+                "loss": 119,
+                "winrate": 30.8,
+                "sumR": 13.5,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 24,
+            "share": 6.2
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 28,
+            "share": 7.3
+          }
+        }
+      },
+      "overall": {
+        "2": {
+          "heutigeRegel": {
+            "n": 978,
+            "win": 359,
+            "loss": 619,
+            "winrate": 36.7,
+            "sumR": 99,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 540,
+                "win": 196,
+                "loss": 344,
+                "winrate": 36.3,
+                "sumR": 48,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 163,
+                "loss": 275,
+                "winrate": 37.2,
+                "sumR": 51,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 976,
+            "win": 351,
+            "loss": 625,
+            "winrate": 36,
+            "sumR": 77,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 538,
+                "win": 183,
+                "loss": 355,
+                "winrate": 34,
+                "sumR": 11,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 168,
+                "loss": 270,
+                "winrate": 38.4,
+                "sumR": 66,
+                "smallN": false
+              }
+            }
+          }
+        },
+        "3": {
+          "heutigeRegel": {
+            "n": 978,
+            "win": 275,
+            "loss": 703,
+            "winrate": 28.1,
+            "sumR": 122,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 538,
+                "win": 142,
+                "loss": 396,
+                "winrate": 26.4,
+                "sumR": 30,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 133,
+                "loss": 307,
+                "winrate": 30.2,
+                "sumR": 92,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 977,
+            "win": 277,
+            "loss": 700,
+            "winrate": 28.4,
+            "sumR": 131,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 537,
+                "win": 143,
+                "loss": 394,
+                "winrate": 26.6,
+                "sumR": 35,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 134,
+                "loss": 306,
+                "winrate": 30.5,
+                "sumR": 96,
+                "smallN": false
+              }
+            }
+          }
+        },
+        "4": {
+          "heutigeRegel": {
+            "n": 976,
+            "win": 233,
+            "loss": 743,
+            "winrate": 23.9,
+            "sumR": 189,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 537,
+                "win": 125,
+                "loss": 412,
+                "winrate": 23.3,
+                "sumR": 88,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 108,
+                "loss": 331,
+                "winrate": 24.6,
+                "sumR": 101,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 975,
+            "win": 234,
+            "loss": 741,
+            "winrate": 24,
+            "sumR": 195,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 536,
+                "win": 125,
+                "loss": 411,
+                "winrate": 23.3,
+                "sumR": 89,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 109,
+                "loss": 330,
+                "winrate": 24.8,
+                "sumR": 106,
+                "smallN": false
+              }
+            }
+          }
+        },
+        "5": {
+          "heutigeRegel": {
+            "n": 975,
+            "win": 204,
+            "loss": 771,
+            "winrate": 20.9,
+            "sumR": 249,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 537,
+                "win": 112,
+                "loss": 425,
+                "winrate": 20.9,
+                "sumR": 135,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 92,
+                "loss": 346,
+                "winrate": 21,
+                "sumR": 114,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 973,
+            "win": 204,
+            "loss": 769,
+            "winrate": 21,
+            "sumR": 251,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 535,
+                "win": 109,
+                "loss": 426,
+                "winrate": 20.4,
+                "sumR": 119,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 95,
+                "loss": 343,
+                "winrate": 21.7,
+                "sumR": 132,
+                "smallN": false
+              }
+            }
+          }
+        },
+        "2.5": {
+          "heutigeRegel": {
+            "n": 979,
+            "win": 322,
+            "loss": 657,
+            "winrate": 32.9,
+            "sumR": 148,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 539,
+                "win": 172,
+                "loss": 367,
+                "winrate": 31.9,
+                "sumR": 63,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 150,
+                "loss": 290,
+                "winrate": 34.1,
+                "sumR": 85,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 978,
+            "win": 318,
+            "loss": 660,
+            "winrate": 32.5,
+            "sumR": 135,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 538,
+                "win": 165,
+                "loss": 373,
+                "winrate": 30.7,
+                "sumR": 39.5,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 153,
+                "loss": 287,
+                "winrate": 34.8,
+                "sumR": 95.5,
+                "smallN": false
+              }
+            }
+          }
+        }
+      },
+      "samples": {
+        "#134": {
+          "stopAnchor": "retestExtreme",
+          "entry": 3929.65,
+          "stopToday": 3947.95,
+          "farEdge": 3948.35,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#135": {
+          "stopAnchor": "m5-edge",
+          "entry": 4116.3,
+          "stopToday": 4135.88,
+          "farEdge": 4135.88,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#136": {
+          "stopAnchor": "retestExtreme",
+          "entry": 3934.94,
+          "stopToday": 3926.76,
+          "farEdge": 3923.93,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#136b": {
+          "stopAnchor": "m5-edge",
+          "entry": 3953.11,
+          "stopToday": 3937.72,
+          "farEdge": 3937.72,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#138": {
+          "stopAnchor": "m5-edge",
+          "entry": 4003.85,
+          "stopToday": 4015.41,
+          "farEdge": 4015.41,
+          "r2": {
+            "heute": "loss",
+            "immerM5": "loss"
+          }
+        },
+        "#139": {
+          "stopAnchor": "retestExtreme",
+          "entry": 4087.98,
+          "stopToday": 4093.84,
+          "farEdge": 4093.98,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#139b": {
+          "stopAnchor": "m5-edge",
+          "entry": 4086.93,
+          "stopToday": 4093.84,
+          "farEdge": 4093.84,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#140": {
+          "stopAnchor": "m5-edge",
+          "entry": 4102.41,
+          "stopToday": 4116.2,
+          "farEdge": 4116.2,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#140b": {
+          "stopAnchor": "m5-edge",
+          "entry": 4102.41,
+          "stopToday": 4116.2,
+          "farEdge": 4116.2,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#141": {
+          "stopAnchor": "m5-edge",
+          "entry": 4171.31,
+          "stopToday": 4178.08,
+          "farEdge": 4178.08,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        }
+      }
+    },
+    "v2": {
+      "trades": 524,
+      "extremeTrades": 199,
+      "m5EdgeTrades": 325,
+      "medianRiskUsd": {
+        "extreme": 4.91,
+        "m5Edge": 7.39
+      },
+      "byR": {
+        "2": {
+          "extreme": {
+            "n": 198,
+            "win": 67,
+            "loss": 131,
+            "winrate": 33.8,
+            "sumR": 3,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 39,
+                "loss": 77,
+                "winrate": 33.6,
+                "sumR": 1,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 28,
+                "loss": 54,
+                "winrate": 34.1,
+                "sumR": 2,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 198,
+            "win": 66,
+            "loss": 132,
+            "winrate": 33.3,
+            "sumR": 0,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 33,
+                "loss": 83,
+                "winrate": 28.4,
+                "sumR": -17,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 33,
+                "loss": 49,
+                "winrate": 40.2,
+                "sumR": 17,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 13,
+            "share": 6.5
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 14,
+            "share": 7
+          }
+        },
+        "3": {
+          "extreme": {
+            "n": 198,
+            "win": 51,
+            "loss": 147,
+            "winrate": 25.8,
+            "sumR": 6,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 28,
+                "loss": 88,
+                "winrate": 24.1,
+                "sumR": -4,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 23,
+                "loss": 59,
+                "winrate": 28,
+                "sumR": 10,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 198,
+            "win": 53,
+            "loss": 145,
+            "winrate": 26.8,
+            "sumR": 14,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 28,
+                "loss": 88,
+                "winrate": 24.1,
+                "sumR": -4,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 25,
+                "loss": 57,
+                "winrate": 30.5,
+                "sumR": 18,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 11,
+            "share": 5.5
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 9,
+            "share": 4.5
+          }
+        },
+        "4": {
+          "extreme": {
+            "n": 198,
+            "win": 45,
+            "loss": 153,
+            "winrate": 22.7,
+            "sumR": 27,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 26,
+                "loss": 90,
+                "winrate": 22.4,
+                "sumR": 14,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 19,
+                "loss": 63,
+                "winrate": 23.2,
+                "sumR": 13,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 198,
+            "win": 46,
+            "loss": 152,
+            "winrate": 23.2,
+            "sumR": 32,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 26,
+                "loss": 90,
+                "winrate": 22.4,
+                "sumR": 14,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 20,
+                "loss": 62,
+                "winrate": 24.4,
+                "sumR": 18,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 10,
+            "share": 5
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 9,
+            "share": 4.5
+          }
+        },
+        "5": {
+          "extreme": {
+            "n": 198,
+            "win": 40,
+            "loss": 158,
+            "winrate": 20.2,
+            "sumR": 42,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 23,
+                "loss": 93,
+                "winrate": 19.8,
+                "sumR": 22,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 17,
+                "loss": 65,
+                "winrate": 20.7,
+                "sumR": 20,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 197,
+            "win": 39,
+            "loss": 158,
+            "winrate": 19.8,
+            "sumR": 37,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 115,
+                "win": 21,
+                "loss": 94,
+                "winrate": 18.3,
+                "sumR": 11,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 18,
+                "loss": 64,
+                "winrate": 22,
+                "sumR": 26,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 8,
+            "share": 4
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 8,
+            "share": 4
+          }
+        },
+        "2.5": {
+          "extreme": {
+            "n": 198,
+            "win": 59,
+            "loss": 139,
+            "winrate": 29.8,
+            "sumR": 8.5,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 34,
+                "loss": 82,
+                "winrate": 29.3,
+                "sumR": 3,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 25,
+                "loss": 57,
+                "winrate": 30.5,
+                "sumR": 5.5,
+                "smallN": false
+              }
+            }
+          },
+          "m5Edge": {
+            "n": 198,
+            "win": 59,
+            "loss": 139,
+            "winrate": 29.8,
+            "sumR": 8.5,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 116,
+                "win": 30,
+                "loss": 86,
+                "winrate": 25.9,
+                "sumR": -11,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 82,
+                "win": 29,
+                "loss": 53,
+                "winrate": 35.4,
+                "sumR": 19.5,
+                "smallN": false
+              }
+            }
+          },
+          "weitUeberlebtEngGestoppt": {
+            "n": 13,
+            "share": 6.5
+          },
+          "engUeberlebtWeitGestoppt": {
+            "n": 13,
+            "share": 6.5
+          }
+        }
+      },
+      "overall": {
+        "2": {
+          "heutigeRegel": {
+            "n": 521,
+            "win": 187,
+            "loss": 334,
+            "winrate": 35.9,
+            "sumR": 40,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 103,
+                "loss": 200,
+                "winrate": 34,
+                "sumR": 6,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 84,
+                "loss": 134,
+                "winrate": 38.5,
+                "sumR": 34,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 521,
+            "win": 186,
+            "loss": 335,
+            "winrate": 35.7,
+            "sumR": 37,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 97,
+                "loss": 206,
+                "winrate": 32,
+                "sumR": -12,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 89,
+                "loss": 129,
+                "winrate": 40.8,
+                "sumR": 49,
+                "smallN": false
+              }
+            }
+          }
+        },
+        "3": {
+          "heutigeRegel": {
+            "n": 521,
+            "win": 145,
+            "loss": 376,
+            "winrate": 27.8,
+            "sumR": 59,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 74,
+                "loss": 229,
+                "winrate": 24.4,
+                "sumR": -7,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 71,
+                "loss": 147,
+                "winrate": 32.6,
+                "sumR": 66,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 521,
+            "win": 147,
+            "loss": 374,
+            "winrate": 28.2,
+            "sumR": 67,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 74,
+                "loss": 229,
+                "winrate": 24.4,
+                "sumR": -7,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 73,
+                "loss": 145,
+                "winrate": 33.5,
+                "sumR": 74,
+                "smallN": false
+              }
+            }
+          }
+        },
+        "4": {
+          "heutigeRegel": {
+            "n": 519,
+            "win": 122,
+            "loss": 397,
+            "winrate": 23.5,
+            "sumR": 91,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 302,
+                "win": 66,
+                "loss": 236,
+                "winrate": 21.9,
+                "sumR": 28,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 56,
+                "loss": 161,
+                "winrate": 25.8,
+                "sumR": 63,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 519,
+            "win": 123,
+            "loss": 396,
+            "winrate": 23.7,
+            "sumR": 96,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 302,
+                "win": 66,
+                "loss": 236,
+                "winrate": 21.9,
+                "sumR": 28,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 57,
+                "loss": 160,
+                "winrate": 26.3,
+                "sumR": 68,
+                "smallN": false
+              }
+            }
+          }
+        },
+        "5": {
+          "heutigeRegel": {
+            "n": 519,
+            "win": 102,
+            "loss": 417,
+            "winrate": 19.7,
+            "sumR": 93,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 302,
+                "win": 55,
+                "loss": 247,
+                "winrate": 18.2,
+                "sumR": 28,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 47,
+                "loss": 170,
+                "winrate": 21.7,
+                "sumR": 65,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 518,
+            "win": 101,
+            "loss": 417,
+            "winrate": 19.5,
+            "sumR": 88,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 301,
+                "win": 53,
+                "loss": 248,
+                "winrate": 17.6,
+                "sumR": 17,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 48,
+                "loss": 169,
+                "winrate": 22.1,
+                "sumR": 71,
+                "smallN": false
+              }
+            }
+          }
+        },
+        "2.5": {
+          "heutigeRegel": {
+            "n": 521,
+            "win": 167,
+            "loss": 354,
+            "winrate": 32.1,
+            "sumR": 63.5,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 89,
+                "loss": 214,
+                "winrate": 29.4,
+                "sumR": 8.5,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 78,
+                "loss": 140,
+                "winrate": 35.8,
+                "sumR": 55,
+                "smallN": false
+              }
+            }
+          },
+          "immerM5Kante": {
+            "n": 521,
+            "win": 167,
+            "loss": 354,
+            "winrate": 32.1,
+            "sumR": 63.5,
+            "smallN": false,
+            "share": 100,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 85,
+                "loss": 218,
+                "winrate": 28.1,
+                "sumR": -5.5,
+                "smallN": false
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 82,
+                "loss": 136,
+                "winrate": 37.6,
+                "sumR": 69,
+                "smallN": false
+              }
+            }
+          }
+        }
+      },
+      "samples": {
+        "#134": {
+          "stopAnchor": "retestExtreme",
+          "entry": 3929.65,
+          "stopToday": 3947.95,
+          "farEdge": 3948.35,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#135": {
+          "stopAnchor": "m5-edge",
+          "entry": 4116.3,
+          "stopToday": 4135.88,
+          "farEdge": 4135.88,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#136": {
+          "stopAnchor": "retestExtreme",
+          "entry": 3934.94,
+          "stopToday": 3926.76,
+          "farEdge": 3923.93,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#136b": {
+          "stopAnchor": "m5-edge",
+          "entry": 3953.11,
+          "stopToday": 3937.72,
+          "farEdge": 3937.72,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#138": {
+          "stopAnchor": "m5-edge",
+          "entry": 4003.85,
+          "stopToday": 4015.41,
+          "farEdge": 4015.41,
+          "r2": {
+            "heute": "loss",
+            "immerM5": "loss"
+          }
+        },
+        "#140": {
+          "stopAnchor": "m5-edge",
+          "entry": 4102.41,
+          "stopToday": 4116.2,
+          "farEdge": 4116.2,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#140b": {
+          "stopAnchor": "m5-edge",
+          "entry": 4102.41,
+          "stopToday": 4116.2,
+          "farEdge": 4116.2,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        },
+        "#141": {
+          "stopAnchor": "m5-edge",
+          "entry": 4171.31,
+          "stopToday": 4178.08,
+          "farEdge": 4178.08,
+          "r2": {
+            "heute": "success",
+            "immerM5": "success"
+          }
+        }
+      }
+    }
+  }
+}
