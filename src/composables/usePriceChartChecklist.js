@@ -18,6 +18,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   let timeBoundaryTimer;
   let saveQueue = Promise.resolve();
   let revision = 0;
+  let lastReady = null;
   let m1PrerequisiteCache;
   let cancelEvaluation = () => {};
   const closeReactionCache = createCloseReactionCache();
@@ -38,11 +39,11 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   }
   function refresh() {
     cancelEvaluation();
-    if (disposed || !enabled()) { state.value = null; return; }
+    if (disposed || !enabled()) { state.value = null; lastReady = null; return; }
     const currentRevision = ++revision;
     const data = adapter.snapshot();
     if (data.status === 'ready') {
-      const loading = { ...evaluateAt(evaluationTime(), { ...data, status: 'loading' }), updating: true };
+      const loading = retainedWhileLoading({ ...evaluateAt(evaluationTime(), { ...data, status: 'loading' }), updating: true });
       state.value = loading;
       emit('checklist-state-change', loading);
       cancelEvaluation = afterBrowserPaint(() => {
@@ -50,12 +51,19 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
       });
     } else publish(data, currentRevision);
   }
+  // Polls und Chart-Nachladen am selben Symbol-/Replay-Stand dürfen den letzten Stand nicht
+  // leeren: die M1-Struktur verwirft sonst ihren Kontext, löscht die Zeichnung und lädt M1 neu.
+  function retainedWhileLoading(result) {
+    return result.status === 'loading' && lastReady ? { ...lastReady, updating: true } : result;
+  }
   function publish(data, currentRevision) {
-    const result = evaluateAt(evaluationTime(), data);
+    let result = evaluateAt(evaluationTime(), data);
     result.updating = data.updating;
+    if (result.status === 'ready' && !result.updating) lastReady = result;
+    result = retainedWhileLoading(result);
     state.value = result;
     emit('checklist-state-change', result);
-    if (statistics && result.status === 'ready') {
+    if (statistics && result.status === 'ready' && !result.updating) {
       const savedSettings = settings();
       const savedSessions = JSON.parse(JSON.stringify(sessionConfigs));
       // Schreibantworten dürfen nach Symbol-/Replaywechsel keinen alten UI-Stand publizieren.
@@ -115,6 +123,7 @@ export function usePriceChartChecklist(props, sessionConfigs, emit, now = () => 
   }
   watch(() => [props.symbol, props.replayUntil], values => {
     adapter.reset(JSON.stringify(values));
+    lastReady = null;
     refresh();
   }, { immediate: true, flush: 'sync' });
   watch(evaluationTime, refresh, { flush: 'sync' });
