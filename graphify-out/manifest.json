@@ -10104,9 +10104,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeSetup.js": {
-    "mtime": 1794914773.0078702,
-    "seen": 1794914901.118479,
-    "ast_hash": "1e5ea76e69785158870148784b277099",
+    "mtime": 1794915467.8462877,
+    "seen": 1794915751.3235507,
+    "ast_hash": "6989005ac106637fa68e261a8dce746d",
     "semantic_hash": ""
   },
   "src/doubleOrderBlockData.js": {
@@ -10200,9 +10200,9 @@
     "semantic_hash": ""
   },
   "scripts/dobTradeSetupsFill.mjs": {
-    "mtime": 1794914773.0098686,
-    "seen": 1794914901.050972,
-    "ast_hash": "ae9b1e37c8fd82c403cefca44118273e",
+    "mtime": 1794915467.8482864,
+    "seen": 1794915751.2547748,
+    "ast_hash": "9d123400858e5e6993e02718349ced91",
     "semantic_hash": ""
   },
   "src/composables/useDobChartRoute.js": {
@@ -10218,9 +10218,9 @@
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
-    "mtime": 1794913690.6139412,
-    "seen": 1794913746.4657605,
-    "ast_hash": "4ef60c690e86f736e85fe7a90958a796",
+    "mtime": 1794915435.305319,
+    "seen": 1794915751.3846056,
+    "ast_hash": "7538f148adb2d765f18e6d79add35481",
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
@@ -10266,15 +10266,15 @@
     "semantic_hash": ""
   },
   "supabase/functions/dob-watcher/index.ts": {
-    "mtime": 1794914773.0088687,
-    "seen": 1794914901.190118,
-    "ast_hash": "b840d0c131c42292e7402242cf63e4a4",
+    "mtime": 1794915467.8472865,
+    "seen": 1794915751.3946054,
+    "ast_hash": "02e444e2a7448f2df8a70c1620dffee9",
     "semantic_hash": ""
   },
   "test/dobAlarm.test.js": {
-    "mtime": 1794914780.6685774,
-    "seen": 1794914901.2293847,
-    "ast_hash": "6d7ffc10f3895738efb4763a3b3ee7cb",
+    "mtime": 1794915496.957292,
+    "seen": 1794915751.4334514,
+    "ast_hash": "444b8ea80ce9d3a984658cff2cdcf31e",
     "semantic_hash": ""
   },
   "test/dobFixtures.js": {
@@ -10392,21 +10392,21 @@
     "semantic_hash": ""
   },
   "src/components/DobGuardrailsPanel.vue": {
-    "mtime": 1794913690.6099415,
-    "seen": 1794913746.4647563,
-    "ast_hash": "5f459c4f1a6196697387ea3b6bb2c08f",
+    "mtime": 1794915435.304319,
+    "seen": 1794915751.2875507,
+    "ast_hash": "633945eeb42161a65d260ab4e05e1f22",
     "semantic_hash": ""
   },
   "src/dobGuardrails.js": {
-    "mtime": 1794913690.6109433,
-    "seen": 1794913746.4647563,
-    "ast_hash": "3e18ecadb7310273e30150a972698a90",
+    "mtime": 1794915510.5722525,
+    "seen": 1794915751.3225505,
+    "ast_hash": "ef52f50fabc237c35d8611cd00ef2b82",
     "semantic_hash": ""
   },
   "test/dobGuardrails.test.js": {
-    "mtime": 1794913690.6169412,
-    "seen": 1794913746.4657605,
-    "ast_hash": "6d1e57ed4bbf1c6d9fe5d895e7ddd624",
+    "mtime": 1794915501.681093,
+    "seen": 1794915751.4334514,
+    "ast_hash": "fd415c1cb50041028e64f8802902c935",
     "semantic_hash": ""
   },
   "src/components/DobStatCell.vue": {
@@ -10452,15 +10452,15 @@
     "semantic_hash": ""
   },
   "src/dobLabFeatures.js": {
-    "mtime": 1794914436.6192863,
-    "seen": 1794914901.1169753,
-    "ast_hash": "93aeefd7f0997d7da461ba809f2d1d2a",
+    "mtime": 1794915319.6290083,
+    "seen": 1794915751.3225505,
+    "ast_hash": "995477962a136815ecf7f1f392a6bc01",
     "semantic_hash": ""
   },
   "test/dobLabFeatures.test.js": {
-    "mtime": 1794914780.615034,
-    "seen": 1794914901.231391,
-    "ast_hash": "152fe71c148664d8fb5bd1a3bea2ca40",
+    "mtime": 1794915496.9587963,
+    "seen": 1794915751.4334514,
+    "ast_hash": "6c1bc0301acc2242bbba7391d74402d8",
     "semantic_hash": ""
   },
   "test/fixtures/dob-native/lab-pins.json": {
@@ -10482,9 +10482,15 @@
     "semantic_hash": ""
   },
   "src/dobCounterDob.js": {
-    "mtime": 1794914773.0078702,
-    "seen": 1794914901.1169753,
-    "ast_hash": "710e243d01ea6a606160a3c8ed592f1a",
+    "mtime": 1794915435.306319,
+    "seen": 1794915751.3225505,
+    "ast_hash": "8597e31550e3a336f9ff24b4713da5df",
+    "semantic_hash": ""
+  },
+  "scripts/dobLabBos.mjs": {
+    "mtime": 1794915618.2460477,
+    "seen": 1794915751.2527757,
+    "ast_hash": "79cac42de4b743322c517929c65b278e",
     "semantic_hash": ""
   }
 }
