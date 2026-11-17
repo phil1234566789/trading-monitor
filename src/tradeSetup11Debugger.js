@@ -135,7 +135,7 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy){
 
 const HOUR=3600;
 // Philip braucht mindestens einen Tag M5-Vorlauf, um den Trend am Fall selbst zu lesen.
-export const TS11_LEADS=[['24h','24 h',24*HOUR],['48h','48 h',48*HOUR],['72h','72 h',72*HOUR],['7d','7 Tage',7*24*HOUR]];
+export const TS11_LEADS=[['24h','24 h',24*HOUR],['36h','36 h',36*HOUR],['48h','48 h',48*HOUR],['72h','72 h',72*HOUR]];
 export const TS11_TAILS=[['1h','+ 1 h',HOUR],['3h','+ 3 h',3*HOUR],['6h','+ 6 h',6*HOUR],['12h','+ 12 h',12*HOUR]];
 const pick=(list,key,fallback)=>(list.find(([k])=>k===key)??list.find(([k])=>k===fallback));
 export const ts11LeadOf=v=>pick(TS11_LEADS,v,'24h')[0];

@@ -16,11 +16,14 @@ import {loadTradeSetup11Context} from '../tradeSetup11ContextLoader.js';
 import {isTs11Pin,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case,ts11CaseWindow,TS11_LEADS,TS11_TAILS,ts11LeadOf,ts11TailOf} from '../tradeSetup11Debugger.js';
 import PinTypeChips from './PinTypeChips.vue';
 import ActionButton from './ui/ActionButton.vue';
+import {renderLowerStructure} from '../structureOverlay.js';
+import {barSecondsFor} from '../timeframes.js';
+import {dobEntryM1Structure} from '../dobEntryM1Structure.js';
 
 // Nur Ansicht/Diagnose: Fälle sind Philips Pins zu TS1.1, neue Pins erscheinen beim nächsten Laden ohne Codeänderung.
 const route=useRoute(),router=useRouter();
 const cases=shallowRef([]),pinId=ref(Number(route.query.pin)||null),error=ref(''),loading=ref(true);
-const tf=ref(route.query.tf==='m1'?'m1':'m5'),lead=ref(ts11LeadOf(route.query.lead)),tail=ref(ts11TailOf(route.query.tail));
+const structure=ref(route.query.struktur==='1'),tf=ref(route.query.tf==='m1'?'m1':'m5'),lead=ref(ts11LeadOf(route.query.lead)),tail=ref(ts11TailOf(route.query.tail));
 const current=computed(()=>cases.value.find(c=>c.id===pinId.value)??null);
 const data=shallowRef(null),status=ref('');
 const SETUP_COLUMNS='id, instrument, direction, source, detector_version, config_hash, input_set_id, fractal_price, fractal_pivot_time, ls_price, ls_pivot_time, ls_touched_time, ls_timeframe, ob_top, ob_bottom, ob_start_time, ob_fvg, created_at, invalidation, trade_setup_sweeps(price, pivot_time, touched_time, timeframe, is_primary)';
@@ -36,9 +39,9 @@ async function loadCases(){
 }
 const optionText=c=>`${c.code} · ${(c.instrument??'?').replace('USD','')} ${c.dir===1?'Short':c.dir===-1?'Long':'?'} · ${c.anchorTime?formatDatedTime(c.anchorTime):'–'} · ${(c.pin.note??'').slice(0,60)}`;
 
-watch([pinId,tf,lead,tail],([p,t,l,n])=>{
- const q={...route.query,sektion:'ts11',pin:p!=null?String(p):undefined,tf:t,lead:l,tail:n};
- if(['pin','tf','lead','tail'].some(k=>route.query[k]!==q[k]))router.replace({query:q});
+watch([pinId,tf,lead,tail,structure],([p,t,l,n,st])=>{
+ const q={...route.query,sektion:'ts11',pin:p!=null?String(p):undefined,tf:t,lead:l,tail:n,struktur:st?'1':undefined};
+ if(['pin','tf','lead','tail','struktur'].some(k=>route.query[k]!==q[k]))router.replace({query:q});
 },{immediate:true});
 
 // Ein Link auf einen anderen Pin bei offener Sektion montiert nicht neu.
@@ -80,7 +83,7 @@ async function saveNote(){
 }
 
 const chartEl=ref(null),drawing=usePriceChartTradeSetupDrawing();
-let chart=null,series=null,markers=null,symbol=null,primitives=[],priceLines=[];
+let chart=null,series=null,markers=null,symbol=null,primitives=[],priceLines=[],structurePrimitives=[],structureMarkers=[];
 function insertChartPoint(param){
  const el=noteEl.value;
  if(!el||!series||param.time==null||!param.point||!current.value)return;
@@ -122,11 +125,21 @@ function draw(){
  markers.setMarkers(at<=candles.at(-1).time?[{time:at,position:'aboveBar',shape:'arrowDown',color:cssColor('tradeConfirmation'),text:'TS1.1-Prüfung'}]:[]);
  // Achsen nach jedem Wechsel zurücksetzen, sonst bleibt eine verschobene Preisachse stehen.
  series.priceScale().applyOptions({autoScale:true});
+ drawStructure();
  const range={from:w.view.from,to:w.view.to};chart.timeScale().setVisibleRange(range);
  // Statuszeile verschwindet im selben Tick: der Resize setzt das Fenster sonst rechtsbündig neu.
  requestAnimationFrame(()=>chart?.timeScale().setVisibleRange(range));
 }
+// Struktur wie in DOB-Entry M1 (dieselbe Berechnung); Anker = Fensterbeginn, also mindestens 24 h vor dem Fall.
+function drawStructure(){
+ if(!series)return;
+ const bar=tf.value==='m1'?'1m':'5m',candles=data.value?(tf.value==='m1'?data.value.m1:data.value.m5):[],instrument=data.value?.kase.instrument;
+ const result=structure.value&&candles.length?dobEntryM1Structure(candles,bar,data.value.window.view.from,instrument):null;
+ renderLowerStructure(series,result,structurePrimitives,structureMarkers,candles,{symbol:instrument,replayUntil:candles.at(-1)?.time,
+  show:!!result,debug:!!result,barSeconds:barSecondsFor(bar),timeframe:bar});
+}
 watch([data,tf],()=>nextTick(draw));
+watch(structure,drawStructure);
 
 onMounted(async()=>{
  ({chart,candleSeries:series}=createPriceChart(chartEl.value,'XAUUSD'));symbol='XAUUSD';
@@ -143,6 +156,7 @@ const mark=ok=>ok?'✓':'✗';
    <select v-model="lead" title="Vorlauf vor OB/Level"><option v-for="[k,t] in TS11_LEADS" :key="k" :value="k">Vorlauf {{ t }}</option></select>
    <select v-model="tail" title="Nachlauf ab OB/Level"><option v-for="[k,t] in TS11_TAILS" :key="k" :value="k">Nachlauf {{ t }}</option></select>
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m5">M5</option><option value="m1">M1</option></select>
+   <label title="Marktstruktur-Analyse wie in DOB-Entry M1 (M5 P5/P2, M1 P5), Anker = Fensterbeginn"><input v-model="structure" type="checkbox"> Struktur</label>
    <span v-if="data" class="info">Ausgewertet {{ formatDatedTime(data.diagnosis.evaluatedAt) }} · <strong>{{ data.diagnosis.verdict }}</strong></span>
   </div>
   <p v-if="error" class="err" role="alert">{{ error }}</p>
