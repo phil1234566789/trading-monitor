@@ -63,7 +63,10 @@ refresh();
 watch(instrument,()=>{if(!poiRuns.value.some(r=>r.id===run.value))run.value=poiRuns.value[0]?.id??'';});
 watch([instrument,run],load);
 // Links mit anderem ?run= bei schon offener Seite (gleiche Route, keine Neuinitialisierung).
-watch(()=>route.query.run,value=>{if(typeof value==='string'&&value&&value!==run.value)run.value=value;});
+watch(()=>route.query.run,value=>{if(typeof value==='string'&&value&&value!==run.value){
+ // Die POI-Art folgt dem Lauf, sonst fehlt er im gefilterten Lauf-Menü (Link mit anderem ?poi= bei offener Seite).
+ poiType.value=runs.value.find(r=>r.id===value)?.poi_type??poiType.value;run.value=value;}});
+watch(()=>route.query.poi,value=>{if(Object.hasOwn(DOB_POI_TYPES,value)&&value!==poiType.value)setPoiType(value);});
 
 const onlyPinned=ref(false);
 const {pins,pinTarget,pinSaving,pinError,pinOf,openPin,savePin,removePin}=useDobTradePins(instrument,rows);
