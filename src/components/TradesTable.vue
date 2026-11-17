@@ -97,7 +97,6 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         <th>Position</th>
         <th>Date</th>
         <th>Entry</th>
-        <th>Exit</th>
         <th>Size</th>
         <th>Ergebnis</th>
         <th>Net P/L</th>
@@ -132,8 +131,6 @@ const showCommission = useLocalStorageRef("showCommissionColumn", false);
         <td class="trade-position-cell">#{{ t.id }}</td>
         <td>{{ fmtDate(t.entryTime) }}</td>
         <td v-if="t.entryPrice != null">{{ fmtPrice(t.entryPrice, pricePrecisionForInstrument(t.instrument)) }} ({{ fmtTime(t.entryTime) }})</td>
-        <td v-else>–</td>
-        <td v-if="t.exitPrice != null">{{ fmtPrice(t.exitPrice, pricePrecisionForInstrument(t.instrument)) }}</td>
         <td v-else>–</td>
         <td>{{ t.size ?? "–" }}</td>
         <td>
