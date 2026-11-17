@@ -33,6 +33,17 @@ export function dobTradeFrame(row){
  return {from:Math.min(row.entry_time,retest),to:row.exit_time??row.entry_time};
 }
 
+// Entry→Exit-Marke plus SL/TP vom Entry bis endTime; geteilt von Detail-Sprung (renderDobTrade) und Lauf-Positionen im Hauptchart.
+// labels: Marken- und Linien-Labels immer zeigen (Einzel-Trade); muted: grau (gesperrter Trade, nur zur Ansicht).
+export function addDobPosition(add,{position,stopPrice,targetPrice,targetLabel,endTime},candles,eventBarSeconds,{labels=false,muted=false}={}){
+ const grey=cssColor('tradeInvalid');
+ const greyed=muted?{entryColor:grey,entryColorKey:'tradeInvalid',exitColor:grey,exitColorKey:'tradeInvalid',connectorColor:grey}:{};
+ add(new TradeMarkerPrimitive(position,{...tradeOptions(position,labels,false,false),...greyed,eventBarSeconds},candles));
+ for(const [price,styleKey,label] of [[stopPrice,'tradeLoss','SL'],[targetPrice,'tradeWin',targetLabel]])
+  if(Number.isFinite(price))add(new LiquidityLinePrimitive({price,pivotTime:position.entryTime,endTime},
+   {color:muted?grey:cssColor(styleKey),lineWidth:1,label,labelSide:'end-above',forceLabel:labels,eventBarSeconds},candles));
+}
+
 export function renderDobTrade(series,row,primitives,candles,currentBar,targetLabel='TP 2R'){
  for(const p of primitives)series.detachPrimitive(p);
  primitives.length=0;
@@ -40,10 +51,7 @@ export function renderDobTrade(series,row,primitives,candles,currentBar,targetLa
  const eventBarSeconds=barSecondsFor(currentBar),position=dobTradePosition(row);
  const endTime=row.exit_time??candles.at(-1).time;
  const add=p=>{series.attachPrimitive(p);primitives.push(p);};
- add(new TradeMarkerPrimitive(position,{...tradeOptions(position,true,false,false),eventBarSeconds},candles));
- for(const [price,styleKey,label] of [[row.stop_price,'tradeLoss','SL'],[row.target_price,'tradeWin',targetLabel]])
-  if(Number.isFinite(price))add(new LiquidityLinePrimitive({price,pivotTime:row.entry_time,endTime},
-   {color:cssColor(styleKey),lineWidth:1,label,labelSide:'end-above',forceLabel:true,eventBarSeconds},candles));
+ addDobPosition(add,{position,stopPrice:row.stop_price,targetPrice:row.target_price,targetLabel,endTime},candles,eventBarSeconds,{labels:true});
  const spec=entryRiskSpec(entryRiskScale(row.entry_price,row.stop_price,[{label:'TP',price:row.target_price}],row.instrument,row.direction),
   'SL','rScale',row.instrument);
  if(spec)add(new ScalePrimitive({...spec,startTime:row.entry_time},candles));

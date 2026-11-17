@@ -87,6 +87,7 @@ import {
 import {doubleOrderBlockPinLabel} from '../doubleOrderBlockPin.js';
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
+import {useDobRunOptions} from "../composables/usePriceChartDobPositions.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
 import { useTabScopedRef } from "../composables/useTabScopedRef.js";
 import { useDrawings } from "../composables/useDrawings.js";
@@ -169,6 +170,13 @@ const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
 // siehe Kommentar im Template.
 const showMmt = useLocalStorageRef("showMmt", false);
 const showMmtPositions=useLocalStorageRef("showMmtPositions",showMmt.value);
+// DOB-Setup-Positionen eines Laufs im Chart (Trades-Menü); ohne gemerkten Lauf der neueste.
+const showDobPositions=useLocalStorageRef("showDobPositions",false);
+const dobPositionsRun=useLocalStorageRef("dobPositionsRun","");
+const dobPositionsShowBlocked=useLocalStorageRef("dobPositionsShowBlocked",false);
+const dobRunOptions=useDobRunOptions();
+watch(dobRunOptions,list=>{if(list.length&&!list.some(r=>r.id===dobPositionsRun.value))dobPositionsRun.value=list.at(-1).id;});
+const dobPositions=computed(()=>({enabled:showDobPositions.value,run:dobPositionsRun.value,showBlocked:dobPositionsShowBlocked.value}));
 const brokerPositions=ref([]);
 const showTrades = useLocalStorageRef("showTrades", true);
 // Anzahl vergangener Setups je Richtung, analog zu tradeSetupHistoryCountShort/Long im
@@ -1980,6 +1988,11 @@ watch(selectedTradingAccountId, () => {
           </ToggleButton>
           <ToggleButton variant="menu" :class="{active:showMmt}" :aria-pressed="showMmt" @click="showMmt=!showMmt">MMT</ToggleButton>
           <ToggleButton variant="menu" :class="{active:showMmtPositions}" :aria-pressed="showMmtPositions" @click="showMmtPositions=!showMmtPositions">MMT-Positionen</ToggleButton>
+          <ToggleButton variant="menu" :class="{active:showDobPositions}" :aria-pressed="showDobPositions" title="Alle Trades des Laufs auf diesem Instrument, TP und Ausgang nach gespeicherter DOB-Konfig" @click="showDobPositions=!showDobPositions">DOB-Setup-Positionen</ToggleButton>
+          <div v-if="showDobPositions" class="dob-positions-options">
+            <label>Lauf <select v-model="dobPositionsRun"><option v-for="r in dobRunOptions" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
+            <label><input v-model="dobPositionsShowBlocked" type="checkbox"> gesperrte zeigen</label>
+          </div>
 
           <div class="toggle-dropdown-divider"></div>
 
@@ -2351,6 +2364,7 @@ watch(selectedTradingAccountId, () => {
     :show-double-order-blocks="showDoubleOrderBlocks"
     :pinned-double-order-blocks="pinnedDoubleOrderBlocks"
     :dob-trade="dobTrade"
+    :dob-positions="dobPositions"
     :hovered-double-order-block-pin="hoveredDoubleOrderBlockPin"
     :show-obs-m1="showObsM1"
     :show-obs-1h="showObs1h"
@@ -2619,6 +2633,9 @@ watch(selectedTradingAccountId, () => {
   color: #787b86;
   white-space: nowrap;
 }
+
+.dob-positions-options{display:flex;flex-direction:column;gap:4px;padding:2px 10px 6px 22px;font-size:13px;color:#787b86}
+.dob-positions-options select{background:#131722;border:1px solid #2a2e39;border-radius:4px;color:#d1d4dc;font-size:13px;padding:2px 4px;margin-left:6px}
 
 .ranges-lookback-input {
   width: 50px;

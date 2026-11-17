@@ -18,6 +18,7 @@ import { goldWeekendClosed } from '../fxcmGoldCalendar.js';
 import { useGoldChartHistory } from '../composables/useGoldChartHistory.js';
 import {useDoubleOrderBlockChart} from '../composables/useDoubleOrderBlockChart.js';
 import {renderDobTrade,dobTradeFrame} from '../dobTradeRendering.js';
+import {usePriceChartDobPositions} from '../composables/usePriceChartDobPositions.js';
 import DoubleOrderBlockStatus from './DoubleOrderBlockStatus.vue';
 import TradeSetup11Status from './TradeSetup11Status.vue';
 import {tradeSetupSourceDetails,tradeSetupInteractionRows} from '../tradeSetupSourcePresentation.js';
@@ -229,6 +230,8 @@ const props = defineProps({
   showDoubleOrderBlocks: {type:Boolean,default:false},
   pinnedDoubleOrderBlocks:{type:Array,default:()=>[]},
   dobTrade:{type:Object,default:null},
+  // Alle Trades eines DOB-Laufs als Positionen: {enabled, run, showBlocked}.
+  dobPositions:{type:Object,default:null},
   hoveredDoubleOrderBlockPin:{type:Object,default:null},
   showObs1h: { type: Boolean, default: true },
   showObs4h: { type: Boolean, default: true },
@@ -626,6 +629,10 @@ function renderDobTradeOverlay(){
   }
 }
 const dobDetails=doubleOrderBlocks.details;
+const dobPositions=usePriceChartDobPositions(()=>({series:candleSeries,candles:clipReplay(allCandles),currentBar:props.currentBar,symbol:props.symbol,
+  enabled:!!props.dobPositions?.enabled&&props.showTradeSetups&&!snapshotView.value,run:props.dobPositions?.run,showBlocked:!!props.dobPositions?.showBlocked}));
+const dobPositionsStatus=dobPositions.status;
+onUnmounted(dobPositions.dispose);
 let candlesReady = false;
 let loadedCandleKey = null;
 const m5ClockEnabled = () => props.currentBar === "5m" && props.replayUntil == null;
@@ -1946,6 +1953,7 @@ function refreshChart({ structure = true } = {}) {
   if (!chart) return;
   doubleOrderBlocks.refresh();
   renderDobTradeOverlay();
+  dobPositions.refresh();
   checklist.setChartCandles(allCandles, candlesReady ? loadedCandleKey : null);
   applyCandleData();
   if (snapshotView.value) {
@@ -2407,6 +2415,7 @@ watch(() => props.showObsM1, refreshPoiZonesInternal);
 watch(() => props.showObsM5, refreshPoiZonesInternal);
 watch(()=>props.showDoubleOrderBlocks,()=>doubleOrderBlocks.refresh());
 watch(()=>props.dobTrade,renderDobTradeOverlay);
+watch(()=>[props.dobPositions,props.showTradeSetups],dobPositions.refresh,{deep:true});
 watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
 watch(() => props.showLiquidity, refreshLiquidityInternal);
@@ -2754,6 +2763,7 @@ defineExpose({
     <ChartIndicatorStatusStack>
       <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
       <DoubleOrderBlockStatus v-if="(showDoubleOrderBlocks || pinnedDoubleOrderBlocks.length) && dobStatus" :status="dobStatus" :details="dobDetails" />
+      <DoubleOrderBlockStatus v-if="dobPositionsStatus" :status="dobPositionsStatus" />
       <TradeSetup11Status v-if="showTradeSetups && (showTradeSetupsLong || showTradeSetupsShort) && !snapshotView" :status="tradeSetup11Status" :details="tradeSetup11Details" />
     </ChartIndicatorStatusStack>
     <div v-if="ideaEditingStatus && !ideaDrawing.active.value" class="idea-drawing-controls" role="status">{{ideaEditingStatus}}</div>
