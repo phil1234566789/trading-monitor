@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {DOB_ENTRY_M1_CASES,dobEntryM1Window,dobEntryM1Display} from '../src/dobEntryM1Cases.js';
+import {DOB_ENTRY_M1_CASES,dobEntryM1Window,dobEntryM1Display,dobEntryM1CaseOf} from '../src/dobEntryM1Cases.js';
 
 describe('DOB-Entry-M1-Fälle',()=>{
  it('15 eindeutige v3-Trades: 10 Losses inkl. 28.08. 15:38 Short, 5 Wins',()=>{
@@ -24,5 +24,11 @@ describe('DOB-Entry-M1-Fälle',()=>{
   const d=dobEntryM1Display(row,'win',m1,dobEntryM1Window(row,'win'));
   expect(d).toMatchObject({targetLabel:'TP 5R',row:{target_price:4010,exit_time:600_000+1260},view:{to:600_000+1260+900}});
   expect(dobEntryM1Display(row,'loss',m1,dobEntryM1Window(row,'loss')).row).toBe(row);
+ });
+ it('Kürzel L1–L10 / W1–W5, per Kürzel oder ID auffindbar',()=>{
+  expect(DOB_ENTRY_M1_CASES.map(c=>c.code)).toEqual([...Array.from({length:10},(_,i)=>'L'+(i+1)),...Array.from({length:5},(_,i)=>'W'+(i+1))]);
+  expect(dobEntryM1CaseOf('L2').label).toBe('10.02. 10:23 Long a');
+  expect(dobEntryM1CaseOf(DOB_ENTRY_M1_CASES[14].id).code).toBe('W5');
+  expect(dobEntryM1CaseOf('X9')).toBeNull();
  });
 });

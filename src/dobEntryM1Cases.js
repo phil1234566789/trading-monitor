@@ -7,7 +7,7 @@ import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 // Auswahl aus dob-setup-v3 (XAUUSD, Kombi = counter_dob_status ≠ live): 10 Losses (sl_hit, max_r < 2, also Loss bei jedem
 // Konfig-TP 2–5R) und 5 Wins mit max_r ≥ 5, über beide Halbjahre und verschiedene Uhrzeiten; 28.08. 15:38 Short auf Wunsch.
 export const DOB_ENTRY_M1_RUN='dob-setup-v3';
-export const DOB_ENTRY_M1_CASES=[
+const CASES=[
  {id:'dob-setup-v3:dob:XAUUSD:1:1767751800:1767752700:a',kind:'loss',label:'07.01. 04:19 Long a'},
  {id:'dob-setup-v3:dob:XAUUSD:1:1770712800:1770714000:a',kind:'loss',label:'10.02. 10:23 Long a'},
  {id:'dob-setup-v3:dob:XAUUSD:1:1772628300:1772629500:b',kind:'loss',label:'04.03. 14:34 Long b'},
@@ -24,6 +24,9 @@ export const DOB_ENTRY_M1_CASES=[
  {id:'dob-setup-v3:dob:XAUUSD:1:1787124600:1787126700:a',kind:'win',label:'19.08. 10:26 Long a'},
  {id:'dob-setup-v3:dob:XAUUSD:-1:1792417200:1792418400:b',kind:'win',label:'19.10. 16:38 Short b'},
 ];
+// Kürzel L1–L10 / W1–W5 in Listenreihenfolge; Philip nennt Fälle so im Chat und in der URL (&trade=L2).
+export const DOB_ENTRY_M1_CASES=CASES.map((c,i)=>({...c,code:(c.kind==='loss'?'L':'W')+(CASES.filter((x,j)=>j<=i&&x.kind===c.kind).length)}));
+export const dobEntryM1CaseOf=key=>DOB_ENTRY_M1_CASES.find(c=>c.code===key||c.id===key)??null;
 
 const LEAD_SECONDS=3600,TAIL_SECONDS=15*60,WIN_R=5,WIN_HORIZON_SECONDS=5*24*3600;
 // Sichtfenster 60 min vor Entry bis Ausgang; der Ladebereich beginnt bei OB1, damit beide Zonen erkannt werden können.

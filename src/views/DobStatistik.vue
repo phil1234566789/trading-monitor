@@ -4,13 +4,13 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobAccountTile from '../components/DobAccountTile.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
 import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobRowGuardrailReason,dobRowConfigTpR,dobGuardrailsSummary} from '../dobGuardrails.js';
-import {fetchDobTradePins,addDobTradePin,removePinEntry,updatePinNote} from '../pinContext.js';
+import {useDobTradePins} from '../composables/useDobTradePins.js';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinFlag from '../components/SimulationPinFlag.vue';
 import {formatDatedTime} from '../berlinTime.js';
@@ -55,26 +55,8 @@ watch([instrument,run],load);
 // Links mit anderem ?run= bei schon offener Seite (gleiche Route, keine Neuinitialisierung).
 watch(()=>route.query.run,value=>{if(typeof value==='string'&&value&&value!==run.value)run.value=value;});
 
-// Pins je Trade wie auf /statistik (pin_context, Pin-Typ + Notiz), laufübergreifend nach derselben Regel (matchDobTradePins).
-const pins=ref([]),pinTarget=ref(null),pinSaving=ref(false),pinError=ref(''),onlyPinned=ref(false);
-const pinMatches=computed(()=>matchDobTradePins(pins.value,rows.value));
-const pinOf=row=>pinMatches.value.get(row.id);
-async function loadPins(){
- pinError.value='';
- try{pins.value=await fetchDobTradePins(instrument.value);}catch(e){pinError.value=e.message||'Pins konnten nicht geladen werden.';}
-}
-watch(instrument,loadPins,{immediate:true});
-function openPin(row){const pin=pinOf(row);pinError.value='';pinTarget.value={row,title:'DOB-Trade anpinnen',note:pin?.note??'',pinType:pin?.pinType??null,existingId:pin?.id};}
-async function pinAction(action){
- if(pinSaving.value)return;
- pinSaving.value=true;pinError.value='';
- try{await action();await loadPins();pinTarget.value=null;}
- catch(e){pinError.value=e.message||'Pin konnte nicht gespeichert werden.';}
- finally{pinSaving.value=false;}
-}
-const savePin=(note,pinType)=>pinAction(async()=>{const t=pinTarget.value;
- if(t.existingId){if(!await updatePinNote(t.existingId,note,pinType))throw new Error('Pin-Notiz konnte nicht gespeichert werden.');}
- else await addDobTradePin(t.row,note,pinType);});
+const onlyPinned=ref(false);
+const {pins,pinTarget,pinSaving,pinError,pinOf,openPin,savePin,removePin}=useDobTradePins(instrument,rows);
 // Sichtungsstand je Trade (laufunabhängig wie die Pins): „Im Chart“ öffnet einen neuen Tab, beim Zurückkommen soll Philip sehen,
 // welcher Trade zuletzt offen war und wie weit er ist. Nur Browser-Komfort, deshalb localStorage statt DB.
 const seen=useLocalStorageRef('dobStatsSeen',[]),lastOpened=useLocalStorageRef('dobStatsLastOpened',null);
@@ -102,7 +84,6 @@ async function revealLast(){
 }
 onMounted(()=>document.addEventListener('visibilitychange',revealLast));
 onUnmounted(()=>document.removeEventListener('visibilitychange',revealLast));
-const removePin=()=>pinAction(async()=>{if(!await removePinEntry(pinTarget.value.existingId))throw new Error('Pin konnte nicht entfernt werden.');});
 // Feste R-Ziele 2R/3R/4R/5R nebeneinander statt Auswahl; alte Links mit ?rA=&rB= laden weiter, die Parameter fallen weg.
 const targets=computed(()=>DOB_STAT_TARGETS.map(k=>({name:String(k),k})));
 watch([instrument,year,run],([i,y,r])=>{shown.value=PAGE;router.replace({query:{run:r,instrument:i,year:y}});},{immediate:true});
