@@ -45,9 +45,10 @@ try {
     'Erweiterung: nur unknown nach 7 Tg': uniqueDobTrades(gated.filter(t => t.m5Trend.verdict === 'unknown')),
   };
   const lowerBound = t => { let lo = 0, hi = m1Marked.length; while (lo < hi) { const m = (lo + hi) >> 1; if (m1Marked[m].time < t) lo = m + 1; else hi = m; } return lo; };
-  const r3 = new Map();
-  const outcome3 = t => { const k = keyOf(t); if (!r3.has(k)) r3.set(k, evaluateDoubleOrderBlockOutcome({ direction: t.direction, entryTime: t.entryTime,
-    entryPrice: t.entryPrice, stopPrice: t.stopPrice, candles: m1Marked.slice(lowerBound(t.entryTime)), evaluatedAt: dataEnd, instrument: SYMBOL, rMultiple: 3 })); return r3.get(k); };
+  // Hauptkennzahlen 3R/4R/5R (Philip), 2R nur am Rand.
+  const R_TARGETS = [3, 4, 5], rCache = new Map();
+  const outcomeR = r => t => { const k = `${keyOf(t)}:${r}`; if (!rCache.has(k)) rCache.set(k, evaluateDoubleOrderBlockOutcome({ direction: t.direction, entryTime: t.entryTime,
+    entryPrice: t.entryPrice, stopPrice: t.stopPrice, candles: m1Marked.slice(lowerBound(t.entryTime)), evaluatedAt: dataEnd, instrument: SYMBOL, rMultiple: r })); return rCache.get(k); };
   const base = runs.v2;
   const runtime = list => { const v = list.map(x => x.ms).sort((a, b) => a - b), q = f => +v[Math.floor(f * (v.length - 1))].toFixed(1);
     return v.length ? { median: q(0.5), p95: q(0.95), max: q(1), calls: v.length } : null; };
@@ -59,14 +60,14 @@ try {
       'Trend: dobM5Trend = unveränderter Trend-Algo wie der Chart (Perioden 5/2, ignorierte Kerzen raus, Close-Auswertung), innerster Trend, Pivots ab 24 h vor der OB2-Retest-Zeit, bei unknown Fensterstart tageweise zurück bis 7 Tage, nur geschlossene Kerzen.',
       'Deckel k (1–7): Trend nur, wenn er in Stufe ≤ k gefunden wurde, sonst unknown. k = 1 ist das 24-h-Gate.',
       'Gegen den Trend: Short im uptrend, Long im downtrend. unknown: Variante durchlassen bzw. blocken.',
-      '2R = Ausgang des Laufs; 3R = evaluateDoubleOrderBlockOutcome mit rMultiple 3, gleicher SL. n = Win + Loss, Halbjahre nach Berliner Entry-Monat.',
+      '3R/4R/5R = evaluateDoubleOrderBlockOutcome mit rMultiple, gleicher SL; 2R = Ausgang des Laufs (nur am Rand). n = Win + Loss, Halbjahre nach Berliner Entry-Monat.',
       'Laufzeit: ein Gate-Aufruf ohne Cache (so oft rechnet der Watcher höchstens je M5-Schluss und Kandidat); schlechtester Fall = alle 7 Stufen unknown.'],
     // Stufe d = d Fenster gerechnet (1 Tg … d Tg); 7 Tg unknown wäre der schlechteste Fall (7 Fenster).
     gateRuntimeMs: { alle: runtime(timings), jeStufe: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(d => [d, runtime(timings.filter(x => x.windowDays === d))])) },
     verdictCounts: Object.fromEntries(['with', 'against', 'unknown'].map(v => [v, uniqueDobTrades(gated.filter(t => t.m5Trend.verdict === v)).length])),
     stages: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(d => [d, stage(d)])),
     caps: Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(k => [k, { pass: summary(pass(capped(k)), base), block: summary(block(capped(k)), base) }])),
-    variants: Object.fromEntries(Object.entries(variants).map(([name, list]) => [name, { r2: summary(list, base), r3: summary(list, base, outcome3, 3) }])),
+    variants: Object.fromEntries(Object.entries(variants).map(([name, list]) => [name, { ...Object.fromEntries(R_TARGETS.map(r => [`r${r}`, summary(list, base, outcomeR(r), r)])), r2: summary(list, base) }])),
     pins: Object.fromEntries(Object.entries(PINS).map(([pin, [key, expected]]) => {
       const carriers = gated.filter(t => keyOf(t) === key);
       return [pin, { expected, found: carriers.length > 0, trends: [...new Set(carriers.map(t => `${t.m5Trend.trend}@${t.m5Trend.windowDays}`))],
@@ -78,7 +79,7 @@ try {
   const g = s => `${s.n} ${s.winrate}% ${s.sumR}R`;
   for (const [d, v] of Object.entries(result.stages)) console.log(`Stufe ${d} Tg`.padEnd(10), 'mit', g(v.with), '| gegen', g(v.against));
   for (const [k, v] of Object.entries(result.caps)) console.log(`Deckel ${k}`.padEnd(10), 'durchlassen', f(v.pass), '| blocken', f(v.block));
-  for (const [name, v] of Object.entries(result.variants)) console.log(name.padEnd(34), '2R', f(v.r2), '| 3R', f(v.r3));
+  for (const [name, v] of Object.entries(result.variants)) console.log(name.padEnd(44), '3R', f(v.r3), '| 4R', f(v.r4), '| 5R', f(v.r5), '| 2R', f(v.r2));
   console.log('Pins', JSON.stringify(result.pins));
 } finally {
   await server.close();

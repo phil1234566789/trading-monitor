@@ -1,6 +1,6 @@
 {
   "measurement": "dob-m5-trend-gate-v2",
-  "git": "de9e50d4-dirty",
+  "git": "5d603ef5-dirty",
   "symbol": "XAUUSD",
   "dataEnd": 1794849660,
   "dataEndBerlin": "2026-11-16",
@@ -9,51 +9,51 @@
     "Trend: dobM5Trend = unveränderter Trend-Algo wie der Chart (Perioden 5/2, ignorierte Kerzen raus, Close-Auswertung), innerster Trend, Pivots ab 24 h vor der OB2-Retest-Zeit, bei unknown Fensterstart tageweise zurück bis 7 Tage, nur geschlossene Kerzen.",
     "Deckel k (1–7): Trend nur, wenn er in Stufe ≤ k gefunden wurde, sonst unknown. k = 1 ist das 24-h-Gate.",
     "Gegen den Trend: Short im uptrend, Long im downtrend. unknown: Variante durchlassen bzw. blocken.",
-    "2R = Ausgang des Laufs; 3R = evaluateDoubleOrderBlockOutcome mit rMultiple 3, gleicher SL. n = Win + Loss, Halbjahre nach Berliner Entry-Monat.",
+    "3R/4R/5R = evaluateDoubleOrderBlockOutcome mit rMultiple, gleicher SL; 2R = Ausgang des Laufs (nur am Rand). n = Win + Loss, Halbjahre nach Berliner Entry-Monat.",
     "Laufzeit: ein Gate-Aufruf ohne Cache (so oft rechnet der Watcher höchstens je M5-Schluss und Kandidat); schlechtester Fall = alle 7 Stufen unknown."
   ],
   "gateRuntimeMs": {
     "alle": {
-      "median": 10.7,
-      "p95": 45.7,
-      "max": 275.3,
+      "median": 10.8,
+      "p95": 45.3,
+      "max": 279.7,
       "calls": 619
     },
     "jeStufe": {
       "1": {
-        "median": 10.4,
-        "p95": 21.8,
-        "max": 79.5,
+        "median": 10.5,
+        "p95": 21.7,
+        "max": 80.6,
         "calls": 536
       },
       "2": {
-        "median": 34.8,
-        "p95": 74.9,
-        "max": 113.4,
+        "median": 35.1,
+        "p95": 74.5,
+        "max": 113,
         "calls": 35
       },
       "3": {
-        "median": 14.4,
-        "p95": 26.8,
-        "max": 91.5,
+        "median": 14.7,
+        "p95": 27.2,
+        "max": 92.2,
         "calls": 29
       },
       "4": {
-        "median": 19.1,
-        "p95": 70.1,
-        "max": 275.3,
+        "median": 18.9,
+        "p95": 70.3,
+        "max": 279.7,
         "calls": 9
       },
       "5": {
-        "median": 39.7,
-        "p95": 39.7,
-        "max": 227.4,
+        "median": 39.4,
+        "p95": 39.4,
+        "max": 227.2,
         "calls": 3
       },
       "6": {
-        "median": 185.1,
-        "p95": 266,
-        "max": 267.7,
+        "median": 184.5,
+        "p95": 272,
+        "max": 272.7,
         "calls": 7
       },
       "7": null
@@ -854,33 +854,6 @@
   },
   "variants": {
     "v2 ohne Gate": {
-      "r2": {
-        "n": 521,
-        "win": 187,
-        "loss": 334,
-        "winrate": 35.9,
-        "sumR": 40,
-        "smallN": false,
-        "share": 100,
-        "halves": {
-          "Jan–Jun": {
-            "n": 303,
-            "win": 103,
-            "loss": 200,
-            "winrate": 34,
-            "sumR": 6,
-            "smallN": false
-          },
-          "Jul–Nov": {
-            "n": 218,
-            "win": 84,
-            "loss": 134,
-            "winrate": 38.5,
-            "sumR": 34,
-            "smallN": false
-          }
-        }
-      },
       "r3": {
         "n": 521,
         "win": 145,
@@ -907,36 +880,90 @@
             "smallN": false
           }
         }
-      }
-    },
-    "24 h, unknown durchlassen": {
-      "r2": {
-        "n": 324,
-        "win": 113,
-        "loss": 211,
-        "winrate": 34.9,
-        "sumR": 15,
+      },
+      "r4": {
+        "n": 519,
+        "win": 122,
+        "loss": 397,
+        "winrate": 23.5,
+        "sumR": 91,
         "smallN": false,
-        "share": 62.2,
+        "share": 100,
         "halves": {
           "Jan–Jun": {
-            "n": 187,
-            "win": 60,
-            "loss": 127,
-            "winrate": 32.1,
-            "sumR": -7,
+            "n": 302,
+            "win": 66,
+            "loss": 236,
+            "winrate": 21.9,
+            "sumR": 28,
             "smallN": false
           },
           "Jul–Nov": {
-            "n": 137,
-            "win": 53,
-            "loss": 84,
-            "winrate": 38.7,
-            "sumR": 22,
+            "n": 217,
+            "win": 56,
+            "loss": 161,
+            "winrate": 25.8,
+            "sumR": 63,
             "smallN": false
           }
         }
       },
+      "r5": {
+        "n": 519,
+        "win": 102,
+        "loss": 417,
+        "winrate": 19.7,
+        "sumR": 93,
+        "smallN": false,
+        "share": 100,
+        "halves": {
+          "Jan–Jun": {
+            "n": 302,
+            "win": 55,
+            "loss": 247,
+            "winrate": 18.2,
+            "sumR": 28,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 217,
+            "win": 47,
+            "loss": 170,
+            "winrate": 21.7,
+            "sumR": 65,
+            "smallN": false
+          }
+        }
+      },
+      "r2": {
+        "n": 521,
+        "win": 187,
+        "loss": 334,
+        "winrate": 35.9,
+        "sumR": 40,
+        "smallN": false,
+        "share": 100,
+        "halves": {
+          "Jan–Jun": {
+            "n": 303,
+            "win": 103,
+            "loss": 200,
+            "winrate": 34,
+            "sumR": 6,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 218,
+            "win": 84,
+            "loss": 134,
+            "winrate": 38.5,
+            "sumR": 34,
+            "smallN": false
+          }
+        }
+      }
+    },
+    "24 h, unknown durchlassen": {
       "r3": {
         "n": 324,
         "win": 89,
@@ -963,36 +990,90 @@
             "smallN": false
           }
         }
-      }
-    },
-    "24 h, unknown blocken": {
-      "r2": {
-        "n": 256,
-        "win": 85,
-        "loss": 171,
-        "winrate": 33.2,
-        "sumR": -1,
+      },
+      "r4": {
+        "n": 324,
+        "win": 75,
+        "loss": 249,
+        "winrate": 23.1,
+        "sumR": 51,
         "smallN": false,
-        "share": 48.9,
+        "share": 62.2,
         "halves": {
           "Jan–Jun": {
-            "n": 151,
-            "win": 45,
-            "loss": 106,
-            "winrate": 29.8,
-            "sumR": -16,
+            "n": 187,
+            "win": 39,
+            "loss": 148,
+            "winrate": 20.9,
+            "sumR": 8,
             "smallN": false
           },
           "Jul–Nov": {
-            "n": 105,
-            "win": 40,
-            "loss": 65,
-            "winrate": 38.1,
-            "sumR": 15,
+            "n": 137,
+            "win": 36,
+            "loss": 101,
+            "winrate": 26.3,
+            "sumR": 43,
             "smallN": false
           }
         }
       },
+      "r5": {
+        "n": 324,
+        "win": 60,
+        "loss": 264,
+        "winrate": 18.5,
+        "sumR": 36,
+        "smallN": false,
+        "share": 62.2,
+        "halves": {
+          "Jan–Jun": {
+            "n": 187,
+            "win": 30,
+            "loss": 157,
+            "winrate": 16,
+            "sumR": -7,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 137,
+            "win": 30,
+            "loss": 107,
+            "winrate": 21.9,
+            "sumR": 43,
+            "smallN": false
+          }
+        }
+      },
+      "r2": {
+        "n": 324,
+        "win": 113,
+        "loss": 211,
+        "winrate": 34.9,
+        "sumR": 15,
+        "smallN": false,
+        "share": 62.2,
+        "halves": {
+          "Jan–Jun": {
+            "n": 187,
+            "win": 60,
+            "loss": 127,
+            "winrate": 32.1,
+            "sumR": -7,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 137,
+            "win": 53,
+            "loss": 84,
+            "winrate": 38.7,
+            "sumR": 22,
+            "smallN": false
+          }
+        }
+      }
+    },
+    "24 h, unknown blocken": {
       "r3": {
         "n": 256,
         "win": 66,
@@ -1019,36 +1100,90 @@
             "smallN": false
           }
         }
-      }
-    },
-    "Erweiterung ≤7 Tg, unknown durchlassen": {
-      "r2": {
-        "n": 300,
-        "win": 103,
-        "loss": 197,
-        "winrate": 34.3,
-        "sumR": 9,
+      },
+      "r4": {
+        "n": 256,
+        "win": 60,
+        "loss": 196,
+        "winrate": 23.4,
+        "sumR": 44,
         "smallN": false,
-        "share": 57.4,
+        "share": 48.9,
         "halves": {
           "Jan–Jun": {
-            "n": 171,
-            "win": 53,
-            "loss": 118,
-            "winrate": 31,
-            "sumR": -12,
+            "n": 151,
+            "win": 29,
+            "loss": 122,
+            "winrate": 19.2,
+            "sumR": -6,
             "smallN": false
           },
           "Jul–Nov": {
-            "n": 129,
-            "win": 50,
-            "loss": 79,
-            "winrate": 38.8,
-            "sumR": 21,
+            "n": 105,
+            "win": 31,
+            "loss": 74,
+            "winrate": 29.5,
+            "sumR": 50,
             "smallN": false
           }
         }
       },
+      "r5": {
+        "n": 256,
+        "win": 49,
+        "loss": 207,
+        "winrate": 19.1,
+        "sumR": 38,
+        "smallN": false,
+        "share": 48.9,
+        "halves": {
+          "Jan–Jun": {
+            "n": 151,
+            "win": 24,
+            "loss": 127,
+            "winrate": 15.9,
+            "sumR": -7,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 105,
+            "win": 25,
+            "loss": 80,
+            "winrate": 23.8,
+            "sumR": 45,
+            "smallN": false
+          }
+        }
+      },
+      "r2": {
+        "n": 256,
+        "win": 85,
+        "loss": 171,
+        "winrate": 33.2,
+        "sumR": -1,
+        "smallN": false,
+        "share": 48.9,
+        "halves": {
+          "Jan–Jun": {
+            "n": 151,
+            "win": 45,
+            "loss": 106,
+            "winrate": 29.8,
+            "sumR": -16,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 105,
+            "win": 40,
+            "loss": 65,
+            "winrate": 38.1,
+            "sumR": 15,
+            "smallN": false
+          }
+        }
+      }
+    },
+    "Erweiterung ≤7 Tg, unknown durchlassen": {
       "r3": {
         "n": 300,
         "win": 81,
@@ -1072,39 +1207,93 @@
             "loss": 88,
             "winrate": 31.8,
             "sumR": 35,
+            "smallN": false
+          }
+        }
+      },
+      "r4": {
+        "n": 300,
+        "win": 70,
+        "loss": 230,
+        "winrate": 23.3,
+        "sumR": 50,
+        "smallN": false,
+        "share": 57.4,
+        "halves": {
+          "Jan–Jun": {
+            "n": 171,
+            "win": 35,
+            "loss": 136,
+            "winrate": 20.5,
+            "sumR": 4,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 129,
+            "win": 35,
+            "loss": 94,
+            "winrate": 27.1,
+            "sumR": 46,
+            "smallN": false
+          }
+        }
+      },
+      "r5": {
+        "n": 300,
+        "win": 56,
+        "loss": 244,
+        "winrate": 18.7,
+        "sumR": 36,
+        "smallN": false,
+        "share": 57.4,
+        "halves": {
+          "Jan–Jun": {
+            "n": 171,
+            "win": 27,
+            "loss": 144,
+            "winrate": 15.8,
+            "sumR": -9,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 129,
+            "win": 29,
+            "loss": 100,
+            "winrate": 22.5,
+            "sumR": 45,
+            "smallN": false
+          }
+        }
+      },
+      "r2": {
+        "n": 300,
+        "win": 103,
+        "loss": 197,
+        "winrate": 34.3,
+        "sumR": 9,
+        "smallN": false,
+        "share": 57.4,
+        "halves": {
+          "Jan–Jun": {
+            "n": 171,
+            "win": 53,
+            "loss": 118,
+            "winrate": 31,
+            "sumR": -12,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 129,
+            "win": 50,
+            "loss": 79,
+            "winrate": 38.8,
+            "sumR": 21,
             "smallN": false
           }
         }
       }
     },
     "Erweiterung ≤7 Tg, unknown blocken": {
-      "r2": {
-        "n": 300,
-        "win": 103,
-        "loss": 197,
-        "winrate": 34.3,
-        "sumR": 9,
-        "smallN": false,
-        "share": 57.4,
-        "halves": {
-          "Jan–Jun": {
-            "n": 171,
-            "win": 53,
-            "loss": 118,
-            "winrate": 31,
-            "sumR": -12,
-            "smallN": false
-          },
-          "Jul–Nov": {
-            "n": 129,
-            "win": 50,
-            "loss": 79,
-            "winrate": 38.8,
-            "sumR": 21,
-            "smallN": false
-          }
-        }
-      },
       "r3": {
         "n": 300,
         "win": 81,
@@ -1131,36 +1320,90 @@
             "smallN": false
           }
         }
-      }
-    },
-    "Erweiterung: nur gegen den Trend (verworfen)": {
-      "r2": {
-        "n": 222,
-        "win": 84,
-        "loss": 138,
-        "winrate": 37.8,
-        "sumR": 30,
+      },
+      "r4": {
+        "n": 300,
+        "win": 70,
+        "loss": 230,
+        "winrate": 23.3,
+        "sumR": 50,
         "smallN": false,
-        "share": 42.7,
+        "share": 57.4,
         "halves": {
           "Jan–Jun": {
-            "n": 133,
-            "win": 50,
-            "loss": 83,
-            "winrate": 37.6,
-            "sumR": 17,
+            "n": 171,
+            "win": 35,
+            "loss": 136,
+            "winrate": 20.5,
+            "sumR": 4,
             "smallN": false
           },
           "Jul–Nov": {
-            "n": 89,
-            "win": 34,
-            "loss": 55,
-            "winrate": 38.2,
-            "sumR": 13,
+            "n": 129,
+            "win": 35,
+            "loss": 94,
+            "winrate": 27.1,
+            "sumR": 46,
             "smallN": false
           }
         }
       },
+      "r5": {
+        "n": 300,
+        "win": 56,
+        "loss": 244,
+        "winrate": 18.7,
+        "sumR": 36,
+        "smallN": false,
+        "share": 57.4,
+        "halves": {
+          "Jan–Jun": {
+            "n": 171,
+            "win": 27,
+            "loss": 144,
+            "winrate": 15.8,
+            "sumR": -9,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 129,
+            "win": 29,
+            "loss": 100,
+            "winrate": 22.5,
+            "sumR": 45,
+            "smallN": false
+          }
+        }
+      },
+      "r2": {
+        "n": 300,
+        "win": 103,
+        "loss": 197,
+        "winrate": 34.3,
+        "sumR": 9,
+        "smallN": false,
+        "share": 57.4,
+        "halves": {
+          "Jan–Jun": {
+            "n": 171,
+            "win": 53,
+            "loss": 118,
+            "winrate": 31,
+            "sumR": -12,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 129,
+            "win": 50,
+            "loss": 79,
+            "winrate": 38.8,
+            "sumR": 21,
+            "smallN": false
+          }
+        }
+      }
+    },
+    "Erweiterung: nur gegen den Trend (verworfen)": {
       "r3": {
         "n": 222,
         "win": 64,
@@ -1187,10 +1430,91 @@
             "smallN": false
           }
         }
+      },
+      "r4": {
+        "n": 220,
+        "win": 52,
+        "loss": 168,
+        "winrate": 23.6,
+        "sumR": 40,
+        "smallN": false,
+        "share": 42.7,
+        "halves": {
+          "Jan–Jun": {
+            "n": 132,
+            "win": 31,
+            "loss": 101,
+            "winrate": 23.5,
+            "sumR": 23,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 88,
+            "win": 21,
+            "loss": 67,
+            "winrate": 23.9,
+            "sumR": 17,
+            "smallN": false
+          }
+        }
+      },
+      "r5": {
+        "n": 220,
+        "win": 46,
+        "loss": 174,
+        "winrate": 20.9,
+        "sumR": 56,
+        "smallN": false,
+        "share": 42.7,
+        "halves": {
+          "Jan–Jun": {
+            "n": 132,
+            "win": 28,
+            "loss": 104,
+            "winrate": 21.2,
+            "sumR": 36,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 88,
+            "win": 18,
+            "loss": 70,
+            "winrate": 20.5,
+            "sumR": 20,
+            "smallN": false
+          }
+        }
+      },
+      "r2": {
+        "n": 222,
+        "win": 84,
+        "loss": 138,
+        "winrate": 37.8,
+        "sumR": 30,
+        "smallN": false,
+        "share": 42.7,
+        "halves": {
+          "Jan–Jun": {
+            "n": 133,
+            "win": 50,
+            "loss": 83,
+            "winrate": 37.6,
+            "sumR": 17,
+            "smallN": false
+          },
+          "Jul–Nov": {
+            "n": 89,
+            "win": 34,
+            "loss": 55,
+            "winrate": 38.2,
+            "sumR": 13,
+            "smallN": false
+          }
+        }
       }
     },
     "Erweiterung: nur unknown nach 7 Tg": {
-      "r2": {
+      "r3": {
         "n": 0,
         "win": 0,
         "loss": 0,
@@ -1217,7 +1541,61 @@
           }
         }
       },
-      "r3": {
+      "r4": {
+        "n": 0,
+        "win": 0,
+        "loss": 0,
+        "winrate": null,
+        "sumR": 0,
+        "smallN": true,
+        "share": 0,
+        "halves": {
+          "Jan–Jun": {
+            "n": 0,
+            "win": 0,
+            "loss": 0,
+            "winrate": null,
+            "sumR": 0,
+            "smallN": true
+          },
+          "Jul–Nov": {
+            "n": 0,
+            "win": 0,
+            "loss": 0,
+            "winrate": null,
+            "sumR": 0,
+            "smallN": true
+          }
+        }
+      },
+      "r5": {
+        "n": 0,
+        "win": 0,
+        "loss": 0,
+        "winrate": null,
+        "sumR": 0,
+        "smallN": true,
+        "share": 0,
+        "halves": {
+          "Jan–Jun": {
+            "n": 0,
+            "win": 0,
+            "loss": 0,
+            "winrate": null,
+            "sumR": 0,
+            "smallN": true
+          },
+          "Jul–Nov": {
+            "n": 0,
+            "win": 0,
+            "loss": 0,
+            "winrate": null,
+            "sumR": 0,
+            "smallN": true
+          }
+        }
+      },
+      "r2": {
         "n": 0,
         "win": 0,
         "loss": 0,
