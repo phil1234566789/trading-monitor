@@ -4,8 +4,8 @@ import {checkDobTradeSetup,dobLiveWindowInput} from '../../../src/dobTradeSetup.
 import {markIgnoredCandles,htfObCandles} from '../../../src/sessionOccurrences.js';
 import {berlinOffsetMinutes,berlinDateStrFor,formatBerlinTime} from '../../../src/berlinTime.js';
 import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
-import {dobAlarmEvents,dobStaleAlarm} from '../../../src/dobAlarm.js';
-import {dobGuardrailsFromRow,dobMonthBlocked,dobEntryRule} from '../../../src/dobGuardrails.js';
+import {dobPoiTypeAlarmRuns,dobActivePoiTypes,dobStaleAlarm} from '../../../src/dobAlarm.js';
+import {dobGuardrailsFromRow,dobEntryRule} from '../../../src/dobGuardrails.js';
 import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
 import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js';
@@ -13,7 +13,7 @@ import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
 
 const SYMBOL='XAUUSD';
-// M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte Quell-Zonen und den ATR.
+// M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte POI-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
 const BAR_SECONDS: Record<string,number>={'1m':60,'5m':300,'1h':3600,'4h':14400};
@@ -46,7 +46,7 @@ async function closedCandles(client:any,bar:string,evaluatedAt:number){
 // Gesperrt (Schalter aus, außerhalb des Fensters oder Sperre aus dob_guardrails): ins Protokoll als suppressed mit Grund,
 // nie nachsenden (der Dedup-Schlüssel ist damit verbraucht). guardrail hält die Sperre auch bei gesendeten Warn-Alarmen fest.
 async function deliver(client:any,event:any,blockedReason:string|null=null){
-  const inserted=checked(await client.from('dob_alarm_events').upsert({id:event.id,instrument:event.instrument,phase:event.phase,setup_id:event.setupId??null,
+  const inserted=checked(await client.from('dob_alarm_events').upsert({id:event.id,instrument:event.instrument,poi_type:event.poiType??'htf_ob',phase:event.phase,setup_id:event.setupId??null,
     direction:event.direction??null,signal_at:new Date(event.signalAt*1000).toISOString(),text:event.text,guardrail:event.guardrail??null,
     ...(blockedReason?{status:'suppressed',error:blockedReason}:{})},{onConflict:'id',ignoreDuplicates:true}).select('id')) as any[];
   if(!inserted.length)return null;
@@ -71,43 +71,47 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60;
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
-  // Sperr-Konfig jede Minute frisch (Statistikseite speichert direkt); im gesperrten Monat wird gar nicht gerechnet.
-  const guardrails=dobGuardrailsFromRow(checked(await client.from('dob_guardrails').select('entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be')
-    .eq('instrument',SYMBOL).maybeSingle()));
-  const monthBlocked=dobMonthBlocked(guardrails,evaluatedAt);
-  if(!dry&&monthBlocked){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}
+  // Sperr-Konfig je POI-Art jede Minute frisch (Statistikseite speichert direkt); gerechnet wird nur für POI-Arten ohne
+  // gesperrten Monat, sind alle gesperrt, gar nicht.
+  const poiTypes=(checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be')
+    .eq('instrument',SYMBOL).order('poi_type').limit(10)) as any[]).map(row=>({poiType:row.poi_type,guardrails:dobGuardrailsFromRow(row)}));
+  if(!dry&&!dobActivePoiTypes(poiTypes,evaluatedAt).length){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}
   const sessions=(checked(await client.from('sessions').select('label,from_minutes,to_minutes,days,ignore_liquidity').eq('instrument',SYMBOL).limit(200)) as any[])
     .map(r=>({label:r.label,fromMinutes:r.from_minutes,toMinutes:r.to_minutes,days:r.days,ignoreLiquidity:r.ignore_liquidity??false}));
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);
   const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
-    htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),guardrails,
+    htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),
     counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL})};
-  const calcStart=performance.now(),result=checkDobTradeSetup(input),calcMs=Math.round(performance.now()-calcStart);
-  const events=dobAlarmEvents(result,evaluatedAt),stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
-  if(stale)events.push(stale);
+  // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
+  const calcStart=performance.now(),runs=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
+  const stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
+  const events=[...runs.flatMap(r=>r.events.map((event:any)=>({event,run:r}))),...(stale?[{event:stale,run:null}]:[])];
+  const count=(key:'setups'|'rejected')=>runs.reduce((n,r)=>n+r.result[key].length,0);
   const policy=await alarmPolicy(client),blocked=policy.decide(evaluatedAt);
-  if(dry)return {dry:true,evaluatedAt,guardrails,monthBlocked,entryRuleNow:dobEntryRule(guardrails,evaluatedAt),alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
+  if(dry)return {dry:true,evaluatedAt,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
     alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
-    liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,setups:result.setups.length,rejected:result.rejected.length,
-    rejectedReasons:result.rejected.reduce((n:any,r:any)=>({...n,[r.reason]:(n[r.reason]??0)+1}),{}),
-    events:events.map(e=>({id:e.id,phase:e.phase,guardrail:e.guardrail??null,suppressed:!!e.suppressed}))};
+    liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,
+    poiTypes:Object.fromEntries(poiTypes.map(({poiType,guardrails})=>{const r=runs.find(x=>x.poiType===poiType);
+      return [poiType,{guardrails,monthBlocked:!r,entryRuleNow:dobEntryRule(guardrails,evaluatedAt),setups:r?.result.setups.length??null,rejected:r?.result.rejected.length??null,
+        rejectedReasons:r?.result.rejected.reduce((n:any,x:any)=>({...n,[x.reason]:(n[x.reason]??0)+1}),{})??null}];})),
+    events:events.map(({event:e})=>({id:e.id,poiType:e.poiType??null,phase:e.phase,guardrail:e.guardrail??null,suppressed:!!e.suppressed}))};
   const delivered=[];
-  for(const event of events){
+  for(const {event,run} of events){
     const d:any=await deliver(client,event,event.suppressed?event.guardrail:blocked);
     if(!d)continue;
     delivered.push(d);
-    // Erster zugestellter Alarm eines Paars: DOB + Quelle anpinnen. Ein Pin-Fehler darf den schon versendeten Alarm nicht stören.
-    const setup=event.setupId&&[...result.setups,...result.rejected].find((s:any)=>s.id===event.setupId),pair=setup&&result.pairs.get(setup.pairId);
+    // Erster zugestellter Alarm eines Paars: DOB + POI anpinnen. Ein Pin-Fehler darf den schon versendeten Alarm nicht stören.
+    const setup=run&&event.setupId&&[...run.result.setups,...run.result.rejected].find((s:any)=>s.id===event.setupId),pair=setup&&run.result.pairs.get(setup.pairId);
     if(pair&&(d.status==='sent'||d.status==='uncertain')){
       try{d.autoPin=await dobAutoPin(client,{event,setup,pair,evaluatedAt,m5Candles:m5Marked,m1Candles:m1Marked});}
       catch(error){d.autoPin={error:error instanceof Error?error.message:String(error)};console.error('DOB-Auto-Pin fehlgeschlagen',event.id,d.autoPin.error);}
     }
   }
   await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
-    runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:result.setups.length,rejected:result.rejected.length,skipped:null,error:null});
-  return {evaluatedAt,calcMs,setups:result.setups.length,events:events.length,delivered};
+    runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:count('setups'),rejected:count('rejected'),skipped:null,error:null});
+  return {evaluatedAt,calcMs,poiTypes:runs.map(r=>r.poiType),setups:count('setups'),events:events.length,delivered};
 }
 
 // Fehler im Lauf: Herzschlag mit Fehler und ein Hinweis je Stunde, statt still zu schweigen.

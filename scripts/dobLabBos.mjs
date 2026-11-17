@@ -16,11 +16,11 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
-  const [lab, { createDobCounterDobGate, dobSourceRetestTime }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR }] = await Promise.all(
+  const [lab, { createDobCounterDobGate, dobPoiRetestTime }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR, dobGuardrailsQuery }] = await Promise.all(
     ['/src/dobLabFeatures.js', '/src/dobCounterDob.js', '/src/supabaseClient.js', '/src/dobGuardrails.js'].map(load));
   const { v2Carriers, uniqueDobTrades, m5Marked, m1Marked, h1All, h4All, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobRuns(server, root);
   const [{ data: cfgRow, error: e1 }, { data: pins, error: e2 }] = await Promise.all([
-    supabase.from('dob_guardrails').select('*').eq('instrument', SYMBOL).maybeSingle(),
+    dobGuardrailsQuery(supabase, SYMBOL, 'htf_ob'),
     supabase.from('pin_context').select('id,note,dob_trade_key').eq('kind', 'dob_trade').gte('id', 521).order('id').limit(200)]);
   if (e1 || e2) throw e1 ?? e2;
   const config = dobGuardrailsFromRow(cfgRow);
@@ -31,14 +31,14 @@ try {
   // Für die Pins zusätzlich alle v2-Trades (auch gesperrte), damit jeder Pin einsortiert werden kann.
   const v2 = uniqueDobTrades(v2Carriers);
 
-  // Varianten: Pivot aus der M5-Struktur zum Quellen-Retest (A) bzw. zum OB1-Start (B, „bis zurück zum letzten Pivot vor OB1“);
+  // Varianten: Pivot aus der M5-Struktur zum POI-Retest (A) bzw. zum OB1-Start (B, „bis zurück zum letzten Pivot vor OB1“);
   // Bruch per Schluss oder Docht zwischen diesem Zeitpunkt und dem Entry.
   const cache = new Map();
   const bosOf = t => {
     const k = dobTradeKey(t);
     if (cache.has(k)) return cache.get(k);
-    const sourceAt = dobSourceRetestTime(t), ob1At = t.chart.firstOrderBlockStart, out = {};
-    for (const [name, at] of [['quellenRetest', sourceAt], ['ob1Start', ob1At]]) {
+    const poiAt = dobPoiRetestTime(t), ob1At = t.chart.firstOrderBlockStart, out = {};
+    for (const [name, at] of [['poiRetest', poiAt], ['ob1Start', ob1At]]) {
       if (at == null) { out[name] = null; continue; }
       const opp = lab.dobOpposingBosPivot(m5Marked, at, t.direction);
       const broken = opp.pivot ? lab.dobPivotBroken(opp.pivot.price, t.direction, m5Marked, Math.max(at, opp.pivot.time), t.entryTime, 300) : null;
@@ -48,7 +48,7 @@ try {
     return out;
   };
   // gebrochen / nicht gebrochen / keine Gegen-Ebene (Struktur läuft schon mit dem Trade).
-  const VARIANTS = { '1a Close ab Quellen-Retest': ['quellenRetest', 'close'], '1b Docht ab Quellen-Retest': ['quellenRetest', 'wick'],
+  const VARIANTS = { '1a Close ab POI-Retest': ['poiRetest', 'close'], '1b Docht ab POI-Retest': ['poiRetest', 'wick'],
     '1c Close ab OB1-Start': ['ob1Start', 'close'] };
   const classOf = (t, [at, how]) => { const b = bosOf(t)[at]; return !b ? null : !b.pivot ? 'keine Gegen-Ebene' : b[how] ? 'gebrochen' : 'nicht gebrochen'; };
 
@@ -65,9 +65,9 @@ try {
   const cfgR = t => dobConfigTpR(config, t.entryTime);
 
   const result = { measurement: 'dob-lab-bos-v1', git: gitHash, symbol: SYMBOL, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd), trades: v3.length,
-    methodology: ['Trades: v3 (v2-Träger ohne Gegen-DOB seit Quellen-Retest, createDobCounterDobGate), Dedup wie die Statistik.',
+    methodology: ['Trades: v3 (v2-Träger ohne Gegen-DOB seit POI-Retest, createDobCounterDobGate), Dedup wie die Statistik.',
       'Gegnerischer BOS-Pivot: M5-Struktur (unveränderter Trend-Algo, 5 Tage, Perioden 5/2) zum Zeitpunkt X; innerste Ebene GEGEN die Trade-Richtung, deren protected-high (Long) bzw. protected-low (Short); schon gebrochen = jüngster break-of-structure, nur Docht = jüngster LQ-sweep.',
-      'X = Quellen-Retest (1a Close, 1b Docht) bzw. OB1-Start (1c Close). Bruch: M5-Kerze nach max(X, Pivotzeit), bis Entry geschlossen.',
+      'X = POI-Retest (1a Close, 1b Docht) bzw. OB1-Start (1c Close). Bruch: M5-Kerze nach max(X, Pivotzeit), bis Entry geschlossen.',
       '„keine Gegen-Ebene“ = die M5-Struktur hat zu X keine Ebene gegen den Trade (läuft schon mit). Regel-Varianten zählen sie als gebrochen bzw. nicht.',
       'n = Win + Loss, ΣR = R·Win − Loss; Konfig = dobConfigTpR(aktive dob_guardrails, Entry); Halbjahre nach Berliner Entry-Monat.'],
     variants: {}, pins: {} };

@@ -1,6 +1,6 @@
 import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 
-// DOB-Setup v3 (Philip, Merkmal-Labor): kein Trade, wenn zwischen dem Retest der Kraftquelle (Start der letzten Touch-Episode
+// DOB-Setup v3 (Philip, Merkmal-Labor): kein Trade, wenn zwischen dem Retest des POI (Start der letzten Touch-Episode
 // vor OB1) und dem Entry ein DOB-Paar in Gegenrichtung erkannt wurde. Tot (zählt nicht): Ein M1-Schluss vor dem Entry lag jenseits
 // der fernen OB2-Kante des Gegen-DOBs (bärisch über Oberkante, bullisch unter Unterkante). Paare, deren Routen der Indikator
 // alle verwirft, liefert detectDoubleOrderBlocks gar nicht erst.
@@ -23,14 +23,14 @@ export function dobCounterDobs(dob,direction,fromTime,entryTime,m1Candles=null){
  return {count:pairs.length,...(m1Candles?{liveCount:pairs.filter(p=>!p.dead).length}:{}),pairs};
 }
 
-export const dobSourceRetestTime=setup=>setup.sourceOfStrength?.retestAgeSeconds==null?null
- :setup.chart.firstOrderBlockStart-setup.sourceOfStrength.retestAgeSeconds;
+export const dobPoiRetestTime=setup=>setup.poi?.retestAgeSeconds==null?null
+ :setup.chart.firstOrderBlockStart-setup.poi.retestAgeSeconds;
 
 // Status je Setup: none = kein Gegen-DOB, dead = nur tote, live = mind. ein lebender. Was daraus folgt (sperren, TP 5R, nichts),
 // entscheidet die Konfig (dob_guardrails.counter_dob_mode, dobCounterDobBlocked/dobCounterDobTpR in src/dobGuardrails.js).
 export const dobCounterDobStatus=c=>!c.count?'none':c.liveCount?'live':'dead';
 // Gate für checkDobTradeSetup (input.counterDobGate): erkennt Gegen-DOBs auf eigenen 2 Tagen bis zum Entry, weil der
-// Quellen-Retest vor dem Live-Fenster liegen kann. m5/m1 session-markiert und bis mindestens zum Entry. Je Entry gecacht.
+// POI-Retest vor dem Live-Fenster liegen kann. m5/m1 session-markiert und bis mindestens zum Entry. Je Entry gecacht.
 export function createDobCounterDobGate({m5Candles,m1Candles,instrument='XAUUSD'}){
  const cache=new Map();
  const dobAt=entryTime=>{
@@ -41,7 +41,7 @@ export function createDobCounterDobGate({m5Candles,m1Candles,instrument='XAUUSD'
   return cache.get(entryTime);
  };
  return setup=>{
-  const from=dobSourceRetestTime(setup);
+  const from=dobPoiRetestTime(setup);
   if(setup.entryTime==null||from==null)return null;
   const counter=dobCounterDobs(dobAt(setup.entryTime),setup.direction,from,setup.entryTime,m1Candles);
   return {...counter,status:dobCounterDobStatus(counter)};

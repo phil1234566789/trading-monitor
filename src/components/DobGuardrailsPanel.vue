@@ -10,17 +10,17 @@ import {DOB_MAX_R_STEPS} from '../dobMaxR.js';
 import {minutesToTimeInput,timeInputToMinutes} from '../chartTimeUtils.js';
 import DobStatCell from './DobStatCell.vue';
 
-// Sperren und Regeln je Instrument bearbeiten (Tabelle dob_guardrails). Der Entwurf wirkt sofort als Vorschau auf die Seite
+// Sperren und Regeln je Instrument und POI-Art bearbeiten (Tabelle dob_guardrails, Speichern trifft nur die eigene POI-Art). Der Entwurf wirkt sofort als Vorschau auf die Seite
 // (update:draft); nur „Speichern“ schreibt ihn in die DB und damit in den Watcher. „Sperren anwenden“ ist ein reiner Ansichtsschalter.
 // Darunter die Halbjahre je Sperrgruppe: Sperren aus denselben Daten schönen die Winrate, ein Effekt, der nur in einem Halbjahr trägt,
 // ist eher Zufall.
-const props=defineProps({instrument:String,config:Object,rows:Array,targets:Array,open:Boolean,apply:Boolean});
+const props=defineProps({instrument:String,poiType:String,config:Object,rows:Array,targets:Array,open:Boolean,apply:Boolean});
 const emit=defineEmits(['saved','toggle','update:draft','update:apply']);
 const MONTHS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const AGE_OPTIONS=DOB_ZONE_AGE_BUCKETS.slice(0,-1).map(([label,max])=>[max,`≥ ${label.split('–').at(-1).replace('< ','')}`]);
 const TP_OPTIONS=DOB_MAX_R_STEPS.filter(r=>r>=1);
 // Über die DB-Form normalisieren, damit Entwurf und gespeicherter Stand dieselbe Gestalt haben (abgeleitete Sperrliste inklusive).
-const clone=c=>JSON.parse(JSON.stringify(dobGuardrailsFromRow(dobGuardrailsToRow(props.instrument,c))));
+const clone=c=>JSON.parse(JSON.stringify(dobGuardrailsFromRow(dobGuardrailsToRow(props.instrument,c,props.poiType))));
 const draft=ref(clone(props.config));
 watch(()=>props.config,c=>{draft.value=clone(c);});
 const dirty=computed(()=>JSON.stringify(clone(draft.value))!==JSON.stringify(clone(props.config)));
@@ -36,7 +36,7 @@ function setZoneAge(value){const d=draft.value;d.minZoneAgeSavedSeconds=value;if
 function toggleMonth(m){const list=draft.value.blockedMonths;draft.value.blockedMonths=list.includes(m)?list.filter(x=>x!==m):[...list,m].sort((a,b)=>a-b);}
 async function save(){
  saving.value=true;error.value='';
- const {error:e}=await supabase.from('dob_guardrails').upsert({...dobGuardrailsToRow(props.instrument,draft.value),updated_at:new Date().toISOString()});
+ const {error:e}=await supabase.from('dob_guardrails').upsert({...dobGuardrailsToRow(props.instrument,draft.value,props.poiType),updated_at:new Date().toISOString()});
  saving.value=false;
  if(e){error.value=e.message;return;}
  emit('saved',clone(draft.value));
@@ -97,12 +97,12 @@ const ruleImpacts=computed(()=>{
       <fieldset><legend>Gesperrte Monate (Entry, Berlin)</legend>
         <label v-for="(name,i) in MONTHS" :key="name"><input type="checkbox" :checked="draft.blockedMonths.includes(i+1)" @change="toggleMonth(i+1)"> {{ name }}</label>
       </fieldset>
-      <fieldset><legend>Kraftquelle-Zone bis Retest</legend>
+      <fieldset><legend>POI-Zone bis Retest</legend>
         <label><input type="checkbox" :checked="zoneAgeOn" @change="setZoneAgeOn($event.target.checked)"> Mindestalter</label>
         <select :value="draft.minZoneAgeSavedSeconds??AGE_OPTIONS[0][0]" :disabled="!zoneAgeOn" aria-label="Mindestalter" @change="setZoneAge(Number($event.target.value))"><option v-for="[value,label] in AGE_OPTIONS" :key="label" :value="value">{{ label }}</option></select>
         <p class="note">Trades ohne bekanntes Zonenalter (v0, ohne Retest) sperrt das nicht.</p>
       </fieldset>
-      <fieldset v-if="hasCounterDob"><legend>Gegen-DOB seit Quellen-Retest</legend>
+      <fieldset v-if="hasCounterDob"><legend>Gegen-DOB seit POI-Retest</legend>
         <label v-for="m in DOB_COUNTER_DOB_MODES" :key="m"><input type="radio" name="counterDobMode" :value="m" v-model="draft.counterDobMode"> {{ DOB_COUNTER_DOB_MODE_LABELS[m] }}
           <span class="impact" title="ΣR nach Konfig mit diesem Modus">{{ dobSignedR(modeImpacts[m]) }} R</span></label>
       </fieldset>

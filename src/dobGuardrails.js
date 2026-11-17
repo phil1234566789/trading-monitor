@@ -1,5 +1,6 @@
 import {berlinOffsetMinutes,berlinDateStrFor} from './berlinTime.js';
 import {dobFeaturesOf,dobFeature} from './dobTradeFeatures.js';
+import {dobPoiTypeOf} from './dobPoiType.js';
 
 // Sperr- und Regel-Konfiguration des DOB-Setups je Instrument (Tabelle dob_guardrails). Eine Quelle für Statistikseite und
 // dob-watcher, deshalb rein und nur mit Deno-tauglichen Importen (Dateiendung, siehe test/dobWatcherImports.test.js).
@@ -8,7 +9,7 @@ import {dobFeaturesOf,dobFeature} from './dobTradeFeatures.js';
 // erlaubt (bis < von), Wochentage egal; das erste passende Fenster gilt. Weitere Felder je Fenster können ohne Umbau dazukommen.
 // enabled:false schaltet eine Regel ab, ohne ihre Werte zu verlieren (fehlt = an); abgeschaltete Regeln wirken nirgends.
 // minZoneAgeSeconds ist der wirksame Wert (null = aus), minZoneAgeSavedSeconds der gemerkte Wert für das Wiedereinschalten.
-// counterDobMode (v3, Gegen-DOB seit Quellen-Retest, Status none/dead/live je Trade): live_block_dead_5r = lebende sperren, nur tote
+// counterDobMode (v3, Gegen-DOB seit POI-Retest, Status none/dead/live je Trade): live_block_dead_5r = lebende sperren, nur tote
 // mit TP 5R (Philips Default), block_all = jeder sperrt, off = Gegen-DOBs ignorieren. TP-Regeln sind Konfig, keine Läufe.
 export const DOB_DEFAULT_TP_R=2;
 export const DOB_COUNTER_DOB_MODES=['block_all','live_block_dead_5r','off'];
@@ -34,7 +35,11 @@ export function dobGuardrailsFromRow(row){
   partialAtR:Number.isFinite(row.partial_at_r)?row.partial_at_r:null,partialPct:Number.isFinite(row.partial_pct)?row.partial_pct:50,
   partialBe:row.partial_be!==false};
 }
-export const dobGuardrailsToRow=(instrument,config)=>({instrument,entry_windows:config.entryWindows,default_tp_r:config.defaultTpR,
+// Eine Leseform für alle Leser (Seite, Panel, Chart, Watcher, Labore): Konfig je Instrument UND POI-Art; ohne POI-Art
+// träfe die Abfrage seit der LQ-Sweep-Zeile zwei Zeilen.
+export const dobGuardrailsQuery=(client,instrument,poiType,columns='*')=>client.from('dob_guardrails').select(columns)
+ .eq('instrument',instrument).eq('poi_type',dobPoiTypeOf(poiType)).maybeSingle();
+export const dobGuardrailsToRow=(instrument,config,poiType)=>({instrument,poi_type:dobPoiTypeOf(poiType),entry_windows:config.entryWindows,default_tp_r:config.defaultTpR,
  blocked_months:config.blockedMonths,min_zone_age_seconds:config.minZoneAgeSeconds,
  min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds,counter_dob_mode:config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE,
  counter_candles_mode:config.counterCandlesMode??'off',partial_at_r:config.partialAtR??null,partial_pct:config.partialPct??50,
@@ -69,7 +74,7 @@ export const dobConfigTpR=(config,entryTimeSec,counterDobStatus=null)=>{
  const rule=dobEntryRule(config,entryTimeSec);return rule.action==='tp'?rule.tpR:config.defaultTpR??DOB_DEFAULT_TP_R;};
 export const dobEntryTimeBlocked=(config,entryTimeSec)=>dobEntryRule(config,entryTimeSec).action==='block';
 
-// Alter der Kraftquelle-Zone bis zum Retest. Unbekanntes Alter (keine Quelle, kein Retest) sperrt nicht: ohne Wert kein Urteil.
+// Alter der POI-Zone bis zum Retest. Unbekanntes Alter (kein POI, kein Retest) sperrt nicht: ohne Wert kein Urteil.
 export const dobZoneAgeBlocked=(config,zoneAgeSeconds)=>
  config.minZoneAgeSeconds!=null&&Number.isFinite(zoneAgeSeconds)&&zoneAgeSeconds<config.minZoneAgeSeconds;
 
@@ -84,7 +89,7 @@ export function dobGuardrailReason(config,{entryTime,zoneAgeSeconds,counterDobSt
 }
 // Dieselben Urteile für eine Zeile aus dob_trade_setups (Statistikseite), damit die Feldzuordnung an einer Stelle steht.
 // Künftige Merkmale kommen aus der jsonb-Spalte features (Philip), gelesen über eine gemeinsame Funktion, nicht als neue Spalten.
-export const dobRowGuardrailReason=(config,row)=>dobGuardrailReason(config,{entryTime:row.entry_time,zoneAgeSeconds:row.source_zone_age_seconds,
+export const dobRowGuardrailReason=(config,row)=>dobGuardrailReason(config,{entryTime:row.entry_time,zoneAgeSeconds:row.poi_zone_age_seconds,
  counterDobStatus:row.counter_dob_status??null,features:dobFeaturesOf(row)});
 export const dobRowConfigTpR=(config,row)=>dobConfigTpR(config,row.entry_time,row.counter_dob_status??null);
 // Teilprofit (partialAtR, null = aus): pct % bei atR schließen, be = Rest-SL danach auf Entry, Rest bis zum Konfig-TP. Liegt der TP

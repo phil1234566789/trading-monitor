@@ -1,12 +1,12 @@
 import {readdirSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {checkDobTradeSetup,dobLiveWindowInput,dobLiveWindowStart} from '../src/dobTradeSetup.js';
-import {sourceMaxDistanceAtr} from '../src/dobSourceOfStrength.js';
+import {poiMaxDistanceAtr} from '../src/dobHtfObPoi.js';
 import {berlinOffsetMinutes} from '../src/berlinTime.js';
-import {directory,load,sourceContext,run,berlin} from './dobFixtures.js';
+import {directory,load,poiContext,run,berlin} from './dobFixtures.js';
 
 const all=result=>[...result.setups,...result.rejected];
-const SOURCE_MAX_DISTANCE_ATR=sourceMaxDistanceAtr('XAUUSD');
+const POI_MAX_DISTANCE_ATR=poiMaxDistanceAtr('XAUUSD');
 const berlinMinute=sec=>((Math.floor(sec/60)+berlinOffsetMinutes(sec*1000))%1440+1440)%1440;
 
 // Mustertrades Journal-Konto 8 (Berliner Zeit). Erwartet ist der nächste v0-Entry gleicher Richtung, kein Soll:
@@ -60,7 +60,7 @@ describe('checkDobTradeSetup v0-Kern',()=>{
   // Erste Minute nach der Tagespause am Abend des 04.11. (FXCM-Reopen 23:01 Berlin).
   const reopen=candles.m1.find((c,i)=>i&&c.time>berlin('2026-11-04','20:00')&&c.time-candles.m1[i-1].time>1800).time;
   for(let at=berlin('2026-11-05','02:00');at<=berlin('2026-11-05','22:00');at+=1800){
-   const input={instrument:'XAUUSD',m5Candles:candles.m5,m1Candles:candles.m1,evaluatedAt:at,sourceContext},live=dobLiveWindowInput(input);
+   const input={instrument:'XAUUSD',m5Candles:candles.m5,m1Candles:candles.m1,evaluatedAt:at,poiContext},live=dobLiveWindowInput(input);
    expect(dobLiveWindowStart(candles.m1,'XAUUSD',at)).toBe(reopen);
    expect([live.m5Candles.length<300,live.m1Candles.length<1500]).toEqual([true,true]);
    const wide=checkDobTradeSetup(input);
@@ -79,10 +79,10 @@ describe('checkDobTradeSetup v0-Kern',()=>{
  });
 });
 
-// OB-Quelle = alle Mustertrade-Positionen außer K05 (#137, LS-Quelle, gehört zur späteren LS-Version).
+// OB-POI = alle Mustertrade-Positionen außer K05 (#137, LQ-Sweep-POI, gehört zur späteren LQ-Sweep-Version).
 // v1 = nächste aktive H1/H4-OB ≤ 1,5 ATR; v2 = dasselbe, aber die Zone muss vor OB1 retestet sein (Philip, Q17).
 // Philips eigene Zone treffen #134/#136/#140 exakt (jeweils vor OB1 berührt). #135 nimmt mit Retest die retestete H4-Zone
-// statt der nie berührten H1-Zone. #139/#139b: die einzige nahe Zone wurde vor OB1 nie berührt (Philips Quelle dort: M5-OB + LS).
+// statt der nie berührten H1-Zone. #139/#139b: die einzige nahe Zone wurde vor OB1 nie berührt (Philips POI dort: M5-OB + LQ-Sweep).
 const OB_SAMPLES=[
  ['#134','2026-11-12','14:11','short',['H1',3954.74,3964.91]],['#135','2026-11-05','16:14','short',['H1',4158.6,4167.16],['H4',4166.18,4225.24]],
  ['#136','2026-11-04','04:13','long',['H1',3917.39,3922.72]],['#136b','2026-11-04','06:21','long',['H1',3917.39,3922.72]],
@@ -90,10 +90,10 @@ const OB_SAMPLES=[
  ['#139b','2026-10-22','11:24','short',['H1',4108.4,4116.2],null],['#140','2026-10-22','05:03','short',['H1',4122.1,4126.19]],
  ['#140b','2026-10-22','05:22','short',['H1',4122.1,4126.19]],['#141','2026-10-12','15:34','short',['H4',4166.18,4225.24]],
 ].map(([trade,day,at,direction,v1,v2=v1])=>({trade,day,at,direction,v1,v2}));
-const sourceOf=([timeframe,bottom,top])=>({kind:'htfOb',timeframe,zone:{bottom,top}});
+const poiOf=([timeframe,bottom,top])=>({kind:'htfOb',timeframe,zone:{bottom,top}});
 
 describe('checkDobTradeSetup: Phase ob2Retest',()=>{
- // Alarmzeitpunkt (Q3): OB2 berührt, OB1-Reaktion und -Hold stehen, Quelle passt; die OB2-Reaktion fehlt noch.
+ // Alarmzeitpunkt (Q3): OB2 berührt, OB1-Reaktion und -Hold stehen, POI passt; die OB2-Reaktion fehlt noch.
  it('#134 meldet ob2Retest ab dem OB2-Kontakt und gibt dann an das Paar ab',()=>{
   const fixture=load('2026-11-12'),done=nearestIn(run(fixture).setups,{day:'2026-11-12',at:'14:11',direction:'short'});
   const contactKnown=done.chart.secondRetestTime+60;
@@ -102,60 +102,60 @@ describe('checkDobTradeSetup: Phase ob2Retest',()=>{
   expect(all(before).some(s=>s.pairId===done.pairId)).toBe(false);
   const retest=run(fixture,contactKnown).setups.find(s=>s.pairId===done.pairId);
   expect(retest).toMatchObject({id:`${done.pairId}:retest`,phase:'ob2Retest',phaseSince:contactKnown,route:null,entryTime:null,
-   sourceOfStrength:done.sourceOfStrength});
+   poi:done.poi});
   const after=run(fixture,done.recognizedAt).setups.filter(s=>s.pairId===done.pairId);
   expect(after.map(s=>s.phase)).not.toContain('ob2Retest');
   expect(after.length).toBeGreaterThan(0);
  });
 });
 
-describe('checkDobTradeSetup: Quelle der Kraft',()=>{
+describe('checkDobTradeSetup: POI',()=>{
  // #140 Pos. 1 (05:03) hat keinen eigenen v0-Trade, sie fällt auf den Trade von #140b (05:24).
- it.each(OB_SAMPLES)('$trade: v1 (ohne Retest) findet eine Quelle',sample=>{
+ it.each(OB_SAMPLES)('$trade: v1 (ohne Retest) findet einen POI',sample=>{
   const result=run(load(sample.day),undefined,true,{requireRetest:false}),setup=nearestIn(all(result),sample);
   expect(Math.abs(setup.entryTime-berlin(sample.day,sample.at))).toBeLessThanOrEqual(30*60);
   expect(result.setups).toContainEqual(setup);
-  expect(setup.sourceOfStrength).toMatchObject(sourceOf(sample.v1));
-  expect(setup.sourceOfStrength.distanceAtr).toBeLessThanOrEqual(SOURCE_MAX_DISTANCE_ATR);
+  expect(setup.poi).toMatchObject(poiOf(sample.v1));
+  expect(setup.poi.distanceAtr).toBeLessThanOrEqual(POI_MAX_DISTANCE_ATR);
  });
  it.each(OB_SAMPLES)('$trade: v2 verlangt den Retest der Zone vor OB1',sample=>{
   const result=run(load(sample.day)),setup=nearestIn(all(result),sample);
   if(sample.v2){
    expect(result.setups).toContainEqual(setup);
-   expect(setup.sourceOfStrength).toMatchObject({...sourceOf(sample.v2),retested:true});
+   expect(setup.poi).toMatchObject({...poiOf(sample.v2),retested:true});
    // Art und Alter des letzten Touchs vor OB1 für spätere Guardrails (Folge-Touch, frischer Retest).
-   expect(['first','followUp']).toContain(setup.sourceOfStrength.retestKind);
-   expect(setup.sourceOfStrength.retestAgeSeconds).toBeGreaterThan(0);
+   expect(['first','followUp']).toContain(setup.poi.retestKind);
+   expect(setup.poi.retestAgeSeconds).toBeGreaterThan(0);
    // Messung (exakte M5-Episoden): #134 erster Touch, #141 zwölfter Touch.
-   if(sample.trade==='#134')expect(setup.sourceOfStrength.retestKind).toBe('first');
-   if(sample.trade==='#141')expect(setup.sourceOfStrength.retestKind).toBe('followUp');
-   expect(setup.sourceOfStrength.distanceAtr).toBeLessThanOrEqual(SOURCE_MAX_DISTANCE_ATR);
+   if(sample.trade==='#134')expect(setup.poi.retestKind).toBe('first');
+   if(sample.trade==='#141')expect(setup.poi.retestKind).toBe('followUp');
+   expect(setup.poi.distanceAtr).toBeLessThanOrEqual(POI_MAX_DISTANCE_ATR);
   }else{
    expect(result.rejected).toContainEqual(setup);
-   expect(setup.reason).toBe('noSourceOfStrength');
+   expect(setup.reason).toBe('noPoi');
   }
  });
- it('#137 (LS-Quelle) wird mit Grund verworfen, nicht still weggelassen',()=>{
+ it('#137 (LQ-Sweep-POI) wird mit Grund verworfen, nicht still weggelassen',()=>{
   const result=run(load('2026-11-02')),setup=nearest(SAMPLE_TRADES[3]);
   expect(result.rejected).toContainEqual(setup);
   // Nächste aktive Zone 38,99 USD = 2,54 ATR entfernt.
-  expect(setup.sourceOfStrength.distanceAtr).toBeGreaterThan(SOURCE_MAX_DISTANCE_ATR);
-  expect(setup.reason).toBe('noSourceOfStrength');
+  expect(setup.poi.distanceAtr).toBeGreaterThan(POI_MAX_DISTANCE_ATR);
+  expect(setup.reason).toBe('noPoi');
  });
- it('ohne H1/H4 bleibt die Quelle unbekannt und jedes Setup verworfen',()=>{
+ it('ohne H1/H4 bleibt der POI unbekannt und jedes Setup verworfen',()=>{
   const result=run(load('2026-11-02'),undefined,false);
   expect(result.setups).toEqual([]);
   expect(result.rejected.length).toBeGreaterThan(0);
   expect(new Set(result.rejected.map(s=>s.reason))).toEqual(new Set(['missingHtfCandles']));
  });
- it('ohne gemessenen ATR-Faktor gibt es keine Quelle (kein stiller Default)',()=>{
+ it('ohne gemessenen ATR-Faktor gibt es kein POI (kein stiller Default)',()=>{
   const fixture=load('2026-11-02');
-  expect(SOURCE_MAX_DISTANCE_ATR).toBe(1.5);
-  expect(sourceMaxDistanceAtr('GBPUSD')).toBeNull();
+  expect(POI_MAX_DISTANCE_ATR).toBe(1.5);
+  expect(poiMaxDistanceAtr('GBPUSD')).toBeNull();
   const result=checkDobTradeSetup({instrument:'GBPUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
-   evaluatedAt:fixture.provenance.query.to,sourceContext});
+   evaluatedAt:fixture.provenance.query.to,poiContext});
   expect(result.setups).toEqual([]);
   expect(result.rejected.length).toBeGreaterThan(0);
-  expect(new Set(result.rejected.map(s=>s.reason))).toEqual(new Set(['noSourceOfStrengthConfig']));
+  expect(new Set(result.rejected.map(s=>s.reason))).toEqual(new Set(['noPoiConfig']));
  });
 });

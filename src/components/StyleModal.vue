@@ -110,7 +110,7 @@ const GROUPS = [
       { key: "dobConfirmed", label: "Bestätigt" },
       { key: "dobLoss", label: "Verlust" },
       { key: "dobHover", label: "Hover-Hervorhebung" },
-      { key: "dobSource", label: "Kraftquelle (Sprung aus Statistik)" },
+      { key: "dobPoi", label: "POI (Sprung aus Statistik)" },
       { key: "dobPin", label: "Pin-Hervorhebung" },
     ],
   },

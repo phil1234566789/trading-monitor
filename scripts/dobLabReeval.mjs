@@ -15,11 +15,11 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
-  const [lab, { dobSourceRetestTime }] = await Promise.all(['/src/dobLabFeatures.js', '/src/dobCounterDob.js'].map(p => server.ssrLoadModule(p)));
+  const [lab, { dobPoiRetestTime }] = await Promise.all(['/src/dobLabFeatures.js', '/src/dobCounterDob.js'].map(p => server.ssrLoadModule(p)));
   const { cases, block, ideaRules, priceAction, m5Marked, h1All, dataEnd, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
   // Merkmale je Trade einmal (gecacht über das Objekt, beide Träger teilen die Repräsentanten).
   const memo = fn => { const cache = new Map(); return t => { if (!cache.has(t)) cache.set(t, fn(t)); return cache.get(t); }; };
-  const m5Bos = memo(t => Object.fromEntries([['quellenRetest', dobSourceRetestTime(t)], ['ob1Start', t.chart.firstOrderBlockStart]].map(([k, at]) => {
+  const m5Bos = memo(t => Object.fromEntries([['poiRetest', dobPoiRetestTime(t)], ['ob1Start', t.chart.firstOrderBlockStart]].map(([k, at]) => {
     if (at == null) return [k, null];
     const opp = lab.dobOpposingBosPivot(m5Marked, at, t.direction);
     const b = opp.pivot ? lab.dobPivotBroken(opp.pivot.price, t.direction, m5Marked, Math.max(at, opp.pivot.time), t.entryTime, 300) : null;
@@ -30,7 +30,7 @@ try {
     t.direction, m5Marked, t.entryTime, 300).cls])));
   const outer = memo(t => ({ m5_5d: lab.dobOuterTrend(m5Marked, t.chart.secondRetestTime + 60, t.direction, { windowDays: 5, barSeconds: 300 }).verdict,
     h1_7d: lab.dobOuterTrend(h1All, t.chart.secondRetestTime + 60, t.direction, { windowDays: 7, barSeconds: 3600 }).verdict }));
-  const confirm = memo(t => { const at = dobSourceRetestTime(t); return at == null ? null : lab.dobM5Confirmation(m5Marked, t.entryTime, t.direction, at).confirmed; });
+  const confirm = memo(t => { const at = dobPoiRetestTime(t); return at == null ? null : lab.dobM5Confirmation(m5Marked, t.entryTime, t.direction, at).confirmed; });
   const brokenOrFree = (t, k, how) => { const b = m5Bos(t)[k]; return !b || b.none || b[how]; };
 
   // keep(t) = Trade bleibt. Gegen-DOB „jeder sperrt“ wirkt nur auf die Kombi-Träger (dort sind nur tote übrig).
@@ -42,16 +42,16 @@ try {
     'PA Gegenkerzen ≥3 von 5 → sperren': t => priceAction(t, 5).counterCandles < 3,
     'PA Muster in Trade-Richtung Pflicht (3)': t => priceAction(t, 3).withPattern,
     'PA Muster in Trade-Richtung Pflicht (5)': t => priceAction(t, 5).withPattern,
-    'BOS M5 1a gebrochen/frei Pflicht (Close ab Quellen-Retest)': t => brokenOrFree(t, 'quellenRetest', 'close'),
-    'BOS M5 1b gebrochen/frei Pflicht (Docht ab Quellen-Retest)': t => brokenOrFree(t, 'quellenRetest', 'wick'),
+    'BOS M5 1a gebrochen/frei Pflicht (Close ab POI-Retest)': t => brokenOrFree(t, 'poiRetest', 'close'),
+    'BOS M5 1b gebrochen/frei Pflicht (Docht ab POI-Retest)': t => brokenOrFree(t, 'poiRetest', 'wick'),
     'BOS M5 1c gebrochen/frei Pflicht (Close ab OB1-Start)': t => brokenOrFree(t, 'ob1Start', 'close'),
     'BOS H1 10 Tg innerste Ebene: 1b sperren': t => h1Class(t).inner !== '1b',
     'BOS H1 10 Tg Range-Ebene: 1b sperren': t => h1Class(t).range !== '1b',
-    'erster Touch Pflicht': t => t.sourceOfStrength.retestKind === 'first',
+    'erster Touch Pflicht': t => t.poi.retestKind === 'first',
     'äußerer Trend M5 5 Tg gegen → sperren': t => outer(t).m5_5d !== 'against',
     'äußerer Trend H1 7 Tg gegen → sperren': t => outer(t).h1_7d !== 'against',
-    'M5-Bestätigung seit Quellen-Retest Pflicht': t => confirm(t) !== false,
-    'OB1 und OB2 beide in der Zone → sperren': t => !lab.dobObsInSourceZone(t.chart, t.sourceOfStrength)?.both,
+    'M5-Bestätigung seit POI-Retest Pflicht': t => confirm(t) !== false,
+    'OB1 und OB2 beide in der Zone → sperren': t => !lab.dobObsInPoiZone(t.chart, t.poi)?.both,
   };
   const result = { measurement: 'dob-lab-reeval-v1', git: gitHash, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
     rule: 'besteht: Winrate fest 3R in Jan–Jun UND Jul–Nov über der Basis; ΣR TP nach Konfig ≥ 90 % der Basis.',

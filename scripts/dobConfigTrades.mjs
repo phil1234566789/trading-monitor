@@ -1,12 +1,13 @@
 // Gemeinsame Grundlage der Konto-Labore (Drawdown, Tageslimit): Lauf dob-setup-v3 aus der DB mit Philips gespeicherter Konfig,
 // eindeutige erlaubte Trades nach Entry sortiert; R je Trade später über dobRowConfigScore (src/dobPartialProfit.js).
+// Lauf und Konfig gehören derselben POI-Art an; beides bleibt HTF-OB, bis ein LQ-Sweep-Lauf existiert.
 export const DOB_CONFIG_RUN = 'dob-setup-v3';
 
-export async function loadDobConfigTrades(server) {
+export async function loadDobConfigTrades(server, poiType = 'htf_ob') {
   const L = p => server.ssrLoadModule(p);
   const [{ supabase }, g, pp, st, bt, db] = await Promise.all(['/src/supabaseClient.js', '/src/dobGuardrails.js', '/src/dobPartialProfit.js',
     '/src/dobTradeStatistics.js', '/src/berlinTime.js', '/src/dbReadPaging.js'].map(L));
-  const { data: cfgRow, error } = await supabase.from('dob_guardrails').select('*').eq('instrument', 'XAUUSD').single();
+  const { data: cfgRow, error } = await g.dobGuardrailsQuery(supabase, 'XAUUSD', poiType);
   if (error) throw error;
   const cfg = g.dobGuardrailsFromRow(cfgRow);
   const { data: rows, error: rowsError } = await db.fetchAllRows((from, to) => supabase.from('dob_trade_setups').select('*').eq('instrument', 'XAUUSD')

@@ -22,7 +22,7 @@ describe('Konfig-Merkmale je Trade (features)',()=>{
   expect([f,g].map(x=>dobCounterCandlesBlocked(c('3of5'),x))).toEqual([true,true]);
   expect(dobCounterCandlesBlocked(c('off'),f)).toBe(false);
   expect(dobCounterCandlesBlocked(c('3of3'),{})).toBe(false);
-  const row={entry_time:entry,source_zone_age_seconds:null,counter_dob_status:'none',features:f};
+  const row={entry_time:entry,poi_zone_age_seconds:null,counter_dob_status:'none',features:f};
   expect(dobRowGuardrailReason(c('3of3'),row)).toBe('counterCandles');
   expect(dobRowGuardrailReason(c('3of3'),{...row,features:null})).toBeNull();
   expect(dobFeature(dobFeaturesOf({}),'counterCandles3')).toBeNull();

@@ -86,8 +86,8 @@ export const DEFAULT_CHART_COLORS = {
   dobLoss: { hex: "#e57373", alpha: 1 },
   dobHover: { hex: "#ffe082", alpha: 0.95 },
   dobPin: { hex: "#ec407a", alpha: 0.9 },
-  // Kraftquelle (H1/H4-Zone) beim DOB-Sprung aus der Statistik: kräftigeres Gold als dobConfirmed, damit sie von OB1/OB2 abhebt.
-  dobSource: { hex: "#ffb300", alpha: 0.95 },
+  // POI (H1/H4-Zone) beim DOB-Sprung aus der Statistik: kräftigeres Gold als dobConfirmed, damit sie von OB1/OB2 abhebt.
+  dobPoi: { hex: "#ffb300", alpha: 0.95 },
   tradeSetupShort: { hex: "#ffd700", alpha: 0.9 },
   tradeSetupLong: { hex: "#2196f3", alpha: 0.9 },
   tradeSetupProtected: { hex: "#ffffff", alpha: 0.95 },
@@ -221,6 +221,10 @@ for (const key of Object.keys(DEFAULT_CHART_COLORS).filter(key => key.startsWith
 DEFAULT_CHART_COLORS.m1RangesMarker = { ...DEFAULT_CHART_COLORS.rangesMarker };
 DEFAULT_CHART_COLORS.m1RangesMarker2 = { ...DEFAULT_CHART_COLORS.rangesMarker2 };
 
+// Umbenannte Schlüssel: gespeicherte Farben unter dem alten Namen gelten weiter (localStorage und chart_colors).
+const LEGACY_COLOR_KEYS = { dobPoi: "dobSource" };
+const currentColorKey = key => Object.keys(LEGACY_COLOR_KEYS).find(k => LEGACY_COLOR_KEYS[k] === key) ?? key;
+
 function loadInitial() {
   let saved = {};
   try {
@@ -231,7 +235,7 @@ function loadInitial() {
   }
   const result = {};
   for (const [key, def] of Object.entries(DEFAULT_CHART_COLORS)) {
-    const s = saved[key];
+    const s = saved[key] ?? saved[LEGACY_COLOR_KEYS[key]];
     if (s && typeof s === "object" && typeof s.hex === "string") {
       result[key] = { hex: s.hex, alpha: typeof s.alpha === "number" ? s.alpha : def.alpha };
     } else if (typeof s === "string") {
@@ -290,8 +294,9 @@ async function syncFromRemote() {
     if (!data || data.length === 0) return;
     suppressSave = true;
     for (const row of data) {
-      if (DEFAULT_CHART_COLORS[row.key]) {
-        chartColors[row.key] = { hex: row.hex, alpha: row.alpha };
+      const key = currentColorKey(row.key);
+      if (DEFAULT_CHART_COLORS[key]) {
+        chartColors[key] = { hex: row.hex, alpha: row.alpha };
       }
     }
     nextTick(() => {

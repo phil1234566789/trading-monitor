@@ -4,12 +4,13 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian,dobTradesPerWeek} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobPoiLabel,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian,dobTradesPerWeek} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobAccountTile from '../components/DobAccountTile.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
-import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobRowGuardrailReason,dobGuardrailsSummary} from '../dobGuardrails.js';
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobRowGuardrailReason,dobGuardrailsSummary,dobGuardrailsQuery} from '../dobGuardrails.js';
+import {DOB_POI_TYPES,DOB_DEFAULT_POI_TYPE} from '../dobPoiType.js';
 import {dobRowConfigScore} from '../dobPartialProfit.js';
 import {useDobTradePins} from '../composables/useDobTradePins.js';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
@@ -26,23 +27,29 @@ const year=ref(String(route.query.year??new Date().getFullYear()));
 const run=ref(typeof route.query.run==='string'?route.query.run:'');
 const runs=ref([]),rows=ref([]),sessions=ref([]),loading=ref(false),error=ref(''),shown=ref(PAGE);
 const selectedRun=computed(()=>runs.value.find(r=>r.id===run.value));
+// POI-Art (src/dobPoiType.js): Läufe, Konfig und Zahlen nur dieser POI-Art, nie gemischt. Alte Links mit ?run= ohne
+// ?poi= nehmen die POI-Art ihres Laufs.
+const poiType=ref(Object.hasOwn(DOB_POI_TYPES,route.query.poi)?route.query.poi:null);
+const poiRuns=computed(()=>runs.value.filter(r=>r.poi_type===poiType.value));
+function setPoiType(f){poiType.value=f;if(!poiRuns.value.some(r=>r.id===run.value))run.value=poiRuns.value[0]?.id??'';}
 
 // Läufe wie auf /statistik per Dropdown und ?run=; ohne gültige Auswahl der erste nach sort.
 async function loadRuns(){
  const {data,error:e}=await supabase.from('dob_trade_setup_runs').select('*').order('sort').order('id').limit(200);
  if(e){error.value=e.message;return false;}
  runs.value=data;
- if(!data.some(r=>r.id===run.value))run.value=data[0]?.id??'';
+ poiType.value??=data.find(r=>r.id===run.value)?.poi_type??DOB_DEFAULT_POI_TYPE;
+ if(!poiRuns.value.some(r=>r.id===run.value))run.value=poiRuns.value[0]?.id??'';
  return true;
 }
 async function load(){
- if(!run.value)return;
+ if(!run.value){rows.value=[];return;}
  loading.value=true;error.value='';
  const [trades,sessionRows,guardrailRow]=await Promise.all([
   fetchAllRows((from,to)=>supabase.from('dob_trade_setups').select('*').eq('instrument',instrument.value).eq('run_id',run.value)
    .order('entry_time',{ascending:false}).order('id').range(from,to)),
   supabase.from('sessions').select('label,from_minutes,to_minutes,days').eq('instrument',instrument.value).order('from_minutes').limit(200),
-  supabase.from('dob_guardrails').select('*').eq('instrument',instrument.value).maybeSingle()]);
+  dobGuardrailsQuery(supabase,instrument.value,poiType.value)]);
  loading.value=false;
  if(trades.error||sessionRows.error){error.value=(trades.error??sessionRows.error).message;return;}
  rows.value=trades.data;sessions.value=sessionRows.data;
@@ -87,7 +94,7 @@ onMounted(()=>document.addEventListener('visibilitychange',revealLast));
 onUnmounted(()=>document.removeEventListener('visibilitychange',revealLast));
 // Feste R-Ziele 2R/3R/4R/5R nebeneinander statt Auswahl; alte Links mit ?rA=&rB= laden weiter, die Parameter fallen weg.
 const targets=computed(()=>DOB_STAT_TARGETS.map(k=>({name:String(k),k})));
-watch([instrument,year,run],([i,y,r])=>{shown.value=PAGE;router.replace({query:{run:r,instrument:i,year:y}});},{immediate:true});
+watch([instrument,year,run,poiType],([i,y,r,f])=>{shown.value=PAGE;router.replace({query:{poi:f??undefined,run:r,instrument:i,year:y}});},{immediate:true});
 
 const years=computed(()=>[...new Set([year.value,...rows.value.map(r=>dobTradeMonth(r).slice(0,4))])].sort().reverse());
 const yearRows=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(year.value)));
@@ -132,14 +139,14 @@ function deltaOf(now,all){
 }
 // Max-R-Filter (genaue Stufen, ODER) und Sortierung; ohne gespeichertes max_r (älterer Lauf-Stand) bleibt beides aus.
 const maxRFilter=ref([]),maxRSort=ref(''),retestFilter=ref([]);
-const hasRetest=computed(()=>inYear.value.some(r=>r.source_retest_kind));
+const hasRetest=computed(()=>inYear.value.some(r=>r.poi_retest_kind));
 const hasMaxR=computed(()=>inYear.value.some(r=>r.max_r!=null));
 const maxRShares=computed(()=>dobMaxRShares(inYear.value));
 const cycleMaxRSort=()=>{maxRSort.value={'':'desc',desc:'asc',asc:''}[maxRSort.value];};
 const listed=computed(()=>{
  let list=onlyPinned.value?inYear.value.filter(pinOf):inYear.value;
  if(maxRFilter.value.length)list=list.filter(r=>maxRFilter.value.includes(dobMaxRBucket(r)));
- if(retestFilter.value.length)list=list.filter(r=>retestFilter.value.includes(r.source_retest_kind));
+ if(retestFilter.value.length)list=list.filter(r=>retestFilter.value.includes(r.poi_retest_kind));
  if(!maxRSort.value)return list;
  const dir=maxRSort.value==='desc'?-1:1;
  return [...list].sort((a,b)=>(a.max_r??-1)===(b.max_r??-1)?b.entry_time-a.entry_time:dir*((a.max_r??-1)-(b.max_r??-1)));
@@ -150,9 +157,9 @@ const totals=computed(()=>Object.fromEntries(targets.value.map(t=>[t.name,dobRou
 const tableTargets=computed(()=>applyGuardrails.value?[...targets.value,{name:'config',label:'Konfig',k:configTp}]:targets.value);
 const statsOf=list=>Object.fromEntries(tableTargets.value.map(t=>[t.name,dobRouteStats(list,t.k)]));
 const sessionsOf=r=>{const s=dobTradeSessions(r,sessions.value);return s.length?s:['ohne Session'];};
-// Winrate je Retest-Art der Kraftquelle (nur v2 befüllt), alle Routen zusammen, beide R-Ziele.
+// Winrate je Retest-Art der POI (nur v2 befüllt), alle Routen zusammen, beide R-Ziele.
 const retestTiles=computed(()=>Object.entries(DOB_RETEST_KINDS).map(([kind,label])=>{
- const list=inYear.value.filter(r=>r.source_retest_kind===kind);
+ const list=inYear.value.filter(r=>r.poi_retest_kind===kind);
  return {kind,label,n:list.length,targets:targets.value.map(t=>({...t,s:dobTotalStats(list,t.k)}))};
 }).filter(t=>t.n));
 // „Je …“-Tabellen, je ein-/ausklappbar (Zustand im Browser). Tageszeit statt Session-Liste: wann die Liquidität kommt, hängt an den
@@ -184,8 +191,8 @@ const tables=computed(()=>{
    .filter(d=>d.list.length).map(d=>({title:`${d.label} (${d.list.length})`,stats:statsOf(d.list),
     rows:DOB_HALVES.map(h=>{const part=d.list.filter(r=>dobTradeHalf(r)===h);return {key:h,label:`${h} (${part.length})`,stats:statsOf(part)};})}))}];
  if(inYear.value.some(dobZoneAgeBucket)){
-  const aged=inYear.value.filter(r=>dobZoneAgeBucket(r)&&(!zoneTimeframe.value||r.source_kind===zoneTimeframe.value));
-  list.push({key:'zoneAge',title:'Je Kraftquelle-OB-Alter',firstCol:'Zone bis Retest',sections:[{rows:DOB_ZONE_AGE_BUCKETS
+  const aged=inYear.value.filter(r=>dobZoneAgeBucket(r)&&(!zoneTimeframe.value||r.poi_kind===zoneTimeframe.value));
+  list.push({key:'zoneAge',title:'Je POI-OB-Alter',firstCol:'Zone bis Retest',sections:[{rows:DOB_ZONE_AGE_BUCKETS
    .map(([label])=>({key:label,label,list:aged.filter(r=>dobZoneAgeBucket(r)===label)})).filter(b=>b.list.length).map(b=>({...b,stats:statsOf(b.list)}))}]});
  }
  return list;
@@ -202,7 +209,8 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
     <header>
       <div><h1>DOB-Setup Statistik</h1><p>{{ selectedRun?.description??'Lauf wählen' }} · einmalige Trades (gleiche Richtung, Entry und SL zählen einmal)</p></div>
       <div class="controls">
-        <label>Lauf <select v-model="run"><option value="" disabled>Lauf wählen</option><option v-for="r in runs" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
+        <label>POI <select :value="poiType" @change="e=>setPoiType(e.target.value)"><option v-for="(label,f) in DOB_POI_TYPES" :key="f" :value="f">{{ label }}</option></select></label>
+        <label>Lauf <select v-model="run"><option value="" disabled>Lauf wählen</option><option v-for="r in poiRuns" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
         <label>Instrument <select v-model="instrument"><option v-for="i in INSTRUMENTS" :key="i">{{ i }}</option></select></label>
         <label>Jahr <select v-model="year"><option v-for="y in years" :key="y">{{ y }}</option></select></label>
         <button type="button" :disabled="loading" @click="refresh">{{ loading?'Wird geladen…':'Aktualisieren' }}</button>
@@ -212,12 +220,12 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
       <DobAccountTile title="Standard" :subtitle="`TP 2R · keine Sperren · Route a + b · ${year}`" :columns="accountStandard" />
       <DobAccountTile title="Mit Konfig" :subtitle="accountConfigLabel" :columns="accountWithConfig" />
     </section>
-    <DobGuardrailsPanel v-if="!loading&&!error&&yearRows.length" :instrument="instrument" :config="guardrails" :rows="yearRows" :targets="targets"
+    <DobGuardrailsPanel v-if="!loading&&!error&&yearRows.length" :instrument="instrument" :poi-type="poiType" :config="guardrails" :rows="yearRows" :targets="targets"
       :open="guardrailsOpen" @toggle="v=>{guardrailsOpen=v;}" @saved="c=>{guardrails=c;}" v-model:apply="applyGuardrails" @update:draft="d=>{guardrailDraft=d;}" />
     <p v-if="!loading&&!error&&yearRows.length>inYear.length" class="note" role="status">{{ yearRows.length-inYear.length }} von {{ yearRows.length }} Trades durch die Sperren{{ draftUnsaved?' (Entwurf, nicht gespeichert)':'' }} ausgeblendet; alle Kennzahlen, Tabellen und die Tradeliste zeigen nur erlaubte Trades.</p>
     <p v-if="error" role="alert" class="error">{{ error }} <button @click="refresh">Erneut versuchen</button></p>
     <p v-else-if="loading" role="status" class="note">Trades werden geladen…</p>
-    <p v-else-if="!runs.length" role="status" class="note">Noch keine berechneten DOB-Läufe.</p>
+    <p v-else-if="!poiRuns.length" role="status" class="note">Noch keine berechneten DOB-Läufe für {{ DOB_POI_TYPES[poiType] }}.</p>
     <p v-else-if="!inYear.length" role="status" class="note">Keine erlaubten Trades für {{ selectedRun?.label }} · {{ instrument }} {{ year }}.</p>
     <template v-else>
       <section class="tiles" aria-label="Gesamt je Route">
@@ -242,7 +250,7 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
           </div></div>
         </article>
         <article v-if="retestTiles.length" class="tile">
-          <h2>Retest der Kraftquelle</h2>
+          <h2>Retest des POI</h2>
           <div v-for="r in retestTiles" :key="r.kind" class="retest">
             <p class="note">{{ r.label }} · {{ r.n }} Trades</p>
             <p><span v-for="t in r.targets" :key="t.name" class="retest-target">{{ rLabel(t.k) }} <DobStatCell :stats="t.s" :k="t.k" /></span></p>
@@ -274,16 +282,16 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
           <label v-for="level in DOB_MAX_R_FILTERS" :key="level"><input v-model="maxRFilter" type="checkbox" :value="level"> {{ level==='<2'?'< 2R':dobMaxRLabel(Number(level)) }}</label>
           <button v-if="maxRFilter.length" type="button" class="pin" @click="maxRFilter=[]">alle</button>
         </fieldset>
-        <fieldset v-if="hasRetest" class="max-r-filter"><legend>Retest der Kraftquelle (mehrere = oder)</legend>
+        <fieldset v-if="hasRetest" class="max-r-filter"><legend>Retest des POI (mehrere = oder)</legend>
           <label v-for="(label,kind) in DOB_RETEST_KINDS" :key="kind"><input v-model="retestFilter" type="checkbox" :value="kind"> {{ label }}</label>
         </fieldset>
         <p v-if="pinError&&!pinTarget" role="alert" class="error">{{ pinError }}</p>
         <div class="scroll"><table>
-          <thead><tr><th scope="col">Entry</th><th scope="col">Richtung</th><th scope="col">Route</th><th scope="col">Ausgang</th><th scope="col">R (Konfig)</th><th scope="col">Session</th><th scope="col">Kraftquelle</th><th scope="col" :aria-sort="maxRSort==='desc'?'descending':maxRSort==='asc'?'ascending':'none'"><button type="button" class="sort" @click="cycleMaxRSort">Max R {{ maxRSort==='desc'?'▼':maxRSort==='asc'?'▲':'↕' }}</button></th><th scope="col">Chart</th><th scope="col">Pin</th></tr></thead>
+          <thead><tr><th scope="col">Entry</th><th scope="col">Richtung</th><th scope="col">Route</th><th scope="col">Ausgang</th><th scope="col">R (Konfig)</th><th scope="col">Session</th><th scope="col">POI</th><th scope="col" :aria-sort="maxRSort==='desc'?'descending':maxRSort==='asc'?'ascending':'none'"><button type="button" class="sort" @click="cycleMaxRSort">Max R {{ maxRSort==='desc'?'▼':maxRSort==='asc'?'▲':'↕' }}</button></th><th scope="col">Chart</th><th scope="col">Pin</th></tr></thead>
           <tbody><tr v-for="t in listed.slice(0,shown)" :key="t.id" :class="{'last-opened':isLast(t)}" @contextmenu.prevent="openPin(t)">
             <td><SimulationPinFlag v-if="pinOf(t)" :note="pinOf(t).note||undefined" />{{ formatDatedTime(t.entry_time) }}</td><td>{{ t.direction==='long'?'Long':'Short' }}</td><td>{{ t.route }}</td>
             <td>{{ DOB_OUTCOME_LABELS[t.outcome]??t.outcome }}<template v-if="t.exit_time"> · {{ formatDatedTime(t.exit_time) }}</template></td>
-            <td :class="pnlClass(configTp(t).r)" :title="`TP nach Konfig ${configTp(t).target}R`">{{ configTp(t).r==null?'–':fmtR(configTp(t).r) }}<template v-if="configTp(t).label"> ({{ configTp(t).label }})</template></td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobSourceLabel(t) }}</td>
+            <td :class="pnlClass(configTp(t).r)" :title="`TP nach Konfig ${configTp(t).target}R`">{{ configTp(t).r==null?'–':fmtR(configTp(t).r) }}<template v-if="configTp(t).label"> ({{ configTp(t).label }})</template></td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobPoiLabel(t) }}</td>
             <td class="max-r"><span class="bar" :title="`Max R ${dobMaxRLabel(t.max_r)}`"><i :style="{width:`${Math.min(t.max_r??0,5)/5*100}%`}" :class="{hit:(t.max_r??0)>=2}"></i></span> {{ dobMaxRLabel(t.max_r) }}</td>
             <td><button type="button" class="chart" :class="{seen:seenKeys.has(dobTradePinKey(t))}" :aria-label="`DOB ${formatDatedTime(t.entry_time)} im Chart öffnen${seenKeys.has(dobTradePinKey(t))?' (gesehen)':''}`" @click="openChart(t)">{{ seenKeys.has(dobTradePinKey(t))?'✓ Im Chart':'Im Chart' }}</button></td>
             <td><button type="button" class="pin" :aria-label="`DOB ${formatDatedTime(t.entry_time)} ${pinOf(t)?'Pin bearbeiten':'anpinnen'}`" @click="openPin(t)">{{ pinOf(t)?'⚑ bearbeiten':'⚑' }}</button></td>

@@ -1,4 +1,4 @@
-// Labor DOB-LAB-IDEE (Philip): mehrere Trades auf dieselbe Idee (gleiche Kraft-Zone + Richtung + Retest-Episode der Zone).
+// Labor DOB-LAB-IDEE (Philip): mehrere Trades auf dieselbe Idee (gleiche POI-Zone + Richtung + Retest-Episode der Zone).
 // Konfig-Regeln (1) nur erster Entry, (2) kein Entry solange einer offen, (3) höchstens 2, (4) nach Loss keine weiteren; Träger wie der
 // v3-Fill (Kombi), ohne und mit Philips Sperren. Ausgang je Trade zum TP nach Konfig. Schreibt analysis/dob-setup/lab-idea-xau-2026.json.
 import fs from 'node:fs/promises';
@@ -19,7 +19,7 @@ try {
   const { cases, block: blockR, outcome, ideasOf, ideaRules, dataEnd, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
   const result = { measurement: 'dob-lab-idea-v1', git: gitHash, symbol: SYMBOL, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
     methodology: ['Trades: v2 mit Gegen-DOB-Status wie der v3-Fill (bester über die tragenden Paare), Modus Kombi; (a) nur TP-Fenster/Default, (b) Philips gespeicherte Konfig mit Sperren.',
-      'Idee = gleiche Richtung + gleiche Kraft-Zone (TF, Start, Kanten) + gleiche Retest-Episode der Zone (Start der letzten Touch-Episode vor OB1).',
+      'Idee = gleiche Richtung + gleiche POI-Zone (TF, Start, Kanten) + gleiche Retest-Episode der Zone (Start der letzten Touch-Episode vor OB1).',
       'Ausgang je Trade: evaluateDoubleOrderBlockOutcome zum TP nach Konfig (inkl. nur tote Gegen-DOBs → 5R). Offen = Ausgang nach dem Entry des nächsten Trades bzw. noch offen/unbekannt.',
       '(2) und (4) kausal in Entry-Reihenfolge über die zugelassenen Trades; (4) sperrt erst ab dem Ausstieg des Losses.',
       'n = Win + Loss, ΣR = R·Win − Loss; Halbjahre nach Berliner Entry-Monat.'],

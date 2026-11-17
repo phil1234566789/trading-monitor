@@ -60,7 +60,7 @@ describe('dobGuardrails',()=>{
   expect(dobGuardrailsToRow('XAUUSD',off)).toMatchObject({min_zone_age_seconds:null,min_zone_age_saved_seconds:86400});
  });
  it('Gegen-DOB-Modus: block_all sperrt tot und lebend, Kombi sperrt lebend und gibt tot TP 5R, off ignoriert',()=>{
-  const at=Date.parse('2026-11-10T13:00:00Z')/1000,row=status=>({entry_time:at,source_zone_age_seconds:null,counter_dob_status:status});
+  const at=Date.parse('2026-11-10T13:00:00Z')/1000,row=status=>({entry_time:at,poi_zone_age_seconds:null,counter_dob_status:status});
   const c=counterDobMode=>({...DOB_GUARDRAILS_DEFAULT,counterDobMode});
   expect(['none','dead','live',null].map(s=>dobRowGuardrailReason(c('block_all'),row(s)))).toEqual([null,'counterDob','counterDob',null]);
   expect(['none','dead','live'].map(s=>dobRowGuardrailReason(c('live_block_dead_5r'),row(s)))).toEqual([null,null,'counterDob']);

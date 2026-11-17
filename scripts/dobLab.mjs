@@ -16,10 +16,10 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
-  const [lab, { detectDoubleOrderBlocks }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR }] = await Promise.all(
+  const [lab, { detectDoubleOrderBlocks }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR, dobGuardrailsQuery }] = await Promise.all(
     ['/src/dobLabFeatures.js', '/src/doubleOrderBlocks.js', '/src/supabaseClient.js', '/src/dobGuardrails.js'].map(load));
   const { runs, m5Marked, m1Marked, h1All, h4All, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobRuns(server, root);
-  const { data: cfgRow, error: cfgError } = await supabase.from('dob_guardrails').select('*').eq('instrument', SYMBOL).maybeSingle();
+  const { data: cfgRow, error: cfgError } = await dobGuardrailsQuery(supabase, SYMBOL, 'htf_ob');
   if (cfgError) throw cfgError;
   const config = dobGuardrailsFromRow(cfgRow);
   const { data: pins, error } = await supabase.from('pin_context').select('id,note,dob_trade_key').eq('kind', 'dob_trade').gte('id', 521).order('id').limit(200);
@@ -36,17 +36,17 @@ try {
   const featuresOf = t => {
     const key = dobTradeKey(t);
     if (featureCache.has(key)) return featureCache.get(key);
-    const retestAt = t.chart.secondRetestTime + 60, src = t.sourceOfStrength;
-    const sourceRetestAt = src?.retestAgeSeconds != null ? t.chart.firstOrderBlockStart - src.retestAgeSeconds : null;
+    const retestAt = t.chart.secondRetestTime + 60, src = t.poi;
+    const poiRetestAt = src?.retestAgeSeconds != null ? t.chart.firstOrderBlockStart - src.retestAgeSeconds : null;
     const dob = detectDoubleOrderBlocks({ ...dobGridInputAt({ symbol: SYMBOL, m5Marked, m1Marked }, t.entryTime, 2 * 86400), options: { retests: false } });
     const f = {
       outer: Object.fromEntries([['m5', 300, m5Marked], ['h1', 3600, h1All]].flatMap(([tf, bar, rows]) => [5, 7].map(d =>
         [`${tf}_${d}d`, lab.dobOuterTrend(rows, retestAt, t.direction, { windowDays: d, barSeconds: bar })]))),
       m5Confirm: { sinceOb2Retest: lab.dobM5Confirmation(m5Marked, t.entryTime, t.direction, t.chart.secondRetestTime),
-        ...(sourceRetestAt != null ? { sinceSourceRetest: lab.dobM5Confirmation(m5Marked, t.entryTime, t.direction, sourceRetestAt) } : {}) },
+        ...(poiRetestAt != null ? { sincePoiRetest: lab.dobM5Confirmation(m5Marked, t.entryTime, t.direction, poiRetestAt) } : {}) },
       counterDobs: { sinceOb2Retest: lab.dobCounterDobs(dob, t.direction, t.chart.secondRetestTime, t.entryTime),
-        ...(sourceRetestAt != null ? { sinceSourceRetest: lab.dobCounterDobs(dob, t.direction, sourceRetestAt, t.entryTime, m1Marked) } : {}) },
-      obsInZone: lab.dobObsInSourceZone(t.chart, src),
+        ...(poiRetestAt != null ? { sincePoiRetest: lab.dobCounterDobs(dob, t.direction, poiRetestAt, t.entryTime, m1Marked) } : {}) },
+      obsInZone: lab.dobObsInPoiZone(t.chart, src),
     };
     // BOS-Pivot-Bruch (1a/1b/1c) auf M5-Schlüssen bis zum Entry, für jede Trendvariante.
     f.outerClass = Object.fromEntries(Object.entries(f.outer).map(([k, o]) => [k, lab.dobOuterTrendClass(o, t.direction, m5Marked, t.entryTime, 300)]));
@@ -59,11 +59,11 @@ try {
     ...Object.fromEntries(['m5_5d', 'm5_7d', 'h1_5d', 'h1_7d'].map(k => [`äußerer Trend ${k} gegen`, f => f.outer[k].verdict === 'against'])),
     ...Object.fromEntries(['m5_5d', 'm5_7d', 'h1_5d', 'h1_7d'].map(k => [`äußerer Trend ${k} gegen, ≥3 Tg alt`, f => f.outer[k].verdict === 'against' && f.outer[k].durationDays >= 3])),
     'keine M5-Bestätigung seit OB2-Retest': f => !f.m5Confirm.sinceOb2Retest.confirmed,
-    'keine M5-Bestätigung seit Quellen-Retest': f => f.m5Confirm.sinceSourceRetest ? !f.m5Confirm.sinceSourceRetest.confirmed : null,
+    'keine M5-Bestätigung seit POI-Retest': f => f.m5Confirm.sincePoiRetest ? !f.m5Confirm.sincePoiRetest.confirmed : null,
     'innerster M5-Trend am Entry nicht in Richtung': (f, t) => f.m5Confirm.sinceOb2Retest.innerTrendAtEntry !== (t.direction === 'long' ? 'uptrend' : 'downtrend'),
     'Gegen-DOB seit OB2-Retest': f => f.counterDobs.sinceOb2Retest.count > 0,
-    'Gegen-DOB seit Quellen-Retest': f => f.counterDobs.sinceSourceRetest ? f.counterDobs.sinceSourceRetest.count > 0 : null,
-    'OB1 und OB2 beide in der Kraft-Zone': f => f.obsInZone ? f.obsInZone.both : null,
+    'Gegen-DOB seit POI-Retest': f => f.counterDobs.sincePoiRetest ? f.counterDobs.sincePoiRetest.count > 0 : null,
+    'OB1 und OB2 beide in der POI-Zone': f => f.obsInZone ? f.obsInZone.both : null,
   };
 
   const month = t => berlinDateStrFor(t.entryTime).slice(0, 7);
@@ -77,9 +77,9 @@ try {
     config: { entryWindows: config.entryWindows, defaultTpR: config.defaultTpR },
     methodology: ['Trades: einmalige Trades der Statistikläufe v2 (Haupt) und v1 (Vergleich), dobRuns.mjs; Merkmale am Repräsentanten je Trade.',
       'Äußerer Trend: oberste Ebene (state.trend) des unveränderten Trend-Algos (Perioden 5/2, Close-Auswertung bei M5) zur OB2-Retest-Zeit, Pivots ab 5 bzw. 7 Tagen davor, M5 und H1, nur geschlossene Kerzen. Dauer = seit appliedPivots[0].',
-      'M5-Bestätigung: Phasenwechsel-Ereignis (buildStructureWithPhases.events) in Trade-Richtung, verarbeitet nach OB2-Retest bzw. Quellen-Retest und spätestens am Entry; Struktur aus 2 Tagen M5 bis Entry.',
-      'Gegen-DOB: detectDoubleOrderBlocks auf 2 Tagen bis Entry, Paare in Gegenrichtung (je OB2 einmal) mit recognizedAt nach OB2- bzw. Quellen-Retest und spätestens am Entry.',
-      'Beide OBs in Zone: Preisabstand OB1 und OB2 zur Kraft-Zone je 0 (Überlappung).',
+      'M5-Bestätigung: Phasenwechsel-Ereignis (buildStructureWithPhases.events) in Trade-Richtung, verarbeitet nach OB2-Retest bzw. POI-Retest und spätestens am Entry; Struktur aus 2 Tagen M5 bis Entry.',
+      'Gegen-DOB: detectDoubleOrderBlocks auf 2 Tagen bis Entry, Paare in Gegenrichtung (je OB2 einmal) mit recognizedAt nach OB2- bzw. POI-Retest und spätestens am Entry.',
+      'Beide OBs in Zone: Preisabstand OB1 und OB2 zur POI-Zone je 0 (Überlappung).',
       'Ausgang: evaluateDoubleOrderBlockOutcome mit rMultiple; tpKonfig = dobConfigTpR(aktive dob_guardrails, Entry). n = Win + Loss, ΣR = R·Win − Loss.',
       'flagged = Merkmal spricht gegen den Trade; kept = Rest (ohne Trades, für die das Merkmal unbekannt ist).'],
     runs: {}, pins: {} };
@@ -91,10 +91,10 @@ try {
       const known = all.filter(t => flag(featuresOf(t), t) != null), flagged = known.filter(t => flag(featuresOf(t), t));
       out.features[name] = { known: known.length, flagged: flagged.length, flaggedRates: rates(flagged), kept: rates(known.filter(t => !flag(featuresOf(t), t))) };
     }
-    // Ausprägungen statt Flag: äußerer Trend 1a/1b/1c (Close, Docht) und Gegen-DOB abgestuft (nur mit Quellen-Retest).
+    // Ausprägungen statt Flag: äußerer Trend 1a/1b/1c (Close, Docht) und Gegen-DOB abgestuft (nur mit POI-Retest).
     const groupBy = bucketOf => { const g = {}; for (const t of all) { const b = bucketOf(featuresOf(t), t); if (b != null) (g[b] ??= []).push(t); }
       return Object.fromEntries(Object.entries(g).sort().map(([b, list]) => [b, rates(list)])); };
-    const counter = f => f.counterDobs.sinceSourceRetest;
+    const counter = f => f.counterDobs.sincePoiRetest;
     const ageBucket = (c, t) => { const live = c.pairs.filter(p => !p.dead); if (!live.length) return 'keiner lebend';
       const h = (t.entryTime - Math.max(...live.map(p => p.recognizedAt))) / 3600; return h < 1 ? '< 1 h' : h < 4 ? '1–4 h' : '≥ 4 h'; };
     const overlaps = (z, ob) => Math.max(0, z.bottom - ob.top, ob.bottom - z.top) === 0;
@@ -105,8 +105,8 @@ try {
       'Gegen-DOB lebend Anzahl': groupBy(f => counter(f) ? (counter(f).liveCount === 0 ? '0' : counter(f).liveCount === 1 ? '1' : '2+') : null),
       'Gegen-DOB tot/lebend': groupBy(f => counter(f) ? (!counter(f).count ? 'keiner' : counter(f).liveCount ? 'mind. 1 lebend' : 'nur tote') : null),
       'Gegen-DOB Abstand jüngster lebender zum Entry': groupBy((f, t) => counter(f) ? ageBucket(counter(f), t) : null),
-      'Gegen-DOB in gleicher Kraftzone': groupBy((f, t) => !counter(f) ? null : !counter(f).count ? 'keiner'
-        : counter(f).pairs.some(p => overlaps(t.sourceOfStrength.zone, p.ob2)) ? 'gleiche Zone' : 'andere Zone'),
+      'Gegen-DOB in gleicher POI-Zone': groupBy((f, t) => !counter(f) ? null : !counter(f).count ? 'keiner'
+        : counter(f).pairs.some(p => overlaps(t.poi.zone, p.ob2)) ? 'gleiche Zone' : 'andere Zone'),
     };
     result.runs[run] = out;
   }
@@ -134,7 +134,7 @@ try {
     console.log(run, name.padEnd(44), Object.entries(g).map(([b, v]) => `${b}: 3R ${f(v.r3)} 5R ${f(v.r5)} Kfg ${f(v.tpKonfig)}`).join(' || '));
   for (const [id, p] of Object.entries(result.pins)) console.log('Pin', id, p.found ? `${p.r3}/${p.r5}` : 'nicht gefunden',
     p.found ? JSON.stringify({ cls: Object.fromEntries(Object.entries(p.features.outerClass).map(([k, c]) => [k, `${c.cls}/${c.clsWick ?? c.cls}`])),
-      counter: p.features.counterDobs.sinceSourceRetest && { n: p.features.counterDobs.sinceSourceRetest.count, live: p.features.counterDobs.sinceSourceRetest.liveCount },
+      counter: p.features.counterDobs.sincePoiRetest && { n: p.features.counterDobs.sincePoiRetest.count, live: p.features.counterDobs.sincePoiRetest.liveCount },
       wide: Object.fromEntries(Object.entries(p.outerWide).map(([k, o]) => [k, `${o.trend}@${o.durationDays}`])) }) : '');
 } finally {
   await server.close();

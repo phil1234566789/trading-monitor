@@ -25,7 +25,7 @@ try {
     { m1GapCovered }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
     '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/goldWeekendGap.js'].map(load));
 
-  // Basismessung = jedes DOB-Setup ohne Quelle der Kraft (v0); die Quelle misst dobSourceMeasurement.mjs auf dieser Datei.
+  // Basismessung = jedes DOB-Setup ohne POI (v0); der POI misst dobPoiMeasurement.mjs auf dieser Datei.
   const BASE_VERSION = 'dob-setup-v0';
   const allDob = input => { const r = checkDobTradeSetup(input); return { setups: [...r.setups, ...r.rejected] }; };
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;

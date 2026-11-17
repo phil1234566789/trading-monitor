@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker,dobTradeWeekday,dobTradeHalf,dobTradesPerWeek,dobPerWeekText} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobPoiLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker,dobTradeWeekday,dobTradeHalf,dobTradesPerWeek,dobPerWeekText} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -23,10 +23,10 @@ describe('dobTradeStatistics',()=>{
   expect(dobChartLink(row('a','success',{exit_time:at+600})).query).toEqual({dob:'run:x:a',instrument:'XAUUSD',bar:'5m',replay:String(at+600)});
   expect(dobChartLink(row('a','open')).query.replay).toBe(String(at+300));
  });
- it('Kraftquelle aus den v1-Feldern, v0 ohne',()=>{
-  expect(dobSourceLabel({source_kind:null})).toBe('–');
-  expect(dobSourceLabel({source_kind:'ob_h1',source_distance_atr:0.84,source_distance_usd:12})).toBe('H1-OB · 0,8 ATR');
-  expect(dobSourceLabel({source_kind:'ob_h4',source_distance_atr:null,source_distance_usd:12.5})).toBe('H4-OB · 12,5 USD');
+ it('POI aus den v1-Feldern, v0 ohne',()=>{
+  expect(dobPoiLabel({poi_kind:null})).toBe('–');
+  expect(dobPoiLabel({poi_kind:'ob_h1',poi_distance_atr:0.84,poi_distance_usd:12})).toBe('H1-OB · 0,8 ATR');
+  expect(dobPoiLabel({poi_kind:'ob_h4',poi_distance_atr:null,poi_distance_usd:12.5})).toBe('H4-OB · 12,5 USD');
  });
  it('Pin-Schlüssel ist laufunabhängig, Zeile und Pin-Kontext ergeben denselben',()=>{
   const trade={instrument:'XAUUSD',direction:'short',entry_time:at,entry_price:3867.93,stop_price:3875.6};
@@ -77,7 +77,7 @@ describe('dobTradeStatistics',()=>{
    .toEqual([['09:00–09:30 · London-Open',['09:00–09:30']],['MMM',['09:30–10:00','10:00–11:00']]]);
  });
  it('Zonenalter-Buckets',()=>{
-  expect([3600,2*86400,10*86400,40*86400,null].map(v=>dobZoneAgeBucket({source_zone_age_seconds:v}))).toEqual(['< 1 Tag','1–3 Tage','1–4 Wochen','> 4 Wochen',null]);
+  expect([3600,2*86400,10*86400,40*86400,null].map(v=>dobZoneAgeBucket({poi_zone_age_seconds:v}))).toEqual(['< 1 Tag','1–3 Tage','1–4 Wochen','> 4 Wochen',null]);
  });
  it('Rückkehr aus dem Chart-Tab: nur nach „Im Chart“, erst verborgen dann sichtbar, genau einmal',()=>{
   const t=dobReturnTracker();

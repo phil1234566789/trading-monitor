@@ -2,10 +2,10 @@ import {detectOrderBlocks,candleInvalidatesOrderBlock,candleTouchesOrderBlock} f
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {obMinimum,instrumentConfig} from './instrumentConfig.js';
 
-// Quelle der Kraft v1 (Philip, Q15/Q16): aktive H1/H4-OB-Zone in Trade-Richtung, höchstens k H1-ATR(14) von OB1 entfernt.
-// k je Instrument in instrumentConfig (dobSourceMaxAtr); nur XAU ist gemessen (analysis/dob-setup/source-g-xau-2026.json),
-// ohne Eintrag gibt es bewusst keine Quelle statt eines stillen Defaults. Messskript und Produkt teilen dieses Modul.
-export const sourceMaxDistanceAtr=instrument=>instrumentConfig(instrument).dobSourceMaxAtr??null;
+// POI v1 (Philip, Q15/Q16): aktive H1/H4-OB-Zone in Trade-Richtung, höchstens k H1-ATR(14) von OB1 entfernt.
+// k je Instrument in instrumentConfig (dobPoiMaxAtr); nur XAU ist gemessen (analysis/dob-setup/source-g-xau-2026.json),
+// ohne Eintrag gibt es bewusst kein POI statt eines stillen Defaults. Messskript und Produkt teilen dieses Modul.
+export const poiMaxDistanceAtr=instrument=>instrumentConfig(instrument).dobPoiMaxAtr??null;
 const HOUR=3600,ATR_PERIOD=14;
 const TIMEFRAMES=[['1h','H1','1H'],['4h','H4','4H']];
 
@@ -15,7 +15,7 @@ const lowerBound=(rows,t)=>{let lo=0,hi=rows.length;while(lo<hi){const m=(lo+hi)
 // Zonen sind beliebig alt; ihr Bruch wird einmal auf H1 vorberechnet, damit Live keine Monate M5 laden muss.
 // Die Invalidierung ist dochtbasiert, eine H1-Kerze bricht also genau dann, wenn eine ihrer M5-Kerzen bricht.
 // m5Candles (optional, session-markiert): Touch-Episoden ab dem ersten M5 genau, davor auf H1 (retestKind/retestAgeSeconds).
-export function dobSourceContext({htfCandles,m5Candles=[],instrument='XAUUSD'}){
+export function dobPoiContext({htfCandles,m5Candles=[],instrument='XAUUSD'}){
  const h1=(htfCandles?.['1h']??[]).filter(c=>!c.ignored),m5=m5Candles.filter(c=>!c.ignored),zones=[];
  for(const [bar,tf,label] of TIMEFRAMES){
   const rows=htfCandles?.[bar]??[];
@@ -86,7 +86,7 @@ function zoneRetestedBefore(zone,at,m5Candles){
 
 // Alle aktiven Zonen in Trade-Richtung zum OB1-Start. Abstand = kürzester Preisabstand der einander zugewandten Kanten
 // (Short: Zone unten − OB1 oben), 0 bei Überlappung. wrongSide: OB1 ragt über die Seite hinaus, von der der Preis abprallen soll.
-export function htfSourceCandidates(context,{firstOrderBlock:ob1,direction,m5Candles,timeframes=['H1','H4']}){
+export function htfPoiCandidates(context,{firstOrderBlock:ob1,direction,m5Candles,timeframes=['H1','H4']}){
  const at=ob1.startTime,atr=h1AtrAt(context,at),result=[];
  for(const zone of context.zones){
   if(zone.side!==direction||!timeframes.includes(zone.tf)||!zoneActiveAt(zone,at,m5Candles))continue;
@@ -107,16 +107,16 @@ function retestInfo(zone,at){
 const lowerBoundValue=(values,t)=>{let lo=0,hi=values.length;while(lo<hi){const m=(lo+hi)>>1;if(values[m]<t)lo=m+1;else hi=m;}return lo;};
 
 // Nächste aktive Zone; mit requireRetest nur unter den retesteten (v2).
-export function nearestHtfSource(context,args,{requireRetest=false}={}){
- const best=htfSourceCandidates(context,args).filter(c=>!requireRetest||c.retested)
+export function nearestHtfPoi(context,args,{requireRetest=false}={}){
+ const best=htfPoiCandidates(context,args).filter(c=>!requireRetest||c.retested)
   .reduce((a,c)=>!a||c.distanceUsd<a.distanceUsd?c:a,null);
  if(!best)return null;
- const {contextZone,...source}=best;
- return source;
+ const {contextZone,...poi}=best;
+ return poi;
 }
 
-export const sourceOfStrengthPassed=(source,maxAtr)=>maxAtr!=null&&source?.distanceAtr!=null&&source.distanceAtr<=maxAtr;
+export const poiPassed=(poi,maxAtr)=>maxAtr!=null&&poi?.distanceAtr!=null&&poi.distanceAtr<=maxAtr;
 
-// Alter der Kraftquelle-Zone bis zum Retest: Entstehung der H1/H4-Zone bis Start der letzten Touch-Episode vor OB1. Ohne Retest null.
-export const dobSourceZoneAgeSeconds=(source,firstOrderBlockStart)=>
- source?.retestAgeSeconds==null?null:firstOrderBlockStart-source.retestAgeSeconds-source.zoneStartTime;
+// Alter der POI-Zone bis zum Retest: Entstehung der H1/H4-Zone bis Start der letzten Touch-Episode vor OB1. Ohne Retest null.
+export const dobPoiZoneAgeSeconds=(poi,firstOrderBlockStart)=>
+ poi?.retestAgeSeconds==null?null:firstOrderBlockStart-poi.retestAgeSeconds-poi.zoneStartTime;

@@ -5,11 +5,11 @@ import { dobTradeKey } from './dobSetupGrid.mjs';
 
 export async function loadDobV3Lab(server, root) {
   const load = p => server.ssrLoadModule(p);
-  const [{ createDobCounterDobGate, dobSourceRetestTime }, { supabase }, g, { dobSourceZoneAgeSeconds }, { candlePatternsIn, candleDirection }] = await Promise.all(
-    ['/src/dobCounterDob.js', '/src/supabaseClient.js', '/src/dobGuardrails.js', '/src/dobSourceOfStrength.js', '/src/candlePatterns.js'].map(load));
+  const [{ createDobCounterDobGate, dobPoiRetestTime }, { supabase }, g, { dobPoiZoneAgeSeconds }, { candlePatternsIn, candleDirection }] = await Promise.all(
+    ['/src/dobCounterDob.js', '/src/supabaseClient.js', '/src/dobGuardrails.js', '/src/dobHtfObPoi.js', '/src/candlePatterns.js'].map(load));
   const runs = await loadDobRuns(server, root);
   const { v2Carriers, m5Marked, m1Marked, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor } = runs;
-  const { data: cfgRow, error } = await supabase.from('dob_guardrails').select('*').eq('instrument', DOB_SYMBOL).maybeSingle();
+  const { data: cfgRow, error } = await g.dobGuardrailsQuery(supabase, DOB_SYMBOL, 'htf_ob');
   if (error) throw error;
   const config = g.dobGuardrailsFromRow(cfgRow);
   const gate = createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: DOB_SYMBOL });
@@ -21,7 +21,7 @@ export async function loadDobV3Lab(server, root) {
   // Je Träger: erlaubte Trades und ihr TP nach Konfig.
   const cases = configs.map(([name, cfg]) => {
     const list = [...best.values()].filter(({ t, st }) => !g.dobGuardrailReason(cfg, { entryTime: t.entryTime,
-      zoneAgeSeconds: dobSourceZoneAgeSeconds(t.sourceOfStrength, t.chart.firstOrderBlockStart), counterDobStatus: st }));
+      zoneAgeSeconds: dobPoiZoneAgeSeconds(t.poi, t.chart.firstOrderBlockStart), counterDobStatus: st }));
     const tp = new Map(list.map(({ t, st }) => [t, g.dobConfigTpR(cfg, t.entryTime, st)]));
     return { name, cfg, trades: list.map(x => x.t), statusOf: new Map(list.map(x => [x.t, x.st])), tpR: t => tp.get(t) };
   });
@@ -37,8 +37,8 @@ export async function loadDobV3Lab(server, root) {
     return { n: w + l, winrate: w + l ? +(w / (w + l) * 100).toFixed(1) : null, sumR: +sum.toFixed(1) }; };
   const block = (list, rOf) => ({ trades: list.length, ...stats(list, rOf), 'Jan–Jun': stats(list.filter(t => month(t) <= '2026-06'), rOf),
     'Jul–Nov': stats(list.filter(t => month(t) >= '2026-07'), rOf) });
-  // Idee = Richtung + Kraft-Zone + Retest-Episode der Zone (DOB-LAB-IDEE); Regeln kausal in Entry-Reihenfolge, Ausgang zum tpR.
-  const ideaOf = t => { const s = t.sourceOfStrength; return `${t.direction}:${s.timeframe}:${s.zoneStartTime}:${s.zone.bottom}:${s.zone.top}:${dobSourceRetestTime(t)}`; };
+  // Idee = Richtung + POI-Zone + Retest-Episode der Zone (DOB-LAB-IDEE); Regeln kausal in Entry-Reihenfolge, Ausgang zum tpR.
+  const ideaOf = t => { const s = t.poi; return `${t.direction}:${s.timeframe}:${s.zoneStartTime}:${s.zone.bottom}:${s.zone.top}:${dobPoiRetestTime(t)}`; };
   const ideasOf = trades => { const ideas = new Map();
     for (const t of trades) (ideas.get(ideaOf(t)) ?? ideas.set(ideaOf(t), []).get(ideaOf(t))).push(t);
     for (const l of ideas.values()) l.sort((a, b) => a.entryTime - b.entryTime); return ideas; };

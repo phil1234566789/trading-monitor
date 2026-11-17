@@ -15,10 +15,10 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
-  const [{ createDobCounterDobGate }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR }] = await Promise.all(
+  const [{ createDobCounterDobGate }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR, dobGuardrailsQuery }] = await Promise.all(
     ['/src/dobCounterDob.js', '/src/supabaseClient.js', '/src/dobGuardrails.js'].map(load));
   const { runs, v2Carriers, uniqueDobTrades, m5Marked, m1Marked, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobRuns(server, root);
-  const { data: cfgRow, error } = await supabase.from('dob_guardrails').select('*').eq('instrument', SYMBOL).maybeSingle();
+  const { data: cfgRow, error } = await dobGuardrailsQuery(supabase, SYMBOL, 'htf_ob');
   if (error) throw error;
   const config = dobGuardrailsFromRow(cfgRow);
   const gate = createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: SYMBOL });
@@ -50,7 +50,7 @@ try {
   const combo = [...groups.keiner, ...groups['nur tote']], comboR = t => groups['nur tote'].includes(t) ? 5 : cfgR(t);
   const result = { measurement: 'dob-counter-dob-gate-v1', git: gitHash, symbol: SYMBOL, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
     methodology: ['Trades: v2-Träger (dobRuns.mjs), Gate je Paar (createDobCounterDobGate: detectDoubleOrderBlocks auf 2 Tagen bis Entry), dann Dedup wie die Statistik.',
-      'Gegen-DOB: Paar in Gegenrichtung mit recognizedAt nach dem Quellen-Retest und spätestens am Entry, je OB2 einmal.',
+      'Gegen-DOB: Paar in Gegenrichtung mit recognizedAt nach dem POI-Retest und spätestens am Entry, je OB2 einmal.',
       'Tot: ein M1-Schluss zwischen Erkennung und Entry jenseits der fernen OB2-Kante (bärisch über Oberkante, bullisch unter Unterkante).',
       'n = Win + Loss, ΣR = R·Win − Loss; tpKonfig = dobConfigTpR(aktive dob_guardrails, Entry); Halbjahre nach Berliner Entry-Monat.'],
     gateMsPerCarrier: +(ms / v2Carriers.length).toFixed(1), variants: Object.fromEntries(Object.entries(variants).map(([k, v]) => [k, rates(v)])),

@@ -19,14 +19,14 @@ const server = await createServer({ root, envDir, server: { middlewareMode: true
 try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput }, { markIgnoredCandles, htfObCandles },
-    { berlinDayRangeUtcMs, berlinOffsetMinutes, formatDatedTime }, { dobSourceContext }, { dobM5Trend }] = await Promise.all(['/src/forexCandles.js',
-    '/src/supabaseClient.js', '/src/dobTradeSetup.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js', '/src/dobM5Trend.js'].map(load));
+    { berlinDayRangeUtcMs, berlinOffsetMinutes, formatDatedTime }, { dobPoiContext }, { dobM5Trend }] = await Promise.all(['/src/forexCandles.js',
+    '/src/supabaseClient.js', '/src/dobTradeSetup.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobM5Trend.js'].map(load));
   const cacheOf = day => dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: SYMBOL, refresh: false,
     defaultStartSec: berlinDayRangeUtcMs(day).startUtcMs / 1000, startSec: berlinDayRangeUtcMs(day).startUtcMs / 1000, fetchInitialCandles, supabase });
   const ltf = cacheOf('2026-01-01'), htf = cacheOf('2025-11-15');
   const sessions = await ltf.sessions(), offset = sec => berlinOffsetMinutes(sec * 1000), mark = rows => markIgnoredCandles(rows, sessions, offset);
   const m5Marked = mark(await ltf.candles('5m', 300, 300)), m1Marked = mark(await ltf.candles('1m', 60, 1500));
-  const sourceContext = dobSourceContext({ instrument: SYMBOL, m5Candles: m5Marked, htfCandles: {
+  const poiContext = dobPoiContext({ instrument: SYMBOL, m5Candles: m5Marked, htfCandles: {
     '1h': htfObCandles(mark(await htf.candles('1h', 3600, 200)), sessions, offset), '4h': htfObCandles(mark(await htf.candles('4h', 14400, 100)), sessions, offset) } });
   const { data: pins, error } = await supabase.from('pin_context').select('id,note,dob_trade_key,dob_trade_context').eq('kind', 'dob_trade')
     .in('id', PINS.map(([id]) => id)).limit(50);
@@ -35,7 +35,7 @@ try {
   const cases = [];
   for (const [id, expected] of PINS) {
     const pin = pins.find(p => p.id === id), ctx = pin.dob_trade_context, at = ctx.entry_time + 60;
-    const result = checkDobTradeSetup({ ...dobLiveWindowInput(dobGridInputAt(grid, at, 2 * 86400)), sourceContext });
+    const result = checkDobTradeSetup({ ...dobLiveWindowInput(dobGridInputAt(grid, at, 2 * 86400)), poiContext });
     const setup = [...result.setups, ...result.rejected].find(s => s.id === ctx.setup_id);
     if (!setup) throw new Error(`Pin ${id}: Setup ${ctx.setup_id} nicht gefunden`);
     const retestAt = setup.chart.secondRetestTime + 60, trend = dobM5Trend(m5Marked, retestAt);

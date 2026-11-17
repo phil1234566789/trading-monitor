@@ -1,5 +1,5 @@
 // Messung DOB-EMA-GATE (noch keine Regel, Philips Idee für v3): Short nur unter der EMA200, Long nur darüber.
-// Auf den Läufen v0 (alle DOB-Setups), v1 (Quelle ohne Retest) und v2 (Quelle mit Retest), gleiches Raster wie die Statistik.
+// Auf den Läufen v0 (alle DOB-Setups), v1 (POI ohne Retest) und v2 (POI mit Retest), gleiches Raster wie die Statistik.
 // EMA200 = computeEma (src/ema.js, wie der Chart) auf M5/M15/H1/H4 zum OB2-Retest (Alarmzeit) und zum Entry, nur geschlossene Kerzen.
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -16,7 +16,7 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const { computeEma } = await server.ssrLoadModule('/src/ema.js');
-  const { runs, m1All, m5All, h1All, h4All, dataEnd, sourceContext, h1AtrAt, berlinDateStrFor, stats, summary, sampleTrade, gitHash }
+  const { runs, m1All, m5All, h1All, h4All, dataEnd, poiContext, h1AtrAt, berlinDateStrFor, stats, summary, sampleTrade, gitHash }
     = await loadDobRuns(server, root);
 
   // EMA-Reihen. M15 gibt es im Archiv nicht; aus je drei nativen M5 (Zeitraster 15 min) zusammengesetzt.
@@ -33,7 +33,7 @@ try {
     entry: t => ({ at: t.entryTime, price: t.entryPrice }) };
   const BUCKETS = [[0.5, '0–0,5'], [1, '0,5–1'], [2, '1–2'], [Infinity, '> 2']];
   const feature = (t, tf, moment) => {
-    const { at, price } = MOMENTS[moment](t), ema = lastBefore(series[tf], at, 'closedAt')?.value, atr = h1AtrAt(sourceContext, at);
+    const { at, price } = MOMENTS[moment](t), ema = lastBefore(series[tf], at, 'closedAt')?.value, atr = h1AtrAt(poiContext, at);
     if (ema == null || price == null) return null;
     const withTrend = t.direction === 'short' ? price < ema : price > ema, dist = atr ? Math.abs(price - ema) / atr : null;
     return { withTrend, bucket: dist == null ? 'ohne ATR' : BUCKETS.find(([max]) => dist <= max)[1] };
@@ -42,7 +42,7 @@ try {
   const emaGate = { measurement: 'dob-ema-gate-v1', git: gitHash,
     symbol: SYMBOL, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd), breakEvenWinrate: 33.3,
     methodology: ['Trades: einmalige Trades wie die Statistikläufe (dobSetupGrid, jeder M5-Schluss im Live-Fenster, Dedup Richtung/Entry/SL).',
-      'v0 = alle DOB-Setups, v1 = Quelle der Kraft ohne Retest-Pflicht, v2 = mit Retest (Produkt).',
+      'v0 = alle DOB-Setups, v1 = POI ohne Retest-Pflicht, v2 = mit Retest (Produkt).',
       'EMA200 = computeEma (src/ema.js) über die Schlusskurse ab Archivbeginn; Wert der letzten geschlossenen Kerze vor dem Zeitpunkt, erste 200 Kerzen verworfen.',
       'M15 aus je drei nativen M5 zusammengesetzt (kein 15m im Archiv). Preis: Retest = Schluss der letzten geschlossenen M1 bei bekanntem OB2-Kontakt, Entry = Entry-Preis.',
       'Mit dem Trend: Short Preis < EMA, Long Preis > EMA. Abstand in H1-ATR(14) nur zur Info.',
@@ -61,8 +61,8 @@ try {
           gegenTrend: stats(rows.filter(r => !r.f.withTrend && r.f.bucket === b).map(r => r.t)) }])),
         // Nur v2 hat die Retest-Art; der erste Touch lag bei 29,7 % (Main), deshalb gekreuzt.
         ...(run === 'v2' ? { byRetestKind: Object.fromEntries(['first', 'followUp'].map(kind => [kind, {
-          mitTrend: summary(rows.filter(r => r.f.withTrend && r.t.sourceOfStrength?.retestKind === kind).map(r => r.t), list),
-          gegenTrend: summary(rows.filter(r => !r.f.withTrend && r.t.sourceOfStrength?.retestKind === kind).map(r => r.t), list) }])) } : {}) };
+          mitTrend: summary(rows.filter(r => r.f.withTrend && r.t.poi?.retestKind === kind).map(r => r.t), list),
+          gegenTrend: summary(rows.filter(r => !r.f.withTrend && r.t.poi?.retestKind === kind).map(r => r.t), list) }])) } : {}) };
     }
     emaGate.runs[run] = out;
   }

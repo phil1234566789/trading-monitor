@@ -1,4 +1,4 @@
-// Messung, keine Regel: welche Quelle der Kraft ging den einmaligen v0-Trades XAU 2026 voraus, und wie hängt die Winrate davon ab.
+// Messung, keine Regel: welche POI ging den einmaligen v0-Trades XAU 2026 voraus, und wie hängt die Winrate davon ab.
 // Basis: analysis/dob-setup/winrate-xau-2026-dob-setup-v0.json. Erkennungen unverändert wiederverwendet:
 // HTF-OBs wie snapshotIndicatorCalculation (htfObCandles + detectOrderBlocks, Kante aus 081d2d47), Levels aus detectLiquidityLevels.
 // Ereigniszeiten auf M5 genau: OB-Touch = erste M5-Kerze ab Erkennung in der Zone, Sweep = erste M5-Kerze in der HTF-Sweepkerze am Level.
@@ -16,7 +16,7 @@ let envDir = root;
 while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir) envDir = path.dirname(envDir);
 const base = JSON.parse(await fs.readFile(path.join(root, 'analysis', 'dob-setup', 'winrate-xau-2026-dob-setup-v0.json'), 'utf8'));
 
-// Mustertrades Konto 8 (Berlin) mit Philips bestätigter Quelle (Status Quo, Reiter Mustertrades).
+// Mustertrades Konto 8 (Berlin) mit Philips bestätigter POI (Status Quo, Reiter Mustertrades).
 const SAMPLES = [
   ['#134', '2026-11-12', '14:11', 'short', 'H1-OB'], ['#135', '2026-11-05', '16:14', 'short', 'LS M5'],
   ['#136', '2026-11-04', '04:13', 'long', 'H1-OB'], ['#136b', '2026-11-04', '06:21', 'long', 'H1-OB'],
@@ -31,9 +31,9 @@ try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { markIgnoredCandles, htfObCandles, sessionOccurrences }, { berlinDayRangeUtcMs, berlinOffsetMinutes, berlinDateStrFor },
     { detectOrderBlocks, candleTouchesOrderBlock, candleInvalidatesOrderBlock }, { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD },
-    { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }, { dobSourceContext, htfSourceCandidates, h1AtrAt }] = await Promise.all(['/src/forexCandles.js',
+    { orderBlockRecognitionTimes }, { obMinimum }, { dobLiveWindowStart }, { dobPoiContext, htfPoiCandidates, h1AtrAt }] = await Promise.all(['/src/forexCandles.js',
     '/src/supabaseClient.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/orderBlockDetection.js', '/src/liquidityDetection.js',
-    '/src/orderBlockRecognitionTime.js', '/src/instrumentConfig.js', '/src/dobTradeSetup.js', '/src/dobSourceOfStrength.js'].map(load));
+    '/src/orderBlockRecognitionTime.js', '/src/instrumentConfig.js', '/src/dobTradeSetup.js', '/src/dobHtfObPoi.js'].map(load));
   const sec = day => berlinDayRangeUtcMs(day).startUtcMs / 1000;
   const cacheOf = from => dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: SYMBOL, refresh: false,
     defaultStartSec: sec(from), startSec: sec(from), fetchInitialCandles, supabase });
@@ -47,7 +47,7 @@ try {
   const lowerBound = (rows, t) => { let lo = 0, hi = rows.length; while (lo < hi) { const m = (lo + hi) >> 1; if (rows[m].time < t) lo = m + 1; else hi = m; } return lo; };
   const firstM5 = (from, to, hit) => { for (let i = lowerBound(m5, from); i < m5.length && m5[i].time < to; i++) if (!m5[i].ignored && hit(m5[i])) return m5[i].time; return null; };
 
-  // Ereignisse: {kind, tf, side (long = Quelle für Long), time, ...}
+  // Ereignisse: {kind, tf, side (long = POI für Long), time, ...}
   const events = [];
   for (const [bar, tf] of [['1h', 'H1'], ['4h', 'H4']]) {
     const input = htfObCandles(frames[bar], sessions, offset), recognized = orderBlockRecognitionTimes(input, bar);
@@ -61,7 +61,7 @@ try {
     for (const level of [...highs, ...lows]) {
       if (!level.touched) continue;
       const time = dur === 300 ? level.touchedTime : firstM5(level.touchedTime, level.touchedTime + dur, c => liquidityTouch(c, level.price, level.dir)) ?? level.touchedTime;
-      // Sweep eines Hochs = Quelle für Short, eines Tiefs = für Long.
+      // Sweep eines Hochs = POI für Short, eines Tiefs = für Long.
       events.push({ kind: 'ls', tf, side: level.dir === 1 ? 'short' : 'long', time, price: level.price, pivotTime: level.pivotTime });
     }
   }
@@ -88,7 +88,7 @@ try {
     // Mehrere Levels in derselben Sweep-Kerze: das älteste Pivot ist das gemeinte Level (#137 3915,06, #141 4179,25).
     const latestLs = lastSweep && found.filter(e => e.kind === 'ls' && e.time === lastSweep.time).reduce((a, b) => b.pivotTime < a.pivotTime ? b : a);
     const ob1 = m5Zones.get(t.ob1);
-    let proximity = 'keine Quelle';
+    let proximity = 'kein POI';
     if (latest && ob1) {
       const [lo, hi] = latest.kind === 'ob' ? [latest.bottom, latest.top] : [latest.price, latest.price];
       const gap = Math.max(0, lo - ob1.top, ob1.bottom - hi);
@@ -96,7 +96,7 @@ try {
     }
     return {
       dayStart, category: hasOb && hasLs ? 'LS + OB' : hasOb ? 'nur OB' : hasLs ? 'nur LS' : 'keine', kinds: [...kinds].sort(),
-      deltaT: latest ? bucket(anchor - latest.time, [HOUR, 3 * HOUR], ['0–1 h', '1–3 h', '3 h–Marktschluss']) : 'keine Quelle',
+      deltaT: latest ? bucket(anchor - latest.time, [HOUR, 3 * HOUR], ['0–1 h', '1–3 h', '3 h–Marktschluss']) : 'kein POI',
       deltaMin: latest ? Math.round((anchor - latest.time) / 60) : null,
       lsAge: latestLs ? bucket(latestLs.time - latestLs.pivotTime, [4 * HOUR, 24 * HOUR], ['< 4 h', '4–24 h', '> 24 h']) : 'kein LS',
       proximity, found, latest: latest && { kind: latest.kind, tf: latest.tf, time: latest.time, price: latest.price ?? null, zone: latest.top != null ? [latest.bottom, latest.top] : null },
@@ -104,8 +104,8 @@ try {
   };
   const slim = ({ found, ...f }) => f;
   const rows = [...trades.values()].map(t => ({ ...t, byOb1: features(t, t.ob1), byOb2: features(t, t.ob2) }));
-  // Quellenlisten nur für die Mustertrades im Bericht, sonst wird das JSON unnötig groß.
-  const sourceList = f => f.found.map(e => ({ kind: e.kind, tf: e.tf, time: e.time, ...(e.kind === 'ob' ? { zone: [e.bottom, e.top], obStart: e.startTime } : { price: e.price, pivotTime: e.pivotTime }) }));
+  // POI-Listen nur für die Mustertrades im Bericht, sonst wird das JSON unnötig groß.
+  const poiList = f => f.found.map(e => ({ kind: e.kind, tf: e.tf, time: e.time, ...(e.kind === 'ob' ? { zone: [e.bottom, e.top], obStart: e.startTime } : { price: e.price, pivotTime: e.pivotTime }) }));
 
   const stats = list => {
     const w = list.filter(t => t.outcome === 'success').length, l = list.filter(t => t.outcome === 'loss').length;
@@ -130,7 +130,7 @@ try {
     const target = berlin(day, at), hit = rows.filter(r => r.direction === direction).reduce((b, r) => !b || Math.abs(r.entryTime - target) < Math.abs(b.entryTime - target) ? r : b, null);
     const off = hit ? Math.round((hit.entryTime - target) / 60) : null;
     return { trade, philip: { entry: `${day} ${at}`, source: confirmed }, v0: hit && Math.abs(off) <= 30 ? { entryTime: hit.entryTime, offsetMin: off, route: hit.route, outcome: hit.outcome,
-      ob1: hit.ob1, ob2: hit.ob2, byOb1: slim(hit.byOb1), byOb2: slim(hit.byOb2), sourcesBeforeOb2: sourceList(hit.byOb2) } : null };
+      ob1: hit.ob1, ob2: hit.ob2, byOb1: slim(hit.byOb1), byOb2: slim(hit.byOb2), poisBeforeOb2: poiList(hit.byOb2) } : null };
   });
 
   const gitHash = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
@@ -139,17 +139,17 @@ try {
     breakEvenWinrate: 33.3, base: stats(rows), baseByRoute: { a: stats(rows.filter(r => r.route === 'a')), b: stats(rows.filter(r => r.route === 'b')) },
     methodology: [
       'Trades: einmalige v0-Trades (Richtung/Entry/SL) aus winrate-xau-2026-dob-setup-v0.json; Anker OB1 = spätester OB1-Start aller DOB-Paare des Trades.',
-      'Quelle: nur in Trade-Richtung (Short: bärischer HTF-OB / Sweep eines Hochs; Long umgekehrt), Ereignis vor dem Anker und ab der letzten XAU-Tagespause davor (dobLiveWindowStart).',
+      'POI: nur in Trade-Richtung (Short: bärischer HTF-OB / Sweep eines Hochs; Long umgekehrt), Ereignis vor dem Anker und ab der letzten XAU-Tagespause davor (dobLiveWindowStart).',
       'OB-Touch: H1/H4-OBs aus htfObCandles + detectOrderBlocks (Kante 081d2d47), erste M5-Kerze ab Erkennung, die die Zone berührt (nur der Erst-Touch).',
       'LS-Sweep: detectLiquidityLevels (Periode 5) auf H1/H4/M5, erster Touch nach Bestätigung, HTF-Zeit auf die erste M5-Kerze am Level verfeinert.',
-      'Δt und Abstand: jüngste Quelle vor dem Anker; LS-Alter: jüngster Sweep (bei mehreren Levels in derselben Kerze das älteste Pivot), Sweep-Zeit − Pivot-Zeit; Nähe: Preislücke OB1 ↔ Quell-Zone/Level.',
+      'Δt und Abstand: jüngste POI vor dem Anker; LS-Alter: jüngster Sweep (bei mehreren Levels in derselben Kerze das älteste Pivot), Sweep-Zeit − Pivot-Zeit; Nähe: Preislücke OB1 ↔ Quell-Zone/Level.',
       'n = Win + Loss (ambiguous/unknown nicht gezählt); Winrate in %; ΣR = 2·Win − Loss; smallN = n < 50. Break-even bei 2R: 33,3 %.',
-      'byOb1 = Auftrag (Quelle vor OB1); byOb2 = Gegenprobe mit Anker OB2-Start, weil Philips Ereignis teils zwischen OB1 und OB2 liegt.'],
+      'byOb1 = Auftrag (POI vor OB1); byOb2 = Gegenprobe mit Anker OB2-Start, weil Philips Ereignis teils zwischen OB1 und OB2 liegt.'],
     events: Object.fromEntries(['ob H1', 'ob H4', 'ls H1', 'ls H4', 'ls M5'].map(k => [k, events.filter(e => `${e.kind} ${e.tf}` === k).length])),
     byOb1: tables('byOb1'), byOb2: tables('byOb2'), samples };
   await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'source-measurement-xau-2026.json'), JSON.stringify(report, null, 2));
 
-  // DOB-QUELLE-KOMBI: Kombinationen der stärksten Einzelmerkmale, Anker OB1. Zone = jede Quelle des Tages, nicht nur die jüngste.
+  // DOB-QUELLE-KOMBI: Kombinationen der stärksten Einzelmerkmale, Anker OB1. Zone = jede POI des Tages, nicht nur die jüngste.
   const zones = new Map([...trades.values()].map(t => [t.ob1, m5Zones.get(t.ob1)]));
   const flags = r => {
     const f = r.byOb1, ob1 = zones.get(r.ob1), obs = f.found.filter(e => e.kind === 'ob'), lss = f.found.filter(e => e.kind === 'ls');
@@ -163,16 +163,16 @@ try {
     'A: HTF-OB berührt': x => x.A,
     'B: A + OB1 in der OB-Zone': x => x.A && x.obZone,
     'C: A + Δt OB-Touch → OB1 < 1 h': x => x.A && x.obDelta1h,
-    "C': A + Δt jüngste Quelle → OB1 < 1 h": x => x.A && x.anyDelta1h,
+    "C': A + Δt jüngste POI → OB1 < 1 h": x => x.A && x.anyDelta1h,
     'D: A + LS-Sweep': x => x.A && x.ls,
     'E1: OB1 in einer OB-Zone': x => x.obZone,
     'E2: OB1 an einem LS-Level': x => x.lsLevel,
     'E3: nur OB-Zone': x => x.obZone && !x.lsLevel,
     'E4: nur LS-Level': x => x.lsLevel && !x.obZone,
     'E5: OB-Zone und LS-Level': x => x.obZone && x.lsLevel,
-    // Gegenstück zur Erstmessung: dort zählte nur die jüngste Quelle.
-    'F1: jüngste Quelle in Zone': x => x.latestInZone,
-    'F2: A + jüngste Quelle in Zone': x => x.A && x.latestInZone,
+    // Gegenstück zur Erstmessung: dort zählte nur die jüngste POI.
+    'F1: jüngste POI in Zone': x => x.latestInZone,
+    'F2: A + jüngste POI in Zone': x => x.A && x.latestInZone,
   };
   const month = r => berlinDateStrFor(r.entryTime).slice(0, 7);
   const months = [...new Set(rows.map(month))].sort();
@@ -193,9 +193,9 @@ try {
   const combos = evaluateFilters(FILTERS, flags);
   const baseSummary = { ...summarize(rows), months: months.length };
   const comboReport = { measurement: 'dob-quelle-kombi-v1', git: gitHash, base: baseSummary,
-    methodology: ['Basis und Quellen wie source-measurement-xau-2026.json (Anker OB1, selber Handelstag, Trade-Richtung).',
-      'A = mindestens ein H1/H4-OB-Erst-Touch; B = OB1 überlappt eine dieser OB-Zonen; C = jüngster OB-Touch < 1 h vor OB1; C’ = jüngste Quelle jeder Art < 1 h vor OB1; D = zusätzlich ein LS-Sweep.',
-      'E: „in Zone“ über alle Quellen des Tages: OB-Zone = OB1 überlappt eine HTF-OB-Zone; LS-Level = Level-Preis liegt innerhalb von OB1. B ist per Definition gleich E1. F: nur die jüngste Quelle (wie proximity der Erstmessung).',
+    methodology: ['Basis und POIs wie source-measurement-xau-2026.json (Anker OB1, selber Handelstag, Trade-Richtung).',
+      'A = mindestens ein H1/H4-OB-Erst-Touch; B = OB1 überlappt eine dieser OB-Zonen; C = jüngster OB-Touch < 1 h vor OB1; C’ = jüngste POI jeder Art < 1 h vor OB1; D = zusätzlich ein LS-Sweep.',
+      'E: „in Zone“ über alle POIs des Tages: OB-Zone = OB1 überlappt eine HTF-OB-Zone; LS-Level = Level-Preis liegt innerhalb von OB1. B ist per Definition gleich E1. F: nur die jüngste POI (wie proximity der Erstmessung).',
       'share = Anteil der Trades an der Basis in %; Monat = Berliner Monat des Entries; monthsAboveBreakEven = Monate mit Winrate > 33,3 %.',
       'samples: ob der Filter den v0-Trade des Mustertrades behält (#136b/#139b/#140b sind Re-Entries, #140 fällt auf den Trade von #140b).'],
     filters: combos };
@@ -208,13 +208,13 @@ try {
 
   // DOB-QUELLE-G: Abstand OB1 ↔ nächste aktive H1/H4-OB-Zone in Trade-Richtung, beliebig alt (Philip: maßgeblich ist der Preisabstand).
   // Zonen, Bruch und H1-ATR(14) aus dem gemeinsamen Modul, damit Messung und checkDobTradeSetup() nie auseinanderlaufen.
-  const sourceContext = dobSourceContext({ instrument: SYMBOL, m5Candles: m5,
+  const poiContext = dobPoiContext({ instrument: SYMBOL, m5Candles: m5,
     htfCandles: Object.fromEntries(['1h', '4h'].map(bar => [bar, htfObCandles(frames[bar], sessions, offset)])) });
-  const atrAt = t => h1AtrAt(sourceContext, t);
+  const atrAt = t => h1AtrAt(poiContext, t);
   const G_BUCKETS = [[0, 'in Zone'], [1, '≤ 1 OB1-Höhe'], [2, '≤ 2'], [5, '≤ 5'], [Infinity, 'weiter']];
-  // Wie das Produkt (checkDobTradeSetup): ein Trade hat eine Quelle, sobald irgendein tragendes Paar eine hat. Je Kennzahl zählt
+  // Wie das Produkt (checkDobTradeSetup): ein Trade hat einen POI, sobald irgendein tragendes Paar eine hat. Je Kennzahl zählt
   // deshalb der kleinste Abstand über alle OB1 der Paare dieses Trades (eine Definition für Messung und Produkt).
-  const candidatesOf = (r, tfs) => r.ob1s.flatMap(o => { const ob1 = m5Zones.get(o); return ob1 ? htfSourceCandidates(sourceContext,
+  const candidatesOf = (r, tfs) => r.ob1s.flatMap(o => { const ob1 = m5Zones.get(o); return ob1 ? htfPoiCandidates(poiContext,
     { firstOrderBlock: ob1, direction: r.direction, m5Candles: m5, timeframes: tfs }).map(c => ({ ...c, at: o, height: ob1.top - ob1.bottom })) : []; });
   const minBy = (list, f) => list.reduce((a, c) => a == null || f(c) < f(a) ? c : a, null);
   const nearestZone = (r, tfs) => {
@@ -265,7 +265,7 @@ try {
     "G≤5 ∪ C'": x => le5(x) || cPrime(x),
     "G≤5 ∪ F1 ∪ C'": x => le5(x) || x.latestInZone || cPrime(x),
   }, gFlags);
-  // Philip: v1 baut nur die OB-Kraftquelle. Fein-Sweep über die Grenze k (Plateau um 5 oder Zufall des groben Rasters?)
+  // Philip: v1 baut nur die OB-POI. Fein-Sweep über die Grenze k (Plateau um 5 oder Zufall des groben Rasters?)
   // und ODER nur mit OB-Teilen: F1(OB) = OB1 in der Zone des jüngsten OB-Touchs, C'(OB) = jüngster OB-Touch < 1 h vor OB1 (= C).
   const SWEEP = [0, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 10, 15];
   const within = k => x => x.g?.units != null && x.g.units <= k;
@@ -291,11 +291,11 @@ try {
     [`G$≤${k}`, usdLe(k)], [`G$≤${k} ∪ F1`, x => usdLe(k)(x) || x.latestInZone], [`G$≤${k} ∪ C'`, x => usdLe(k)(x) || cPrime(x)],
     [`G$≤${k} ∪ F1 ∪ C'`, x => usdLe(k)(x) || x.latestInZone || cPrime(x)],
     [`G$≤${k} ∪ F1(OB) ∪ C'(OB)`, x => usdLe(k)(x) || f1Ob(x) || cOb(x)]])), gFlags);
-  // Reine OB-Variante der bisher besten Kombi (F1/C' enthalten LS-Quellen als jüngste Quelle).
+  // Reine OB-Variante der bisher besten Kombi (F1/C' enthalten LS-POIs als jüngste POI).
   const pureOb = evaluateFilters({ "C' ∪ F1 ∪ G(in Zone)": x => cPrime(x) || x.latestInZone || inZone(x),
     "C'(OB) ∪ F1(OB) ∪ G(in Zone)": x => cOb(x) || f1Ob(x) || inZone(x) }, gFlags);
-  const lsShare = { "C' mit LS als jüngster Quelle": rows.filter(r => gFlags(r).A && gFlags(r).anyDelta1h && r.byOb1.latest?.kind === 'ls').length,
-    'F1 mit LS als jüngster Quelle': rows.filter(r => gFlags(r).latestInZone && r.byOb1.latest?.kind === 'ls').length };
+  const lsShare = { "C' mit LS als jüngster POI": rows.filter(r => gFlags(r).A && gFlags(r).anyDelta1h && r.byOb1.latest?.kind === 'ls').length,
+    'F1 mit LS als jüngster POI': rows.filter(r => gFlags(r).latestInZone && r.byOb1.latest?.kind === 'ls').length };
   // Session je Entry (Philip entscheidet später, v1 hat keinen Session-Filter).
   const sessionOf = r => sessions.find(s => !s.ignoreLiquidity && sessionOccurrences(s.fromMinutes, s.toMinutes, r.entryTime, r.entryTime + 1, offset, s.days).length)?.label ?? 'keine Session';
   const sessionTable = keep => {
@@ -374,7 +374,7 @@ try {
   for (const [k, g] of Object.entries(report.byOb2.category)) console.log(k.padEnd(22), ...['gesamt', 'a', 'b'].map(r => g[r] ? `${r}: n=${g[r].n} ${g[r].winrate}% ${g[r].sumR}R${g[r].smallN ? '*' : ''}` : `${r}: –`));
   const fmt = s => new Date(s * 1000).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
   console.log('\n== Mustertrades');
-  for (const s of samples) { if (s.v0) for (const e of s.v0.sourcesBeforeOb2) console.log('   ', s.trade, e.kind, e.tf, fmt(e.time), e.zone ?? e.price, e.pivotTime ? 'pivot ' + fmt(e.pivotTime) : 'OB ' + fmt(e.obStart)); console.log(s.trade, s.philip.source, '→', s.v0 ? `${s.v0.offsetMin}min ${s.v0.route} OB1 ${fmt(s.v0.ob1)} OB2 ${fmt(s.v0.ob2)} | OB1: ${s.v0.byOb1.kinds.join('+') || 'keine'} (${s.v0.byOb1.deltaMin ?? '–'} min, ${s.v0.byOb1.latest ? s.v0.byOb1.latest.kind + ' ' + s.v0.byOb1.latest.tf + ' ' + fmt(s.v0.byOb1.latest.time) + ' ' + (s.v0.byOb1.latest.price ?? s.v0.byOb1.latest.zone) : ''}) | OB2: ${s.v0.byOb2.kinds.join('+') || 'keine'}` : 'kein v0-Trade ±30 min'); }
+  for (const s of samples) { if (s.v0) for (const e of s.v0.poisBeforeOb2) console.log('   ', s.trade, e.kind, e.tf, fmt(e.time), e.zone ?? e.price, e.pivotTime ? 'pivot ' + fmt(e.pivotTime) : 'OB ' + fmt(e.obStart)); console.log(s.trade, s.philip.source, '→', s.v0 ? `${s.v0.offsetMin}min ${s.v0.route} OB1 ${fmt(s.v0.ob1)} OB2 ${fmt(s.v0.ob2)} | OB1: ${s.v0.byOb1.kinds.join('+') || 'keine'} (${s.v0.byOb1.deltaMin ?? '–'} min, ${s.v0.byOb1.latest ? s.v0.byOb1.latest.kind + ' ' + s.v0.byOb1.latest.tf + ' ' + fmt(s.v0.byOb1.latest.time) + ' ' + (s.v0.byOb1.latest.price ?? s.v0.byOb1.latest.zone) : ''}) | OB2: ${s.v0.byOb2.kinds.join('+') || 'keine'}` : 'kein v0-Trade ±30 min'); }
 } finally {
   await server.close();
 }

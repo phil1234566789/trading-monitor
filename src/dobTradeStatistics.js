@@ -130,7 +130,7 @@ export function dobTimeSlotGroups(rows,sessions,opens=DOB_EXCHANGE_OPENS){
 // Alter der H1/H4-Zone von ihrer Entstehung bis zum Retest (Start der letzten Touch-Episode vor OB1), nur v1/v2.
 const DAY=86400;
 export const DOB_ZONE_AGE_BUCKETS=[['< 1 Tag',DAY],['1–3 Tage',3*DAY],['3–7 Tage',7*DAY],['1–4 Wochen',28*DAY],['> 4 Wochen',Infinity]];
-export const dobZoneAgeBucket=row=>Number.isFinite(row.source_zone_age_seconds)?DOB_ZONE_AGE_BUCKETS.find(([,max])=>row.source_zone_age_seconds<max)[0]:null;
+export const dobZoneAgeBucket=row=>Number.isFinite(row.poi_zone_age_seconds)?DOB_ZONE_AGE_BUCKETS.find(([,max])=>row.poi_zone_age_seconds<max)[0]:null;
 // Rückkehr aus dem Chart-Tab erkennen: nur nach „Im Chart“ (arm) und erst, wenn die Seite danach verborgen war und wieder sichtbar
 // wird, genau einmal true. Fokuswechsel, Klicks, Dropdowns oder ein Tabwechsel ohne vorheriges „Im Chart“ lösen nichts aus.
 export function dobReturnTracker(){
@@ -144,5 +144,5 @@ export const dobAsWide=row=>({...row,max_r:row.wide_max_r,sl_hit:row.wide_sl_hit
 export const dobMedian=values=>{const v=values.filter(Number.isFinite).sort((a,b)=>a-b);return v.length?v[v.length>>1]:null;};
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
 // Eigenes Modul, damit der DOB-Watcher (Deno) das Label ohne die Pin-Abgleich-Kette dieser Datei importieren kann.
-export {dobSourceLabel} from './dobSourceLabel.js';
+export {dobPoiLabel} from './dobPoiLabel.js';
 export const dobTradeR=(row,k=2)=>({success:k,loss:-1})[dobTargetOutcome(row,k)]??null;

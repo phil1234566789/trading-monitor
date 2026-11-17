@@ -8,7 +8,7 @@ export const ALARM_TYPES = [
   {
     key: "dob_setup",
     label: "DOB-Setup XAUUSD",
-    description: "Doppelter Orderblock mit Quelle der Kraft (v2): Alarm beim OB2-Retest und beim Entry (dob-watcher). Erkennung und Protokoll laufen 02:00–22:00 weiter, gesendet wird nur im Alarmfenster.",
+    description: "Doppelter Orderblock mit POI (v2): Alarm beim OB2-Retest und beim Entry (dob-watcher). Erkennung und Protokoll laufen 02:00–22:00 weiter, gesendet wird nur im Alarmfenster.",
     windowInstrument: "XAUUSD",
   },
   {

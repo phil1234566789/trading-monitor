@@ -7,7 +7,7 @@ describe('DOB-Alarme',()=>{
  // #134: Retest-Alarm ab dem OB2-Kontakt, Entry-Alarm beim Entry; mehrere OB1-Partner ergeben je einen Alarm.
  const fixture=load('2026-11-12');
  const done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
- it('meldet den OB2-Retest einmal mit Quelle, Zonen und Chart-Link',()=>{
+ it('meldet den OB2-Retest einmal mit POI, Zonen und Chart-Link',()=>{
   const at=done.chart.secondRetestTime+60,events=dobAlarmEvents(run(fixture,at),at).filter(e=>e.phase==='ob2Retest');
   expect(events).toHaveLength(1);
   expect(events[0]).toMatchObject({id:`dob:retest:XAUUSD:short:${done.chart.secondOrderBlockStart}`,direction:'short',signalAt:at});
@@ -25,8 +25,8 @@ describe('DOB-Alarme',()=>{
   const at=done.entryTime+60,entry=dobAlarmEvents(run(fixture,at),at).find(e=>e.phase==='entry');
   expect(entry.id).toBe(`dob:entry:XAUUSD:short:${done.entryTime}:${done.entryPrice}:${done.stopPrice}`);
   expect(entry.text).toContain('Entry 3.929,65');
-  // Quelle, Zonen und Ziel stehen nicht im Entry-Alarm; das Ziel rechnet das Setup weiter.
-  for(const gone of ['TP','Quelle der Kraft','OB1','OB2 '])expect(entry.text).not.toContain(gone);
+  // POI, Zonen und Ziel stehen nicht im Entry-Alarm; das Ziel rechnet das Setup weiter.
+  for(const gone of ['TP','POI','OB1','OB2 '])expect(entry.text).not.toContain(gone);
   expect(entry.text).toContain('&bar=5m&');
   expect(done.targetPrice).toBeCloseTo(3893.05,2);
  });

@@ -17,11 +17,11 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const load = p => server.ssrLoadModule(p);
-  const [lab, { createDobCounterDobGate }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR }] = await Promise.all(
+  const [lab, { createDobCounterDobGate }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR, dobGuardrailsQuery }] = await Promise.all(
     ['/src/dobLabFeatures.js', '/src/dobCounterDob.js', '/src/supabaseClient.js', '/src/dobGuardrails.js'].map(load));
   const { v2Carriers, m5Marked, m1Marked, h1All, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobRuns(server, root);
   const [{ data: cfgRow, error: e1 }, { data: pins, error: e2 }] = await Promise.all([
-    supabase.from('dob_guardrails').select('*').eq('instrument', SYMBOL).maybeSingle(),
+    dobGuardrailsQuery(supabase, SYMBOL, 'htf_ob'),
     supabase.from('pin_context').select('id,note,dob_trade_key').eq('kind', 'dob_trade').gte('id', 521).order('id').limit(200)]);
   if (e1 || e2) throw e1 ?? e2;
   const config = dobGuardrailsFromRow(cfgRow);

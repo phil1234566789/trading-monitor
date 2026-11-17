@@ -19,7 +19,7 @@ const server = await createServer({ root, envDir, server: { middlewareMode: true
 try {
   const { cfg, allowed, sessions, g, pp, st, bt } = await loadDobConfigTrades(server);
   const when = s => bt.formatDatedTime(s), r1 = v => Math.round(v * 10) / 10;
-  const ideaOf = r => `${r.direction}:${r.source_kind}:${r.source_zone_start}:${r.source_zone_bottom}:${r.source_zone_top}`;
+  const ideaOf = r => `${r.direction}:${r.poi_kind}:${r.poi_zone_start}:${r.poi_zone_bottom}:${r.poi_zone_top}`;
 
   const measure = config => {
     const trades = allowed.map(r => ({ row: r, r: pp.dobRowConfigScore(config, r).r })).filter(t => t.r != null);

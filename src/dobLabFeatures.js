@@ -81,10 +81,10 @@ export function dobM5Confirmation(m5Candles,entryTime,direction,fromTime,{window
 
 // 3. Gegen-DOBs: seit v3 im Setup (src/dobCounterDob.js), hier nur re-exportiert.
 
-// 4. OB1 und OB2 in der Kraft-Zone: Preisabstand 0 (Überlappung), wie distanceUsd der Quelle.
+// 4. OB1 und OB2 in der POI-Zone: Preisabstand 0 (Überlappung), wie distanceUsd des POI.
 const gap=(ob,zone)=>Math.max(0,zone.bottom-ob.top,ob.bottom-zone.top);
-export function dobObsInSourceZone(chart,source){
- if(!source?.zone)return null;
- const ob1=gap(chart.firstOrderBlock,source.zone)===0,ob2=gap(chart.secondOrderBlock,source.zone)===0;
+export function dobObsInPoiZone(chart,poi){
+ if(!poi?.zone)return null;
+ const ob1=gap(chart.firstOrderBlock,poi.zone)===0,ob2=gap(chart.secondOrderBlock,poi.zone)===0;
  return {ob1,ob2,both:ob1&&ob2};
 }

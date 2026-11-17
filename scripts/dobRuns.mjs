@@ -1,4 +1,4 @@
-// Gemeinsame Grundlage der DOB-Messskripte auf den Statistikläufen (EMA-Gate, SL-Varianten): Kerzen aus dem Cache, Quelle der Kraft,
+// Gemeinsame Grundlage der DOB-Messskripte auf den Statistikläufen (EMA-Gate, SL-Varianten): Kerzen aus dem Cache, POI,
 // zwei Rasterläufe wie die Statistik und dieselben Kennzahlen. So zählen alle Messungen dieselben Trades.
 import path from 'node:path';
 import { execSync } from 'node:child_process';
@@ -6,7 +6,7 @@ import { dobCandleCache } from './dobCandleCache.mjs';
 import { collectDobSetups, dobGridTrades, uniqueDobTrades } from './dobSetupGrid.mjs';
 
 export const DOB_SYMBOL = 'XAUUSD';
-// OB-Mustertrades (Konto 8, Berlin); #137 hat eine LS-Quelle und fehlt hier bewusst.
+// OB-Mustertrades (Konto 8, Berlin); #137 hat eine LQ-Sweep-POI und fehlt hier bewusst.
 export const DOB_OB_SAMPLES = [['#134', '2026-11-12', '14:11', 'short'], ['#135', '2026-11-05', '16:14', 'short'], ['#136', '2026-11-04', '04:13', 'long'],
   ['#136b', '2026-11-04', '06:21', 'long'], ['#138', '2026-10-26', '14:34', 'short'], ['#139', '2026-10-22', '10:52', 'short'],
   ['#139b', '2026-10-22', '11:24', 'short'], ['#140', '2026-10-22', '05:03', 'short'], ['#140b', '2026-10-22', '05:22', 'short'],
@@ -15,9 +15,9 @@ export const DOB_OB_SAMPLES = [['#134', '2026-11-12', '14:11', 'short'], ['#135'
 export async function loadDobRuns(server, root, startDay = '2026-01-01') {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput }, { evaluateDoubleOrderBlockOutcome },
-    { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes }, { dobSourceContext, h1AtrAt }]
+    { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes }, { dobPoiContext, h1AtrAt }]
     = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js', '/src/doubleOrderBlockOutcome.js',
-      '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js'].map(load));
+      '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js'].map(load));
   const startSec = berlinDayRangeUtcMs(startDay).startUtcMs / 1000, htfStart = berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000;
   const cacheOf = from => dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: DOB_SYMBOL, refresh: false,
     defaultStartSec: from, startSec: from, fetchInitialCandles, supabase });
@@ -27,18 +27,18 @@ export async function loadDobRuns(server, root, startDay = '2026-01-01') {
   const offset = sec => berlinOffsetMinutes(sec * 1000), mark = rows => markIgnoredCandles(rows, sessions, offset);
   const m1Marked = mark(m1All), m5Marked = mark(m5All);
   const dataEnd = Math.min(m1All.at(-1).time + 60, Math.floor(Date.now() / 1000));
-  const sourceContext = dobSourceContext({ instrument: DOB_SYMBOL, m5Candles: m5Marked,
+  const poiContext = dobPoiContext({ instrument: DOB_SYMBOL, m5Candles: m5Marked,
     htfCandles: { '1h': htfObCandles(mark(h1All), sessions, offset), '4h': htfObCandles(mark(h4All), sessions, offset) } });
 
-  // Zwei Rasterläufe wie die Statistik: ohne Retest-Pflicht (v0 = alle, v1 = mit Quelle) und mit (v2).
+  // Zwei Rasterläufe wie die Statistik: ohne Retest-Pflicht (v0 = alle, v1 = mit POI) und mit (v2).
   const grid = { symbol: DOB_SYMBOL, m5All, m5Marked, m1Marked };
   const pass = (requireRetest, pick) => dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, dobLiveWindowInput,
-    checkDobTradeSetup: live => ({ setups: pick(checkDobTradeSetup({ ...live, sourceContext, sourceOptions: { requireRetest } })) }) }).setups,
+    checkDobTradeSetup: live => ({ setups: pick(checkDobTradeSetup({ ...live, poiContext, poiOptions: { requireRetest } })) }) }).setups,
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
-  // Erst nach Quelle filtern, dann deduplizieren: ein Trade zählt, sobald irgendein tragendes Paar eine Quelle hat (wie der v1-Lauf).
-  const passA = pass(false, r => [...r.setups.map(s => ({ ...s, sourced: true })), ...r.rejected.map(s => ({ ...s, sourced: false }))]);
+  // Erst nach POI filtern, dann deduplizieren: ein Trade zählt, sobald irgendein tragendes Paar einen POI hat (wie der v1-Lauf).
+  const passA = pass(false, r => [...r.setups.map(s => ({ ...s, hasPoi: true })), ...r.rejected.map(s => ({ ...s, hasPoi: false }))]);
   const v2Carriers = pass(true, r => r.setups);
-  const runs = { v0: uniqueDobTrades(passA), v1: uniqueDobTrades(passA.filter(t => t.sourced)), v2: uniqueDobTrades(v2Carriers) };
+  const runs = { v0: uniqueDobTrades(passA), v1: uniqueDobTrades(passA.filter(t => t.hasPoi)), v2: uniqueDobTrades(v2Carriers) };
 
   const berlin = (day, hhmm) => { const utc = Date.parse(`${day}T${hhmm}:00Z`) / 1000; return utc - berlinOffsetMinutes(utc * 1000) * 60; };
   const month = t => berlinDateStrFor(t.entryTime).slice(0, 7);
@@ -54,6 +54,6 @@ export async function loadDobRuns(server, root, startDay = '2026-01-01') {
   const gitHash = execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim()
     + (execSync('git status --porcelain -- . ":!analysis/dob-setup"', { cwd: root }).toString().trim() ? '-dirty' : '');
   // v2Carriers: v2-Trades vor der Dedup, für Filter, die je tragendem Paar entscheiden (z. B. das M5-Trend-Gate).
-  return { runs, v2Carriers, uniqueDobTrades, m5Marked, m1All, m5All, h1All, h4All, m1Marked, dataEnd, sourceContext, evaluateDoubleOrderBlockOutcome, h1AtrAt,
+  return { runs, v2Carriers, uniqueDobTrades, m5Marked, m1All, m5All, h1All, h4All, m1Marked, dataEnd, poiContext, evaluateDoubleOrderBlockOutcome, h1AtrAt,
     berlinDateStrFor, stats, summary, sampleTrade, gitHash };
 }
