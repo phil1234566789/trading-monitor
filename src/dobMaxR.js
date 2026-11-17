@@ -20,3 +20,13 @@ export function dobMaxR(trade,{candles,dataEnd,instrument='XAUUSD'}){
  }
  return {maxR,slHit,ambiguousR};
 }
+
+// Weite SL-Variante (Messung DOB-SL-VARIANTEN, Statistikseite „SL-Vergleich“): Wo der Indikator den SL ans Retest-Extrem legt,
+// zum Vergleich der SL an der fernen M5-Kante von OB2 (Long Unterkante, Short Oberkante). Entry bleibt, Ziele aus dem weiten Risiko.
+export const dobWideStopPrice=t=>t.direction==='long'?t.chart.secondOrderBlock.bottom:t.chart.secondOrderBlock.top;
+// null, wenn der Trade schon an der M5-Kante stoppt (dort ist eng = weit).
+export function dobWideVariant(t,options){
+ if(t.stopAnchor!=='retestExtreme')return null;
+ const stopPrice=dobWideStopPrice(t);
+ return {stopPrice,riskUsd:Math.abs(t.entryPrice-stopPrice),...dobMaxR({...t,stopPrice},options)};
+}

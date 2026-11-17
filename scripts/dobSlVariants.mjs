@@ -16,6 +16,7 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
   const { runs, m1Marked, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, summary, sampleTrade, gitHash } = await loadDobRuns(server, root);
+  const { dobWideStopPrice } = await server.ssrLoadModule('/src/dobMaxR.js');
   const lowerBound = t => { let lo = 0, hi = m1Marked.length; while (lo < hi) { const m = (lo + hi) >> 1; if (m1Marked[m].time < t) lo = m + 1; else hi = m; } return lo; };
   // Ab dem Entry reicht für den Ausgang; spart das Kopieren der ganzen M1-Historie je Aufruf.
   const fromEntry = new Map();
@@ -27,8 +28,8 @@ try {
       stopPrice: stopOf(t, variant), candles: candlesFrom(t), evaluatedAt: dataEnd, instrument: SYMBOL, rMultiple: r }));
     return outcomes.get(key);
   };
-  // Ferne M5-Kante = Kante von OB2 auf der Seite, die der Preis nicht unterschreiten soll (Long unten, Short oben).
-  const farEdge = t => t.direction === 'long' ? t.chart.secondOrderBlock.bottom : t.chart.secondOrderBlock.top;
+  // Ferne M5-Kante von OB2: gemeinsam mit dem Fill der Statistikseite (src/dobMaxR.js, dobWideStopPrice).
+  const farEdge = dobWideStopPrice;
   // 'extreme' und 'heute' nehmen den SL des Indikators, nur 'm5Edge' ersetzt ihn.
   const stopOf = (t, variant) => variant === 'm5Edge' ? farEdge(t) : t.stopPrice;
   const risk = (t, variant) => Math.abs(t.entryPrice - stopOf(t, variant));

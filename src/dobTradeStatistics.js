@@ -126,6 +126,10 @@ export function dobReturnTracker(){
  return {arm(){armed=true;left=false;},
   visibility(hidden){if(!armed)return false;if(hidden){left=true;return false;}if(!left)return false;armed=false;left=false;return true;}};
 }
+// SL-Vergleich: dieselbe Zeile mit den Werten der weiten SL-Variante (ferne OB2-Kante); nur Trades mit Variante (Extrem-SL).
+export const dobHasWideVariant=row=>row.wide_max_r!=null;
+export const dobAsWide=row=>({...row,max_r:row.wide_max_r,sl_hit:row.wide_sl_hit,ambiguous_r:row.wide_ambiguous_r});
+export const dobMedian=values=>{const v=values.filter(Number.isFinite).sort((a,b)=>a-b);return v.length?v[v.length>>1]:null;};
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
 // Eigenes Modul, damit der DOB-Watcher (Deno) das Label ohne die Pin-Abgleich-Kette dieser Datei importieren kann.
 export {dobSourceLabel} from './dobSourceLabel.js';

@@ -4,7 +4,7 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
@@ -160,10 +160,24 @@ const retestTiles=computed(()=>Object.entries(DOB_RETEST_KINDS).map(([kind,label
 // Börsenöffnungen, deshalb Stunden unter ihren Sessions bzw. unter der Uhrzeit der Lücke dazwischen.
 const tablesOpen=useLocalStorageRef('dobStatsTablesOpen',{});
 const zoneTimeframe=ref('');
+// SL-Vergleich in „Je Session und Stunde“: nur Trades mit Extrem-SL, eng (heute) gegen weit (ferne OB2-Kante), alle Routen zusammen,
+// 3R und 5R vorn. n und Median-Risiko (eng/weit, USD) stehen in der Zeile, weil die Gruppen klein sind.
+const slCompare=useLocalStorageRef('dobStatsSlCompare',false);
+const SL_COMPARE_TARGETS=[3,5,2,4].flatMap(k=>[{name:`e${k}`,label:`eng ${k}R`,k},{name:`w${k}`,label:`weit ${k}R`,k,wide:true}]);
+const fmtUsd=v=>v==null?'–':v.toLocaleString('de-DE',{maximumFractionDigits:1});
+const compareStats=list=>Object.fromEntries(SL_COMPARE_TARGETS.map(t=>[t.name,{all:dobTotalStats(t.wide?list.map(dobAsWide):list,t.k)}]));
+const compareLabel=(label,list)=>`${label} · n ${list.length} · Risiko ${fmtUsd(dobMedian(list.map(r=>Math.abs(r.entry_price-r.stop_price))))}/${fmtUsd(dobMedian(list.map(r=>r.wide_risk_usd)))} USD`;
+const hasWide=computed(()=>inYear.value.some(dobHasWideVariant));
+const timeTable=computed(()=>{
+ if(!(slCompare.value&&hasWide.value))return {key:'time',title:'Je Session und Stunde',firstCol:'Entry (Berlin)',
+  sections:dobTimeSlotGroups(inYear.value,sessions.value).map(g=>({title:g.title,stats:statsOf(g.rows),rows:g.slots.map(slot=>({key:slot.label,label:slot.label,stats:statsOf(slot.rows)}))}))};
+ return {key:'time',title:'Je Session und Stunde',firstCol:'Entry (Berlin) · nur Extrem-SL',compare:true,
+  sections:dobTimeSlotGroups(inYear.value.filter(dobHasWideVariant),sessions.value).map(g=>({title:compareLabel(g.title,g.rows),stats:compareStats(g.rows),
+   rows:g.slots.map(slot=>({key:slot.label,label:compareLabel(slot.label,slot.rows),stats:compareStats(slot.rows)}))}))};
+});
 const tables=computed(()=>{
  const list=[
-  {key:'time',title:'Je Session und Stunde',firstCol:'Entry (Berlin)',sections:dobTimeSlotGroups(inYear.value,sessions.value).map(g=>({title:g.title,
-   stats:statsOf(g.rows),rows:g.slots.map(slot=>({key:slot.label,label:slot.label,stats:statsOf(slot.rows)}))}))},
+  timeTable.value,
   {key:'month',title:'Je Monat',firstCol:'Monat',sections:[{rows:dobGroups(inYear.value,r=>[dobTradeMonth(r)]).sort((a,b)=>a.key.localeCompare(b.key))
    .map(g=>({key:g.key,label:monthLabel(g.key),stats:statsOf(g.rows)}))}]},
   // Je Wochentag mit den Halbjahren darunter: die Gruppen sind klein, ein Effekt sollte in beiden Halbjahren tragen.
@@ -241,8 +255,9 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
       <p class="note">Ziel k: Win, wenn k vor dem SL erreicht wurde (+k R), Loss, wenn der SL vorher kam (−1 R), offen, wenn bis Datenende keins von beiden; Break-even = 1/(1+k). Winrate = Win / (Win + Loss). Zellen: Winrate · Σ R, Details im Tooltip. Ziel 2R entspricht dem bisherigen Ausgang. Jahr und Monat nach Erkennung des Paars, Session und Stunde nach Entry-Zeit (Europe/Berlin).<template v-if="computedAt"> Stand der Berechnung: {{ formatDatedTime(Date.parse(computedAt)/1000) }}.</template></p>
 
       <template v-for="table in tables" :key="table.key">
-        <DobStatsTable :title="table.title" :first-col="table.firstCol" :sections="table.sections" :targets="tableTargets"
+        <DobStatsTable :title="table.title" :first-col="table.firstCol" :sections="table.sections" :targets="table.compare?SL_COMPARE_TARGETS:tableTargets" :routes="table.compare?['all']:undefined"
           :open="tablesOpen[table.key]??true" @toggle="open=>{if((tablesOpen[table.key]??true)!==open)tablesOpen={...tablesOpen,[table.key]:open};}">
+          <template v-if="table.key==='time'&&hasWide" #controls><label title="nur Trades mit SL am Retest-Extrem; weit = SL an der fernen OB2-Kante, Entry gleich, Ziele aus dem weiten Risiko"><input v-model="slCompare" type="checkbox"> SL-Vergleich eng gegen weit</label></template>
           <template v-if="table.key==='zoneAge'" #controls><label>Zeitrahmen der Zone <select v-model="zoneTimeframe"><option value="">H1 + H4</option><option value="ob_h1">H1</option><option value="ob_h4">H4</option></select></label></template>
         </DobStatsTable>
       </template>

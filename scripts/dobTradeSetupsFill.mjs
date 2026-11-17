@@ -31,7 +31,7 @@ try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
-    { dobSourceContext, dobSourceZoneAgeSeconds }, { dobMaxR }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobSourceContext, dobSourceZoneAgeSeconds }, { dobMaxR, dobWideVariant }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js', '/src/dobMaxR.js'].map(load));
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
@@ -64,6 +64,9 @@ try {
     outcome: t.outcome.status, outcome_reason: t.outcome.reason ?? null, exit_time: t.outcome.recognizedAt ?? null,
     exit_price: t.outcome.exitPrice ?? null,
     ...(({ maxR, slHit, ambiguousR }) => ({ max_r: maxR, sl_hit: slHit, ambiguous_r: ambiguousR }))(dobMaxR(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
+    // Weite SL-Variante (ferne OB2-Kante) nur, wo der SL am Retest-Extrem liegt; sonst null (eng = weit).
+    ...(wide => ({ wide_max_r: wide?.maxR ?? null, wide_sl_hit: wide?.slHit ?? null, wide_ambiguous_r: wide?.ambiguousR ?? null,
+      wide_risk_usd: wide?.riskUsd ?? null }))(dobWideVariant(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
     first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
     ...(RUN_ID === 'dob-setup-v0' ? {} : { source_kind: `ob_${t.sourceOfStrength.timeframe.toLowerCase()}`, source_distance_usd: t.sourceOfStrength.distanceUsd,
       source_atr: t.sourceOfStrength.atr, source_distance_atr: t.sourceOfStrength.distanceAtr,
