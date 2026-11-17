@@ -147,7 +147,7 @@ async function tick(client:any,dry=false,probes:number[]=[]){
 Deno.serve(async request=>{
   if(request.method==='OPTIONS')return new Response(null,{headers});
   const client=db();
-  if(request.method==='GET')return json(checked(await client.from('dob_watcher_state').select('*').in('instrument',INSTRUMENTS).order('instrument')));
+  if(request.method==='GET')return json(checked(await client.from('dob_watcher_state').select('*').in('instrument',INSTRUMENTS).order('instrument').limit(10)));
   if(request.method!=='POST')return json({error:'Method not allowed'},405);
   const token=request.headers.get('authorization')?.replace(/^Bearer /,'');
   if(!await secretMatches(token,env('SETUP2_WATCH_TOKEN')))return json({error:'Unauthorized'},401);
