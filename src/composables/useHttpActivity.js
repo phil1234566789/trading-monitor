@@ -36,6 +36,9 @@ function pushError(label, message, status) {
   errors.push({ id: ++errorSeq, label, message, status: status ?? null, at: Date.now(), count: 1 });
 }
 
+// Für Fehler außerhalb von HTTP (z. B. ein Pin, der nur teilweise gespeichert werden konnte): dasselbe Banner, nichts bleibt still.
+export const reportUiError=(label,message)=>pushError(label,message,null);
+
 export function dismissHttpError(id) {
   const idx = errors.findIndex((e) => e.id === id);
   if (idx !== -1) errors.splice(idx, 1);

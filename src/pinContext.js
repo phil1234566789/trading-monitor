@@ -371,10 +371,14 @@ export async function addPinRsiDivergenceEntry(instrument, divergence, note, pin
 // (instrument, direction, ob_start_time) selbst an, danach ganz normaler kind="trade_setup"-
 // Pin wie bei einem bereits verlinkten Setup. setup = { instrument, direction, setup } aus
 // priceChartHitTest.js' tsc_setup-Kandidat (setup selbst im Rohformat aus tradeSetupsMetadata).
+// Ein ungültiger Quellen-Snapshot verhindert den Pin nicht mehr (Philip: „Hinzufügen“ tat nichts): der Pin wird ohne Snapshot
+// gespeichert, der Grund kommt als snapshotWarning zurück und wird angezeigt.
 export async function addPinTscSetupEntry({ instrument, direction, setup }, note, pinType) {
-  const snapshot=await captureCurrentTradeSetupSources(setup,instrument);
+  let snapshot=null,snapshotWarning=null;
+  try{snapshot=await captureCurrentTradeSetupSources(setup,instrument);}
+  catch(error){snapshotWarning=error?.message??String(error);console.error('TS1.1-Quellen-Snapshot verworfen:',error);}
   const tradeSetupId = await findOrCreateTradeSetupId({ instrument, direction, setup });
-  if (tradeSetupId == null) return null;
+  if (tradeSetupId == null) throw new Error('Das TS1.1-Setup konnte nicht in trade_setups angelegt werden.');
   let snapshotId=null;
   if(snapshot){
     const {data:existing,error}=await supabase.from('pin_context').select(ROW_COLUMNS).eq('kind','trade_setup')
@@ -386,7 +390,8 @@ export async function addPinTscSetupEntry({ instrument, direction, setup }, note
     }
     snapshotId=await ensureTradeSetupSourceSnapshot(tradeSetupId,snapshot);
   }
-  return addPinEntry("trade_setup", tradeSetupId, note, pinType,snapshotId);
+  const entry=await addPinEntry("trade_setup", tradeSetupId, note, pinType,snapshotId);
+  return entry&&snapshotWarning?{...entry,snapshotWarning}:entry;
 }
 
 export async function removePinEntry(id) {

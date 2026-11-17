@@ -70,3 +70,10 @@ it('keeps the existing H1 coarse bucket plus known native M5 fine touch without 
  expect(restored.ls.fineTouchedTime).toBe(2100);expect(restored.fractal).toBe(restored.ls);
  source.ls.fineTouchedTime=1700;await expect(capture(source)).rejects.toThrow();
 });
+it('freezes a fractal touched after the canonical setup time as still open (pin from a later replay)',async()=>{
+ const source=setup();source.fractal={price:104,dir:1,pivotTime:1800,touched:true,touchedTime:3300,endTime:3300};
+ const payload=await capture(source);
+ expect(payload.setup.fractal).toMatchObject({price:104,touched:false,touchedTime:null,endTime:null});
+ expect(source.fractal.touched).toBe(true);
+ expect(restoreTradeSetupSourceSnapshot(JSON.parse(JSON.stringify(payload))).fractal.endTime).toBe(Infinity);
+});

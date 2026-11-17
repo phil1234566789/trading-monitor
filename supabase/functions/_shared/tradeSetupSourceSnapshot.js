@@ -131,10 +131,19 @@ export function assertTradeSetupSourceSnapshot(payload) {
  return payload;
 }
 
+// Der Snapshot friert den Stand bei canonicalSetupKnownAt ein. Das Live-Setup trägt den späteren Touch seines Fraktals (Pin aus dem
+// Replay nach der Invalidierung, Long #4 05.11.); der gehört nicht in die Quellen und würde die Prüfung sonst immer reißen.
+function fractalAsOf(setup,asOf) {
+ const fractal=setup?.fractal;
+ if(!object(fractal)||fractal.touched!==true||fractal===setup.ls||(fractal.fineTouchedTime??fractal.touchedTime)+300<=asOf)return setup;
+ const {fineTouchedTime,...open}=fractal;
+ return {...setup,fractal:{...open,touched:false,touchedTime:null,endTime:null}};
+}
+
 export async function captureTradeSetupSourceSnapshot({setup,instrument,sourceProfile,configuration,canonicalSetupKnownAt,evaluationAsOf}) {
  if(!object(configuration)||sourceProfile!==PROFILE
   ||(configuration.params?.sweepSourceProfile!=null&&configuration.params.sweepSourceProfile!==sourceProfile))return fail();
- const normalized=jsonValue(setup);
+ const normalized=fractalAsOf(jsonValue(setup),canonicalSetupKnownAt);
  const provenance=await tradeSetupProvenance({source:'manual',configuration:{...configuration,sourceProfile}});
  const payload={schemaVersion:TRADE_SETUP_SOURCE_SNAPSHOT_VERSION,sourceProfile,instrument,
   setupKey:`${instrument}:${setup?.dir}:${setup?.obStartTime}`,engineVersion:setup?.trendEvaluationVersion,

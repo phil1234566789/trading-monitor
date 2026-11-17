@@ -82,6 +82,7 @@ import {
   m5LiquidityEntryNaturalKey,
   rsiDivergenceEntryNaturalKey,
 } from "../pinContext.js";
+import { reportUiError } from "../composables/useHttpActivity.js";
 import {doubleOrderBlockPinLabel} from '../doubleOrderBlockPin.js';
 import { usePolledFetch } from "../composables/usePolledFetch.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
@@ -997,55 +998,65 @@ async function onPinAddConfirm(note, pinType) {
     pinAddPopupTarget.value=null;pinAddPopupError.value=null;await refreshPinContext();return;
   }
   const target = pinAddPopupTarget.value;
-  if (target.kind === "ob_zone") {
-    const { instrument, timeframe, dir, startTime } = target.zone;
-    const obZoneId = await resolveObZoneId(instrument, timeframe, dir, startTime);
-    if (obZoneId == null) {
-      // poi-watcher refresht 1H/4H nur einmal pro Stunde/4h-Boundary (siehe CLAUDE.md
-      // poi-watcher-Throttling) — eine gerade erst entstandene Zone kann also noch fehlen.
-      pinAddPopupError.value = "Diese OB-Zone ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
-      return;
+  // Fehler nie still schlucken (Philip: „Hinzufügen“ tat nichts): Popup bleibt offen und zeigt den Grund.
+  let saved = null;
+  try {
+    if (target.kind === "ob_zone") {
+      const { instrument, timeframe, dir, startTime } = target.zone;
+      const obZoneId = await resolveObZoneId(instrument, timeframe, dir, startTime);
+      if (obZoneId == null) {
+        // poi-watcher refresht 1H/4H nur einmal pro Stunde/4h-Boundary (siehe CLAUDE.md
+        // poi-watcher-Throttling) — eine gerade erst entstandene Zone kann also noch fehlen.
+        pinAddPopupError.value = "Diese OB-Zone ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
+        return;
+      }
+      saved = await addPinEntry("ob_zone", obZoneId, note, pinType);
+    } else if (target.kind === "trade_setup") {
+      // Kein Resolve nötig — trade_setups.id ist schon direkt bekannt (siehe PriceChart.vue:
+      // refreshTradeSetupLinksInternal), anders als bei ob_zone.
+      saved = await addPinEntry("trade_setup", target.tradeSetupId, note, pinType);
+    } else if (target.kind === "tsc_setup") {
+      // Live erkannte Setup-Box OHNE bekannte trade_setups.id (siehe priceChartHitTest.js:
+      // findNearbyPinCandidates) — addPinTscSetupEntry legt die Zeile bei Bedarf per find-or-create
+      // an (analog zu addPinChartObEntry), landet danach als ganz normaler kind="trade_setup"-Pin.
+      saved = await addPinTscSetupEntry({ instrument: target.instrument, direction: target.direction, setup: target.setup }, note, pinType);
+    } else if (target.kind === "trade_confirmation") {
+      // Kein Resolve nötig — trade_evidence.id ist schon direkt bekannt, analog zu trade_setup.
+      saved = await addPinEntry("trade_confirmation", target.confirmationId, note, pinType);
+    } else if (target.kind === "liquidity_level") {
+      const { instrument, timeframe, dirNum, pivotTime } = target.level;
+      const liquidityLevelId = await resolveLiquidityLevelId(instrument, timeframe, dirNum, pivotTime);
+      if (liquidityLevelId == null) {
+        // poi-watcher refresht 1H nur einmal pro Stunde (siehe CLAUDE.md poi-watcher-Throttling) —
+        // ein gerade erst entstandenes Level kann also noch fehlen.
+        pinAddPopupError.value = "Dieses Liquiditäts-Level ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
+        return;
+      }
+      saved = await addPinEntry("liquidity_level", liquidityLevelId, note, pinType);
+    } else if (target.kind === "chart_ob") {
+      // "chart_ob" bleibt hier ein rein clientseitiger Kandidaten-Kind (siehe PriceChart.vue:
+      // findNearbyPinCandidates) — anders als resolveObZoneId oben (SELECT-only, wartet auf
+      // poi-watcher) legt addPinChartObEntry die ob_zones-Zeile bei Bedarf per find-or-create gleich mit
+      // an (Punkt 6), landet danach aber als ganz normaler kind='ob_zone'-Pin.
+      saved = await addPinChartObEntry(target.zone, note, pinType);
+    } else if (target.kind === "m5_liquidity_level") {
+      // Kein Resolve nötig — Liquiditäts-Level auf einem Nicht-1h-Timeframe werden nie persistiert,
+      // Rohdaten-Snapshot direkt (siehe addPinM5LiquidityEntry).
+      saved = await addPinM5LiquidityEntry(target.level, note, pinType);
+    } else if (target.kind === "rsi_divergence") {
+      // Kein Resolve nötig — Divergenzen werden nie persistiert, Rohdaten-Snapshot direkt (siehe
+      // addPinRsiDivergenceEntry).
+      saved = await addPinRsiDivergenceEntry(target.instrument, target.divergence, note, pinType);
+    } else {
+      saved = await addPinEntry("trade_position", target.trade.id, note, pinType);
     }
-    await addPinEntry("ob_zone", obZoneId, note, pinType);
-  } else if (target.kind === "trade_setup") {
-    // Kein Resolve nötig — trade_setups.id ist schon direkt bekannt (siehe PriceChart.vue:
-    // refreshTradeSetupLinksInternal), anders als bei ob_zone.
-    await addPinEntry("trade_setup", target.tradeSetupId, note, pinType);
-  } else if (target.kind === "tsc_setup") {
-    // Live erkannte Setup-Box OHNE bekannte trade_setups.id (siehe priceChartHitTest.js:
-    // findNearbyPinCandidates) — addPinTscSetupEntry legt die Zeile bei Bedarf per find-or-create
-    // an (analog zu addPinChartObEntry), landet danach als ganz normaler kind="trade_setup"-Pin.
-    await addPinTscSetupEntry({ instrument: target.instrument, direction: target.direction, setup: target.setup }, note, pinType);
-  } else if (target.kind === "trade_confirmation") {
-    // Kein Resolve nötig — trade_evidence.id ist schon direkt bekannt, analog zu trade_setup.
-    await addPinEntry("trade_confirmation", target.confirmationId, note, pinType);
-  } else if (target.kind === "liquidity_level") {
-    const { instrument, timeframe, dirNum, pivotTime } = target.level;
-    const liquidityLevelId = await resolveLiquidityLevelId(instrument, timeframe, dirNum, pivotTime);
-    if (liquidityLevelId == null) {
-      // poi-watcher refresht 1H nur einmal pro Stunde (siehe CLAUDE.md poi-watcher-Throttling) —
-      // ein gerade erst entstandenes Level kann also noch fehlen.
-      pinAddPopupError.value = "Dieses Liquiditäts-Level ist noch nicht gespeichert (poi-watcher braucht bis zu einer Stunde) — bitte gleich nochmal versuchen.";
-      return;
-    }
-    await addPinEntry("liquidity_level", liquidityLevelId, note, pinType);
-  } else if (target.kind === "chart_ob") {
-    // "chart_ob" bleibt hier ein rein clientseitiger Kandidaten-Kind (siehe PriceChart.vue:
-    // findNearbyPinCandidates) — anders als resolveObZoneId oben (SELECT-only, wartet auf
-    // poi-watcher) legt addPinChartObEntry die ob_zones-Zeile bei Bedarf per find-or-create gleich mit
-    // an (Punkt 6), landet danach aber als ganz normaler kind='ob_zone'-Pin.
-    await addPinChartObEntry(target.zone, note, pinType);
-  } else if (target.kind === "m5_liquidity_level") {
-    // Kein Resolve nötig — Liquiditäts-Level auf einem Nicht-1h-Timeframe werden nie persistiert,
-    // Rohdaten-Snapshot direkt (siehe addPinM5LiquidityEntry).
-    await addPinM5LiquidityEntry(target.level, note, pinType);
-  } else if (target.kind === "rsi_divergence") {
-    // Kein Resolve nötig — Divergenzen werden nie persistiert, Rohdaten-Snapshot direkt (siehe
-    // addPinRsiDivergenceEntry).
-    await addPinRsiDivergenceEntry(target.instrument, target.divergence, note, pinType);
-  } else {
-    await addPinEntry("trade_position", target.trade.id, note, pinType);
+    if (saved == null) throw new Error("Pin konnte nicht gespeichert werden (Details in der Browser-Konsole).");
+  } catch (error) {
+    console.error("Pin speichern fehlgeschlagen:", error);
+    pinAddPopupError.value = error?.message || "Pin konnte nicht gespeichert werden.";
+    return;
   }
+  if (saved.snapshotWarning) reportUiError("Pin ohne TS1.1-Quellen-Snapshot gespeichert", saved.snapshotWarning);
   pinAddPopupTarget.value = null;
   pinAddPopupError.value = null;
   refreshPinContext();
