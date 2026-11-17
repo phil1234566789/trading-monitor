@@ -1,5 +1,6 @@
 import {pivotTimeOf} from './marketStructureAnalysis';
 import {structureInWindow,dobTrendVerdict} from './dobM5Trend.js';
+export {dobCounterDobs} from './dobCounterDob.js';
 
 // Merkmal-Labor gegen DOB-Losses (Brain-Task Merkmal-Labor, Q24): je Trade zum Entscheidungszeitpunkt, nur geschlossene Kerzen.
 // Reine Messfunktionen, noch keine Regel; Trend-Algo und DOB-Indikator bleiben unangetastet.
@@ -22,11 +23,7 @@ export function dobM5Confirmation(m5Candles,entryTime,direction,fromTime,{window
  return {confirmed:events.length>0,events,innerTrendAtEntry:built?built.phases.at(-1)?.trend??'unknown':'unknown'};
 }
 
-// 3. Gegen-DOBs: Paare in Gegenrichtung, erkannt zwischen fromTime und Entry (dob = detectDoubleOrderBlocks am Entry).
-export function dobCounterDobs(dob,direction,fromTime,entryTime){
- const opposite=(dob?.pairs??[]).filter(p=>p.direction!==direction&&p.recognizedAt>fromTime&&p.recognizedAt<=entryTime);
- return {count:new Set(opposite.map(p=>p.secondOrderBlock.startTime)).size};
-}
+// 3. Gegen-DOBs: seit v3 im Setup (src/dobCounterDob.js), hier nur re-exportiert.
 
 // 4. OB1 und OB2 in der Kraft-Zone: Preisabstand 0 (Überlappung), wie distanceUsd der Quelle.
 const gap=(ob,zone)=>Math.max(0,zone.bottom-ob.top,ob.bottom-zone.top);

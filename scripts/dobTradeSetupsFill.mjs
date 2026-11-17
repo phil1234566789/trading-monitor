@@ -19,6 +19,8 @@ const RUNS = {
     sort: 1, version: 'dob-setup-v1', pick: r => r.setups, sourceOptions: { requireRetest: false } },
   'dob-setup-v2': { label: 'v2 · Quelle der Kraft mit Retest', description: 'wie v1, die H1/H4-Zone muss vor OB1 retestet sein',
     sort: 2, version: 'dob-setup-v2', pick: r => r.setups, sourceOptions: { requireRetest: true } },
+  'dob-setup-v3': { label: 'v3 · ohne Gegen-DOB', description: 'wie v2, kein Trade bei Gegen-DOB seit dem Retest der Kraftquelle',
+    sort: 3, version: 'dob-setup-v3', pick: r => r.setups, sourceOptions: { requireRetest: true }, counterDob: { liveOnly: true } },
 };
 const RUN_ID = flag('--run') ?? 'dob-setup-v0';
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
@@ -31,8 +33,8 @@ try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
-    { dobSourceContext, dobSourceZoneAgeSeconds }, { dobMaxR, dobWideVariant }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
-      '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js', '/src/dobMaxR.js'].map(load));
+    { dobSourceContext, dobSourceZoneAgeSeconds }, { dobMaxR, dobWideVariant }, { createDobCounterDobGate }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+      '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js', '/src/dobMaxR.js', '/src/dobCounterDob.js'].map(load));
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
   const cache = dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
@@ -51,7 +53,8 @@ try {
 
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
   // Der Lauf entscheidet, welche Setups zählen; die Quelle der Kraft kommt aus dem einmal vorberechneten Kontext.
-  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, sourceContext, sourceOptions: RUNS[RUN_ID].sourceOptions })) });
+  const counterDobGate = RUNS[RUN_ID].counterDob && createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: SYMBOL }, RUNS[RUN_ID].counterDob);
+  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, sourceContext, sourceOptions: RUNS[RUN_ID].sourceOptions, counterDobGate })) });
   const trades = dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup: runSetups, dobLiveWindowInput }).setups,
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   const carrying = new Map();

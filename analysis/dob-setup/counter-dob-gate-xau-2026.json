@@ -1,0 +1,205 @@
+{
+  "measurement": "dob-counter-dob-gate-v1",
+  "git": "5f2bdff1-dirty",
+  "symbol": "XAUUSD",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "methodology": [
+    "Trades: v2-Träger (dobRuns.mjs), Gate je Paar (createDobCounterDobGate: detectDoubleOrderBlocks auf 2 Tagen bis Entry), dann Dedup wie die Statistik.",
+    "Gegen-DOB: Paar in Gegenrichtung mit recognizedAt nach dem Quellen-Retest und spätestens am Entry, je OB2 einmal.",
+    "Tot: ein M1-Schluss zwischen Erkennung und Entry jenseits der fernen OB2-Kante (bärisch über Oberkante, bullisch unter Unterkante).",
+    "n = Win + Loss, ΣR = R·Win − Loss; tpKonfig = dobConfigTpR(aktive dob_guardrails, Entry); Halbjahre nach Berliner Entry-Monat."
+  ],
+  "gateMsPerCarrier": 3.8,
+  "variants": {
+    "v2 ohne Gate": {
+      "trades": 524,
+      "r3": {
+        "n": 521,
+        "winrate": 27.8,
+        "sumR": 59,
+        "Jan–Jun": {
+          "n": 303,
+          "winrate": 24.4,
+          "sumR": -7
+        },
+        "Jul–Nov": {
+          "n": 218,
+          "winrate": 32.6,
+          "sumR": 66
+        }
+      },
+      "r5": {
+        "n": 519,
+        "winrate": 19.7,
+        "sumR": 93,
+        "Jan–Jun": {
+          "n": 302,
+          "winrate": 18.2,
+          "sumR": 28
+        },
+        "Jul–Nov": {
+          "n": 217,
+          "winrate": 21.7,
+          "sumR": 65
+        }
+      },
+      "tpKonfig": {
+        "n": 520,
+        "winrate": 28.7,
+        "sumR": 121,
+        "Jan–Jun": {
+          "n": 303,
+          "winrate": 27.7,
+          "sumR": 53
+        },
+        "Jul–Nov": {
+          "n": 217,
+          "winrate": 30,
+          "sumR": 68
+        }
+      },
+      "r2": {
+        "n": 521,
+        "winrate": 35.9,
+        "sumR": 40,
+        "Jan–Jun": {
+          "n": 303,
+          "winrate": 34,
+          "sumR": 6
+        },
+        "Jul–Nov": {
+          "n": 218,
+          "winrate": 38.5,
+          "sumR": 34
+        }
+      }
+    },
+    "jeder Gegen-DOB sperrt": {
+      "trades": 217,
+      "r3": {
+        "n": 216,
+        "winrate": 32.4,
+        "sumR": 64,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 29.4,
+          "sumR": 19
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 35.5,
+          "sumR": 45
+        }
+      },
+      "r5": {
+        "n": 215,
+        "winrate": 22.3,
+        "sumR": 73,
+        "Jan–Jun": {
+          "n": 108,
+          "winrate": 19.4,
+          "sumR": 18
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 25.2,
+          "sumR": 55
+        }
+      },
+      "tpKonfig": {
+        "n": 216,
+        "winrate": 33.3,
+        "sumR": 112,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 33,
+          "sumR": 45
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 33.6,
+          "sumR": 67
+        }
+      },
+      "r2": {
+        "n": 216,
+        "winrate": 40.3,
+        "sumR": 45,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 38.5,
+          "sumR": 17
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 42.1,
+          "sumR": 28
+        }
+      }
+    },
+    "nur lebende Gegen-DOBs sperren": {
+      "trades": 385,
+      "r3": {
+        "n": 384,
+        "winrate": 28.9,
+        "sumR": 60,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 26.1,
+          "sumR": 10
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 32.5,
+          "sumR": 50
+        }
+      },
+      "r5": {
+        "n": 383,
+        "winrate": 20.9,
+        "sumR": 97,
+        "Jan–Jun": {
+          "n": 217,
+          "winrate": 18.9,
+          "sumR": 29
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 23.5,
+          "sumR": 68
+        }
+      },
+      "tpKonfig": {
+        "n": 384,
+        "winrate": 30.5,
+        "sumR": 127,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 29.8,
+          "sumR": 59
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 31.3,
+          "sumR": 68
+        }
+      },
+      "r2": {
+        "n": 384,
+        "winrate": 37,
+        "sumR": 42,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 35.8,
+          "sumR": 16
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 38.6,
+          "sumR": 26
+        }
+      }
+    }
+  }
+}

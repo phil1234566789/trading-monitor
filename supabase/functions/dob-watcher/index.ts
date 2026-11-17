@@ -6,14 +6,17 @@ import {berlinOffsetMinutes,berlinDateStrFor,formatBerlinTime} from '../../../sr
 import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
 import {dobAlarmEvents,dobStaleAlarm} from '../../../src/dobAlarm.js';
 import {dobGuardrailsFromRow,dobMonthBlocked,dobEntryRule} from '../../../src/dobGuardrails.js';
+import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
 
 const SYMBOL='XAUUSD';
-// M1/M5 reichen für das Live-Fenster samt Wochenende; H1/H4 für beliebig alte Quell-Zonen und den ATR.
+// v3-Gate: true = nur lebende Gegen-DOBs sperren, false = jeder (Messung analysis/dob-setup/counter-dob-gate-xau-2026.json).
+const DOB_COUNTER_DOB_LIVE_ONLY=true;
+// M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte Quell-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
-const COUNTS: Record<string,number>={'1m':2000,'5m':450,'1h':6000,'4h':1500};
+const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
 const BAR_SECONDS: Record<string,number>={'1m':60,'5m':300,'1h':3600,'4h':14400};
 const offset=(sec:number)=>berlinOffsetMinutes(sec*1000);
 // Versand steuert die Alarme-Seite: Schalter alarm_settings.dob_setup (fehlende Zeile = an, wie poi-watcher) und
@@ -78,8 +81,10 @@ async function tick(client:any,dry=false,probes:number[]=[]){
     .map(r=>({label:r.label,fromMinutes:r.from_minutes,toMinutes:r.to_minutes,days:r.days,ignoreLiquidity:r.ignore_liquidity??false}));
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
-  const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:mark(m1),m5Candles:mark(m5),
-    htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),guardrails};
+  const m1Marked=mark(m1),m5Marked=mark(m5);
+  const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
+    htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),guardrails,
+    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL},{liveOnly:DOB_COUNTER_DOB_LIVE_ONLY})};
   const calcStart=performance.now(),result=checkDobTradeSetup(input),calcMs=Math.round(performance.now()-calcStart);
   const events=dobAlarmEvents(result,evaluatedAt),stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   if(stale)events.push(stale);

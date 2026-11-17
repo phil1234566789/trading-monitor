@@ -79,3 +79,21 @@ describe('DOB-Sperren (dob_guardrails) im Alarm',()=>{
   expect(dobAlarmEvents(withGuardrails(at,{defaultTpR:2.5}),at).find(e=>e.phase==='entry').text).toContain('TP 2,5R (Standard)');
  });
 });
+
+describe('DOB v3: Gegen-DOB im Alarm',()=>{
+ const fixture=load('2026-11-12');
+ const done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
+ // Gate-Stub: das echte Gate testet dobLabFeatures.test.js an Philips Pins.
+ const counterDobGate=s=>s.entryTime==null?null:{count:1,liveCount:1,rejectReason:'counterDob'};
+ it('Retest-Alarm bleibt, der Entry kommt als „Gegen-DOB seit Retest, kein Trade“',()=>{
+  const retestAt=done.chart.secondRetestTime+60;
+  expect(dobAlarmEvents(run(fixture,retestAt,true,undefined,{counterDobGate}),retestAt).find(e=>e.phase==='ob2Retest')).toMatchObject({guardrail:null,suppressed:false});
+  const at=done.entryTime+60,result=run(fixture,at,true,undefined,{counterDobGate});
+  expect(result.version).toBe('dob-setup-v3');
+  expect(result.rejected.find(s=>s.entryTime===done.entryTime)).toMatchObject({reason:'counterDob'});
+  const entry=dobAlarmEvents(result,at).find(e=>e.phase==='entry');
+  expect(entry).toMatchObject({guardrail:'counterDob',suppressed:false});
+  expect(entry.text).toContain('Gegen-DOB seit Retest, Entry 14:10, kein Trade');
+  expect(dobAlarmEvents(result,at,{counterDobAlarm:'none'}).find(e=>e.phase==='entry')).toMatchObject({suppressed:true});
+ });
+});

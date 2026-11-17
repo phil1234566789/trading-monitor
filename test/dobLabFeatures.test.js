@@ -2,6 +2,7 @@ import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {detectDoubleOrderBlocks} from '../src/doubleOrderBlocks.js';
 import {dobObsInSourceZone,dobCounterDobs} from '../src/dobLabFeatures.js';
+import {createDobCounterDobGate} from '../src/dobCounterDob.js';
 
 describe('DOB-Merkmal-Labor',()=>{
  const zone={top:110,bottom:100};
@@ -27,5 +28,16 @@ describe('DOB-Merkmal-Labor: Gegen-DOB an Philips Pins',()=>{
  it.each(cases)('Pin $pin ($expected, $direction)',c=>{
   const dob=detectDoubleOrderBlocks({instrument:'XAUUSD',evaluatedAt:c.entryTime,m5Candles:candles(c.m5),m1Candles:candles(c.m1),options:{retests:false}});
   expect(dobCounterDobs(dob,c.direction,c.sourceRetestAt,c.entryTime).count).toBe(COUNTS[c.pin]);
+ });
+ // v3-Gate auf denselben Kerzen: gleiche Zählung, Sperre je nach liveOnly.
+ it.each(cases)('Pin $pin: Gate wie die Labor-Zählung',c=>{
+  const m5=candles(c.m5),m1=candles(c.m1),setup={direction:c.direction,entryTime:c.entryTime,
+   chart:{firstOrderBlockStart:c.sourceRetestAt+3600},sourceOfStrength:{retestAgeSeconds:3600}};
+  const all=createDobCounterDobGate({m5Candles:m5,m1Candles:m1},{liveOnly:false})(setup);
+  expect(all).toMatchObject({count:COUNTS[c.pin],rejectReason:COUNTS[c.pin]?'counterDob':null});
+  const live=createDobCounterDobGate({m5Candles:m5,m1Candles:m1})(setup);
+  expect(live.liveCount).toBeLessThanOrEqual(all.count);
+  expect(live.rejectReason).toBe(live.liveCount?'counterDob':null);
+  expect(createDobCounterDobGate({m5Candles:m5,m1Candles:m1})({...setup,entryTime:null})).toBeNull();
  });
 });

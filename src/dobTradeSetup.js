@@ -9,6 +9,8 @@ import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 // + DOB + TP 2R. Den Retest verlangt Philip fachlich (Q17), auch wenn er die Winrate nicht hebt; sourceOptions.requireRetest=false
 // rechnet nur den historischen v1-Lauf nach. Einziger Guardrail bleibt das Entry-Verbot 22:00–02:00 im Indikator; LS-Quelle kommt später.
 export const DOB_TRADE_SETUP_VERSION='dob-setup-v2';
+// v3 = v2 + Gegen-DOB-Gate (input.counterDobGate, src/dobCounterDob.js).
+export const DOB_TRADE_SETUP_V3_VERSION='dob-setup-v3';
 
 // Phasen für Alarm-Zeitpunkt und Dedup (pairId+phase): ob2Retest = OB2 berührt, Reaktion steht aus (Alarm, Q3);
 // ob2Recognized = OB2-Reaktion da, Route b wartet auf den Entry; entry = Trade läuft, danach der Ausgang.
@@ -42,7 +44,7 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 // sourceOptions: {requireRetest} (Standard true). trendGate (optional, v3-Experiment): Funktion setup → {trend, verdict, rejectReason}
 // aus createDobM5TrendGate; wird vom Aufrufer hereingereicht, damit der Trend-Algo nicht im Watcher-Bundle landet.
 // guardrails (optional, dobGuardrailsFromRow): Zonenalter und Entry-Stunde → rejected 'blockedZoneAge'/'blockedEntryHour'; den Monat
-// prüft der Watcher vorab. Ein Entry außerhalb der Sperre bekommt tpRule {tpR, window} und Ziel/Ausgang zu diesem R. setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
+// prüft der Watcher vorab. counterDobGate (optional, v3): setup → {count, liveCount, rejectReason} aus createDobCounterDobGate. Ein Entry außerhalb der Sperre bekommt tpRule {tpR, window} und Ziel/Ausgang zu diesem R. setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 // Der Indikator rechnet Ziel und Ausgang mit 2R; ein anderes R aus der Fensterregel rechnet dieselbe Ausgangslogik nach.
 function withTarget(pair,setup,rule,{m1Candles,evaluatedAt}){
  const tpRule={tpR:rule.tpR,window:rule.window};
@@ -84,12 +86,15 @@ export function checkDobTradeSetup(input){
   const rule=guardrails&&setup.entryTime!=null?dobEntryRule(guardrails,setup.entryTime):null;
   if(rule?.action==='block'){rejected.push({...setup,sourceOfStrength,reason:'blockedEntryHour'});continue;}
   if(rule)Object.assign(setup,withTarget(pair,setup,rule,input));
+  // v3: Gegen-DOB seit Quellen-Retest (createDobCounterDobGate), nur für Setups mit Entry; Retest-Alarm bleibt.
+  const counterDob=input.counterDobGate?.({...setup,sourceOfStrength});
+  if(counterDob?.rejectReason){rejected.push({...setup,sourceOfStrength,counterDob,reason:counterDob.rejectReason});continue;}
   // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
   const m5Trend=input.trendGate?.({...setup,sourceOfStrength});
   if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});
   else setups.push({...setup,sourceOfStrength,...(m5Trend?{m5Trend}:{})});
  }
- return {version:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,rejected,stats:dob.stats};
+ return {version:input.counterDobGate?DOB_TRADE_SETUP_V3_VERSION:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,rejected,stats:dob.stats};
 }
 
 // Erste M1-Zeit nach dem letzten XAU-Marktschluss vor evaluatedAt (evaluatedAt selbst, solange der Markt zu ist).
