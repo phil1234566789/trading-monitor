@@ -12,8 +12,8 @@ import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
 
 const SYMBOL='XAUUSD';
-// v3-Gate: true = nur lebende Gegen-DOBs sperren, false = jeder (Messung analysis/dob-setup/counter-dob-gate-xau-2026.json).
-const DOB_COUNTER_DOB_LIVE_ONLY=true;
+// v3-Gate, Modus aus DOB_COUNTER_DOB_MODES (src/dobCounterDob.js); Philip: block_all.
+const DOB_COUNTER_DOB_MODE='block_all';
 // M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte Quell-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
@@ -84,7 +84,7 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   const m1Marked=mark(m1),m5Marked=mark(m5);
   const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
     htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),guardrails,
-    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL},{liveOnly:DOB_COUNTER_DOB_LIVE_ONLY})};
+    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL},{mode:DOB_COUNTER_DOB_MODE})};
   const calcStart=performance.now(),result=checkDobTradeSetup(input),calcMs=Math.round(performance.now()-calcStart);
   const events=dobAlarmEvents(result,evaluatedAt),stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   if(stale)events.push(stale);

@@ -20,7 +20,7 @@ const RUNS = {
   'dob-setup-v2': { label: 'v2 · Quelle der Kraft mit Retest', description: 'wie v1, die H1/H4-Zone muss vor OB1 retestet sein',
     sort: 2, version: 'dob-setup-v2', pick: r => r.setups, sourceOptions: { requireRetest: true } },
   'dob-setup-v3': { label: 'v3 · ohne Gegen-DOB', description: 'wie v2, kein Trade bei Gegen-DOB seit dem Retest der Kraftquelle',
-    sort: 3, version: 'dob-setup-v3', pick: r => r.setups, sourceOptions: { requireRetest: true }, counterDob: { liveOnly: true } },
+    sort: 3, version: 'dob-setup-v3', pick: r => r.setups, sourceOptions: { requireRetest: true }, counterDob: { mode: 'block_all' } },
 };
 const RUN_ID = flag('--run') ?? 'dob-setup-v0';
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);

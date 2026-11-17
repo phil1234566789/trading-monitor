@@ -31,7 +31,7 @@ function sourceLine({sourceOfStrength:s}){
 }
 const hhmm=m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
 // Ohne Konfig (tpRule fehlt) bleibt es beim festen 2R des Setups.
-const tpLabel=({tpRule:r})=>!r?'TP 2R':`TP ${String(r.tpR).replace('.',',')}R (${r.window?.action==='tp'?`Fensterregel ${hhmm(r.window.from)}–${hhmm(r.window.to)}`:'Standard'})`;
+const tpLabel=({tpRule:r})=>!r?'TP 2R':`TP ${String(r.tpR).replace('.',',')}R (${r.source==='deadCounterDob'?'nur tote Gegen-DOBs':r.window?.action==='tp'?`Fensterregel ${hhmm(r.window.from)}–${hhmm(r.window.to)}`:'Standard'})`;
 const obLines=({chart})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} · ${zone(chart.firstOrderBlock)}`,
  `OB2 ${formatBerlinTime(chart.secondOrderBlockStart)} · ${zone(chart.secondOrderBlock)}`];
 

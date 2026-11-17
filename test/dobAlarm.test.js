@@ -96,4 +96,10 @@ describe('DOB v3: Gegen-DOB im Alarm',()=>{
   expect(entry.text).toContain('Gegen-DOB seit Retest, Entry 14:10, kein Trade');
   expect(dobAlarmEvents(result,at,{counterDobAlarm:'none'}).find(e=>e.phase==='entry')).toMatchObject({suppressed:true});
  });
+ it('Kombi-Modus: nur tote Gegen-DOBs → Entry-Alarm mit TP 5R',()=>{
+  const at=done.entryTime+60,gate=s=>s.entryTime==null?null:{count:1,liveCount:0,rejectReason:null,tpR:5};
+  const result=run(fixture,at,true,undefined,{counterDobGate:gate});
+  expect(result.setups.find(s=>s.entryTime===done.entryTime)).toMatchObject({tpRule:{tpR:5,source:'deadCounterDob'}});
+  expect(dobAlarmEvents(result,at).find(e=>e.phase==='entry').text).toContain('TP 5R (nur tote Gegen-DOBs)');
+ });
 });

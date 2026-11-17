@@ -1,6 +1,6 @@
 {
   "measurement": "dob-counter-dob-gate-v1",
-  "git": "5f2bdff1-dirty",
+  "git": "f7ced225-dirty",
   "symbol": "XAUUSD",
   "dataEnd": 1794849660,
   "dataEndBerlin": "2026-11-16",
@@ -10,7 +10,7 @@
     "Tot: ein M1-Schluss zwischen Erkennung und Entry jenseits der fernen OB2-Kante (bärisch über Oberkante, bullisch unter Unterkante).",
     "n = Win + Loss, ΣR = R·Win − Loss; tpKonfig = dobConfigTpR(aktive dob_guardrails, Entry); Halbjahre nach Berliner Entry-Monat."
   ],
-  "gateMsPerCarrier": 3.8,
+  "gateMsPerCarrier": 3.6,
   "variants": {
     "v2 ohne Gate": {
       "trades": 524,
@@ -198,6 +198,280 @@
           "n": 166,
           "winrate": 38.6,
           "sumR": 26
+        }
+      }
+    }
+  },
+  "groups": {
+    "keiner": {
+      "trades": 217,
+      "r3": {
+        "n": 216,
+        "winrate": 32.4,
+        "sumR": 64,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 29.4,
+          "sumR": 19
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 35.5,
+          "sumR": 45
+        }
+      },
+      "r5": {
+        "n": 215,
+        "winrate": 22.3,
+        "sumR": 73,
+        "Jan–Jun": {
+          "n": 108,
+          "winrate": 19.4,
+          "sumR": 18
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 25.2,
+          "sumR": 55
+        }
+      },
+      "tpKonfig": {
+        "n": 216,
+        "winrate": 33.3,
+        "sumR": 112,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 33,
+          "sumR": 45
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 33.6,
+          "sumR": 67
+        }
+      },
+      "r2": {
+        "n": 216,
+        "winrate": 40.3,
+        "sumR": 45,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 38.5,
+          "sumR": 17
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 42.1,
+          "sumR": 28
+        }
+      },
+      "r4": {
+        "n": 215,
+        "winrate": 27.4,
+        "sumR": 80,
+        "Jan–Jun": {
+          "n": 108,
+          "winrate": 24.1,
+          "sumR": 22
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 30.8,
+          "sumR": 58
+        }
+      }
+    },
+    "nur tote": {
+      "trades": 168,
+      "r3": {
+        "n": 168,
+        "winrate": 24.4,
+        "sumR": -4,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 22.9,
+          "sumR": -9
+        },
+        "Jul–Nov": {
+          "n": 59,
+          "winrate": 27.1,
+          "sumR": 5
+        }
+      },
+      "r5": {
+        "n": 168,
+        "winrate": 19,
+        "sumR": 24,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 18.3,
+          "sumR": 11
+        },
+        "Jul–Nov": {
+          "n": 59,
+          "winrate": 20.3,
+          "sumR": 13
+        }
+      },
+      "tpKonfig": {
+        "n": 168,
+        "winrate": 26.8,
+        "sumR": 15,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 26.6,
+          "sumR": 14
+        },
+        "Jul–Nov": {
+          "n": 59,
+          "winrate": 27.1,
+          "sumR": 1
+        }
+      },
+      "r2": {
+        "n": 168,
+        "winrate": 32.7,
+        "sumR": -3,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 33,
+          "sumR": -1
+        },
+        "Jul–Nov": {
+          "n": 59,
+          "winrate": 32.2,
+          "sumR": -2
+        }
+      },
+      "r4": {
+        "n": 168,
+        "winrate": 21.4,
+        "sumR": 12,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 22,
+          "sumR": 11
+        },
+        "Jul–Nov": {
+          "n": 59,
+          "winrate": 20.3,
+          "sumR": 1
+        }
+      }
+    },
+    "lebend": {
+      "trades": 139,
+      "r3": {
+        "n": 137,
+        "winrate": 24.8,
+        "sumR": -1,
+        "Jan–Jun": {
+          "n": 85,
+          "winrate": 20,
+          "sumR": -17
+        },
+        "Jul–Nov": {
+          "n": 52,
+          "winrate": 32.7,
+          "sumR": 16
+        }
+      },
+      "r5": {
+        "n": 136,
+        "winrate": 16.2,
+        "sumR": -4,
+        "Jan–Jun": {
+          "n": 85,
+          "winrate": 16.5,
+          "sumR": -1
+        },
+        "Jul–Nov": {
+          "n": 51,
+          "winrate": 15.7,
+          "sumR": -3
+        }
+      },
+      "tpKonfig": {
+        "n": 136,
+        "winrate": 23.5,
+        "sumR": -6,
+        "Jan–Jun": {
+          "n": 85,
+          "winrate": 22.4,
+          "sumR": -6
+        },
+        "Jul–Nov": {
+          "n": 51,
+          "winrate": 25.5,
+          "sumR": 0
+        }
+      },
+      "r2": {
+        "n": 137,
+        "winrate": 32.8,
+        "sumR": -2,
+        "Jan–Jun": {
+          "n": 85,
+          "winrate": 29.4,
+          "sumR": -10
+        },
+        "Jul–Nov": {
+          "n": 52,
+          "winrate": 38.5,
+          "sumR": 8
+        }
+      },
+      "r4": {
+        "n": 136,
+        "winrate": 19.9,
+        "sumR": -1,
+        "Jan–Jun": {
+          "n": 85,
+          "winrate": 18.8,
+          "sumR": -5
+        },
+        "Jul–Nov": {
+          "n": 51,
+          "winrate": 21.6,
+          "sumR": 4
+        }
+      }
+    }
+  },
+  "combo": {
+    "jeder sperrt (TP Konfig)": {
+      "trades": 217,
+      "tp": {
+        "n": 216,
+        "winrate": 33.3,
+        "sumR": 112,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 33,
+          "sumR": 45
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 33.6,
+          "sumR": 67
+        }
+      }
+    },
+    "lebend sperrt, nur tote 5R, keiner Konfig": {
+      "trades": 385,
+      "tp": {
+        "n": 384,
+        "winrate": 27.1,
+        "sumR": 136,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 25.7,
+          "sumR": 56
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 28.9,
+          "sumR": 80
         }
       }
     }

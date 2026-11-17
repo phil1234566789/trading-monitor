@@ -47,7 +47,7 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 // prüft der Watcher vorab. counterDobGate (optional, v3): setup → {count, liveCount, rejectReason} aus createDobCounterDobGate. Ein Entry außerhalb der Sperre bekommt tpRule {tpR, window} und Ziel/Ausgang zu diesem R. setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 // Der Indikator rechnet Ziel und Ausgang mit 2R; ein anderes R aus der Fensterregel rechnet dieselbe Ausgangslogik nach.
 function withTarget(pair,setup,rule,{m1Candles,evaluatedAt}){
- const tpRule={tpR:rule.tpR,window:rule.window};
+ const tpRule={tpR:rule.tpR,window:rule.window,...(rule.source?{source:rule.source}:{})};
  if(rule.tpR===DOB_DEFAULT_TP_R)return {tpRule};
  const outcome=evaluateDoubleOrderBlockOutcome({direction:setup.direction,entryTime:setup.entryTime,entryPrice:setup.entryPrice,stopPrice:setup.stopPrice,
   candles:m1Candles,evaluatedAt,instrument:setup.instrument,rMultiple:rule.tpR});
@@ -89,6 +89,7 @@ export function checkDobTradeSetup(input){
   // v3: Gegen-DOB seit Quellen-Retest (createDobCounterDobGate), nur für Setups mit Entry; Retest-Alarm bleibt.
   const counterDob=input.counterDobGate?.({...setup,sourceOfStrength});
   if(counterDob?.rejectReason){rejected.push({...setup,sourceOfStrength,counterDob,reason:counterDob.rejectReason});continue;}
+  if(counterDob?.tpR)Object.assign(setup,withTarget(pair,setup,{tpR:counterDob.tpR,window:null,source:'deadCounterDob'},input),{counterDob});
   // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
   const m5Trend=input.trendGate?.({...setup,sourceOfStrength});
   if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});

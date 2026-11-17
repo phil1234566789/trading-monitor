@@ -12,7 +12,36 @@ export function dobOuterTrend(candles,at,direction,{windowDays,barSeconds}){
  const state=structureInWindow(candles,at,windowDays*86400,{barSeconds})?.state;
  const trend=state?.trend??'unknown',origin=state?.appliedPivots?.[0];
  return {trend,verdict:dobTrendVerdict(direction,trend),
-  durationDays:trend!=='unknown'&&origin?+((at-pivotTimeOf(origin))/86400).toFixed(2):null};
+  durationDays:trend!=='unknown'&&origin?+((at-pivotTimeOf(origin))/86400).toFixed(2):null,bosPivot:bosPivotOf(state)};
+}
+
+// BOS-Pivot (Philip): der Pullback-Punkt, nach dem der äußere Trend zuletzt fortgesetzt wurde = protected-low/-high der
+// äußeren Ebene. Schon per Close gebrochen = 'break-of-structure'; nur per Docht berührt degradiert der Algo ihn zu
+// 'LQ-sweep' (im Uptrend sind das nur Tiefs, im Downtrend nur Hochs, siehe markLqSweeps). Jüngster Kandidat gewinnt.
+function bosPivotOf(state){
+ if(!state||state.trend==='unknown')return null;
+ const side=state.trend==='uptrend'?'protected-low':'protected-high';
+ const latest=types=>state.structurePivots.filter(p=>types.includes(p.type)).reduce((a,p)=>!a||pivotTimeOf(p)>pivotTimeOf(a)?p:a,null);
+ const p=latest([side])??latest(['break-of-structure'])??latest(['LQ-sweep']);
+ return p?{price:p.price,time:pivotTimeOf(p),type:p.type}:null;
+}
+
+// 1a = äußerer Trend mit dem Trade; 1b = dagegen, BOS-Pivot nicht gebrochen; 1c = dagegen, BOS-Pivot vor dem Entry in
+// Trade-Richtung gebrochen (Close bzw. Docht, auf den übergebenen Kerzen, nur bis Entry geschlossen). Sonst unknown.
+export function dobOuterTrendClass(outer,direction,candles,entryTime,barSeconds=300){
+ if(outer.verdict==='with')return {cls:'1a'};
+ if(outer.verdict!=='against'||!outer.bosPivot)return {cls:'unknown'};
+ const {price,time}=outer.bosPivot,long=direction==='long';
+ let close=false,wick=false,lo=0,hi=candles.length;
+ while(lo<hi){const m=(lo+hi)>>1;if(candles[m].time<=time)lo=m+1;else hi=m;}
+ for(let i=lo;i<candles.length;i++){
+  const c=candles[i];
+  if(c.time+barSeconds>entryTime)break;
+  if(c.ignored)continue;
+  if(long?c.high>price:c.low<price)wick=true;
+  if(long?c.close>price:c.close<price){close=true;break;}
+ }
+ return {cls:close?'1c':'1b',clsWick:wick?'1c':'1b',closeBroken:close,wickBroken:wick};
 }
 
 // 2. M5-Struktur bestätigt die Trade-Richtung: Phasenwechsel (CHoCH/BOS/Trendwechsel/Fortsetzung) in Trade-Richtung,
