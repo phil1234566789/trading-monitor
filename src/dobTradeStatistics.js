@@ -64,6 +64,36 @@ export function dobMaxRShares(rows){
  const share=min=>decided.length?decided.filter(r=>r.max_r>=min).length/decided.length:null;
  return {n:decided.length,r3:share(3),r4:share(4),r5:share(5)};
 }
+// Alle Routen zusammen (Kacheln je Retest-Art, Zwischensummen).
+export const dobTotalStats=(rows,k=2)=>dobRouteStats(rows.map(r=>({...r,route:'a'})),k).a;
+export const DOB_RETEST_KINDS={first:'erster Touch',followUp:'Folge-Touch'};
+
+// Tageszeit-Slots (Berlin, Entry-Zeit): volle Stunden, an Session-Grenzen auf halber Stunde geteilt (z.B. 10:00–10:30 / 10:30–11:00).
+// Gruppiert unter der Session, in der der Slot beginnt; Lücken zwischen Sessions sind eigene Gruppen mit ihrer Uhrzeit als Titel,
+// weil die Liquidität mit den Börsenöffnungen kommt. Sessions nach Uhrzeit, Wochentage spielen für die Gruppierung keine Rolle.
+const hhmm=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+const inSession=(s,m)=>s.from_minutes<=s.to_minutes?m>=s.from_minutes&&m<s.to_minutes:m>=s.from_minutes||m<s.to_minutes;
+export function dobTimeSlotGroups(rows,sessions){
+ const cuts=[...new Set([...Array.from({length:25},(_,h)=>h*60),...sessions.flatMap(s=>[s.from_minutes%1440,s.to_minutes%1440])])].sort((a,b)=>a-b);
+ const slots=cuts.slice(0,-1).map((start,i)=>({start,end:cuts[i+1],label:`${hhmm(start)}–${hhmm(cuts[i+1])}`,rows:[],
+  session:[...sessions].sort((a,b)=>a.from_minutes-b.from_minutes).find(s=>inSession(s,start))?.label??null}));
+ for(const row of rows){
+  const m=Math.floor(((row.entry_time+berlinOffsetMinutes(row.entry_time*1000)*60)%86400+86400)%86400/60);
+  slots.find(s=>m>=s.start&&m<s.end).rows.push(row);
+ }
+ const groups=[];
+ for(const slot of slots){
+  const last=groups.at(-1);
+  if(last&&last.session===slot.session)last.slots.push(slot);else groups.push({session:slot.session,slots:[slot]});
+ }
+ return groups.map(g=>({title:g.session??`${g.slots[0].label.slice(0,5)}–${g.slots.at(-1).label.slice(6)}`,
+  slots:g.slots.filter(s=>s.rows.length),rows:g.slots.flatMap(s=>s.rows)})).filter(g=>g.rows.length);
+}
+
+// Alter der H1/H4-Zone von ihrer Entstehung bis zum Retest (Start der letzten Touch-Episode vor OB1), nur v1/v2.
+const DAY=86400;
+export const DOB_ZONE_AGE_BUCKETS=[['< 1 Tag',DAY],['1–3 Tage',3*DAY],['3–7 Tage',7*DAY],['1–4 Wochen',28*DAY],['> 4 Wochen',Infinity]];
+export const dobZoneAgeBucket=row=>Number.isFinite(row.source_zone_age_seconds)?DOB_ZONE_AGE_BUCKETS.find(([,max])=>row.source_zone_age_seconds<max)[0]:null;
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
 // Eigenes Modul, damit der DOB-Watcher (Deno) das Label ohne die Pin-Abgleich-Kette dieser Datei importieren kann.
 export {dobSourceLabel} from './dobSourceLabel.js';

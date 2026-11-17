@@ -4,7 +4,8 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_R_TARGETS,dobBreakEven} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_R_TARGETS,dobBreakEven,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS} from '../dobTradeStatistics.js';
+import DobStatsTable from '../components/DobStatsTable.vue';
 import {fetchDobTradePins,addDobTradePin,removePinEntry,updatePinNote} from '../pinContext.js';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinFlag from '../components/SimulationPinFlag.vue';
@@ -101,24 +102,45 @@ watch([instrument,year,run,rA,rB],([i,y,r,a,b])=>{shown.value=PAGE;router.replac
 const years=computed(()=>[...new Set([year.value,...rows.value.map(r=>dobTradeMonth(r).slice(0,4))])].sort().reverse());
 const inYear=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(year.value)));
 // Max-R-Filter (genaue Stufen, ODER) und Sortierung; ohne gespeichertes max_r (älterer Lauf-Stand) bleibt beides aus.
-const maxRFilter=ref([]),maxRSort=ref('');
+const maxRFilter=ref([]),maxRSort=ref(''),retestFilter=ref([]);
+const hasRetest=computed(()=>inYear.value.some(r=>r.source_retest_kind));
 const hasMaxR=computed(()=>inYear.value.some(r=>r.max_r!=null));
 const maxRShares=computed(()=>dobMaxRShares(inYear.value));
 const cycleMaxRSort=()=>{maxRSort.value={'':'desc',desc:'asc',asc:''}[maxRSort.value];};
 const listed=computed(()=>{
  let list=onlyPinned.value?inYear.value.filter(pinOf):inYear.value;
  if(maxRFilter.value.length)list=list.filter(r=>maxRFilter.value.includes(dobMaxRBucket(r)));
+ if(retestFilter.value.length)list=list.filter(r=>retestFilter.value.includes(r.source_retest_kind));
  if(!maxRSort.value)return list;
  const dir=maxRSort.value==='desc'?-1:1;
  return [...list].sort((a,b)=>(a.max_r??-1)===(b.max_r??-1)?b.entry_time-a.entry_time:dir*((a.max_r??-1)-(b.max_r??-1)));
 });
-watch([maxRFilter,maxRSort],()=>{shown.value=PAGE;});
+watch([maxRFilter,maxRSort,retestFilter],()=>{shown.value=PAGE;});
 const totals=computed(()=>Object.fromEntries(targets.value.map(t=>[t.name,dobRouteStats(inYear.value,t.k)])));
-const withStats=groups=>groups.map(g=>({...g,stats:Object.fromEntries(targets.value.map(t=>[t.name,dobRouteStats(g.rows,t.k)]))}));
+const statsOf=list=>Object.fromEntries(targets.value.map(t=>[t.name,dobRouteStats(list,t.k)]));
 const sessionsOf=r=>{const s=dobTradeSessions(r,sessions.value);return s.length?s:['ohne Session'];};
-const sessionOrder=computed(()=>[...sessions.value.map(s=>s.label),'ohne Session']);
-const bySession=computed(()=>withStats(dobGroups(inYear.value,sessionsOf)).sort((a,b)=>sessionOrder.value.indexOf(a.key)-sessionOrder.value.indexOf(b.key)));
-const byMonth=computed(()=>withStats(dobGroups(inYear.value,r=>[dobTradeMonth(r)])).sort((a,b)=>a.key.localeCompare(b.key)));
+// Winrate je Retest-Art der Kraftquelle (nur v2 befüllt), alle Routen zusammen, beide R-Ziele.
+const retestTiles=computed(()=>Object.entries(DOB_RETEST_KINDS).map(([kind,label])=>{
+ const list=inYear.value.filter(r=>r.source_retest_kind===kind);
+ return {kind,label,n:list.length,targets:targets.value.map(t=>({...t,s:dobTotalStats(list,t.k)}))};
+}).filter(t=>t.n));
+// „Je …“-Tabellen, je ein-/ausklappbar (Zustand im Browser). Tageszeit statt Session-Liste: wann die Liquidität kommt, hängt an den
+// Börsenöffnungen, deshalb Stunden unter ihren Sessions bzw. unter der Uhrzeit der Lücke dazwischen.
+const tablesOpen=useLocalStorageRef('dobStatsTablesOpen',{});
+const zoneTimeframe=ref('');
+const tables=computed(()=>{
+ const list=[
+  {key:'time',title:'Je Session und Stunde',firstCol:'Entry (Berlin)',sections:dobTimeSlotGroups(inYear.value,sessions.value).map(g=>({title:g.title,
+   stats:statsOf(g.rows),rows:g.slots.map(slot=>({key:slot.label,label:slot.label,stats:statsOf(slot.rows)}))}))},
+  {key:'month',title:'Je Monat',firstCol:'Monat',sections:[{rows:dobGroups(inYear.value,r=>[dobTradeMonth(r)]).sort((a,b)=>a.key.localeCompare(b.key))
+   .map(g=>({key:g.key,label:monthLabel(g.key),stats:statsOf(g.rows)}))}]}];
+ if(inYear.value.some(dobZoneAgeBucket)){
+  const aged=inYear.value.filter(r=>dobZoneAgeBucket(r)&&(!zoneTimeframe.value||r.source_kind===zoneTimeframe.value));
+  list.push({key:'zoneAge',title:'Je Kraftquelle-OB-Alter',firstCol:'Zone bis Retest',sections:[{rows:DOB_ZONE_AGE_BUCKETS
+   .map(([label])=>({key:label,label,list:aged.filter(r=>dobZoneAgeBucket(r)===label)})).filter(b=>b.list.length).map(b=>({...b,stats:statsOf(b.list)}))}]});
+ }
+ return list;
+});
 const computedAt=computed(()=>selectedRun.value?.computed_at);
 
 const pct=v=>v==null?'–':`${(v*100).toFixed(1)} %`;
@@ -155,6 +177,13 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
             <p class="note">offen {{ totals[t.name][r].open }} · uneindeutig/unbekannt {{ totals[t.name][r].ambiguous+totals[t.name][r].unknown }}</p>
           </div></div>
         </article>
+        <article v-if="retestTiles.length" class="tile">
+          <h2>Retest der Kraftquelle</h2>
+          <div v-for="r in retestTiles" :key="r.kind" class="retest">
+            <p class="note">{{ r.label }} · {{ r.n }} Trades</p>
+            <p><span v-for="t in r.targets" :key="t.name" class="retest-target">{{ rLabel(t.k) }} <b :class="winTone(t.s.winrate,t.k)">{{ pct(t.s.winrate) }}</b> <span :class="pnlClass(t.s.sumR)">{{ fmtR(t.s.sumR) }}</span></span></p>
+          </div>
+        </article>
         <article v-if="hasMaxR" class="tile">
           <h2>Max R</h2>
           <p class="big">{{ pct(maxRShares.r3) }} <small>≥ 3R</small></p>
@@ -162,17 +191,13 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
           <p class="note">Anteil der {{ maxRShares.n }} entschiedenen Trades, die die Stufe vor dem SL erreicht hätten.</p>
         </article>
       </section>
-      <p class="note">Ziel k: Win, wenn k vor dem SL erreicht wurde (+k R), Loss, wenn der SL vorher kam (−1 R), offen, wenn bis Datenende keins von beiden; Break-even = 1/(1+k). Winrate = Win / (Win + Loss). Ziel 2R entspricht dem bisherigen Ausgang. Jahr und Monat nach Erkennung des Paars, Session nach Entry-Zeit (Europe/Berlin). Ein Entry in überlappenden Sessions zählt in jeder.<template v-if="computedAt"> Stand der Berechnung: {{ formatDatedTime(Date.parse(computedAt)/1000) }}.</template></p>
+      <p class="note">Ziel k: Win, wenn k vor dem SL erreicht wurde (+k R), Loss, wenn der SL vorher kam (−1 R), offen, wenn bis Datenende keins von beiden; Break-even = 1/(1+k). Winrate = Win / (Win + Loss). Ziel 2R entspricht dem bisherigen Ausgang. Jahr und Monat nach Erkennung des Paars, Session und Stunde nach Entry-Zeit (Europe/Berlin).<template v-if="computedAt"> Stand der Berechnung: {{ formatDatedTime(Date.parse(computedAt)/1000) }}.</template></p>
 
-      <section v-for="[title,groups,labelOf] in [['Je Session',bySession,k=>k],['Je Monat',byMonth,monthLabel]]" :key="title">
-        <h2>{{ title }}</h2>
-        <div class="scroll"><table>
-          <thead><tr><th scope="col" rowspan="2">{{ title.slice(3) }}</th><th v-for="r in ROUTES" :key="r" scope="colgroup" colspan="4">Route {{ r }}</th></tr>
-            <tr><template v-for="r in ROUTES" :key="r"><template v-for="t in targets" :key="t.name"><th scope="col">{{ rLabel(t.k) }} Winrate</th><th scope="col">{{ rLabel(t.k) }} Σ R</th></template></template></tr></thead>
-          <tbody><tr v-for="g in groups" :key="g.key"><th scope="row">{{ labelOf(g.key) }}</th>
-            <template v-for="r in ROUTES" :key="r"><template v-for="t in targets" :key="t.name"><td :class="winTone(g.stats[t.name][r].winrate,t.k)" :title="`${g.stats[t.name][r].success} W / ${g.stats[t.name][r].loss} L · offen ${g.stats[t.name][r].open}`">{{ pct(g.stats[t.name][r].winrate) }}</td><td :class="pnlClass(g.stats[t.name][r].sumR)">{{ fmtR(g.stats[t.name][r].sumR) }}</td></template></template></tr></tbody>
-        </table></div>
-      </section>
+      <template v-for="table in tables" :key="table.key">
+        <label v-if="table.key==='zoneAge'" class="note zone-tf">Zeitrahmen der Zone <select v-model="zoneTimeframe"><option value="">H1 + H4</option><option value="ob_h1">H1</option><option value="ob_h4">H4</option></select></label>
+        <DobStatsTable :title="table.title" :first-col="table.firstCol" :sections="table.sections" :targets="targets"
+          :open="tablesOpen[table.key]??true" @toggle="open=>{if((tablesOpen[table.key]??true)!==open)tablesOpen={...tablesOpen,[table.key]:open};}" />
+      </template>
 
       <section>
         <h2>Trades ({{ listed.length }})</h2>
@@ -182,6 +207,9 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
         <fieldset v-if="hasMaxR" class="max-r-filter"><legend>Max R (genaue Stufe, mehrere = oder)</legend>
           <label v-for="level in DOB_MAX_R_FILTERS" :key="level"><input v-model="maxRFilter" type="checkbox" :value="level"> {{ level==='<2'?'< 2R':dobMaxRLabel(Number(level)) }}</label>
           <button v-if="maxRFilter.length" type="button" class="pin" @click="maxRFilter=[]">alle</button>
+        </fieldset>
+        <fieldset v-if="hasRetest" class="max-r-filter"><legend>Retest der Kraftquelle (mehrere = oder)</legend>
+          <label v-for="(label,kind) in DOB_RETEST_KINDS" :key="kind"><input v-model="retestFilter" type="checkbox" :value="kind"> {{ label }}</label>
         </fieldset>
         <p v-if="pinError&&!pinTarget" role="alert" class="error">{{ pinError }}</p>
         <div class="scroll"><table>
@@ -202,5 +230,5 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
   </main>
 </template>
 <style scoped>
-.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.targets{display:grid;grid-template-columns:1fr 1fr;gap:12px}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}tr.last-opened{background:rgba(145,184,255,.24);box-shadow:inset 4px 0 0 #91b8ff;font-weight:600}.max-r-filter{border:1px solid #2a2e39;border-radius:4px;margin:8px 0;padding:6px 10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.max-r-filter legend{color:#b1b7c5;padding:0 4px}button.sort{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600}td.max-r{text-align:left}.bar{display:inline-block;vertical-align:middle;width:70px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,#2a2e39 0 6px,#1e222d 6px 7px);position:relative;overflow:hidden}.bar::after{content:'';position:absolute;left:40%;top:0;bottom:0;width:1px;background:#b1b7c5}.bar i{display:block;height:100%;background:var(--negative)}.bar i.hit{background:var(--positive)}button.chart{padding:2px 10px;border-color:#91b8ff;color:#91b8ff}button.chart.seen{border-color:#434651;color:#7f8696}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
+.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.targets{display:grid;grid-template-columns:1fr 1fr;gap:12px}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}tr.last-opened{background:rgba(145,184,255,.24);box-shadow:inset 4px 0 0 #91b8ff;font-weight:600}.retest{margin-top:6px}.retest-target{margin-right:12px}.zone-tf{display:block;margin-top:24px}.max-r-filter{border:1px solid #2a2e39;border-radius:4px;margin:8px 0;padding:6px 10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.max-r-filter legend{color:#b1b7c5;padding:0 4px}button.sort{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600}td.max-r{text-align:left}.bar{display:inline-block;vertical-align:middle;width:70px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,#2a2e39 0 6px,#1e222d 6px 7px);position:relative;overflow:hidden}.bar::after{content:'';position:absolute;left:40%;top:0;bottom:0;width:1px;background:#b1b7c5}.bar i{display:block;height:100%;background:var(--negative)}.bar i.hit{background:var(--positive)}button.chart{padding:2px 10px;border-color:#91b8ff;color:#91b8ff}button.chart.seen{border-color:#434651;color:#7f8696}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
 </style>

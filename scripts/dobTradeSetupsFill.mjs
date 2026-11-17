@@ -68,7 +68,10 @@ try {
     ...(RUN_ID === 'dob-setup-v0' ? {} : { source_kind: `ob_${t.sourceOfStrength.timeframe.toLowerCase()}`, source_distance_usd: t.sourceOfStrength.distanceUsd,
       source_atr: t.sourceOfStrength.atr, source_distance_atr: t.sourceOfStrength.distanceAtr,
       source_gap_seconds: t.chart.firstOrderBlockStart - t.sourceOfStrength.zoneRecognizedAt,
-      source_retest_kind: t.sourceOfStrength.retestKind, source_retest_age_seconds: t.sourceOfStrength.retestAgeSeconds }) }));
+      source_retest_kind: t.sourceOfStrength.retestKind, source_retest_age_seconds: t.sourceOfStrength.retestAgeSeconds,
+      // Zonenalter bis zum Retest: Entstehung der H1/H4-Zone bis Start der letzten Touch-Episode vor OB1 (OB1-Start − retestAgeSeconds).
+      source_zone_age_seconds: t.sourceOfStrength.retestAgeSeconds == null ? null
+        : t.chart.firstOrderBlockStart - t.sourceOfStrength.retestAgeSeconds - t.sourceOfStrength.zoneStartTime }) }));
 
   const total = aggregateDobByMonth(unique.map(t => ({ recognizedAt: t.recognizedAt, entries: { [t.route]: { status: 'ready', outcome: t.outcome } } })),
     p => berlinDateStrFor(p.recognizedAt).slice(0, 7)).total;

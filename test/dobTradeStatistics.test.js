@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -57,5 +57,16 @@ describe('dobTradeStatistics',()=>{
   expect(dobTradeR(rows[0],3)).toBe(3);
   expect(dobTargetOutcome({outcome:'unknown',max_r:0.5,sl_hit:false},3)).toBe('unknown');
   expect([2,3].map(k=>dobTargetOutcome({max_r:1.5,sl_hit:true,ambiguous_r:2.5},k))).toEqual(['ambiguous','loss']);
+ });
+ it('Tageszeit-Slots: Stunden, an 10:30 geteilt, unter Sessions bzw. Lücken-Uhrzeit gruppiert',()=>{
+  const sessions=[{label:'Asia',from_minutes:0,to_minutes:420},{label:'MMM',from_minutes:630,to_minutes:780},{label:'NY',from_minutes:840,to_minutes:1320}];
+  // CET (UTC+1): Berlin = UTC + 1h
+  const at=(h,m)=>({entry_time:Date.UTC(2026,10,12,h-1,m)/1000,route:'a',outcome:'success'});
+  const groups=dobTimeSlotGroups([at(10,15),at(10,45),at(8,5),at(15,0)],sessions);
+  expect(groups.map(g=>[g.title,g.slots.map(s=>s.label)])).toEqual([['07:00–10:30',['08:00–09:00','10:00–10:30']],['MMM',['10:30–11:00']],['NY',['15:00–16:00']]]);
+  expect(dobTotalStats(groups[0].rows,2)).toMatchObject({success:2,sumR:4});
+ });
+ it('Zonenalter-Buckets',()=>{
+  expect([3600,2*86400,10*86400,40*86400,null].map(v=>dobZoneAgeBucket({source_zone_age_seconds:v}))).toEqual(['< 1 Tag','1–3 Tage','1–4 Wochen','> 4 Wochen',null]);
  });
 });
