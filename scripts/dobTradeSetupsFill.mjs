@@ -47,7 +47,7 @@ try {
   const LQ = RUNS[RUN_ID].poiType === 'lq_sweep';
   // TS1.1-Setups (alle Detektorversionen; die Version steht als Merkmal am Trade), nur für LQ-Sweep-Läufe.
   const tradeSetups = LQ ? await (async () => { const { data, error } = await fetchAllRows((from, to) => supabase.from('trade_setups')
-    .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,detector_version,ob_zones(top,bottom)')
+    .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,ob_zones(top,bottom)')
     .eq('instrument', SYMBOL).order('ob_start_time').order('id').range(from, to)); if (error) throw error; return data.map(dobTs11FromRow); })() : undefined;
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;

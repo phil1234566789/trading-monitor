@@ -17,7 +17,7 @@ export function dobTs11FromRow(row){
  return {id:row.id,direction:row.direction,top:Number(row.ob_top),bottom:Number(row.ob_bottom),
   rawTop:raw?.top==null?null:Number(raw.top),rawBottom:raw?.bottom==null?null:Number(raw.bottom),
   startTime:time(row.ob_start_time),lsPrice:row.ls_price==null?null:Number(row.ls_price),lsTouchedTime:time(row.ls_touched_time),
-  lsTimeframe:row.ls_timeframe??null,detectorVersion:row.detector_version??null};
+  lsTimeframe:row.ls_timeframe??null};
 }
 
 // Rang einer Verbindung (kleiner = stärker): Stufe, dann beide Kanten gleich vor einer (Philip verknüpft #135 mit dem TS1.1, das OB2
@@ -52,7 +52,7 @@ export function lqSweepPoi(input){
    const m=dobLqSweepMatch(pair,ts,tick);
    if(!m)continue;
    if(!poi||dobLqMatchRank(m)<dobLqMatchRank(poi))poi={kind:'ts11',tradeSetupId:ts.id,zone:{top:ts.top,bottom:ts.bottom},
-    zoneStartTime:ts.startTime,lsPrice:ts.lsPrice,lsTouchedTime:ts.lsTouchedTime,lsTimeframe:ts.lsTimeframe,detectorVersion:ts.detectorVersion,...m};
+    zoneStartTime:ts.startTime,lsPrice:ts.lsPrice,lsTouchedTime:ts.lsTouchedTime,lsTimeframe:ts.lsTimeframe,...m};
   }
   return {poi,reason:poi&&DOB_LQ_MATCH_LEVELS.indexOf(poi.match)<=allowed?null:list.length?'noPoi':'missingTradeSetups'};
  };

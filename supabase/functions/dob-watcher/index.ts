@@ -84,7 +84,7 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   const m1Marked=mark(m1),m5Marked=mark(m5);
   // LQ-Sweep-POI = TS1.1-Setups aus trade_setups (poi-watcher schreibt sie); 2 Tage decken jeden möglichen DOB des Live-Fensters.
   const tradeSetups=poiTypes.some(p=>p.poiType==='lq_sweep')?(checked(await client.from('trade_setups')
-    .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,detector_version,ob_zones(top,bottom)')
+    .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,ob_zones(top,bottom)')
     .eq('instrument',SYMBOL).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[]).map(dobTs11FromRow):[];
   const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
     htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),

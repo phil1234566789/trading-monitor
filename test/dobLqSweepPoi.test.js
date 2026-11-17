@@ -5,18 +5,18 @@ import {dobTs11FromRow,dobLqSweepMatch} from '../src/dobLqSweepPoi.js';
 
 // POI-Art LQ-Sweep (Philip): POI = TS1.1-Setup, GO wenn OB1 oder OB2 des DOB mindestens eine Kante mit dem TS1.1-OB teilt.
 // Positivfälle = Philips Mustertrades (Konto 8); Erwartung je Fall: welches TS1.1 trägt, an welchem OB, mit welcher Stufe.
-// #139 (nur Überlappung) und #138/#142 (TS1.1-OB knapp neben dem DOB-OB) sind gemeldete Lücken der Regel, hier eingefroren,
+// #139/#138 (nur Überlappung) und #142 (TS1.1-OB 0,18 USD neben dem DOB-OB) sind gemeldete Lücken der Regel, hier eingefroren,
 // damit eine Regeländerung sichtbar wird statt still durchzurutschen.
 const tradeSetups=JSON.parse(readFileSync(new URL('lq-sweep-ts11.json',directory),'utf8')).rows.map(dobTs11FromRow);
 const SAMPLES=[
- {trade:'#137',day:'2026-11-02',at:'09:05',direction:'short',ts:47184,match:'edge',ob:'ob1',edge:'both'},
+ {trade:'#137',day:'2026-11-02',at:'09:05',direction:'short',ts:47184,match:'edge',ob:'ob1',edge:'bottom'},
  {trade:'#140 (K10)',day:'2026-10-22',at:'05:24',direction:'short',ts:50160,match:'edge',ob:'ob1',edge:'both'},
- {trade:'#141',day:'2026-10-12',at:'15:34',direction:'short',ts:17262,match:'edge',ob:'ob1',edge:'top'},
+ {trade:'#141',day:'2026-10-12',at:'15:34',direction:'short',ts:50294,match:'edge',ob:'ob1',edge:'both'},
  // #135: TS 38280 (von Philip verknüpft) teilt beide Kanten mit OB2 und schlägt TS 37679 (Level 4142,14, nur rohe Oberkante an OB1).
  {trade:'#135',day:'2026-11-05',at:'16:19',direction:'short',ts:38280,match:'edge',ob:'ob2',edge:'both'},
  {trade:'#143',day:'2026-06-04',at:'05:52',direction:'long',ts:49404,match:'edge',ob:'ob1',edge:'bottom'},
  {trade:'#139',day:'2026-10-22',at:'10:52',direction:'short',ts:24767,match:'overlap',ob:'ob1',edge:null},
- {trade:'#138',day:'2026-10-26',at:'14:34',direction:'short',ts:27646,match:'adjacent',ob:'ob1',edge:null,gapUsd:0.84},
+ {trade:'#138',day:'2026-10-26',at:'14:34',direction:'short',ts:50382,match:'overlap',ob:'ob1',edge:null},
  {trade:'#142',day:'2026-11-17',at:'14:32',direction:'short',ts:48056,match:'adjacent',ob:'ob1',edge:null,gapUsd:0.18},
 ];
 const lq=(day,match)=>run(load(day),undefined,false,{match},{poiType:'lq_sweep',tradeSetups});
