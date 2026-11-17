@@ -8,6 +8,7 @@ import {dobPoiTypeAlarmRuns,dobActivePoiTypes,dobStaleAlarm} from '../../../src/
 import {dobGuardrailsFromRow,dobEntryRule} from '../../../src/dobGuardrails.js';
 import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
+import {dobTs11FromRow} from '../../../src/dobLqSweepPoi.js';
 import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
@@ -73,7 +74,7 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
   // Sperr-Konfig je POI-Art jede Minute frisch (Statistikseite speichert direkt); gerechnet wird nur für POI-Arten ohne
   // gesperrten Monat, sind alle gesperrt, gar nicht.
-  const poiTypes=(checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be')
+  const poiTypes=(checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be,poi_match_mode,alarm_enabled')
     .eq('instrument',SYMBOL).order('poi_type').limit(10)) as any[]).map(row=>({poiType:row.poi_type,guardrails:dobGuardrailsFromRow(row)}));
   if(!dry&&!dobActivePoiTypes(poiTypes,evaluatedAt).length){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}
   const sessions=(checked(await client.from('sessions').select('label,from_minutes,to_minutes,days,ignore_liquidity').eq('instrument',SYMBOL).limit(200)) as any[])
@@ -81,9 +82,13 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);
+  // LQ-Sweep-POI = TS1.1-Setups aus trade_setups (poi-watcher schreibt sie); 2 Tage decken jeden möglichen DOB des Live-Fensters.
+  const tradeSetups=poiTypes.some(p=>p.poiType==='lq_sweep')?(checked(await client.from('trade_setups')
+    .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,detector_version,ob_zones(top,bottom)')
+    .eq('instrument',SYMBOL).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[]).map(dobTs11FromRow):[];
   const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
     htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),
-    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL})};
+    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL}),tradeSetups};
   // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
   const calcStart=performance.now(),runs=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
   const stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
@@ -99,7 +104,9 @@ async function tick(client:any,dry=false,probes:number[]=[]){
     events:events.map(({event:e})=>({id:e.id,poiType:e.poiType??null,phase:e.phase,guardrail:e.guardrail??null,suppressed:!!e.suppressed}))};
   const delivered=[];
   for(const {event,run} of events){
-    const d:any=await deliver(client,event,event.suppressed?event.guardrail:blocked);
+    // Alarm-Schalter je POI-Art (Konfig alarmEnabled): aus = nur Protokoll, wie eine Sperre.
+    const off=run&&run.guardrails?.alarmEnabled===false?'poiTypeAlarmOff':null;
+    const d:any=await deliver(client,event,event.suppressed?event.guardrail:off??blocked);
     if(!d)continue;
     delivered.push(d);
     // Erster zugestellter Alarm eines Paars: DOB + POI anpinnen. Ein Pin-Fehler darf den schon versendeten Alarm nicht stören.

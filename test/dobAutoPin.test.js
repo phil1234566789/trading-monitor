@@ -61,9 +61,9 @@ it('legt keine fehlende H1/H4-Zone an, sondern meldet den Fehler',async()=>{
  expect(db.tables.ob_zones.some(z=>z.timeframe==='1H')).toBe(false);
 });
 
-it('LQ-Sweep: eigene Alarm-Historie, DOB-Pin ja, POI-Pin ist nur ein Haken',async()=>{
+it('LQ-Sweep: eigene Alarm-Historie, DOB-Pin und das tragende TS1.1-Setup als Pin',async()=>{
  // Ein HTF-OB-Alarm desselben Paars zählt für LQ-Sweep nicht als früherer Alarm.
- const res=await dobAutoPin(db,args({...entry,poiType:'lq_sweep'}));
- expect(res.poi).toEqual({skipped:'lqSweepPoiPinPending'});
- expect(db.tables.pin_context.map(p=>p.kind)).toEqual(['double_order_block']);
+ const res=await dobAutoPin(db,{...args({...entry,poiType:'lq_sweep'}),setup:{...setup,poi:{kind:'ts11',tradeSetupId:50160}}});
+ expect(res.poi).toMatchObject({tradeSetupId:50160,existed:false});
+ expect(db.tables.pin_context.map(p=>p.kind).sort()).toEqual(['double_order_block','trade_setup']);
 });

@@ -1,5 +1,6 @@
 import {berlinOffsetMinutes,berlinDateStrFor} from './berlinTime.js';
-import {dobFeaturesOf,dobFeature} from './dobTradeFeatures.js';
+import {dobFeaturesOf,dobFeature,dobPoiFeature} from './dobTradeFeatures.js';
+import {DOB_LQ_MATCH_LEVELS} from './dobLqSweepPoi.js';
 import {dobPoiTypeOf} from './dobPoiType.js';
 
 // Sperr- und Regel-Konfiguration des DOB-Setups je Instrument (Tabelle dob_guardrails). Eine Quelle für Statistikseite und
@@ -18,8 +19,13 @@ export const DOB_COUNTER_DOB_DEFAULT_MODE='live_block_dead_5r';
 // counterCandlesMode (DOB-PA, Neubewertung): 3of3 = alle 3 letzten geschlossenen M5 vor dem Entry gegen den Trade → sperren,
 // 3of5 = mind. 3 der letzten 5; off = aus (Default, damit ohne Konfig nichts wegfällt).
 export const DOB_COUNTER_CANDLES_MODES=['off','3of3','3of5'];
+// poiMatchMode (nur POI-Art LQ-Sweep): schwächste Verbindung TS1.1 ↔ DOB, die noch zählt; edge = gleiche Kante (Philips Regel),
+// overlap/adjacent zeigen in der Statistik, ob auch Überlappung bzw. knapp daneben trägt. alarmEnabled: Alarme dieser POI-Art
+// werden gesendet (aus = nur Protokoll, LQ-Sweep startet aus bis zu Philips Go).
+export const DOB_POI_MATCH_MODE_LABELS={edge:'gleiche Kante',overlap:'Kante oder Überlappung',adjacent:'Kante, Überlappung oder ≤ 1 USD daneben'};
 export const DOB_GUARDRAILS_DEFAULT=Object.freeze({entryWindows:[],defaultTpR:DOB_DEFAULT_TP_R,blockedMonths:[],minZoneAgeSeconds:null,
- minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE,counterCandlesMode:'off',partialAtR:null,partialPct:50,partialBe:true});
+ minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE,counterCandlesMode:'off',partialAtR:null,partialPct:50,partialBe:true,
+ poiMatchMode:'edge',alarmEnabled:true});
 
 export const dobRuleActive=w=>w.enabled!==false;
 export function dobGuardrailsFromRow(row){
@@ -33,7 +39,8 @@ export function dobGuardrailsFromRow(row){
   counterDobMode:DOB_COUNTER_DOB_MODES.includes(row.counter_dob_mode)?row.counter_dob_mode:DOB_COUNTER_DOB_DEFAULT_MODE,
   counterCandlesMode:DOB_COUNTER_CANDLES_MODES.includes(row.counter_candles_mode)?row.counter_candles_mode:'off',
   partialAtR:Number.isFinite(row.partial_at_r)?row.partial_at_r:null,partialPct:Number.isFinite(row.partial_pct)?row.partial_pct:50,
-  partialBe:row.partial_be!==false};
+  partialBe:row.partial_be!==false,poiMatchMode:DOB_LQ_MATCH_LEVELS.includes(row.poi_match_mode)?row.poi_match_mode:'edge',
+  alarmEnabled:row.alarm_enabled!==false};
 }
 // Eine Leseform für alle Leser (Seite, Panel, Chart, Watcher, Labore): Konfig je Instrument UND POI-Art; ohne POI-Art
 // träfe die Abfrage seit der LQ-Sweep-Zeile zwei Zeilen.
@@ -43,7 +50,7 @@ export const dobGuardrailsToRow=(instrument,config,poiType)=>({instrument,poi_ty
  blocked_months:config.blockedMonths,min_zone_age_seconds:config.minZoneAgeSeconds,
  min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds,counter_dob_mode:config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE,
  counter_candles_mode:config.counterCandlesMode??'off',partial_at_r:config.partialAtR??null,partial_pct:config.partialPct??50,
- partial_be:config.partialBe!==false});
+ partial_be:config.partialBe!==false,poi_match_mode:config.poiMatchMode??'edge',alarm_enabled:config.alarmEnabled!==false});
 
 // Monat in Berlin (1–12). Der Watcher prüft ihn als Erstes und rechnet in gesperrten Monaten gar nicht.
 export const dobMonthBlocked=(config,atSec)=>config.blockedMonths.includes(Number(berlinDateStrFor(atSec).slice(5,7)));
@@ -79,12 +86,15 @@ export const dobZoneAgeBlocked=(config,zoneAgeSeconds)=>
  config.minZoneAgeSeconds!=null&&Number.isFinite(zoneAgeSeconds)&&zoneAgeSeconds<config.minZoneAgeSeconds;
 
 // Gesamturteil für einen Trade: null = erlaubt, sonst der erste greifende Grund in der Reihenfolge des Watchers.
+export const dobPoiMatchBlocked=(config,features)=>{const match=dobPoiFeature(features,'match');
+ return match!=null&&DOB_LQ_MATCH_LEVELS.indexOf(match)>DOB_LQ_MATCH_LEVELS.indexOf(config.poiMatchMode??'edge');};
 export function dobGuardrailReason(config,{entryTime,zoneAgeSeconds,counterDobStatus=null,features={}}){
  if(dobMonthBlocked(config,entryTime))return 'blockedMonth';
  if(dobZoneAgeBlocked(config,zoneAgeSeconds))return 'blockedZoneAge';
  if(dobEntryTimeBlocked(config,entryTime))return 'blockedEntryHour';
  if(dobCounterDobBlocked(config,counterDobStatus))return 'counterDob';
  if(dobCounterCandlesBlocked(config,features))return 'counterCandles';
+ if(dobPoiMatchBlocked(config,features))return 'poiMatch';
  return null;
 }
 // Dieselben Urteile für eine Zeile aus dob_trade_setups (Statistikseite), damit die Feldzuordnung an einer Stelle steht.
@@ -117,6 +127,7 @@ export function dobGuardrailsSummary(config){
   // Der Default-Modus bleibt still (gilt nur im v3-Lauf, das Panel zeigt den Schalter dort); Abweichungen stehen im Kopf.
   (config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE)!==DOB_COUNTER_DOB_DEFAULT_MODE?DOB_COUNTER_DOB_MODE_LABELS[config.counterDobMode]:null,
   (config.counterCandlesMode??'off')!=='off'?DOB_COUNTER_CANDLES_MODE_LABELS[config.counterCandlesMode]:null,
+  (config.poiMatchMode??'edge')!=='edge'?`POI: ${DOB_POI_MATCH_MODE_LABELS[config.poiMatchMode]}`:null,
   config.partialAtR!=null?dobPartialText({atR:config.partialAtR,pct:config.partialPct??50,be:config.partialBe!==false}):null,
   config.entryWindows.length>active.length?`${config.entryWindows.length-active.length} Regel${config.entryWindows.length-active.length>1?'n':''} aus`:null];
  return parts.filter(Boolean).join(' · ');

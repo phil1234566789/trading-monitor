@@ -24,6 +24,10 @@ const RUNS = {
   // v3: alle v2-Trades mit Gegen-DOB-Status (none/dead/live); was gesperrt oder mit 5R gehandelt wird, entscheidet die Konfig.
   'dob-setup-v3': { label: 'v3 · Gegen-DOB', description: 'wie v2 mit Gegen-DOB-Status seit dem Retest des POI; Sperre bzw. TP über „Sperren und Regeln“',
     sort: 3, version: 'dob-setup-v3', poiType: 'htf_ob', pick: r => r.setups, poiOptions: { requireRetest: true }, counterDob: true },
+  // LQ-Sweep v0: POI = TS1.1-Setup mit gleicher Kante an OB1/OB2 (Philip). Der Lauf nimmt auch Überlappung und ≤ 1 USD daneben
+  // auf (features.poi_match), welche Stufe zählt, entscheidet die Konfig (poiMatchMode, Default gleiche Kante).
+  'dob-lq-sweep-v0': { label: 'v0 · TS1.1 an OB1/OB2', description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
+    sort: 10, version: 'dob-lq-sweep-v0', poiType: 'lq_sweep', pick: r => r.setups, poiOptions: { match: 'adjacent' }, counterDob: true },
 };
 const RUN_ID = flag('--run') ?? 'dob-setup-v0';
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
@@ -36,8 +40,15 @@ try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
-    { dobPoiContext, dobPoiZoneAgeSeconds }, { dobMaxR, dobWideVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, DOB_BREAKEVEN_AT_R_LEVELS }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
-      '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js'].map(load));
+    { dobPoiContext, dobPoiZoneAgeSeconds }, { dobMaxR, dobWideVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, dobPoiFeatures, DOB_BREAKEVEN_AT_R_LEVELS },
+    { dobTs11FromRow, DOB_LQ_MATCH_LEVELS }, { fetchAllRows }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+      '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js',
+      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js'].map(load));
+  const LQ = RUNS[RUN_ID].poiType === 'lq_sweep';
+  // TS1.1-Setups (alle Detektorversionen; die Version steht als Merkmal am Trade), nur für LQ-Sweep-Läufe.
+  const tradeSetups = LQ ? await (async () => { const { data, error } = await fetchAllRows((from, to) => supabase.from('trade_setups')
+    .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,detector_version,ob_zones(top,bottom)')
+    .eq('instrument', SYMBOL).order('ob_start_time').order('id').range(from, to)); if (error) throw error; return data.map(dobTs11FromRow); })() : undefined;
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
   const cache = dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
@@ -57,7 +68,7 @@ try {
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
   // Der Lauf entscheidet, welche Setups zählen; die POI kommt aus dem einmal vorberechneten Kontext.
   const counterDobGate = RUNS[RUN_ID].counterDob ? createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: SYMBOL }) : undefined;
-  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, poiType: RUNS[RUN_ID].poiType, poiContext, poiOptions: RUNS[RUN_ID].poiOptions, counterDobGate })) });
+  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, poiType: RUNS[RUN_ID].poiType, poiContext, poiOptions: RUNS[RUN_ID].poiOptions, counterDobGate, tradeSetups })) });
   const trades = dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup: runSetups, dobLiveWindowInput }).setups,
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   const carrying = new Map();
@@ -66,6 +77,9 @@ try {
   // Gegen-DOB-Status je Trade über alle tragenden Paare, bester gewinnt (none > dead > live): wie die Dedup „bleibt, sobald ein Paar passiert“.
   const RANK = { none: 0, dead: 1, live: 2 }, counterStatus = new Map();
   for (const t of trades) { const s = t.counterDob?.status, k = dobTradeKey(t); if (s && (!counterStatus.has(k) || RANK[s] < RANK[counterStatus.get(k)])) counterStatus.set(k, s); }
+  // LQ-Sweep: stärkste Verbindung über alle tragenden Paare (gleiche Kante vor Überlappung vor daneben, dann kleinster Abstand).
+  const bestPoi = new Map(), poiRank = poi => DOB_LQ_MATCH_LEVELS.indexOf(poi.match) * 1e6 + poi.gapUsd;
+  if (LQ) for (const t of trades) { const k = dobTradeKey(t); if (t.poi && (!bestPoi.has(k) || poiRank(t.poi) < poiRank(bestPoi.get(k)))) bestPoi.set(k, t.poi); }
 
   const rows = unique.map(t => ({ id: `${RUN_ID}:${t.id}`, run_id: RUN_ID, instrument: SYMBOL,
     direction: t.direction, route: t.route, setup_id: t.id, carrying_setups: carrying.get(dobTradeKey(t)), recognized_at: t.recognizedAt,
@@ -80,9 +94,12 @@ try {
     // Konfig-Merkmale als jsonb (Philip): Schlüssel nur in src/dobTradeFeatures.js, gelesen über dobRowGuardrailReason.
     // Teilprofit mit SL auf Entry: Rest-Verlauf je gespeicherter Stufe (DOB_BREAKEVEN_AT_R_LEVELS), gerechnet in src/dobPartialProfit.js.
     features: { ...dobTradeFeatures({ m5Candles: m5Marked, entryTime: t.entryTime, direction: t.direction }),
-      ...Object.assign({}, ...DOB_BREAKEVEN_AT_R_LEVELS.map(atR => dobBreakevenFeatures(atR, dobMaxR(t, { candles: m1Marked, dataEnd, instrument: SYMBOL, breakevenAtR: atR })))) },
+      ...Object.assign({}, ...DOB_BREAKEVEN_AT_R_LEVELS.map(atR => dobBreakevenFeatures(atR, dobMaxR(t, { candles: m1Marked, dataEnd, instrument: SYMBOL, breakevenAtR: atR })))),
+      ...(LQ ? dobPoiFeatures(bestPoi.get(dobTradeKey(t))) : {}) },
     first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
-    ...(RUN_ID === 'dob-setup-v0' ? {} : { poi_kind: `ob_${t.poi.timeframe.toLowerCase()}`, poi_distance_usd: t.poi.distanceUsd,
+    ...(LQ ? (poi => ({ poi_kind: 'ts11', poi_distance_usd: poi.gapUsd, poi_zone_top: poi.zone.top, poi_zone_bottom: poi.zone.bottom,
+      poi_zone_start: poi.zoneStartTime, poi_gap_seconds: t.chart.firstOrderBlockStart - poi.zoneStartTime }))(bestPoi.get(dobTradeKey(t)))
+    : RUN_ID === 'dob-setup-v0' ? {} : { poi_kind: `ob_${t.poi.timeframe.toLowerCase()}`, poi_distance_usd: t.poi.distanceUsd,
       poi_atr: t.poi.atr, poi_distance_atr: t.poi.distanceAtr,
       poi_gap_seconds: t.chart.firstOrderBlockStart - t.poi.zoneRecognizedAt,
       poi_zone_top: t.poi.zone.top, poi_zone_bottom: t.poi.zone.bottom,

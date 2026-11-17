@@ -30,6 +30,13 @@ export function dobBreakevenRest(features,atR){
  return Number.isFinite(maxR)?{maxR,stopped:features[beKey(atR,'stopped')]===true,ambiguousR:features[beKey(atR,'ambiguous_r')]??null}:null;
 }
 
+// POI-Art LQ-Sweep (src/dobLqSweepPoi.js): welches TS1.1-Setup trägt und wie es am DOB hängt. Die Stufe (edge/overlap/adjacent)
+// entscheidet die Konfig (poiMatchMode); HTF-OB-Trades schreiben keine dieser Schlüssel.
+export const DOB_POI_FEATURE_KEYS=Object.freeze({match:'poi_match',gapUsd:'poi_gap_usd',tradeSetupId:'poi_trade_setup_id',matchedOb:'poi_matched_ob',
+ matchedEdge:'poi_matched_edge',detectorVersion:'poi_ts_detector'});
+export const dobPoiFeatures=poi=>poi?.kind!=='ts11'?{}:Object.fromEntries(Object.entries(DOB_POI_FEATURE_KEYS).map(([field,key])=>[key,poi[field]??null]));
+export const dobPoiFeature=(features,field)=>features?.[DOB_POI_FEATURE_KEYS[field]]??null;
+
 // Lesen: Zeile aus dob_trade_setups bzw. Setup des Watchers; ältere Läufe ohne features liefern {} (kein Urteil, keine Sperre).
 export const dobFeaturesOf=rowOrSetup=>rowOrSetup?.features??{};
 export const dobFeature=(features,key)=>Number.isFinite(features?.[DOB_FEATURE_KEYS[key]])?features[DOB_FEATURE_KEYS[key]]:null;

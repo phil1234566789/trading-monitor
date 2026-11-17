@@ -25,8 +25,9 @@ describe('DOB-Alarme',()=>{
   const at=done.entryTime+60,entry=dobAlarmEvents(run(fixture,at),at).find(e=>e.phase==='entry');
   expect(entry.id).toBe(`dob:entry:XAUUSD:short:${done.entryTime}:${done.entryPrice}:${done.stopPrice}`);
   expect(entry.text).toContain('Entry 3.929,65');
-  // POI, Zonen und Ziel stehen nicht im Entry-Alarm; das Ziel rechnet das Setup weiter.
-  for(const gone of ['TP','POI','OB1','OB2 '])expect(entry.text).not.toContain(gone);
+  // POI-Zeile wie im Retest-Alarm; Zonen und Ziel stehen nicht im Entry-Alarm, das Ziel rechnet das Setup weiter.
+  expect(entry.text.split('\n')[1]).toMatch(/^POI: H1-OB · /);
+  for(const gone of ['TP','OB1','OB2 '])expect(entry.text).not.toContain(gone);
   expect(entry.text).toContain('&bar=5m&');
   expect(done.targetPrice).toBeCloseTo(3893.05,2);
  });

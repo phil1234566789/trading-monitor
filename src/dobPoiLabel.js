@@ -8,8 +8,14 @@ export function dobRetestLabel({kind,count,ageSeconds}){
 }
 
 // POI aus den v1-Feldern, z.B. „H1-OB · 0,8 ATR · Folge-Touch vor 40 min“; v0 hat keine und zeigt „–“.
+// LQ-Sweep: „TS1.1 #50160 · Kante“ bzw. „· Überlappung“ / „· 0,8 USD daneben“ (Schlüssel wie src/dobTradeFeatures.js).
+const MATCH_TEXT={edge:'Kante',overlap:'Überlappung'};
+export function dobTs11Label({tradeSetupId,match,gapUsd}){
+ return `TS1.1 #${tradeSetupId}${match?` · ${MATCH_TEXT[match]??`${Number(gapUsd).toLocaleString('de-DE',{maximumFractionDigits:2})} USD daneben`}`:''}`;
+}
 export function dobPoiLabel(row){
  if(!row.poi_kind)return '–';
+ if(row.poi_kind==='ts11'){const f=row.features??{};return dobTs11Label({tradeSetupId:f.poi_trade_setup_id,match:f.poi_match,gapUsd:f.poi_gap_usd});}
  const num=v=>v.toLocaleString('de-DE',{maximumFractionDigits:1});
  const distance=Number.isFinite(row.poi_distance_atr)?` · ${num(row.poi_distance_atr)} ATR`
   :Number.isFinite(row.poi_distance_usd)?` · ${num(row.poi_distance_usd)} USD`:'';

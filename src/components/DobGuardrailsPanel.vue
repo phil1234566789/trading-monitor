@@ -1,8 +1,9 @@
 <script setup>
 import {computed,ref,watch} from 'vue';
 import {supabase} from '../supabaseClient.js';
-import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRuleActive,dobPartialText,dobGuardrailsSummary,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS,DOB_COUNTER_CANDLES_MODES,DOB_COUNTER_CANDLES_MODE_LABELS} from '../dobGuardrails.js';
-import {dobFeaturesOf,dobFeature,DOB_BREAKEVEN_AT_R_LEVELS} from '../dobTradeFeatures.js';
+import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRuleActive,dobPartialText,dobGuardrailsSummary,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS,DOB_COUNTER_CANDLES_MODES,DOB_COUNTER_CANDLES_MODE_LABELS,DOB_POI_MATCH_MODE_LABELS} from '../dobGuardrails.js';
+import {DOB_LQ_MATCH_LEVELS} from '../dobLqSweepPoi.js';
+import {dobFeaturesOf,dobFeature,dobPoiFeature,DOB_BREAKEVEN_AT_R_LEVELS} from '../dobTradeFeatures.js';
 import {dobRowConfigScore,dobHasPartialData} from '../dobPartialProfit.js';
 import {dobSignedR} from '../dobTradeStatistics.js';
 import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf,dobTradesPerWeek,dobPerWeekText} from '../dobTradeStatistics.js';
@@ -42,7 +43,7 @@ async function save(){
  emit('saved',clone(draft.value));
 }
 
-const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit',counterDob:'gesperrt: Gegen-DOB',counterCandles:'gesperrt: Gegenkerzen'};
+const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit',counterDob:'gesperrt: Gegen-DOB',counterCandles:'gesperrt: Gegenkerzen',poiMatch:'gesperrt: POI-Verbindung'};
 const configTp=row=>dobRowConfigScore(draft.value,row);
 // Erlaubt und je Sperrgrund getrennt, jeweils Jan–Jun / Jul–Dez, alle Routen, feste Ziele und TP nach Konfig.
 const robustness=computed(()=>{
@@ -60,6 +61,9 @@ const hasCounterDob=computed(()=>props.rows.some(r=>r.counter_dob_status!=null))
 const modeImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_DOB_MODES.map(m=>[m,configSumR({...draft.value,counterDobMode:m})])));
 // Gegenkerzen-Merkmal (features) gibt es erst ab dem v3-Fill mit features; ältere Läufe blenden den Schalter aus.
 const hasCounterCandles=computed(()=>props.rows.some(r=>dobFeature(dobFeaturesOf(r),'counterCandles3')!=null));
+// POI-Verbindung (nur LQ-Sweep-Läufe, features.poi_match): welche Stufe TS1.1 ↔ DOB noch zählt.
+const hasPoiMatch=computed(()=>props.rows.some(r=>dobPoiFeature(dobFeaturesOf(r),'match')!=null));
+const matchImpacts=computed(()=>Object.fromEntries(DOB_LQ_MATCH_LEVELS.map(m=>[m,configSumR({...draft.value,poiMatchMode:m})])));
 const candleImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_CANDLES_MODES.map(m=>[m,configSumR({...draft.value,counterCandlesMode:m})])));
 // Teilprofit: nur Stufen, deren Rest-Verlauf (SL auf Entry) der Lauf gespeichert hat; ohne SL-auf-Entry reicht max_r für jede Stufe.
 const partialLevels=computed(()=>DOB_BREAKEVEN_AT_R_LEVELS.filter(r=>dobHasPartialData(props.rows,r)));
@@ -116,6 +120,13 @@ const ruleImpacts=computed(()=>{
           <span class="impact" title="ΣR nach Konfig mit dieser Stellung">{{ dobSignedR(partialImpacts[i]) }} R</span></label>
         <label>Anteil <select v-model.number="draft.partialPct" aria-label="Teilprofit-Anteil"><option v-for="p in [25,33,50,70]" :key="p" :value="p">{{ p }} %</option></select></label>
         <label><input type="checkbox" v-model="draft.partialBe"> danach SL auf Entry</label>
+      </fieldset>
+      <fieldset v-if="hasPoiMatch"><legend>POI-Verbindung TS1.1 ↔ OB1/OB2</legend>
+        <label v-for="m in DOB_LQ_MATCH_LEVELS" :key="m"><input type="radio" name="poiMatchMode" :value="m" v-model="draft.poiMatchMode"> {{ DOB_POI_MATCH_MODE_LABELS[m] }}
+          <span class="impact" title="ΣR nach Konfig mit dieser Stellung">{{ dobSignedR(matchImpacts[m]) }} R</span></label>
+      </fieldset>
+      <fieldset><legend>Telegram-Alarme</legend>
+        <label><input type="checkbox" v-model="draft.alarmEnabled"> Alarme dieser POI-Art senden (aus = nur Protokoll)</label>
       </fieldset>
       <div class="actions">
         <button type="button" :disabled="!dirty||saving" @click="save">{{ saving?'Speichert…':'Speichern' }}</button>

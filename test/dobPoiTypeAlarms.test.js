@@ -29,3 +29,11 @@ it('gesperrter Monat einer Familie lässt die andere laufen',()=>{
  const runs=dobPoiTypeAlarmRuns({poiTypes:[{...poiTypes[0],guardrails:{...poiTypes[0].guardrails,blockedMonths:[month]}},poiTypes[1]],input:{},evaluatedAt:at,check});
  expect(runs.map(r=>r.poiType)).toEqual(['lq_sweep']);
 });
+
+it('LQ-Sweep nennt das tragende TS1.1-Setup in der POI-Zeile, auch im Entry-Alarm',()=>{
+ const poi={kind:'ts11',tradeSetupId:50160,match:'edge',gapUsd:0};
+ const entry={...retest,id:'dob:XAUUSD:-1:1000:2000:a',route:'a',phase:'entry',entryTime:at,entryPrice:4113.57,stopPrice:4123.87,poi};
+ const [lq]=dobPoiTypeAlarmRuns({poiTypes:[poiTypes[1]],input:{},evaluatedAt:at,check:()=>({setups:[{...retest,poi},entry],rejected:[],pairs:new Map()})});
+ const lines=lq.events.map(e=>e.text.split('\n')[1]);
+ expect(lines).toEqual(['POI: LQ-Sweep · TS1.1 #50160 · Kante','POI: LQ-Sweep · TS1.1 #50160 · Kante']);
+});

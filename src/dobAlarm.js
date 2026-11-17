@@ -1,5 +1,5 @@
 import {formatBerlinTime,berlinDateStrFor} from './berlinTime.js';
-import {dobPoiLabel,dobRetestLabel} from './dobPoiLabel.js';
+import {dobPoiLabel,dobRetestLabel,dobTs11Label} from './dobPoiLabel.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobMonthBlocked} from './dobGuardrails.js';
 import {DOB_DEFAULT_POI_TYPE,dobPoiTypeLabel} from './dobPoiType.js';
@@ -27,7 +27,7 @@ const side=direction=>direction==='long'?'Long':'Short';
 export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=5m&replay=${at}`;
 // Die POI-Zeile nennt die Art (H1-OB/H4-OB bei HTF-OB, sonst den Namen der POI-Art); die Kopfzeile bleibt ohne Art.
 function poiLine({poi:s},poiType){
- if(poiType!==DOB_DEFAULT_POI_TYPE)return `POI: ${dobPoiTypeLabel(poiType)}`;
+ if(poiType!==DOB_DEFAULT_POI_TYPE)return `POI: ${dobPoiTypeLabel(poiType)}${s?.kind==='ts11'?` · ${dobTs11Label(s)}`:''}`;
  if(!s)return 'POI: –';
  const label=dobPoiLabel({poi_kind:`ob_${s.timeframe.toLowerCase()}`,poi_distance_atr:s.distanceAtr});
  const touch=dobRetestLabel({kind:s.retestKind,count:s.retestCount,ageSeconds:s.retestAgeSeconds});
@@ -59,8 +59,8 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    if(!events.has(id))events.set(id,{id,poiType,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
     text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${WARN_TEXT[guardrail]} ${formatBerlinTime(s.entryTime)}, kein Trade`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
-     // POI und OB-Zonen stehen schon im Retest-Alarm; ein Ziel gibt der Alarm bewusst nicht vor.
-     `Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)}`,
+     // Die POI-Zeile zeigt auch hier die Art (Philip); OB-Zonen stehen im Retest-Alarm, ein Ziel gibt der Alarm bewusst nicht vor.
+     poiLine(s,poiType),`Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)}`,
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
   }
  }
@@ -73,7 +73,7 @@ export const dobActivePoiTypes=(poiTypes,evaluatedAt)=>poiTypes.filter(f=>!dobMo
 export function dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt,check}){
  return dobActivePoiTypes(poiTypes,evaluatedAt).map(({poiType,guardrails})=>{
   const result=check({...input,poiType,guardrails});
-  return {poiType,result,events:dobAlarmEvents(result,evaluatedAt,{poiType})};
+  return {poiType,guardrails,result,events:dobAlarmEvents(result,evaluatedAt,{poiType})};
  });
 }
 

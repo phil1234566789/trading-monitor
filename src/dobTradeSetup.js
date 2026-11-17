@@ -3,9 +3,10 @@ import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobPoiContext,nearestHtfPoi,poiPassed,poiMaxDistanceAtr,dobPoiZoneAgeSeconds} from './dobHtfObPoi.js';
 import {dobZoneAgeBlocked,dobEntryRule,dobCounterDobBlocked,dobCounterDobTpR,dobCounterCandlesBlocked,dobPartialPlan,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
-import {dobTradeFeatures} from './dobTradeFeatures.js';
+import {dobTradeFeatures,dobPoiFeatures} from './dobTradeFeatures.js';
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 import {dobPoiTypeOf} from './dobPoiType.js';
+import {lqSweepPoi} from './dobLqSweepPoi.js';
 
 // v2 = POI (aktive H1/H4-OB-Zone ≤ k H1-ATR von OB1, k je Instrument, vor OB1 retestet; dobHtfObPoi.js)
 // + DOB + TP 2R. Den Retest verlangt Philip fachlich (Q17), auch wenn er die Winrate nicht hebt; poiOptions.requireRetest=false
@@ -72,8 +73,6 @@ function htfObPoi(input){
   return {poi,reason:poiPassed(poi,maxAtr)?null:maxAtr==null?'noPoiConfig':context?'noPoi':'missingHtfCandles'};
  };
 }
-// ponytail: LQ-Sweep-Platzhalter ohne POI (kein Setup), bis die LQ-Sweep-Erkennung mit Philips Mustertrades kommt.
-const lqSweepPoi=()=>()=>({poi:null,reason:'noPoi'});
 export const DOB_POI_DETECTORS={htf_ob:htfObPoi,lq_sweep:lqSweepPoi};
 
 export function checkDobTradeSetup(input){
@@ -101,7 +100,7 @@ export function checkDobTradeSetup(input){
   if(counterDob)setup.counterDob=counterDob;
   if(guardrails&&counterDob&&dobCounterDobBlocked(guardrails,counterDob.status)){rejected.push({...setup,poi,reason:'counterDob'});continue;}
   // Konfig-Merkmale am Entry (src/dobTradeFeatures.js), die letzten M5 vor dem Entry liegen im Live-Fenster (Vorlauf 12 M5).
-  if(setup.entryTime!=null)setup.features=dobTradeFeatures({m5Candles:input.m5Candles,entryTime:setup.entryTime,direction:setup.direction});
+  if(setup.entryTime!=null)setup.features={...dobTradeFeatures({m5Candles:input.m5Candles,entryTime:setup.entryTime,direction:setup.direction}),...dobPoiFeatures(poi)};
   if(guardrails&&setup.features&&dobCounterCandlesBlocked(guardrails,setup.features)){rejected.push({...setup,poi,reason:'counterCandles'});continue;}
   const deadTpR=guardrails&&counterDob?dobCounterDobTpR(guardrails,counterDob.status):null;
   if(rule)Object.assign(setup,withTarget(pair,setup,deadTpR?{tpR:deadTpR,window:null,source:'deadCounterDob'}:rule,input));
