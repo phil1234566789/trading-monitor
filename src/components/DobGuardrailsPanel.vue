@@ -1,8 +1,9 @@
 <script setup>
 import {computed,ref,watch} from 'vue';
 import {supabase} from '../supabaseClient.js';
-import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRowConfigTpR,dobRuleActive,dobGuardrailsSummary,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS,DOB_COUNTER_CANDLES_MODES,DOB_COUNTER_CANDLES_MODE_LABELS} from '../dobGuardrails.js';
-import {dobFeaturesOf,dobFeature} from '../dobTradeFeatures.js';
+import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRuleActive,dobPartialText,dobGuardrailsSummary,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS,DOB_COUNTER_CANDLES_MODES,DOB_COUNTER_CANDLES_MODE_LABELS} from '../dobGuardrails.js';
+import {dobFeaturesOf,dobFeature,DOB_BREAKEVEN_AT_R_LEVELS} from '../dobTradeFeatures.js';
+import {dobRowConfigScore,dobHasPartialData} from '../dobPartialProfit.js';
 import {dobSignedR} from '../dobTradeStatistics.js';
 import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf,dobTradesPerWeek,dobPerWeekText} from '../dobTradeStatistics.js';
 import {DOB_MAX_R_STEPS} from '../dobMaxR.js';
@@ -42,7 +43,7 @@ async function save(){
 }
 
 const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit',counterDob:'gesperrt: Gegen-DOB',counterCandles:'gesperrt: Gegenkerzen'};
-const configTp=row=>dobRowConfigTpR(draft.value,row);
+const configTp=row=>dobRowConfigScore(draft.value,row);
 // Erlaubt und je Sperrgrund getrennt, jeweils Jan–Jun / Jul–Dez, alle Routen, feste Ziele und TP nach Konfig.
 const robustness=computed(()=>{
  const groups=new Map([['allowed',[]],...Object.keys(REASONS).map(r=>[r,[]])]);
@@ -53,13 +54,17 @@ const robustness=computed(()=>{
 });
 // Was eine Regel allein bringt: ΣR nach Konfig (erlaubte Trades, TP je Fenster) mit gegen ohne diese Regel; bei abgeschalteten Regeln
 // „mit eingeschaltet“ gegen den aktuellen Stand. Alle Routen, alle Trades des Jahres.
-const configSumR=cfg=>dobTotalStats(props.rows.filter(r=>!dobRowGuardrailReason(cfg,r)),r=>dobRowConfigTpR(cfg,r)).sumR;
+const configSumR=cfg=>dobTotalStats(props.rows.filter(r=>!dobRowGuardrailReason(cfg,r)),r=>dobRowConfigScore(cfg,r)).sumR;
 // Gegen-DOB-Status gibt es nur im v3-Lauf; in älteren Läufen bleibt der Schalter ohne Wirkung und wird ausgeblendet.
 const hasCounterDob=computed(()=>props.rows.some(r=>r.counter_dob_status!=null));
 const modeImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_DOB_MODES.map(m=>[m,configSumR({...draft.value,counterDobMode:m})])));
 // Gegenkerzen-Merkmal (features) gibt es erst ab dem v3-Fill mit features; ältere Läufe blenden den Schalter aus.
 const hasCounterCandles=computed(()=>props.rows.some(r=>dobFeature(dobFeaturesOf(r),'counterCandles3')!=null));
 const candleImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_CANDLES_MODES.map(m=>[m,configSumR({...draft.value,counterCandlesMode:m})])));
+// Teilprofit: nur Stufen, deren Rest-Verlauf (SL auf Entry) der Lauf gespeichert hat; ohne SL-auf-Entry reicht max_r für jede Stufe.
+const partialLevels=computed(()=>DOB_BREAKEVEN_AT_R_LEVELS.filter(r=>dobHasPartialData(props.rows,r)));
+const partialOptions=computed(()=>[null,...partialLevels.value]);
+const partialImpacts=computed(()=>partialOptions.value.map(atR=>configSumR({...draft.value,partialAtR:atR})));
 const ruleImpacts=computed(()=>{
  const current=configSumR(draft.value);
  return draft.value.entryWindows.map((w,i)=>{
@@ -104,6 +109,13 @@ const ruleImpacts=computed(()=>{
       <fieldset v-if="hasCounterCandles"><legend>Gegenkerzen vor Entry (letzte geschlossene M5)</legend>
         <label v-for="m in DOB_COUNTER_CANDLES_MODES" :key="m"><input type="radio" name="counterCandlesMode" :value="m" v-model="draft.counterCandlesMode"> {{ DOB_COUNTER_CANDLES_MODE_LABELS[m] }}
           <span class="impact" title="ΣR nach Konfig mit dieser Stellung">{{ dobSignedR(candleImpacts[m]) }} R</span></label>
+      </fieldset>
+      <fieldset v-if="partialLevels.length"><legend>Teilprofit (Rest bis zum Konfig-TP; TP ≤ Stufe: alles beim TP)</legend>
+        <label v-for="(atR,i) in partialOptions" :key="String(atR)"><input type="radio" name="partialAtR" :value="atR" v-model="draft.partialAtR">
+          {{ atR==null?'aus':dobPartialText({atR,pct:draft.partialPct,be:draft.partialBe}) }}
+          <span class="impact" title="ΣR nach Konfig mit dieser Stellung">{{ dobSignedR(partialImpacts[i]) }} R</span></label>
+        <label>Anteil <select v-model.number="draft.partialPct" aria-label="Teilprofit-Anteil"><option v-for="p in [25,33,50,70]" :key="p" :value="p">{{ p }} %</option></select></label>
+        <label><input type="checkbox" v-model="draft.partialBe"> danach SL auf Entry</label>
       </fieldset>
       <div class="actions">
         <button type="button" :disabled="!dirty||saving" @click="save">{{ saving?'Speichert…':'Speichern' }}</button>

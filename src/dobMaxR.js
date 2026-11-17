@@ -7,14 +7,16 @@ export const DOB_MAX_R_STEPS=[0.5,1,1.5,2,2.5,3,3.5,4,4.5,5];
 // slHit: der SL kam, bevor die nächste Stufe erreicht war. Trifft die SL-Kerze zugleich Stufen (ambiguous wie beim 2R-Ausgang),
 // reicht ambiguousR bis zur höchsten davon: Ziele bis dort bleiben unentschieden, höhere sind Loss. Damit gilt für jedes Ziel k:
 // Win bei maxR ≥ k, unentschieden bei k ≤ ambiguousR, Loss bei slHit, sonst offen/unbekannt.
-export function dobMaxR(trade,{candles,dataEnd,instrument='XAUUSD'}){
- const status=rMultiple=>evaluateDoubleOrderBlockOutcome({...trade,candles,evaluatedAt:dataEnd,instrument,rMultiple}).status;
+// breakevenAtR (Teilprofit, Konfig partialBe): dieselben Stufen mit SL auf Entry ab dieser R-Weite; slHit heißt dann ausgestoppt
+// (auf Entry oder am SL).
+export function dobMaxR(trade,{candles,dataEnd,instrument='XAUUSD',breakevenAtR=null}){
+ const status=rMultiple=>evaluateDoubleOrderBlockOutcome({...trade,candles,evaluatedAt:dataEnd,instrument,rMultiple,breakevenAtR}).status;
  let maxR=0,slHit=false,ambiguousR=null;
  // Stufen sind monoton: wird eine nicht erreicht, folgt keine höhere.
  for(const [i,rMultiple] of DOB_MAX_R_STEPS.entries()){
   const result=status(rMultiple);
   if(result==='success'){maxR=rMultiple;continue;}
-  slHit=result==='loss'||result==='ambiguous';
+  slHit=result==='loss'||result==='ambiguous'||result==='breakeven';
   for(const next of DOB_MAX_R_STEPS.slice(i)){if(status(next)!=='ambiguous')break;ambiguousR=next;}
   break;
  }

@@ -18,7 +18,7 @@ export const DOB_COUNTER_DOB_DEFAULT_MODE='live_block_dead_5r';
 // 3of5 = mind. 3 der letzten 5; off = aus (Default, damit ohne Konfig nichts wegfällt).
 export const DOB_COUNTER_CANDLES_MODES=['off','3of3','3of5'];
 export const DOB_GUARDRAILS_DEFAULT=Object.freeze({entryWindows:[],defaultTpR:DOB_DEFAULT_TP_R,blockedMonths:[],minZoneAgeSeconds:null,
- minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE,counterCandlesMode:'off'});
+ minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE,counterCandlesMode:'off',partialAtR:null,partialPct:50,partialBe:true});
 
 export const dobRuleActive=w=>w.enabled!==false;
 export function dobGuardrailsFromRow(row){
@@ -30,12 +30,15 @@ export function dobGuardrailsFromRow(row){
   minZoneAgeSavedSeconds:Number.isFinite(row.min_zone_age_saved_seconds)?row.min_zone_age_saved_seconds
    :Number.isFinite(row.min_zone_age_seconds)?row.min_zone_age_seconds:null,
   counterDobMode:DOB_COUNTER_DOB_MODES.includes(row.counter_dob_mode)?row.counter_dob_mode:DOB_COUNTER_DOB_DEFAULT_MODE,
-  counterCandlesMode:DOB_COUNTER_CANDLES_MODES.includes(row.counter_candles_mode)?row.counter_candles_mode:'off'};
+  counterCandlesMode:DOB_COUNTER_CANDLES_MODES.includes(row.counter_candles_mode)?row.counter_candles_mode:'off',
+  partialAtR:Number.isFinite(row.partial_at_r)?row.partial_at_r:null,partialPct:Number.isFinite(row.partial_pct)?row.partial_pct:50,
+  partialBe:row.partial_be!==false};
 }
 export const dobGuardrailsToRow=(instrument,config)=>({instrument,entry_windows:config.entryWindows,default_tp_r:config.defaultTpR,
  blocked_months:config.blockedMonths,min_zone_age_seconds:config.minZoneAgeSeconds,
  min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds,counter_dob_mode:config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE,
- counter_candles_mode:config.counterCandlesMode??'off'});
+ counter_candles_mode:config.counterCandlesMode??'off',partial_at_r:config.partialAtR??null,partial_pct:config.partialPct??50,
+ partial_be:config.partialBe!==false});
 
 // Monat in Berlin (1–12). Der Watcher prüft ihn als Erstes und rechnet in gesperrten Monaten gar nicht.
 export const dobMonthBlocked=(config,atSec)=>config.blockedMonths.includes(Number(berlinDateStrFor(atSec).slice(5,7)));
@@ -84,6 +87,11 @@ export function dobGuardrailReason(config,{entryTime,zoneAgeSeconds,counterDobSt
 export const dobRowGuardrailReason=(config,row)=>dobGuardrailReason(config,{entryTime:row.entry_time,zoneAgeSeconds:row.source_zone_age_seconds,
  counterDobStatus:row.counter_dob_status??null,features:dobFeaturesOf(row)});
 export const dobRowConfigTpR=(config,row)=>dobConfigTpR(config,row.entry_time,row.counter_dob_status??null);
+// Teilprofit (partialAtR, null = aus): pct % bei atR schließen, be = Rest-SL danach auf Entry, Rest bis zum Konfig-TP. Liegt der TP
+// bei ≤ atR, gibt es keinen Teilprofit (alles beim TP). Rechnung je Trade: src/dobPartialProfit.js.
+export const dobPartialPlan=(config,tpR)=>config.partialAtR!=null&&tpR>config.partialAtR
+ ?{atR:config.partialAtR,pct:config.partialPct??50,be:config.partialBe!==false}:null;
+export const dobPartialText=({atR,pct,be})=>`Teilprofit ${pct} % bei ${rText(atR)}${be?' → SL auf Entry':''}`;
 
 // Kurzbeschreibung einer Konfig für Panel-Kopf und Konto-Kachel, z.B. „Sperren 10:30–11:00, 21:00–22:00 · Jan · 09:00–10:00 TP 2R ·
 // sonst 2,5R · Zone ≥ 1 Tag“. Nur wirksame Regeln; abgeschaltete zählen als „aus“ am Ende.
@@ -104,6 +112,7 @@ export function dobGuardrailsSummary(config){
   // Der Default-Modus bleibt still (gilt nur im v3-Lauf, das Panel zeigt den Schalter dort); Abweichungen stehen im Kopf.
   (config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE)!==DOB_COUNTER_DOB_DEFAULT_MODE?DOB_COUNTER_DOB_MODE_LABELS[config.counterDobMode]:null,
   (config.counterCandlesMode??'off')!=='off'?DOB_COUNTER_CANDLES_MODE_LABELS[config.counterCandlesMode]:null,
+  config.partialAtR!=null?dobPartialText({atR:config.partialAtR,pct:config.partialPct??50,be:config.partialBe!==false}):null,
   config.entryWindows.length>active.length?`${config.entryWindows.length-active.length} Regel${config.entryWindows.length-active.length>1?'n':''} aus`:null];
  return parts.filter(Boolean).join(' · ');
 }

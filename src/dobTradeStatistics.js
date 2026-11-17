@@ -13,12 +13,15 @@ export function dobTargetOutcome(row,k=2){
  return row.sl_hit?'loss':row.outcome==='unknown'?'unknown':'open';
 }
 // k: festes Ziel für alle Trades oder Funktion je Trade (Konfig: TP aus der Regel seines Entry-Fensters); ΣR je Trade mit seinem k.
+// Liefert die Funktion ein Ergebnis {target, outcome, r} (dobRowConfigScore, Teilprofit), zählt dessen r.
 export function dobRouteStats(rows,k=2){
  const kOf=typeof k==='function'?k:()=>k;
- const scored=rows.map(r=>{const target=kOf(r);return {route:r.route,target,outcome:dobTargetOutcome(r,target)};});
+ const scored=rows.map(r=>{const t=kOf(r);
+  if(typeof t==='object')return {route:r.route,...t};
+  const outcome=dobTargetOutcome(r,t);return {route:r.route,target:t,outcome,r:outcome==='success'?t:outcome==='loss'?-1:null};});
  const routes=aggregateDobRoutes(scored.map(s=>({entries:{[s.route]:{status:'ready',outcome:{status:s.outcome}}}}))).routes;
  for(const [route,c] of Object.entries(routes))
-  c.sumR=scored.filter(s=>s.route===route).reduce((sum,s)=>sum+(s.outcome==='success'?s.target:s.outcome==='loss'?-1:0),0);
+  c.sumR=Math.round(scored.filter(s=>s.route===route).reduce((sum,s)=>sum+(s.r??0),0)*1000)/1000;
  return routes;
 }
 export const dobBreakEven=k=>1/(1+k);

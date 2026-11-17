@@ -34,7 +34,7 @@ try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
-    { dobSourceContext, dobSourceZoneAgeSeconds }, { dobMaxR, dobWideVariant }, { createDobCounterDobGate }, { dobTradeFeatures }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobSourceContext, dobSourceZoneAgeSeconds }, { dobMaxR, dobWideVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, DOB_BREAKEVEN_AT_R_LEVELS }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js'].map(load));
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
@@ -76,7 +76,9 @@ try {
       wide_risk_usd: wide?.riskUsd ?? null }))(dobWideVariant(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
     counter_dob_status: counterStatus.get(dobTradeKey(t)) ?? null,
     // Konfig-Merkmale als jsonb (Philip): Schlüssel nur in src/dobTradeFeatures.js, gelesen über dobRowGuardrailReason.
-    features: dobTradeFeatures({ m5Candles: m5Marked, entryTime: t.entryTime, direction: t.direction }),
+    // Teilprofit mit SL auf Entry: Rest-Verlauf je gespeicherter Stufe (DOB_BREAKEVEN_AT_R_LEVELS), gerechnet in src/dobPartialProfit.js.
+    features: { ...dobTradeFeatures({ m5Candles: m5Marked, entryTime: t.entryTime, direction: t.direction }),
+      ...Object.assign({}, ...DOB_BREAKEVEN_AT_R_LEVELS.map(atR => dobBreakevenFeatures(atR, dobMaxR(t, { candles: m1Marked, dataEnd, instrument: SYMBOL, breakevenAtR: atR })))) },
     first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
     ...(RUN_ID === 'dob-setup-v0' ? {} : { source_kind: `ob_${t.sourceOfStrength.timeframe.toLowerCase()}`, source_distance_usd: t.sourceOfStrength.distanceUsd,
       source_atr: t.sourceOfStrength.atr, source_distance_atr: t.sourceOfStrength.distanceAtr,

@@ -4,12 +4,13 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian,dobTradesPerWeek} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS,DOB_WEEKDAYS,DOB_HALVES,dobTradeWeekday,dobTradeHalf,dobHasWideVariant,dobAsWide,dobMedian,dobTradesPerWeek} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobAccountTile from '../components/DobAccountTile.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
-import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobRowGuardrailReason,dobRowConfigTpR,dobGuardrailsSummary} from '../dobGuardrails.js';
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobRowGuardrailReason,dobGuardrailsSummary} from '../dobGuardrails.js';
+import {dobRowConfigScore} from '../dobPartialProfit.js';
 import {useDobTradePins} from '../composables/useDobTradePins.js';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinFlag from '../components/SimulationPinFlag.vue';
@@ -101,7 +102,8 @@ const blockedOf=r=>dobRowGuardrailReason(guardrailDraft.value,r);
 const inYear=computed(()=>applyGuardrails.value?yearRows.value.filter(r=>!blockedOf(r)):yearRows.value);
 // „Nach Konfig“: jeder Trade mit dem TP seines Entry-Fensters (sonst Default-TP). Vergleich gegen alle Trades ohne Sperren mit dem
 // Default-TP, also gegen „gar keine Konfig“ bei derselben Grund-TP.
-const configTp=r=>dobRowConfigTpR(guardrailDraft.value,r);
+// Ergebnis je Trade inkl. Teilprofit (dobRowConfigScore), dobRouteStats zählt dessen r.
+const configTp=r=>dobRowConfigScore(guardrailDraft.value,r);
 // Simulationskonto in R ganz oben: „Standard“ = alle Trades des Jahres mit TP 2R, ohne Sperren und Regeln, Route a+b zusammen;
 // „Mit Konfig“ = Entwurf, wenn „Sperren anwenden“ an ist, sonst die gespeicherte Konfig. Gleiche Rechnung wie überall (dobRouteStats).
 const accountConfig=computed(()=>applyGuardrails.value?guardrailDraft.value:guardrails.value);
@@ -112,7 +114,7 @@ const accountStandard=computed(()=>accountColumns(yearRows.value,2));
 const accountWithConfig=computed(()=>{
  const cfg=accountConfig.value;
  const list=yearRows.value.filter(r=>!dobRowGuardrailReason(cfg,r));
- return accountColumns(list,r=>dobRowConfigTpR(cfg,r)).map((c,i)=>{const base=accountStandard.value[i].stats;
+ return accountColumns(list,r=>dobRowConfigScore(cfg,r)).map((c,i)=>{const base=accountStandard.value[i].stats;
   return {...c,delta:{sumR:c.stats.sumR-base.sumR,winratePp:c.stats.winrate==null||base.winrate==null?null:(c.stats.winrate-base.winrate)*100}};});
 });
 const accountConfigLabel=computed(()=>dobGuardrailsSummary(accountConfig.value)+(applyGuardrails.value&&draftUnsaved.value?' · Entwurf':'')
@@ -281,7 +283,7 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
           <tbody><tr v-for="t in listed.slice(0,shown)" :key="t.id" :class="{'last-opened':isLast(t)}" @contextmenu.prevent="openPin(t)">
             <td><SimulationPinFlag v-if="pinOf(t)" :note="pinOf(t).note||undefined" />{{ formatDatedTime(t.entry_time) }}</td><td>{{ t.direction==='long'?'Long':'Short' }}</td><td>{{ t.route }}</td>
             <td>{{ DOB_OUTCOME_LABELS[t.outcome]??t.outcome }}<template v-if="t.exit_time"> · {{ formatDatedTime(t.exit_time) }}</template></td>
-            <td :class="pnlClass(dobTradeR(t,configTp(t)))" :title="`TP nach Konfig ${configTp(t)}R`">{{ dobTradeR(t,configTp(t))==null?'–':fmtR(dobTradeR(t,configTp(t))) }}</td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobSourceLabel(t) }}</td>
+            <td :class="pnlClass(configTp(t).r)" :title="`TP nach Konfig ${configTp(t).target}R`">{{ configTp(t).r==null?'–':fmtR(configTp(t).r) }}<template v-if="configTp(t).label"> ({{ configTp(t).label }})</template></td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobSourceLabel(t) }}</td>
             <td class="max-r"><span class="bar" :title="`Max R ${dobMaxRLabel(t.max_r)}`"><i :style="{width:`${Math.min(t.max_r??0,5)/5*100}%`}" :class="{hit:(t.max_r??0)>=2}"></i></span> {{ dobMaxRLabel(t.max_r) }}</td>
             <td><button type="button" class="chart" :class="{seen:seenKeys.has(dobTradePinKey(t))}" :aria-label="`DOB ${formatDatedTime(t.entry_time)} im Chart öffnen${seenKeys.has(dobTradePinKey(t))?' (gesehen)':''}`" @click="openChart(t)">{{ seenKeys.has(dobTradePinKey(t))?'✓ Im Chart':'Im Chart' }}</button></td>
             <td><button type="button" class="pin" :aria-label="`DOB ${formatDatedTime(t.entry_time)} ${pinOf(t)?'Pin bearbeiten':'anpinnen'}`" @click="openPin(t)">{{ pinOf(t)?'⚑ bearbeiten':'⚑' }}</button></td>

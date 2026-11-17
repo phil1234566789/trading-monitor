@@ -70,6 +70,13 @@ describe('DOB-Sperren (dob_guardrails) im Alarm',()=>{
   expect(events.map(e=>({...e,text:e.text.replace('TP 2R (Standard)','TP 2R')}))).toEqual(plain);
   expect(events.find(e=>e.phase==='entry').text).toContain('TP 2R (Standard) 3.893,05');
  });
+ it('Teilprofit: Entry-Alarm nennt TP1 und TP2 mit Preisen; TP ≤ Stufe ohne Teilprofit',()=>{
+  const at=done.entryTime+60,partial={partialAtR:3,partialPct:50,partialBe:true};
+  const text=r=>dobAlarmEvents(withGuardrails(at,{entryWindows:[{from:840,to:900,action:'tp',tpR:r}],...partial}),at).find(e=>e.phase==='entry').text;
+  expect(text(4)).toContain('TP1 3R (50 %) 3.874,75 → danach SL auf Entry · TP2 4R (Fensterregel 14:00–15:00) 3.856,45');
+  expect(text(3)).toContain('· TP 3R (Fensterregel 14:00–15:00) 3.874,75');
+  expect(text(3)).not.toContain('TP1');
+ });
  it('TP-Fensterregel: Ziel und Ausgang zum R des Entry-Fensters',()=>{
   const at=done.entryTime+60,rule={entryWindows:[{from:840,to:900,action:'tp',tpR:3}]};
   const setup=withGuardrails(at,rule).setups.find(s=>s.entryTime===done.entryTime);

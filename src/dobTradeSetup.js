@@ -2,7 +2,7 @@ import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed,sourceMaxDistanceAtr,dobSourceZoneAgeSeconds} from './dobSourceOfStrength.js';
-import {dobZoneAgeBlocked,dobEntryRule,dobCounterDobBlocked,dobCounterDobTpR,dobCounterCandlesBlocked,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
+import {dobZoneAgeBlocked,dobEntryRule,dobCounterDobBlocked,dobCounterDobTpR,dobCounterCandlesBlocked,dobPartialPlan,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
 import {dobTradeFeatures} from './dobTradeFeatures.js';
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 
@@ -96,6 +96,9 @@ export function checkDobTradeSetup(input){
   if(guardrails&&setup.features&&dobCounterCandlesBlocked(guardrails,setup.features)){rejected.push({...setup,sourceOfStrength,reason:'counterCandles'});continue;}
   const deadTpR=guardrails&&counterDob?dobCounterDobTpR(guardrails,counterDob.status):null;
   if(rule)Object.assign(setup,withTarget(pair,setup,deadTpR?{tpR:deadTpR,window:null,source:'deadCounterDob'}:rule,input));
+  // Teilprofit nur für den Alarmtext (TP1/TP2); Ziel und Ausgang des Setups bleiben beim Konfig-TP.
+  const partial=setup.tpRule&&dobPartialPlan(guardrails,setup.tpRule.tpR);
+  if(partial)setup.tpRule={...setup.tpRule,partial};
   // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
   const m5Trend=input.trendGate?.({...setup,sourceOfStrength});
   if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});

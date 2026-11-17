@@ -20,6 +20,16 @@ export function dobTradeFeatures({m5Candles,entryTime,direction}){
   [DOB_FEATURE_KEYS.counterCandles5]:dobCounterCandles(m5Candles,entryTime,direction,5)};
 }
 
+// Teilprofit mit SL auf Entry ab atR (Konfig partialAtR/partialBe): Rest-Verlauf aus dobMaxR(..., {breakevenAtR}) je gespeicherter
+// Stufe, Schlüssel be_<atR>_*. Gelesen über dobBreakevenRest, gerechnet in src/dobPartialProfit.js.
+export const DOB_BREAKEVEN_AT_R_LEVELS=[3];
+const beKey=(atR,field)=>`be_${String(atR).replace('.','_')}_${field}`;
+export const dobBreakevenFeatures=(atR,{maxR,slHit,ambiguousR})=>({[beKey(atR,'max_r')]:maxR,[beKey(atR,'stopped')]:slHit,[beKey(atR,'ambiguous_r')]:ambiguousR});
+export function dobBreakevenRest(features,atR){
+ const maxR=features?.[beKey(atR,'max_r')];
+ return Number.isFinite(maxR)?{maxR,stopped:features[beKey(atR,'stopped')]===true,ambiguousR:features[beKey(atR,'ambiguous_r')]??null}:null;
+}
+
 // Lesen: Zeile aus dob_trade_setups bzw. Setup des Watchers; ältere Läufe ohne features liefern {} (kein Urteil, keine Sperre).
 export const dobFeaturesOf=rowOrSetup=>rowOrSetup?.features??{};
 export const dobFeature=(features,key)=>Number.isFinite(features?.[DOB_FEATURE_KEYS[key]])?features[DOB_FEATURE_KEYS[key]]:null;
