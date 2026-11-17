@@ -11,27 +11,33 @@ import {dobChartLink,dobMaxRLabel} from '../dobTradeStatistics.js';
 import {formatDatedTime} from '../berlinTime.js';
 import {useDobTradePins} from '../composables/useDobTradePins.js';
 import SimulationPinMenu from './SimulationPinMenu.vue';
+import {renderLowerStructure} from '../structureOverlay.js';
+import {barSecondsFor} from '../timeframes.js';
+import {dobEntryM1Structure} from '../dobEntryM1Structure.js';
 import {DOB_ENTRY_M1_RUN,DOB_ENTRY_M1_CASES,DOB_ENTRY_M1_LEADS,DOB_ENTRY_M1_TAILS,dobEntryM1TailOf,dobEntryM1Window,dobEntryM1Zones,dobEntryM1Display,dobEntryM1CaseOf,dobEntryM1LeadOf} from '../dobEntryM1Cases.js';
 
 // Nur Ansicht, keine Erkennung: Trade-Zeile aus dob_trade_setups, Kerzen live aus dem Archiv wie im Dashboard.
 const route=useRoute(),router=useRouter();
 const GROUPS=[['Losses',DOB_ENTRY_M1_CASES.filter(c=>c.kind==='loss')],['Wins (max R ≥ 5)',DOB_ENTRY_M1_CASES.filter(c=>c.kind==='win')]];
 const tradeId=ref((dobEntryM1CaseOf(route.query.trade)??DOB_ENTRY_M1_CASES[0]).id);
-const tf=ref(route.query.tf==='m5'?'m5':'m1'),lead=ref(dobEntryM1LeadOf(route.query.lead)),tail=ref(dobEntryM1TailOf(route.query.tail));
+const tf=ref(route.query.tf==='m5'?'m5':'m1'),lead=ref(dobEntryM1LeadOf(route.query.lead)),tail=ref(dobEntryM1TailOf(route.query.tail)),structure=ref(route.query.struktur==='1');
 const rows=shallowRef(new Map()),data=shallowRef(null),error=ref('');
 const row=computed(()=>rows.value.get(tradeId.value)??null),current=computed(()=>dobEntryM1CaseOf(tradeId.value)),kind=computed(()=>current.value.kind);
 // Kommentar/Pin wie auf /dob-statistik, laufübergreifend über denselben Pin-Schlüssel.
 const {pinTarget,pinSaving,pinError,pinOf,openPin,savePin,removePin}=useDobTradePins(ref('XAUUSD'),computed(()=>[...rows.value.values()]));
 const pinMark=c=>{const r=rows.value.get(c.id);return r&&pinOf(r)?' 📌':'';};
 const chartEl=ref(null);
-let chart=null,series=null,primitives=[];
+let chart=null,series=null,primitives=[],structurePrimitives=[],structureMarkers=[];
 
 async function loadRows(){
  const {data:list,error:e}=await supabase.from('dob_trade_setups').select('*').in('id',DOB_ENTRY_M1_CASES.map(c=>c.id)).limit(DOB_ENTRY_M1_CASES.length);
  if(e)throw e;
  rows.value=new Map(list.map(r=>[r.id,r]));
 }
-watch([tradeId,tf,lead,tail],([id,t,l,n])=>{const code=dobEntryM1CaseOf(id).code;if(route.query.trade!==code||route.query.tf!==t||route.query.lead!==l||route.query.tail!==n)router.replace({query:{...route.query,trade:code,tf:t,lead:l,tail:n}});},{immediate:true});
+watch([tradeId,tf,lead,tail,structure],([id,t,l,n,s])=>{
+ const q={...route.query,trade:dobEntryM1CaseOf(id).code,tf:t,lead:l,tail:n,struktur:s?'1':undefined};
+ if(['trade','tf','lead','tail','struktur'].some(k=>route.query[k]!==q[k]))router.replace({query:q});
+},{immediate:true});
 watch([row,lead,tail],async([r,l,n])=>{
  data.value=null;error.value='';
  if(!r)return;
@@ -55,9 +61,19 @@ function draw(){
    textColor:cssColor('dobConfirmed'),borderWidth:1,label,forceLabel:true},candles);
   series.attachPrimitive(p);primitives.push(p);
  }
+ drawStructure();
  chart.timeScale().setVisibleRange({from:view.from,to:view.to});
 }
+// Debug wie im Dashboard: Pivots mit Ereignis-Labels, Range und Trend je Ebene, auf die gerade angezeigten Kerzen.
+function drawStructure(){
+ if(!series)return;
+ const bar=tf.value==='m1'?'1m':'5m',candles=data.value?(tf.value==='m1'?data.value.m1:data.value.m5):[];
+ const result=structure.value&&candles.length?dobEntryM1Structure(candles,bar,data.value.view.from,'XAUUSD'):null;
+ renderLowerStructure(series,result,structurePrimitives,structureMarkers,candles,{symbol:'XAUUSD',replayUntil:candles.at(-1)?.time,
+  show:!!result,debug:!!result,barSeconds:barSecondsFor(bar),timeframe:bar});
+}
 watch([data,tf],draw);
+watch(structure,drawStructure);
 
 onMounted(async()=>{
  ({chart,candleSeries:series}=createPriceChart(chartEl.value,'XAUUSD'));
@@ -76,6 +92,7 @@ const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.la
    <select v-model="lead" title="Vorlauf"><option v-for="[k,t] in DOB_ENTRY_M1_LEADS" :key="k" :value="k">Vorlauf {{ t }}</option></select>
    <select v-model="tail" title="Nachlauf ab Ausgang"><option v-for="[k,t] in DOB_ENTRY_M1_TAILS" :key="k" :value="k">Nachlauf {{ t }}</option></select>
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
+   <label title="Marktstruktur-Analyse (Debug wie im Dashboard) auf die angezeigten Kerzen, Anker = Fensterbeginn"><input v-model="structure" type="checkbox"> Struktur</label>
    <RouterLink v-if="row" :to="dobChartLink(row)">Im Chart öffnen</RouterLink>
    <button v-if="row" type="button" @click="openPin(row)">{{ pinOf(row) ? '⚑ Pin bearbeiten' : '⚑ Kommentar / Pin' }}</button>
    <span v-if="row" class="info"><strong>{{ current.code }}</strong> · {{ data?.targetLabel==='TP 5R' ? '5R erreicht '+formatDatedTime(data.row.exit_time)+' · ' : '' }}Entry {{ formatDatedTime(row.entry_time) }} @ {{ row.entry_price }} · SL {{ row.stop_price }} · Ausgang

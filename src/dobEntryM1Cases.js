@@ -47,7 +47,7 @@ const tailSeconds=tail=>DOB_ENTRY_M1_TAILS.find(([k])=>k===dobEntryM1TailOf(tail
 export function dobEntryM1Window(row,kind,lead='ob1',tail='3h'){
  const end=kind==='win'?row.entry_time+WIN_HORIZON_SECONDS:row.exit_time??row.entry_time+HOUR,tailSec=tailSeconds(tail);
  const view={from:leadStart(row,lead),to:end+tailSec};
- const loadFrom=Math.min(view.from,row.first_ob_start-2*3600);
+ const loadFrom=Math.min(view.from,row.first_ob_start)-2*HOUR; // 2 h Vorlauf: Fraktal-Bestätigung (Struktur-Schalter) am Fensterbeginn.
  // Zählbasierter Abruf: Wochenend-/Nachtlücken holen nur mehr Vorlauf, nie zu wenig.
  return {view,tailSec,loadTo:view.to,count:{'1m':Math.ceil((view.to-loadFrom)/60)+30,'5m':Math.ceil((view.to-loadFrom)/300)+30}};
 }
