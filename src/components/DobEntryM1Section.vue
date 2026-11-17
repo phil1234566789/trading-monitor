@@ -1,5 +1,5 @@
 <script setup>
-import {computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue';
+import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
 import {createPriceChart} from '../priceChartSetup.js';
 import {OrderBlockPrimitive} from '../orderBlocks.js';
@@ -10,7 +10,9 @@ import {cssColor,cssColorScaled} from '../chartColors.js';
 import {dobChartLink,dobMaxRLabel} from '../dobTradeStatistics.js';
 import {formatDatedTime} from '../berlinTime.js';
 import {useDobTradePins} from '../composables/useDobTradePins.js';
-import SimulationPinMenu from './SimulationPinMenu.vue';
+import PinTypeChips from './PinTypeChips.vue';
+import {formatBerlinTime} from '../berlinTime.js';
+import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
 import {renderLowerStructure} from '../structureOverlay.js';
 import {barSecondsFor} from '../timeframes.js';
 import {dobEntryM1Structure} from '../dobEntryM1Structure.js';
@@ -25,6 +27,23 @@ const rows=shallowRef(new Map()),data=shallowRef(null),error=ref('');
 const row=computed(()=>rows.value.get(tradeId.value)??null),current=computed(()=>dobEntryM1CaseOf(tradeId.value)),kind=computed(()=>current.value.kind);
 // Kommentar/Pin wie auf /dob-statistik, laufübergreifend über denselben Pin-Schlüssel.
 const {pinTarget,pinSaving,pinError,pinOf,openPin,savePin,removePin}=useDobTradePins(ref('XAUUSD'),computed(()=>[...rows.value.values()]));
+// Kommentar ohne Modal (das Modal verdeckte den Chart, Philip liest beim Schreiben Preise/Zeiten ab): openPin hält das Ziel
+// des aktuellen Falls offen; nach Speichern/Entfernen setzt useDobTradePins es zurück, die Pins laden neu und es öffnet sich wieder.
+const note=ref(''),pinType=ref(null),noteEl=ref(null);
+watch(()=>row.value&&[row.value,pinOf(row.value)],v=>{if(v)openPin(v[0]);});
+watch(pinTarget,t=>{if(t){note.value=t.note;pinType.value=t.pinType;}});
+const saveNote=()=>{if(pinTarget.value&&!pinSaving.value)savePin(note.value,pinType.value);};
+// Klick in den Chart: „HH:MM @ Preis“ (Berlin, Kerzenzeit) an der Cursorposition des Textfelds.
+function insertChartPoint(param){
+ const el=noteEl.value;
+ if(!el||!series||param.time==null||!param.point)return;
+ const price=series.coordinateToPrice(param.point.y);
+ if(price==null)return;
+ const text=`${formatBerlinTime(param.time)} @ ${fmtPrice(price,pricePrecisionForInstrument('XAUUSD'))}`;
+ const a=el.selectionStart??note.value.length,b=el.selectionEnd??a;
+ note.value=note.value.slice(0,a)+text+note.value.slice(b);
+ nextTick(()=>{el.focus();el.setSelectionRange(a+text.length,a+text.length);});
+}
 const pinMark=c=>{const r=rows.value.get(c.id);return r&&pinOf(r)?' 📌':'';};
 const chartEl=ref(null);
 let chart=null,series=null,primitives=[],structurePrimitives=[],structureMarkers=[];
@@ -78,9 +97,10 @@ watch(structure,drawStructure);
 onMounted(async()=>{
  ({chart,candleSeries:series}=createPriceChart(chartEl.value,'XAUUSD'));
  chart.applyOptions({autoSize:true});
+ chart.subscribeClick(insertChartPoint);
  try{await loadRows();}catch(e){error.value=e.message;}
 });
-onBeforeUnmount(()=>{chart?.remove();chart=series=null;});
+onBeforeUnmount(()=>{chart?.unsubscribeClick(insertChartPoint);chart?.remove();chart=series=null;});
 const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.label)??[]);
 </script>
 
@@ -94,17 +114,24 @@ const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.la
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
    <label title="Marktstruktur-Analyse (Debug wie im Dashboard) auf die angezeigten Kerzen, Anker = Fensterbeginn"><input v-model="structure" type="checkbox"> Struktur</label>
    <RouterLink v-if="row" :to="dobChartLink(row)">Im Chart öffnen</RouterLink>
-   <button v-if="row" type="button" @click="openPin(row)">{{ pinOf(row) ? '⚑ Pin bearbeiten' : '⚑ Kommentar / Pin' }}</button>
    <span v-if="row" class="info"><strong>{{ current.code }}</strong> · {{ data?.targetLabel==='TP 5R' ? '5R erreicht '+formatDatedTime(data.row.exit_time)+' · ' : '' }}Entry {{ formatDatedTime(row.entry_time) }} @ {{ row.entry_price }} · SL {{ row.stop_price }} · Ausgang
     {{ row.exit_time ? formatDatedTime(row.exit_time) : 'offen' }} · max R {{ dobMaxRLabel(row.max_r) }} · SL getroffen {{ row.sl_hit ? 'ja' : 'nein' }}</span>
   </div>
   <p v-if="error" class="err" role="alert">{{ error }}</p>
   <p v-else-if="!data" role="status">Lade Trade und Kerzen …</p>
   <p v-else-if="missingZones.length" role="status">{{ missingZones.join(', ') }} im geladenen M5 nicht gefunden.</p>
-  <p v-if="row&&pinOf(row)?.note" class="pin-note">📌 {{ pinOf(row).note }}</p>
-  <p v-if="pinError&&!pinTarget" class="err" role="alert">{{ pinError }}</p>
   <div ref="chartEl" class="chart"></div>
-  <SimulationPinMenu :target="pinTarget" :saving="pinSaving" :error="pinError" @close="pinTarget=null" @save="savePin" @remove="removePin" @show-pins="pinTarget=null;router.push({path:'/dob-statistik',query:{run:DOB_ENTRY_M1_RUN}})"/>
+  <div v-if="row" class="comment">
+   <PinTypeChips v-model="pinType" :disabled="pinSaving||!pinTarget" />
+   <textarea ref="noteEl" v-model="note" rows="3" :disabled="pinSaving||!pinTarget" aria-label="Kommentar zum Trade"
+    placeholder="Kommentar · Klick in den Chart fügt „HH:MM @ Preis“ ein · Ctrl+Enter speichert" @keydown.ctrl.enter.prevent="saveNote"></textarea>
+   <div class="comment-actions">
+    <button type="button" :disabled="pinSaving||!pinTarget" @click="saveNote">{{ pinOf(row) ? 'Pin aktualisieren' : 'Pin speichern' }}</button>
+    <button v-if="pinTarget?.existingId" type="button" :disabled="pinSaving" @click="removePin">Pin entfernen</button>
+    <RouterLink :to="{path:'/dob-statistik',query:{run:DOB_ENTRY_M1_RUN}}">Alle Pins</RouterLink>
+    <span v-if="pinSaving" role="status">Speichert …</span><span v-if="pinError" class="err" role="alert">{{ pinError }}</span>
+   </div>
+  </div>
  </div>
 </template>
 
@@ -114,5 +141,7 @@ const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.la
 .info{font-variant-numeric:tabular-nums}
 .chart{flex:1;min-height:300px}
 .err{color:#ef5350}
-.pin-note{margin:0;white-space:pre-line}
+.comment{display:flex;flex-direction:column;gap:6px}
+.comment textarea{width:100%;box-sizing:border-box;background:#131722;color:#d1d4dc;border:1px solid #626b7f;padding:8px;font:inherit;resize:vertical}
+.comment-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 </style>
