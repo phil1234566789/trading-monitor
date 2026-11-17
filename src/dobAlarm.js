@@ -22,23 +22,13 @@ const WARN_TEXT={blockedEntryHour:'Entry in Sperrzeit',counterDob:'Gegen-DOB sei
 const price=v=>Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}):'–';
 const zone=z=>`${price(z.bottom)}–${price(z.top)}`;
 const side=direction=>direction==='long'?'Long':'Short';
-export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=1m&replay=${at}`;
+export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=5m&replay=${at}`;
 function sourceLine({sourceOfStrength:s}){
  if(!s)return 'Quelle der Kraft: –';
  const label=dobSourceLabel({source_kind:`ob_${s.timeframe.toLowerCase()}`,source_distance_atr:s.distanceAtr});
  const touch=dobRetestLabel({kind:s.retestKind,count:s.retestCount,ageSeconds:s.retestAgeSeconds});
  const retest=touch?` · ${touch}`:s.retested?' · retestet':'';
  return `Quelle der Kraft: ${label} · Zone ${zone(s.zone)}${retest}`;
-}
-const hhmm=m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
-// Ohne Konfig (tpRule fehlt) bleibt es beim festen 2R des Setups.
-const tpLabel=({tpRule:r})=>!r?'TP 2R':`TP ${String(r.tpR).replace('.',',')}R (${r.source==='deadCounterDob'?'nur tote Gegen-DOBs':r.window?.action==='tp'?`Fensterregel ${hhmm(r.window.from)}–${hhmm(r.window.to)}`:'Standard'})`;
-// Teilprofit (tpRule.partial): „TP1 3R (50 %) 4.012,00 → danach SL auf Entry · TP2 4R (Fensterregel …) 4.020,00“.
-function targetLine(s){
- const p=s.tpRule?.partial,tp=`${tpLabel(s)} ${price(s.targetPrice)}`;
- if(!p||!Number.isFinite(s.targetPrice))return tp;
- const tp1=s.entryPrice+(s.targetPrice-s.entryPrice)*p.atR/s.tpRule.tpR;
- return `TP1 ${String(p.atR).replace('.',',')}R (${p.pct} %) ${price(tp1)}${p.be?' → danach SL auf Entry':''} · ${tp.replace(/^TP /,'TP2 ')}`;
 }
 const obLines=({chart})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} · ${zone(chart.firstOrderBlock)}`,
  `OB2 ${formatBerlinTime(chart.secondOrderBlockStart)} · ${zone(chart.secondOrderBlock)}`];
@@ -54,7 +44,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    const id=`dob:retest:${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`;
    if(!events.has(id))events.set(id,{id,phase:'ob2Retest',setupId:s.id,instrument,direction:s.direction,signalAt:s.phaseSince,guardrail,suppressed:!!guardrail,
     text:[`🟡 DOB ${instrument} ${side(s.direction)} · OB2-Retest ${formatBerlinTime(s.phaseSince)}`,sourceLine(s),...obLines(s),
-     `Entry-Zone: OB2 ${zone(s.chart.secondOrderBlock)} · Entry nach der OB2-Reaktion (Route a/b), SL laut Indikator, TP je nach Entry-Fensterregel`,
+     'noch kein Entry',
      dobChartUrl(id,instrument,s.phaseSince)].join('\n')});
   }
   if(ENTERED.has(s.phase)&&s.entryTime>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){
@@ -63,7 +53,8 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    if(!events.has(id))events.set(id,{id,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
     text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${WARN_TEXT[guardrail]} ${formatBerlinTime(s.entryTime)}, kein Trade`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
-     `Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)} · ${targetLine(s)}`,sourceLine(s),...obLines(s),
+     // Quelle und OB-Zonen stehen schon im Retest-Alarm; ein Ziel gibt der Alarm bewusst nicht vor.
+     `Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)}`,
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
   }
  }

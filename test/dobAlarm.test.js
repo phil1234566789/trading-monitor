@@ -16,14 +16,19 @@ describe('DOB-Alarme',()=>{
   expect(events[0].text).toContain('3.954,74–3.964,91');
   expect(events[0].text).toContain('erster Touch vor');
   expect(events[0].text).toContain('#/?dob=');
-  // Entry-Zeit ist beim Retest offen, also auch das Fenster-Ziel.
-  expect(events[0].text).not.toContain('TP 2R');
+  expect(events[0].text).toContain('&bar=5m&');
+  expect(events[0].text).toContain('noch kein Entry');
+  expect(events[0].text).not.toContain('Entry-Zone');
+  expect(events[0].text).not.toContain('TP');
  });
  it('meldet den Entry mit Preis, SL und TP 2R',()=>{
   const at=done.entryTime+60,entry=dobAlarmEvents(run(fixture,at),at).find(e=>e.phase==='entry');
   expect(entry.id).toBe(`dob:entry:XAUUSD:short:${done.entryTime}:${done.entryPrice}:${done.stopPrice}`);
   expect(entry.text).toContain('Entry 3.929,65');
-  expect(entry.text).toContain('TP 2R 3.893,05');
+  // Quelle, Zonen und Ziel stehen nicht im Entry-Alarm; das Ziel rechnet das Setup weiter.
+  for(const gone of ['TP','Quelle der Kraft','OB1','OB2 '])expect(entry.text).not.toContain(gone);
+  expect(entry.text).toContain('&bar=5m&');
+  expect(done.targetPrice).toBeCloseTo(3893.05,2);
  });
  it('meldet alte Phasen nach einem Neustart nicht nach',()=>{
   const at=done.entryTime+60*60;
@@ -64,26 +69,23 @@ describe('DOB-Sperren (dob_guardrails) im Alarm',()=>{
   expect(result.setups.filter(s=>s.phase==='ob2Retest')).toEqual([]);
   expect(dobAlarmEvents(result,at).find(e=>e.phase==='ob2Retest')).toMatchObject({guardrail:'blockedZoneAge',suppressed:true});
  });
- it('ohne Regel: Standard-TP 2R wie ohne Konfig, nur mit Herkunft im Text',()=>{
+ it('ohne Regel: Standard-TP 2R wie ohne Konfig, Alarme gleich',()=>{
   const at=done.entryTime+60,plain=dobAlarmEvents(run(fixture,at),at);
-  const events=dobAlarmEvents(withGuardrails(at,{}),at);
-  expect(events.map(e=>({...e,text:e.text.replace('TP 2R (Standard)','TP 2R')}))).toEqual(plain);
-  expect(events.find(e=>e.phase==='entry').text).toContain('TP 2R (Standard) 3.893,05');
+  expect(dobAlarmEvents(withGuardrails(at,{}),at)).toEqual(plain);
+  expect(withGuardrails(at,{}).setups.find(s=>s.entryTime===done.entryTime).targetPrice).toBeCloseTo(3893.05,2);
  });
- it('Teilprofit: Entry-Alarm nennt TP1 und TP2 mit Preisen; TP ≤ Stufe ohne Teilprofit',()=>{
+ it('Teilprofit: Setup trägt TP1-Stufe; TP ≤ Stufe ohne Teilprofit',()=>{
   const at=done.entryTime+60,partial={partialAtR:3,partialPct:50,partialBe:true};
-  const text=r=>dobAlarmEvents(withGuardrails(at,{entryWindows:[{from:840,to:900,action:'tp',tpR:r}],...partial}),at).find(e=>e.phase==='entry').text;
-  expect(text(4)).toContain('TP1 3R (50 %) 3.874,75 → danach SL auf Entry · TP2 4R (Fensterregel 14:00–15:00) 3.856,45');
-  expect(text(3)).toContain('· TP 3R (Fensterregel 14:00–15:00) 3.874,75');
-  expect(text(3)).not.toContain('TP1');
+  const rule=r=>withGuardrails(at,{entryWindows:[{from:840,to:900,action:'tp',tpR:r}],...partial}).setups.find(s=>s.entryTime===done.entryTime).tpRule;
+  expect(rule(4)).toMatchObject({tpR:4,partial:{atR:3,pct:50,be:true}});
+  expect(rule(3)?.partial).toBeFalsy();
  });
  it('TP-Fensterregel: Ziel und Ausgang zum R des Entry-Fensters',()=>{
   const at=done.entryTime+60,rule={entryWindows:[{from:840,to:900,action:'tp',tpR:3}]};
   const setup=withGuardrails(at,rule).setups.find(s=>s.entryTime===done.entryTime);
   expect(setup).toMatchObject({tpRule:{tpR:3},targetPrice:expect.closeTo(3874.75,2)});
-  expect(dobAlarmEvents(withGuardrails(at,rule),at).find(e=>e.phase==='entry').text).toContain('TP 3R (Fensterregel 14:00–15:00) 3.874,75');
   // Default-TP greift außerhalb jedes Fensters.
-  expect(dobAlarmEvents(withGuardrails(at,{defaultTpR:2.5}),at).find(e=>e.phase==='entry').text).toContain('TP 2,5R (Standard)');
+  expect(withGuardrails(at,{defaultTpR:2.5}).setups.find(s=>s.entryTime===done.entryTime).tpRule).toMatchObject({tpR:2.5});
  });
 });
 
@@ -127,7 +129,6 @@ describe('DOB v3: Gegen-DOB im Alarm',()=>{
   expect(run(fixture,at,true,undefined,{counterDobGate:dead,...cfg('block_all')}).rejected.find(s=>s.entryTime===done.entryTime)).toMatchObject({reason:'counterDob'});
   const combo=run(fixture,at,true,undefined,{counterDobGate:dead,...cfg('live_block_dead_5r')});
   expect(entryOf(combo)).toMatchObject({tpRule:{tpR:5,source:'deadCounterDob'},counterDob:{status:'dead'}});
-  expect(dobAlarmEvents(combo,at).find(e=>e.phase==='entry').text).toContain('TP 5R (nur tote Gegen-DOBs)');
   expect(run(fixture,at,true,undefined,{counterDobGate:gateWith('live'),...cfg('live_block_dead_5r')}).rejected.find(s=>s.entryTime===done.entryTime)).toMatchObject({reason:'counterDob'});
   expect(entryOf(run(fixture,at,true,undefined,{counterDobGate,...cfg('off')}))).toBeTruthy();
   // Statistik ohne Konfig: Status nur vermerkt, nichts gesperrt.
