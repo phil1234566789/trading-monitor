@@ -127,6 +127,19 @@ describe('Chart-Checklist: asynchrone Integration', () => {
     expect(ctx.events.at(-1)).toEqual(before);
     ctx.scope.stop();
   });
+  it('behält beim Poll-Nachladen am selben Stand den letzten fertigen Stand statt ihn zu leeren', () => {
+    const ctx = setup();
+    ctx.fill();
+    const ready = ctx.events.at(-1).state;
+    expect(ready.status).toBe('ready');
+    const ticket = ctx.api.begin('m5');
+    expect(ctx.events.at(-1).state).toEqual({ ...ready, updating: true });
+    expect(ctx.api.m1PrerequisitesAt(123).setup).toBe(ready.setup);
+    ctx.api.finish(ticket, { ok: true, applied: false }, []);
+    expect(ctx.events.at(-1).state.status).toBe('ready');
+    expect(ctx.events.at(-1).state.updating).toBe(false);
+    ctx.scope.stop();
+  });
   it('entfernt alte Ergebnisse sofort beim Symbolwechsel und ignoriert verspätete Antworten', () => {
     const ctx = setup();
     ctx.fill();
