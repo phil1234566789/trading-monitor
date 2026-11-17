@@ -1,6 +1,6 @@
 import { reconstructObLifecycle } from "../_shared/obReplayLifecycle.ts";
 import { pinTypeFields, type PinType } from './pinType.ts';
-import {persistDoubleOrderBlockPin} from '../_shared/doubleOrderBlockPinStore.js';
+import {persistDoubleOrderBlockPin,upsertM5ObZoneId} from '../_shared/doubleOrderBlockPinStore.js';
 import {assertTradeSetupSourceSnapshot} from '../_shared/tradeSetupSourceSnapshot.js';
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
@@ -384,16 +384,7 @@ async function findOrCreateObZoneId(instrument: string, timeframe: string, direc
     }
     return data.id as number;
   }
-  const { data, error } = await supabase
-    .from("ob_zones")
-    .upsert(
-      { instrument, timeframe, direction, top, bottom, start_time: startTimeIso },
-      { onConflict: "instrument,timeframe,start_time,direction" },
-    )
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  return data.id as number;
+  return await upsertM5ObZoneId(supabase, { instrument, direction, top, bottom, startTime: startTimeSec }) as number;
 }
 
 // Analoges Gegenstück zu findOrCreateObZoneId, für kind='pivot'-Targets/Bestätigungen (Task

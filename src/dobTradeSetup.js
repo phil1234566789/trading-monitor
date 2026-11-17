@@ -104,7 +104,9 @@ export function checkDobTradeSetup(input){
   if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});
   else setups.push({...setup,sourceOfStrength,...(m5Trend?{m5Trend}:{})});
  }
- return {version:input.counterDobGate?DOB_TRADE_SETUP_V3_VERSION:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,rejected,stats:dob.stats};
+ // pairs: DOB-Paar je pairId (das fertige Paar überschreibt den Retest-Kandidaten), damit der Watcher es beim ersten Alarm anpinnen kann.
+ return {version:input.counterDobGate?DOB_TRADE_SETUP_V3_VERSION:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,rejected,stats:dob.stats,
+  pairs:new Map(candidates.map(([pair])=>[pair.id,pair]))};
 }
 
 // Erste M1-Zeit nach dem letzten XAU-Marktschluss vor evaluatedAt (evaluatedAt selbst, solange der Markt zu ist).

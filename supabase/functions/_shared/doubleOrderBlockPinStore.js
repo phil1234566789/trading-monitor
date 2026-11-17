@@ -20,3 +20,12 @@ export async function persistDoubleOrderBlockPin({supabase,resolveObId,snapshot,
   if(updated.error)throw new Error(updated.error.message);
   return updated.data;
 }
+
+// M5-OBs pflegt kein Watcher; ein DOB-Pin legt seine beiden ob_zones-Zeilen per Natural-Key an oder findet sie (MCP und dob-watcher).
+/** @param {any} supabase @param {{instrument:string,direction:string,top:number,bottom:number,startTime:number}} ob */
+export async function upsertM5ObZoneId(supabase,{instrument,direction,top,bottom,startTime}) {
+  const {data,error}=await supabase.from('ob_zones').upsert({instrument,timeframe:'5M',direction,top,bottom,start_time:new Date(startTime*1000).toISOString()},
+    {onConflict:'instrument,timeframe,start_time,direction'}).select('id').single();
+  if(error)throw new Error(error.message);
+  return data.id;
+}

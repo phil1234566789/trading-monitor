@@ -7,6 +7,7 @@ import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
 import {dobAlarmEvents,dobStaleAlarm} from '../../../src/dobAlarm.js';
 import {dobGuardrailsFromRow,dobMonthBlocked,dobEntryRule} from '../../../src/dobGuardrails.js';
 import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
+import {dobAutoPin} from '../../../src/dobAutoPin.js';
 import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
@@ -93,7 +94,17 @@ async function tick(client:any,dry=false,probes:number[]=[]){
     rejectedReasons:result.rejected.reduce((n:any,r:any)=>({...n,[r.reason]:(n[r.reason]??0)+1}),{}),
     events:events.map(e=>({id:e.id,phase:e.phase,guardrail:e.guardrail??null,suppressed:!!e.suppressed}))};
   const delivered=[];
-  for(const event of events){const d=await deliver(client,event,event.suppressed?event.guardrail:blocked);if(d)delivered.push(d);}
+  for(const event of events){
+    const d:any=await deliver(client,event,event.suppressed?event.guardrail:blocked);
+    if(!d)continue;
+    delivered.push(d);
+    // Erster zugestellter Alarm eines Paars: DOB + Quelle anpinnen. Ein Pin-Fehler darf den schon versendeten Alarm nicht stören.
+    const setup=event.setupId&&[...result.setups,...result.rejected].find((s:any)=>s.id===event.setupId),pair=setup&&result.pairs.get(setup.pairId);
+    if(pair&&(d.status==='sent'||d.status==='uncertain')){
+      try{d.autoPin=await dobAutoPin(client,{event,setup,pair,evaluatedAt,m5Candles:m5Marked,m1Candles:m1Marked});}
+      catch(error){d.autoPin={error:error instanceof Error?error.message:String(error)};console.error('DOB-Auto-Pin fehlgeschlagen',event.id,d.autoPin.error);}
+    }
+  }
   await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
     runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:result.setups.length,rejected:result.rejected.length,skipped:null,error:null});
   return {evaluatedAt,calcMs,setups:result.setups.length,events:events.length,delivered};
