@@ -5,7 +5,8 @@ import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 
 // Sektion „DOB-Entry M1“: Philip sieht sich M1 rund um DOB-Entries an, bevor es eine Erkennungslogik gibt.
 // Auswahl aus dob-setup-v3 (XAUUSD, Kombi = counter_dob_status ≠ live): 10 Losses (sl_hit, max_r < 2, also Loss bei jedem
-// Konfig-TP 2–5R) und 5 Wins mit max_r ≥ 5, über beide Halbjahre und verschiedene Uhrzeiten; 28.08. 15:38 Short auf Wunsch.
+// Konfig-TP 2–5R) und 10 Wins mit max_r ≥ 5, über beide Halbjahre und verschiedene Uhrzeiten; 28.08. 15:38 Short auf Wunsch.
+// W6–W10 nachträglich angehängt, damit L1–L10/W1–W5 ihre Kürzel behalten.
 export const DOB_ENTRY_M1_RUN='dob-setup-v3';
 const CASES=[
  {id:'dob-setup-v3:dob:XAUUSD:1:1767751800:1767752700:a',kind:'loss',label:'07.01. 04:19 Long a'},
@@ -23,23 +24,32 @@ const CASES=[
  {id:'dob-setup-v3:dob:XAUUSD:1:1780535100:1780541100:a',kind:'win',label:'04.06. 05:52 Long a'},
  {id:'dob-setup-v3:dob:XAUUSD:1:1787124600:1787126700:a',kind:'win',label:'19.08. 10:26 Long a'},
  {id:'dob-setup-v3:dob:XAUUSD:-1:1792417200:1792418400:b',kind:'win',label:'19.10. 16:38 Short b'},
+ {id:'dob-setup-v3:dob:XAUUSD:1:1771863000:1771869600:a',kind:'win',label:'23.02. 19:30 Long a'},
+ {id:'dob-setup-v3:dob:XAUUSD:-1:1776151200:1776158700:a',kind:'win',label:'14.04. 12:13 Short a'},
+ {id:'dob-setup-v3:dob:XAUUSD:1:1788915900:1788917400:a',kind:'win',label:'09.09. 04:11 Long a'},
+ {id:'dob-setup-v3:dob:XAUUSD:-1:1791948300:1791954300:a',kind:'win',label:'14.10. 08:19 Short a'},
+ {id:'dob-setup-v3:dob:XAUUSD:1:1793807700:1793810400:b',kind:'win',label:'04.11. 20:51 Long b'},
 ];
-// Kürzel L1–L10 / W1–W5 in Listenreihenfolge; Philip nennt Fälle so im Chat und in der URL (&trade=L2).
+// Kürzel L1–L10 / W1–W10 in Listenreihenfolge; Philip nennt Fälle so im Chat und in der URL (&trade=L2).
 export const DOB_ENTRY_M1_CASES=CASES.map((c,i)=>({...c,code:(c.kind==='loss'?'L':'W')+(CASES.filter((x,j)=>j<=i&&x.kind===c.kind).length)}));
 export const dobEntryM1CaseOf=key=>DOB_ENTRY_M1_CASES.find(c=>c.code===key||c.id===key)??null;
 
-const HOUR=3600,TAIL_SECONDS=15*60,WIN_R=5,WIN_HORIZON_SECONDS=5*24*HOUR;
+const HOUR=3600,WIN_R=5,WIN_HORIZON_SECONDS=5*24*HOUR;
 // Vorlauf: Default ab OB1 − 1 h, damit beide OBs und die Bewegung heraus (kleine Reaktion oder echte Kraft) voll im Bild sind.
 export const DOB_ENTRY_M1_LEADS=[['ob1','ab OB1 − 1 h'],['3h','3 h vor Entry'],['6h','6 h vor Entry'],['12h','12 h vor Entry'],['24h','24 h vor Entry']];
 export const dobEntryM1LeadOf=v=>DOB_ENTRY_M1_LEADS.some(([k])=>k===v)?v:'ob1';
 const leadStart=(row,lead)=>dobEntryM1LeadOf(lead)==='ob1'?row.first_ob_start-HOUR:row.entry_time-parseInt(lead)*HOUR;
+// Nachlauf ab Ausgang (Loss: SL-Treffer, Win: 5R-Treffer); Default + 3 h zeigt, ob danach noch Kraft kommt.
+export const DOB_ENTRY_M1_TAILS=[['15m','+ 15 min',15*60],['1h','+ 1 h',HOUR],['3h','+ 3 h',3*HOUR],['6h','+ 6 h',6*HOUR],['12h','+ 12 h',12*HOUR]];
+export const dobEntryM1TailOf=v=>DOB_ENTRY_M1_TAILS.some(([k])=>k===v)?v:'3h';
+const tailSeconds=tail=>DOB_ENTRY_M1_TAILS.find(([k])=>k===dobEntryM1TailOf(tail))[2];
 // Wins laufen bis 5R statt bis zum gespeicherten 2R-Exit; der 5R-Zeitpunkt ist nicht gespeichert, er kann Tage nach Entry liegen, daher Ladebereich bis 5 Tage.
-export function dobEntryM1Window(row,kind,lead='ob1'){
- const end=kind==='win'?row.entry_time+WIN_HORIZON_SECONDS:row.exit_time??row.entry_time+HOUR;
- const view={from:leadStart(row,lead),to:end+TAIL_SECONDS};
+export function dobEntryM1Window(row,kind,lead='ob1',tail='3h'){
+ const end=kind==='win'?row.entry_time+WIN_HORIZON_SECONDS:row.exit_time??row.entry_time+HOUR,tailSec=tailSeconds(tail);
+ const view={from:leadStart(row,lead),to:end+tailSec};
  const loadFrom=Math.min(view.from,row.first_ob_start-2*3600);
  // Zählbasierter Abruf: Wochenend-/Nachtlücken holen nur mehr Vorlauf, nie zu wenig.
- return {view,loadTo:view.to,count:{'1m':Math.ceil((view.to-loadFrom)/60)+30,'5m':Math.ceil((view.to-loadFrom)/300)+30}};
+ return {view,tailSec,loadTo:view.to,count:{'1m':Math.ceil((view.to-loadFrom)/60)+30,'5m':Math.ceil((view.to-loadFrom)/300)+30}};
 }
 
 // OB1/OB2 wie im Detektor: dieselbe Eingabe (geschlossen + Session-Ignore) und dieselbe M5-OB-Erkennung, gesucht über Startzeit.
@@ -56,5 +66,5 @@ export function dobEntryM1Display(row,kind,m1,window){
   candles:m1,evaluatedAt:window.loadTo,instrument:row.instrument,rMultiple:WIN_R});
  if(o.status!=='success')return {row,view:window.view,targetLabel:'TP 2R'};
  return {row:{...row,target_price:o.targetPrice,exit_time:o.recognizedAt,exit_price:o.exitPrice,outcome:'success'},
-  view:{from:window.view.from,to:o.recognizedAt+TAIL_SECONDS},targetLabel:'TP '+WIN_R+'R'};
+  view:{from:window.view.from,to:o.recognizedAt+window.tailSec},targetLabel:'TP '+WIN_R+'R'};
 }
