@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {expect,it} from 'vitest';
-import {isTs11Pin,noteLsPrice,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case} from '../src/tradeSetup11Debugger.js';
+import {isTs11Pin,noteLsPrice,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case,ts11CaseWindow,ts11LeadOf,TS11_LEADS} from '../src/tradeSetup11Debugger.js';
 
 const load=path=>JSON.parse(readFileSync(new URL(path,import.meta.url),'utf8'));
 const oct12=load('./fixtures/ts11-native/context.json'),oct22=load('./fixtures/ts11-ls-ob/xau-2026-10-22.json');
@@ -59,4 +59,11 @@ it('DR 139: Philips M1-LS hat kein M5-Fraktal, TS1.1 bleibt unbekannt',()=>{
 it('meldet einen H1-OB-Pin als nicht auswertbar statt zu raten',()=>{
  expect(ts11CaseFromPin({id:1,kind:'ob_zone',note:'TS1.1',obZone:{instrument:'XAUUSD',direction:'short',timeframe:'1H',startTime:'2026-10-22T00:00:00Z'}}).error)
   .toMatch(/H1/);
+});
+
+it('zeigt mindestens einen Tag M5-Vorlauf, auch bei altem oder fremdem Query-Wert',()=>{
+ expect(ts11LeadOf('6h')).toBe('24h');
+ expect(Math.min(...TS11_LEADS.map(([,,s])=>s))).toBeGreaterThanOrEqual(86400);
+ const kase={anchorTime:Date.parse('2026-10-12T10:45:00Z')/1000,lsPivotTime:null};
+ expect(kase.anchorTime-ts11CaseWindow(kase,'6h','3h').view.from).toBeGreaterThanOrEqual(86400);
 });

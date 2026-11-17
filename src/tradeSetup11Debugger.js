@@ -134,14 +134,15 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy){
 }
 
 const HOUR=3600;
-export const TS11_LEADS=[['2h','2 h',2*HOUR],['6h','6 h',6*HOUR],['12h','12 h',12*HOUR],['24h','24 h',24*HOUR]];
+// Philip braucht mindestens einen Tag M5-Vorlauf, um den Trend am Fall selbst zu lesen.
+export const TS11_LEADS=[['24h','24 h',24*HOUR],['48h','48 h',48*HOUR],['72h','72 h',72*HOUR],['7d','7 Tage',7*24*HOUR]];
 export const TS11_TAILS=[['1h','+ 1 h',HOUR],['3h','+ 3 h',3*HOUR],['6h','+ 6 h',6*HOUR],['12h','+ 12 h',12*HOUR]];
 const pick=(list,key,fallback)=>(list.find(([k])=>k===key)??list.find(([k])=>k===fallback));
-export const ts11LeadOf=v=>pick(TS11_LEADS,v,'6h')[0];
+export const ts11LeadOf=v=>pick(TS11_LEADS,v,'24h')[0];
 export const ts11TailOf=v=>pick(TS11_TAILS,v,'3h')[0];
 // Sicht um den Fall; geladen wird zusätzlich das volle Chart-M5-Fenster vor dem Auswertungszeitpunkt.
 export function ts11CaseWindow(kase,lead,tail){
- const from=Math.min(kase.anchorTime-pick(TS11_LEADS,lead,'6h')[2],(kase.lsPivotTime??kase.anchorTime)-HOUR);
+ const from=Math.min(kase.anchorTime-pick(TS11_LEADS,lead,'24h')[2],(kase.lsPivotTime??kase.anchorTime)-HOUR);
  const to=kase.anchorTime+pick(TS11_TAILS,tail,'3h')[2],loadTo=Math.max(to,kase.anchorTime+TS11_LOOKAHEAD_SEC);
  return {view:{from,to},loadTo,count:{'5m':TRADE_SETUP_M5_CANDLE_COUNT+Math.ceil((loadTo-from)/300)+300,'1m':Math.ceil((to-from)/60)+30}};
 }
