@@ -15,6 +15,18 @@ export function dobOuterTrend(candles,at,direction,{windowDays,barSeconds}){
   durationDays:trend!=='unknown'&&origin?+((at-pivotTimeOf(origin))/86400).toFixed(2):null,bosPivot:bosPivotOf(state)};
 }
 
+// Ebene der Struktur wählbar (Philip, Pin 528: sein Trend ist oft die innerste Ebene): outer = oberste, inner = innerste
+// bestätigte, range = innerste Ebene, deren aktuelle Range den Preis enthält (sonst die oberste). Trend und BOS-Pivot dieser Ebene.
+export function dobLevelTrend(candles,at,direction,{windowDays,barSeconds,level='outer',price=null}){
+ const state=structureInWindow(candles,at,windowDays*86400,{barSeconds})?.state;
+ if(!state||state.trend==='unknown')return {trend:'unknown',verdict:'unknown',bosPivot:null,depth:null};
+ const chain=collectNestedChain(state);
+ const inside=l=>price!=null&&l.currRange.low.price<=price&&price<=l.currRange.high.price;
+ const pick=level==='inner'?chain.length-1:level==='range'?Math.max(0,chain.findLastIndex(inside)):0;
+ const l=chain[pick];
+ return {trend:l.trend,verdict:dobTrendVerdict(direction,l.trend),bosPivot:bosPivotOf(l),depth:pick};
+}
+
 // BOS-Pivot (Philip): der Pullback-Punkt, nach dem der äußere Trend zuletzt fortgesetzt wurde = protected-low/-high der
 // äußeren Ebene. Schon per Close gebrochen = 'break-of-structure'; nur per Docht berührt degradiert der Algo ihn zu
 // 'LQ-sweep' (im Uptrend sind das nur Tiefs, im Downtrend nur Hochs, siehe markLqSweeps). Jüngster Kandidat gewinnt.

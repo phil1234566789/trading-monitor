@@ -1,0 +1,1330 @@
+{
+  "measurement": "dob-lab-bos-v1",
+  "git": "ebf3d767-dirty",
+  "symbol": "XAUUSD",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "trades": 217,
+  "methodology": [
+    "Trades: v3 (v2-Träger ohne Gegen-DOB seit Quellen-Retest, createDobCounterDobGate), Dedup wie die Statistik.",
+    "Gegnerischer BOS-Pivot: M5-Struktur (unveränderter Trend-Algo, 5 Tage, Perioden 5/2) zum Zeitpunkt X; innerste Ebene GEGEN die Trade-Richtung, deren protected-high (Long) bzw. protected-low (Short); schon gebrochen = jüngster break-of-structure, nur Docht = jüngster LQ-sweep.",
+    "X = Quellen-Retest (1a Close, 1b Docht) bzw. OB1-Start (1c Close). Bruch: M5-Kerze nach max(X, Pivotzeit), bis Entry geschlossen.",
+    "„keine Gegen-Ebene“ = die M5-Struktur hat zu X keine Ebene gegen den Trade (läuft schon mit). Regel-Varianten zählen sie als gebrochen bzw. nicht.",
+    "n = Win + Loss, ΣR = R·Win − Loss; Konfig = dobConfigTpR(aktive dob_guardrails, Entry); Halbjahre nach Berliner Entry-Monat."
+  ],
+  "variants": {
+    "1a Close ab Quellen-Retest": {
+      "groups": {
+        "gebrochen": {
+          "r2": {
+            "n": 93,
+            "winrate": 45.2,
+            "sumR": 33,
+            "Jan–Jun": {
+              "n": 51,
+              "winrate": 37.3,
+              "sumR": 6
+            },
+            "Jul–Nov": {
+              "n": 42,
+              "winrate": 54.8,
+              "sumR": 27
+            }
+          },
+          "r3": {
+            "n": 93,
+            "winrate": 35.5,
+            "sumR": 39,
+            "Jan–Jun": {
+              "n": 51,
+              "winrate": 27.5,
+              "sumR": 5
+            },
+            "Jul–Nov": {
+              "n": 42,
+              "winrate": 45.2,
+              "sumR": 34
+            }
+          },
+          "r4": {
+            "n": 93,
+            "winrate": 31.2,
+            "sumR": 52,
+            "Jan–Jun": {
+              "n": 51,
+              "winrate": 23.5,
+              "sumR": 9
+            },
+            "Jul–Nov": {
+              "n": 42,
+              "winrate": 40.5,
+              "sumR": 43
+            }
+          },
+          "r5": {
+            "n": 93,
+            "winrate": 25.8,
+            "sumR": 51,
+            "Jan–Jun": {
+              "n": 51,
+              "winrate": 17.6,
+              "sumR": 3
+            },
+            "Jul–Nov": {
+              "n": 42,
+              "winrate": 35.7,
+              "sumR": 48
+            }
+          }
+        },
+        "keine Gegen-Ebene": {
+          "r2": {
+            "n": 40,
+            "winrate": 32.5,
+            "sumR": -1,
+            "Jan–Jun": {
+              "n": 21,
+              "winrate": 14.3,
+              "sumR": -12
+            },
+            "Jul–Nov": {
+              "n": 19,
+              "winrate": 52.6,
+              "sumR": 11
+            }
+          },
+          "r3": {
+            "n": 40,
+            "winrate": 27.5,
+            "sumR": 4,
+            "Jan–Jun": {
+              "n": 21,
+              "winrate": 9.5,
+              "sumR": -13
+            },
+            "Jul–Nov": {
+              "n": 19,
+              "winrate": 47.4,
+              "sumR": 17
+            }
+          },
+          "r4": {
+            "n": 40,
+            "winrate": 22.5,
+            "sumR": 5,
+            "Jan–Jun": {
+              "n": 21,
+              "winrate": 9.5,
+              "sumR": -11
+            },
+            "Jul–Nov": {
+              "n": 19,
+              "winrate": 36.8,
+              "sumR": 16
+            }
+          },
+          "r5": {
+            "n": 40,
+            "winrate": 17.5,
+            "sumR": 2,
+            "Jan–Jun": {
+              "n": 21,
+              "winrate": 9.5,
+              "sumR": -9
+            },
+            "Jul–Nov": {
+              "n": 19,
+              "winrate": 26.3,
+              "sumR": 11
+            }
+          }
+        },
+        "nicht gebrochen": {
+          "r2": {
+            "n": 83,
+            "winrate": 38.6,
+            "sumR": 13,
+            "Jan–Jun": {
+              "n": 37,
+              "winrate": 54.1,
+              "sumR": 23
+            },
+            "Jul–Nov": {
+              "n": 46,
+              "winrate": 26.1,
+              "sumR": -10
+            }
+          },
+          "r3": {
+            "n": 83,
+            "winrate": 31.3,
+            "sumR": 21,
+            "Jan–Jun": {
+              "n": 37,
+              "winrate": 43.2,
+              "sumR": 27
+            },
+            "Jul–Nov": {
+              "n": 46,
+              "winrate": 21.7,
+              "sumR": -6
+            }
+          },
+          "r4": {
+            "n": 82,
+            "winrate": 25.6,
+            "sumR": 23,
+            "Jan–Jun": {
+              "n": 36,
+              "winrate": 33.3,
+              "sumR": 24
+            },
+            "Jul–Nov": {
+              "n": 46,
+              "winrate": 19.6,
+              "sumR": -1
+            }
+          },
+          "r5": {
+            "n": 82,
+            "winrate": 20.7,
+            "sumR": 20,
+            "Jan–Jun": {
+              "n": 36,
+              "winrate": 27.8,
+              "sumR": 24
+            },
+            "Jul–Nov": {
+              "n": 46,
+              "winrate": 15.2,
+              "sumR": -4
+            }
+          }
+        }
+      },
+      "rules": {
+        "fest 3R": {
+          "n": 216,
+          "winrate": 32.4,
+          "sumR": 64,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 29.4,
+            "sumR": 19
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 35.5,
+            "sumR": 45
+          }
+        },
+        "fest 5R": {
+          "n": 215,
+          "winrate": 22.3,
+          "sumR": 73,
+          "Jan–Jun": {
+            "n": 108,
+            "winrate": 19.4,
+            "sumR": 18
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 25.2,
+            "sumR": 55
+          }
+        },
+        "Konfig": {
+          "n": 216,
+          "winrate": 33.3,
+          "sumR": 112,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 33,
+            "sumR": 45
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 33.6,
+            "sumR": 67
+          }
+        },
+        "gebrochen 5R, sonst 3R": {
+          "n": 216,
+          "winrate": 28.2,
+          "sumR": 76,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 24.8,
+            "sumR": 17
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 31.8,
+            "sumR": 59
+          }
+        },
+        "gebrochen oder keine Gegen-Ebene 5R, sonst 3R": {
+          "n": 216,
+          "winrate": 26.4,
+          "sumR": 74,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 24.8,
+            "sumR": 21
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 28,
+            "sumR": 53
+          }
+        }
+      }
+    },
+    "1b Docht ab Quellen-Retest": {
+      "groups": {
+        "gebrochen": {
+          "r2": {
+            "n": 95,
+            "winrate": 45.3,
+            "sumR": 34,
+            "Jan–Jun": {
+              "n": 51,
+              "winrate": 37.3,
+              "sumR": 6
+            },
+            "Jul–Nov": {
+              "n": 44,
+              "winrate": 54.5,
+              "sumR": 28
+            }
+          },
+          "r3": {
+            "n": 95,
+            "winrate": 35.8,
+            "sumR": 41,
+            "Jan–Jun": {
+              "n": 51,
+              "winrate": 27.5,
+              "sumR": 5
+            },
+            "Jul–Nov": {
+              "n": 44,
+              "winrate": 45.5,
+              "sumR": 36
+            }
+          },
+          "r4": {
+            "n": 95,
+            "winrate": 31.6,
+            "sumR": 55,
+            "Jan–Jun": {
+              "n": 51,
+              "winrate": 23.5,
+              "sumR": 9
+            },
+            "Jul–Nov": {
+              "n": 44,
+              "winrate": 40.9,
+              "sumR": 46
+            }
+          },
+          "r5": {
+            "n": 95,
+            "winrate": 26.3,
+            "sumR": 55,
+            "Jan–Jun": {
+              "n": 51,
+              "winrate": 17.6,
+              "sumR": 3
+            },
+            "Jul–Nov": {
+              "n": 44,
+              "winrate": 36.4,
+              "sumR": 52
+            }
+          }
+        },
+        "keine Gegen-Ebene": {
+          "r2": {
+            "n": 40,
+            "winrate": 32.5,
+            "sumR": -1,
+            "Jan–Jun": {
+              "n": 21,
+              "winrate": 14.3,
+              "sumR": -12
+            },
+            "Jul–Nov": {
+              "n": 19,
+              "winrate": 52.6,
+              "sumR": 11
+            }
+          },
+          "r3": {
+            "n": 40,
+            "winrate": 27.5,
+            "sumR": 4,
+            "Jan–Jun": {
+              "n": 21,
+              "winrate": 9.5,
+              "sumR": -13
+            },
+            "Jul–Nov": {
+              "n": 19,
+              "winrate": 47.4,
+              "sumR": 17
+            }
+          },
+          "r4": {
+            "n": 40,
+            "winrate": 22.5,
+            "sumR": 5,
+            "Jan–Jun": {
+              "n": 21,
+              "winrate": 9.5,
+              "sumR": -11
+            },
+            "Jul–Nov": {
+              "n": 19,
+              "winrate": 36.8,
+              "sumR": 16
+            }
+          },
+          "r5": {
+            "n": 40,
+            "winrate": 17.5,
+            "sumR": 2,
+            "Jan–Jun": {
+              "n": 21,
+              "winrate": 9.5,
+              "sumR": -9
+            },
+            "Jul–Nov": {
+              "n": 19,
+              "winrate": 26.3,
+              "sumR": 11
+            }
+          }
+        },
+        "nicht gebrochen": {
+          "r2": {
+            "n": 81,
+            "winrate": 38.3,
+            "sumR": 12,
+            "Jan–Jun": {
+              "n": 37,
+              "winrate": 54.1,
+              "sumR": 23
+            },
+            "Jul–Nov": {
+              "n": 44,
+              "winrate": 25,
+              "sumR": -11
+            }
+          },
+          "r3": {
+            "n": 81,
+            "winrate": 30.9,
+            "sumR": 19,
+            "Jan–Jun": {
+              "n": 37,
+              "winrate": 43.2,
+              "sumR": 27
+            },
+            "Jul–Nov": {
+              "n": 44,
+              "winrate": 20.5,
+              "sumR": -8
+            }
+          },
+          "r4": {
+            "n": 80,
+            "winrate": 25,
+            "sumR": 20,
+            "Jan–Jun": {
+              "n": 36,
+              "winrate": 33.3,
+              "sumR": 24
+            },
+            "Jul–Nov": {
+              "n": 44,
+              "winrate": 18.2,
+              "sumR": -4
+            }
+          },
+          "r5": {
+            "n": 80,
+            "winrate": 20,
+            "sumR": 16,
+            "Jan–Jun": {
+              "n": 36,
+              "winrate": 27.8,
+              "sumR": 24
+            },
+            "Jul–Nov": {
+              "n": 44,
+              "winrate": 13.6,
+              "sumR": -8
+            }
+          }
+        }
+      },
+      "rules": {
+        "fest 3R": {
+          "n": 216,
+          "winrate": 32.4,
+          "sumR": 64,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 29.4,
+            "sumR": 19
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 35.5,
+            "sumR": 45
+          }
+        },
+        "fest 5R": {
+          "n": 215,
+          "winrate": 22.3,
+          "sumR": 73,
+          "Jan–Jun": {
+            "n": 108,
+            "winrate": 19.4,
+            "sumR": 18
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 25.2,
+            "sumR": 55
+          }
+        },
+        "Konfig": {
+          "n": 216,
+          "winrate": 33.3,
+          "sumR": 112,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 33,
+            "sumR": 45
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 33.6,
+            "sumR": 67
+          }
+        },
+        "gebrochen 5R, sonst 3R": {
+          "n": 216,
+          "winrate": 28.2,
+          "sumR": 78,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 24.8,
+            "sumR": 17
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 31.8,
+            "sumR": 61
+          }
+        },
+        "gebrochen oder keine Gegen-Ebene 5R, sonst 3R": {
+          "n": 216,
+          "winrate": 26.4,
+          "sumR": 76,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 24.8,
+            "sumR": 21
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 28,
+            "sumR": 55
+          }
+        }
+      }
+    },
+    "1c Close ab OB1-Start": {
+      "groups": {
+        "gebrochen": {
+          "r2": {
+            "n": 103,
+            "winrate": 39.8,
+            "sumR": 20,
+            "Jan–Jun": {
+              "n": 50,
+              "winrate": 28,
+              "sumR": -8
+            },
+            "Jul–Nov": {
+              "n": 53,
+              "winrate": 50.9,
+              "sumR": 28
+            }
+          },
+          "r3": {
+            "n": 103,
+            "winrate": 31.1,
+            "sumR": 25,
+            "Jan–Jun": {
+              "n": 50,
+              "winrate": 20,
+              "sumR": -10
+            },
+            "Jul–Nov": {
+              "n": 53,
+              "winrate": 41.5,
+              "sumR": 35
+            }
+          },
+          "r4": {
+            "n": 103,
+            "winrate": 30.1,
+            "sumR": 52,
+            "Jan–Jun": {
+              "n": 50,
+              "winrate": 20,
+              "sumR": 0
+            },
+            "Jul–Nov": {
+              "n": 53,
+              "winrate": 39.6,
+              "sumR": 52
+            }
+          },
+          "r5": {
+            "n": 103,
+            "winrate": 26.2,
+            "sumR": 59,
+            "Jan–Jun": {
+              "n": 50,
+              "winrate": 16,
+              "sumR": -2
+            },
+            "Jul–Nov": {
+              "n": 53,
+              "winrate": 35.8,
+              "sumR": 61
+            }
+          }
+        },
+        "keine Gegen-Ebene": {
+          "r2": {
+            "n": 35,
+            "winrate": 42.9,
+            "sumR": 10,
+            "Jan–Jun": {
+              "n": 15,
+              "winrate": 26.7,
+              "sumR": -3
+            },
+            "Jul–Nov": {
+              "n": 20,
+              "winrate": 55,
+              "sumR": 13
+            }
+          },
+          "r3": {
+            "n": 35,
+            "winrate": 40,
+            "sumR": 21,
+            "Jan–Jun": {
+              "n": 15,
+              "winrate": 26.7,
+              "sumR": 1
+            },
+            "Jul–Nov": {
+              "n": 20,
+              "winrate": 50,
+              "sumR": 20
+            }
+          },
+          "r4": {
+            "n": 35,
+            "winrate": 31.4,
+            "sumR": 20,
+            "Jan–Jun": {
+              "n": 15,
+              "winrate": 26.7,
+              "sumR": 5
+            },
+            "Jul–Nov": {
+              "n": 20,
+              "winrate": 35,
+              "sumR": 15
+            }
+          },
+          "r5": {
+            "n": 35,
+            "winrate": 22.9,
+            "sumR": 13,
+            "Jan–Jun": {
+              "n": 15,
+              "winrate": 20,
+              "sumR": 3
+            },
+            "Jul–Nov": {
+              "n": 20,
+              "winrate": 25,
+              "sumR": 10
+            }
+          }
+        },
+        "nicht gebrochen": {
+          "r2": {
+            "n": 78,
+            "winrate": 39.7,
+            "sumR": 15,
+            "Jan–Jun": {
+              "n": 44,
+              "winrate": 54.5,
+              "sumR": 28
+            },
+            "Jul–Nov": {
+              "n": 34,
+              "winrate": 20.6,
+              "sumR": -13
+            }
+          },
+          "r3": {
+            "n": 78,
+            "winrate": 30.8,
+            "sumR": 18,
+            "Jan–Jun": {
+              "n": 44,
+              "winrate": 40.9,
+              "sumR": 28
+            },
+            "Jul–Nov": {
+              "n": 34,
+              "winrate": 17.6,
+              "sumR": -10
+            }
+          },
+          "r4": {
+            "n": 77,
+            "winrate": 22.1,
+            "sumR": 8,
+            "Jan–Jun": {
+              "n": 43,
+              "winrate": 27.9,
+              "sumR": 17
+            },
+            "Jul–Nov": {
+              "n": 34,
+              "winrate": 14.7,
+              "sumR": -9
+            }
+          },
+          "r5": {
+            "n": 77,
+            "winrate": 16.9,
+            "sumR": 1,
+            "Jan–Jun": {
+              "n": 43,
+              "winrate": 23.3,
+              "sumR": 17
+            },
+            "Jul–Nov": {
+              "n": 34,
+              "winrate": 8.8,
+              "sumR": -16
+            }
+          }
+        }
+      },
+      "rules": {
+        "fest 3R": {
+          "n": 216,
+          "winrate": 32.4,
+          "sumR": 64,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 29.4,
+            "sumR": 19
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 35.5,
+            "sumR": 45
+          }
+        },
+        "fest 5R": {
+          "n": 215,
+          "winrate": 22.3,
+          "sumR": 73,
+          "Jan–Jun": {
+            "n": 108,
+            "winrate": 19.4,
+            "sumR": 18
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 25.2,
+            "sumR": 55
+          }
+        },
+        "Konfig": {
+          "n": 216,
+          "winrate": 33.3,
+          "sumR": 112,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 33,
+            "sumR": 45
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 33.6,
+            "sumR": 67
+          }
+        },
+        "gebrochen 5R, sonst 3R": {
+          "n": 216,
+          "winrate": 30.1,
+          "sumR": 98,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 27.5,
+            "sumR": 27
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 32.7,
+            "sumR": 71
+          }
+        },
+        "gebrochen oder keine Gegen-Ebene 5R, sonst 3R": {
+          "n": 216,
+          "winrate": 27.3,
+          "sumR": 90,
+          "Jan–Jun": {
+            "n": 109,
+            "winrate": 26.6,
+            "sumR": 29
+          },
+          "Jul–Nov": {
+            "n": 107,
+            "winrate": 28,
+            "sumR": 61
+          }
+        }
+      }
+    }
+  },
+  "pins": {
+    "521": {
+      "note": "EMAs gegen den short. M5 Struktur echt unschön. nicht besonders bärisch. eher Korrektiv.",
+      "found": true,
+      "inV3": true,
+      "r3": "loss",
+      "r5": "loss",
+      "classes": {
+        "1a Close ab Quellen-Retest": "nicht gebrochen",
+        "1b Docht ab Quellen-Retest": "nicht gebrochen",
+        "1c Close ab OB1-Start": "nicht gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "uptrend",
+          "pivot": {
+            "price": 4386.11,
+            "time": 1788948000,
+            "type": "protected-low"
+          },
+          "close": false,
+          "wick": false
+        },
+        "ob1Start": {
+          "innerTrend": "uptrend",
+          "pivot": {
+            "price": 4386.11,
+            "time": 1788948000,
+            "type": "protected-low"
+          },
+          "close": false,
+          "wick": false
+        }
+      },
+      "outer": {
+        "m5_5d": "downtrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "downtrend",
+        "m5_21d": "downtrend",
+        "m5_30d": "downtrend",
+        "h1_5d": "unknown",
+        "h1_7d": "downtrend",
+        "h1_14d": "downtrend",
+        "h1_21d": "downtrend",
+        "h1_30d": "downtrend",
+        "h4_5d": "unknown",
+        "h4_7d": "downtrend",
+        "h4_14d": "unknown",
+        "h4_21d": "downtrend",
+        "h4_30d": "unknown"
+      }
+    },
+    "522": {
+      "note": "scheiß Price Action. keine gute bullische M5 Struktur",
+      "found": true,
+      "inV3": false,
+      "r3": "loss",
+      "r5": "loss",
+      "classes": {
+        "1a Close ab Quellen-Retest": "nicht gebrochen",
+        "1b Docht ab Quellen-Retest": "gebrochen",
+        "1c Close ab OB1-Start": "nicht gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 4404.07,
+            "time": 1787022000,
+            "type": "protected-high"
+          },
+          "close": false,
+          "wick": true
+        },
+        "ob1Start": {
+          "innerTrend": "uptrend",
+          "pivot": {
+            "price": 4404.07,
+            "time": 1787022000,
+            "type": "protected-high"
+          },
+          "close": false,
+          "wick": true
+        }
+      },
+      "outer": {
+        "m5_5d": "uptrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "uptrend",
+        "m5_21d": "uptrend",
+        "m5_30d": "uptrend",
+        "h1_5d": "uptrend",
+        "h1_7d": "unknown",
+        "h1_14d": "uptrend",
+        "h1_21d": "uptrend",
+        "h1_30d": "uptrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "unknown",
+        "h4_21d": "uptrend",
+        "h4_30d": "uptrend"
+      }
+    },
+    "523": {
+      "note": "mega bullischer outertrend. Shorten dann um die falsche Uhrzeit direkt nach einem bullischen 1h OB. nicht gut",
+      "found": true,
+      "inV3": true,
+      "r3": "loss",
+      "r5": "loss",
+      "classes": {
+        "1a Close ab Quellen-Retest": "nicht gebrochen",
+        "1b Docht ab Quellen-Retest": "nicht gebrochen",
+        "1c Close ab OB1-Start": "gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "uptrend",
+          "pivot": {
+            "price": 4377.17,
+            "time": 1786970700,
+            "type": "protected-low"
+          },
+          "close": false,
+          "wick": false
+        },
+        "ob1Start": {
+          "innerTrend": "uptrend",
+          "pivot": {
+            "price": 4417.58,
+            "time": 1786981500,
+            "type": "break-of-structure"
+          },
+          "close": true,
+          "wick": true
+        }
+      },
+      "outer": {
+        "m5_5d": "downtrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "uptrend",
+        "m5_21d": "uptrend",
+        "m5_30d": "uptrend",
+        "h1_5d": "downtrend",
+        "h1_7d": "unknown",
+        "h1_14d": "uptrend",
+        "h1_21d": "uptrend",
+        "h1_30d": "uptrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "unknown",
+        "h4_21d": "uptrend",
+        "h4_30d": "uptrend"
+      }
+    },
+    "524": {
+      "note": "schwierig umzusetzende anti-confluence: bärischer LS der NY Session am Vortag und sehr impulsive bärische Bewegung in den gescheiterten Long Versuch",
+      "found": true,
+      "inV3": false,
+      "r3": "loss",
+      "r5": "loss",
+      "classes": {
+        "1a Close ab Quellen-Retest": "gebrochen",
+        "1b Docht ab Quellen-Retest": "gebrochen",
+        "1c Close ab OB1-Start": "gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 3929.65,
+            "time": 1793682900,
+            "type": "protected-high"
+          },
+          "close": true,
+          "wick": true
+        },
+        "ob1Start": {
+          "innerTrend": "uptrend",
+          "pivot": {
+            "price": 3926.87,
+            "time": 1793687700,
+            "type": "break-of-structure"
+          },
+          "close": true,
+          "wick": true
+        }
+      },
+      "outer": {
+        "m5_5d": "downtrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "downtrend",
+        "m5_21d": "downtrend",
+        "m5_30d": "downtrend",
+        "h1_5d": "unknown",
+        "h1_7d": "downtrend",
+        "h1_14d": "downtrend",
+        "h1_21d": "downtrend",
+        "h1_30d": "downtrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "downtrend",
+        "h4_21d": "downtrend",
+        "h4_30d": "downtrend"
+      }
+    },
+    "525": {
+      "note": "beide DOBs sind im Kraft-OB. Nicht sooo geil.\nHmmm Long geht eig auf. Problem ist, dass wir longen, bevor wir eine gute bullische M5 STruktur bekommen.",
+      "found": true,
+      "inV3": false,
+      "r3": "loss",
+      "r5": "loss",
+      "classes": {
+        "1a Close ab Quellen-Retest": "nicht gebrochen",
+        "1b Docht ab Quellen-Retest": "nicht gebrochen",
+        "1c Close ab OB1-Start": "nicht gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 3929.65,
+            "time": 1793682900,
+            "type": "protected-high"
+          },
+          "close": false,
+          "wick": false
+        },
+        "ob1Start": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 3926.87,
+            "time": 1793687700,
+            "type": "protected-high"
+          },
+          "close": false,
+          "wick": false
+        }
+      },
+      "outer": {
+        "m5_5d": "downtrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "downtrend",
+        "m5_21d": "downtrend",
+        "m5_30d": "downtrend",
+        "h1_5d": "unknown",
+        "h1_7d": "downtrend",
+        "h1_14d": "downtrend",
+        "h1_21d": "downtrend",
+        "h1_30d": "downtrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "downtrend",
+        "h4_21d": "downtrend",
+        "h4_30d": "downtrend"
+      }
+    },
+    "526": {
+      "note": "gescheiterter long gegen nen lang anhaltenden bärischen trend.\nund bärische DOBs direkt gegen den long",
+      "found": true,
+      "inV3": false,
+      "r3": "loss",
+      "r5": "loss",
+      "classes": {
+        "1a Close ab Quellen-Retest": "nicht gebrochen",
+        "1b Docht ab Quellen-Retest": "nicht gebrochen",
+        "1c Close ab OB1-Start": "nicht gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 4064.89,
+            "time": 1792680600,
+            "type": "protected-high"
+          },
+          "close": false,
+          "wick": false
+        },
+        "ob1Start": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 4064.89,
+            "time": 1792680600,
+            "type": "protected-high"
+          },
+          "close": false,
+          "wick": false
+        }
+      },
+      "outer": {
+        "m5_5d": "downtrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "downtrend",
+        "m5_21d": "downtrend",
+        "m5_30d": "downtrend",
+        "h1_5d": "downtrend",
+        "h1_7d": "downtrend",
+        "h1_14d": "downtrend",
+        "h1_21d": "downtrend",
+        "h1_30d": "downtrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "unknown",
+        "h4_21d": "downtrend",
+        "h4_30d": "downtrend"
+      }
+    },
+    "527": {
+      "note": "weder bärische noch bullische kurzfristige M5 Sturktur => triangle pattern => das ist pures gambling",
+      "found": true,
+      "inV3": true,
+      "r3": "loss",
+      "r5": "loss",
+      "classes": {
+        "1a Close ab Quellen-Retest": "nicht gebrochen",
+        "1b Docht ab Quellen-Retest": "nicht gebrochen",
+        "1c Close ab OB1-Start": "nicht gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "uptrend",
+          "pivot": {
+            "price": 4154.68,
+            "time": 1792156800,
+            "type": "protected-low"
+          },
+          "close": false,
+          "wick": false
+        },
+        "ob1Start": {
+          "innerTrend": "uptrend",
+          "pivot": {
+            "price": 4154.68,
+            "time": 1792156800,
+            "type": "protected-low"
+          },
+          "close": false,
+          "wick": false
+        }
+      },
+      "outer": {
+        "m5_5d": "uptrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "uptrend",
+        "m5_21d": "downtrend",
+        "m5_30d": "downtrend",
+        "h1_5d": "uptrend",
+        "h1_7d": "downtrend",
+        "h1_14d": "uptrend",
+        "h1_21d": "downtrend",
+        "h1_30d": "downtrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "unknown",
+        "h4_21d": "unknown",
+        "h4_30d": "downtrend"
+      }
+    },
+    "528": {
+      "note": "wieder längerer uptrend. zwar bekommen wir ne gute kurzfristige bärische struktur rein, aber der bullische BOS-Pivot ist noch nicht gebrochen",
+      "found": true,
+      "inV3": true,
+      "r3": "loss",
+      "r5": "loss",
+      "classes": {
+        "1a Close ab Quellen-Retest": "nicht gebrochen",
+        "1b Docht ab Quellen-Retest": "nicht gebrochen",
+        "1c Close ab OB1-Start": "nicht gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 4157.91,
+            "time": 1792092600,
+            "type": "break-of-structure"
+          },
+          "close": false,
+          "wick": false
+        },
+        "ob1Start": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 4157.91,
+            "time": 1792092600,
+            "type": "break-of-structure"
+          },
+          "close": false,
+          "wick": false
+        }
+      },
+      "outer": {
+        "m5_5d": "downtrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "downtrend",
+        "m5_21d": "downtrend",
+        "m5_30d": "downtrend",
+        "h1_5d": "downtrend",
+        "h1_7d": "downtrend",
+        "h1_14d": "downtrend",
+        "h1_21d": "downtrend",
+        "h1_30d": "downtrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "downtrend",
+        "h4_21d": "downtrend",
+        "h4_30d": "downtrend"
+      }
+    },
+    "529": {
+      "note": "hier haben wir eine mittelfristige bullische struktur, aber bis zum short haben sich wieder zwei innerranges gebildet, die für einen short sprechen. \nvon der längeren uptrend ist der BOS-Pivot bereits gebrochen",
+      "found": true,
+      "inV3": true,
+      "r3": "success",
+      "r5": "success",
+      "classes": {
+        "1a Close ab Quellen-Retest": "gebrochen",
+        "1b Docht ab Quellen-Retest": "gebrochen",
+        "1c Close ab OB1-Start": "gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 3950.42,
+            "time": 1793633700,
+            "type": "break-of-structure"
+          },
+          "close": true,
+          "wick": true
+        },
+        "ob1Start": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 3950.42,
+            "time": 1793633700,
+            "type": "break-of-structure"
+          },
+          "close": true,
+          "wick": true
+        }
+      },
+      "outer": {
+        "m5_5d": "downtrend",
+        "m5_7d": "downtrend",
+        "m5_14d": "downtrend",
+        "m5_21d": "downtrend",
+        "m5_30d": "downtrend",
+        "h1_5d": "downtrend",
+        "h1_7d": "downtrend",
+        "h1_14d": "downtrend",
+        "h1_21d": "downtrend",
+        "h1_30d": "downtrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "downtrend",
+        "h4_21d": "downtrend",
+        "h4_30d": "downtrend"
+      }
+    },
+    "530": {
+      "note": "win long gegen einen länger andauernden downtrend. aber BOS-Pivot wurde nach oben gebrohcen, von daher ok",
+      "found": true,
+      "inV3": true,
+      "r3": "success",
+      "r5": "success",
+      "classes": {
+        "1a Close ab Quellen-Retest": "nicht gebrochen",
+        "1b Docht ab Quellen-Retest": "nicht gebrochen",
+        "1c Close ab OB1-Start": "gebrochen"
+      },
+      "bos": {
+        "quellenRetest": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 4403.73,
+            "time": 1788887100,
+            "type": "protected-high"
+          },
+          "close": false,
+          "wick": false
+        },
+        "ob1Start": {
+          "innerTrend": "downtrend",
+          "pivot": {
+            "price": 4359.79,
+            "time": 1788910200,
+            "type": "break-of-structure"
+          },
+          "close": true,
+          "wick": true
+        }
+      },
+      "outer": {
+        "m5_5d": "downtrend",
+        "m5_7d": "uptrend",
+        "m5_14d": "downtrend",
+        "m5_21d": "downtrend",
+        "m5_30d": "downtrend",
+        "h1_5d": "downtrend",
+        "h1_7d": "unknown",
+        "h1_14d": "downtrend",
+        "h1_21d": "downtrend",
+        "h1_30d": "downtrend",
+        "h4_5d": "unknown",
+        "h4_7d": "unknown",
+        "h4_14d": "unknown",
+        "h4_21d": "downtrend",
+        "h4_30d": "unknown"
+      }
+    }
+  }
+}

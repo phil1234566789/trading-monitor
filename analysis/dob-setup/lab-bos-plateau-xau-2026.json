@@ -1,0 +1,5237 @@
+{
+  "measurement": "dob-lab-bos-plateau-v1",
+  "git": "b91c7aab-dirty",
+  "symbol": "XAUUSD",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "counterDobMode": "live_block_dead_5r",
+  "methodology": [
+    "Trades: v2 mit Gegen-DOB-Status wie der v3-Fill (bester über die tragenden Paare); Träger „keiner“ bzw. „keiner + nur tote“.",
+    "Struktur: unveränderter Trend-Algo auf H1 (Perioden 5/2), Pivots ab 5/7/10/14 Tagen vor der OB2-Retest-Zeit, nur geschlossene Kerzen.",
+    "Ebene: outer = oberste, inner = innerste bestätigte, range = innerste Ebene, deren aktuelle Range den Entry-Preis enthält (sonst oberste).",
+    "1a = Ebene mit dem Trade, 1b = dagegen und BOS-Pivot (protected-high/-low dieser Ebene) bis Entry nicht per M5-Schluss gebrochen, 1c = gebrochen.",
+    "Konfig = dobConfigTpR(aktive dob_guardrails, Entry, Gegen-DOB-Status); Regel = 1c → 5R, sonst Konfig. n = Win + Loss, Halbjahre nach Berliner Entry-Monat."
+  ],
+  "carriers": {
+    "keiner": {
+      "trades": 217,
+      "konfig": {
+        "n": 216,
+        "winrate": 33.3,
+        "sumR": 112,
+        "Jan–Jun": {
+          "n": 109,
+          "winrate": 33,
+          "sumR": 45
+        },
+        "Jul–Nov": {
+          "n": 107,
+          "winrate": 33.6,
+          "sumR": 67
+        }
+      },
+      "windows": {
+        "h1_5d_outer": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 82,
+                "winrate": 36.6,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 35,
+                  "winrate": 22.9,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 46.8,
+                  "sumR": 41
+                }
+              },
+              "r5": {
+                "n": 82,
+                "winrate": 25.6,
+                "sumR": 44,
+                "Jan–Jun": {
+                  "n": 35,
+                  "winrate": 14.3,
+                  "sumR": -5
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 34,
+                  "sumR": 49
+                }
+              },
+              "konfig": {
+                "n": 82,
+                "winrate": 40.2,
+                "sumR": 70,
+                "Jan–Jun": {
+                  "n": 35,
+                  "winrate": 34.3,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 44.7,
+                  "sumR": 55
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 46,
+                "winrate": 34.8,
+                "sumR": 18,
+                "Jan–Jun": {
+                  "n": 19,
+                  "winrate": 42.1,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 29.6,
+                  "sumR": 5
+                }
+              },
+              "r5": {
+                "n": 46,
+                "winrate": 21.7,
+                "sumR": 14,
+                "Jan–Jun": {
+                  "n": 19,
+                  "winrate": 26.3,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 18.5,
+                  "sumR": 3
+                }
+              },
+              "konfig": {
+                "n": 46,
+                "winrate": 34.8,
+                "sumR": 24,
+                "Jan–Jun": {
+                  "n": 19,
+                  "winrate": 42.1,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 29.6,
+                  "sumR": 11
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 19,
+                "winrate": 31.6,
+                "sumR": 5,
+                "Jan–Jun": {
+                  "n": 9,
+                  "winrate": 55.6,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 10,
+                  "winrate": 10,
+                  "sumR": -6
+                }
+              },
+              "r5": {
+                "n": 19,
+                "winrate": 26.3,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 9,
+                  "winrate": 44.4,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 10,
+                  "winrate": 10,
+                  "sumR": -4
+                }
+              },
+              "konfig": {
+                "n": 19,
+                "winrate": 31.6,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 9,
+                  "winrate": 55.6,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 10,
+                  "winrate": 10,
+                  "sumR": -5
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 69,
+                "winrate": 26.1,
+                "sumR": 3,
+                "Jan–Jun": {
+                  "n": 46,
+                  "winrate": 23.9,
+                  "sumR": -2
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 30.4,
+                  "sumR": 5
+                }
+              },
+              "r5": {
+                "n": 68,
+                "winrate": 17.6,
+                "sumR": 4,
+                "Jan–Jun": {
+                  "n": 45,
+                  "winrate": 15.6,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 21.7,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 69,
+                "winrate": 24.6,
+                "sumR": 7,
+                "Jan–Jun": {
+                  "n": 46,
+                  "winrate": 23.9,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 6
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.9,
+            "sumR": 112,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 44
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 33.6,
+              "sumR": 68
+            }
+          }
+        },
+        "h1_5d_inner": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 67,
+                "winrate": 37.3,
+                "sumR": 33,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 27.8,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 48.4,
+                  "sumR": 29
+                }
+              },
+              "r5": {
+                "n": 67,
+                "winrate": 25.4,
+                "sumR": 35,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 19.4,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 32.3,
+                  "sumR": 29
+                }
+              },
+              "konfig": {
+                "n": 67,
+                "winrate": 38.8,
+                "sumR": 54,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 33.3,
+                  "sumR": 18
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 45.2,
+                  "sumR": 36
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 64,
+                "winrate": 34.4,
+                "sumR": 24,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 43.5,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 29.3,
+                  "sumR": 7
+                }
+              },
+              "r5": {
+                "n": 64,
+                "winrate": 21.9,
+                "sumR": 20,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 19.5,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 64,
+                "winrate": 35.9,
+                "sumR": 37,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 47.8,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 29.3,
+                  "sumR": 17
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 20,
+                "winrate": 35,
+                "sumR": 8,
+                "Jan–Jun": {
+                  "n": 8,
+                  "winrate": 37.5,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 12,
+                  "winrate": 33.3,
+                  "sumR": 4
+                }
+              },
+              "r5": {
+                "n": 20,
+                "winrate": 35,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 8,
+                  "winrate": 37.5,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 12,
+                  "winrate": 33.3,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 20,
+                "winrate": 40,
+                "sumR": 18,
+                "Jan–Jun": {
+                  "n": 8,
+                  "winrate": 50,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 12,
+                  "winrate": 33.3,
+                  "sumR": 8
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 65,
+                "winrate": 24.6,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 42,
+                  "winrate": 21.4,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 30.4,
+                  "sumR": 5
+                }
+              },
+              "r5": {
+                "n": 64,
+                "winrate": 15.6,
+                "sumR": -4,
+                "Jan–Jun": {
+                  "n": 41,
+                  "winrate": 12.2,
+                  "sumR": -11
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 21.7,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 65,
+                "winrate": 23.1,
+                "sumR": 3,
+                "Jan–Jun": {
+                  "n": 42,
+                  "winrate": 21.4,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 6
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.9,
+            "sumR": 116,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 45
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 33.6,
+              "sumR": 71
+            }
+          }
+        },
+        "h1_5d_range": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 68,
+                "winrate": 38.2,
+                "sumR": 36,
+                "Jan–Jun": {
+                  "n": 37,
+                  "winrate": 29.7,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 48.4,
+                  "sumR": 29
+                }
+              },
+              "r5": {
+                "n": 68,
+                "winrate": 26.5,
+                "sumR": 40,
+                "Jan–Jun": {
+                  "n": 37,
+                  "winrate": 21.6,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 32.3,
+                  "sumR": 29
+                }
+              },
+              "konfig": {
+                "n": 68,
+                "winrate": 39.7,
+                "sumR": 58,
+                "Jan–Jun": {
+                  "n": 37,
+                  "winrate": 35.1,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 45.2,
+                  "sumR": 36
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 63,
+                "winrate": 33.3,
+                "sumR": 21,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 40.9,
+                  "sumR": 14
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 29.3,
+                  "sumR": 7
+                }
+              },
+              "r5": {
+                "n": 63,
+                "winrate": 20.6,
+                "sumR": 15,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 22.7,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 19.5,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 63,
+                "winrate": 34.9,
+                "sumR": 33,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 45.5,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 29.3,
+                  "sumR": 17
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 20,
+                "winrate": 35,
+                "sumR": 8,
+                "Jan–Jun": {
+                  "n": 8,
+                  "winrate": 37.5,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 12,
+                  "winrate": 33.3,
+                  "sumR": 4
+                }
+              },
+              "r5": {
+                "n": 20,
+                "winrate": 35,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 8,
+                  "winrate": 37.5,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 12,
+                  "winrate": 33.3,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 20,
+                "winrate": 40,
+                "sumR": 18,
+                "Jan–Jun": {
+                  "n": 8,
+                  "winrate": 50,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 12,
+                  "winrate": 33.3,
+                  "sumR": 8
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 65,
+                "winrate": 24.6,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 42,
+                  "winrate": 21.4,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 30.4,
+                  "sumR": 5
+                }
+              },
+              "r5": {
+                "n": 64,
+                "winrate": 15.6,
+                "sumR": -4,
+                "Jan–Jun": {
+                  "n": 41,
+                  "winrate": 12.2,
+                  "sumR": -11
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 21.7,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 65,
+                "winrate": 23.1,
+                "sumR": 3,
+                "Jan–Jun": {
+                  "n": 42,
+                  "winrate": 21.4,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 6
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.9,
+            "sumR": 116,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 45
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 33.6,
+              "sumR": 71
+            }
+          }
+        },
+        "h1_7d_outer": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 99,
+                "winrate": 30.3,
+                "sumR": 21,
+                "Jan–Jun": {
+                  "n": 51,
+                  "winrate": 25.5,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 35.4,
+                  "sumR": 20
+                }
+              },
+              "r5": {
+                "n": 99,
+                "winrate": 19.2,
+                "sumR": 15,
+                "Jan–Jun": {
+                  "n": 51,
+                  "winrate": 17.6,
+                  "sumR": 3
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 20.8,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 99,
+                "winrate": 32.3,
+                "sumR": 43,
+                "Jan–Jun": {
+                  "n": 51,
+                  "winrate": 31.4,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 33.3,
+                  "sumR": 26
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 30,
+                "winrate": 33.3,
+                "sumR": 10,
+                "Jan–Jun": {
+                  "n": 12,
+                  "winrate": 33.3,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 33.3,
+                  "sumR": 6
+                }
+              },
+              "r5": {
+                "n": 30,
+                "winrate": 20,
+                "sumR": 6,
+                "Jan–Jun": {
+                  "n": 12,
+                  "winrate": 16.7,
+                  "sumR": 0
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 22.2,
+                  "sumR": 6
+                }
+              },
+              "konfig": {
+                "n": 30,
+                "winrate": 30,
+                "sumR": 9,
+                "Jan–Jun": {
+                  "n": 12,
+                  "winrate": 33.3,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 27.8,
+                  "sumR": 7
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 37,
+                "winrate": 27,
+                "sumR": 3,
+                "Jan–Jun": {
+                  "n": 17,
+                  "winrate": 23.5,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 30,
+                  "sumR": 4
+                }
+              },
+              "r5": {
+                "n": 37,
+                "winrate": 18.9,
+                "sumR": 5,
+                "Jan–Jun": {
+                  "n": 17,
+                  "winrate": 11.8,
+                  "sumR": -5
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 25,
+                  "sumR": 10
+                }
+              },
+              "konfig": {
+                "n": 37,
+                "winrate": 29.7,
+                "sumR": 12,
+                "Jan–Jun": {
+                  "n": 17,
+                  "winrate": 29.4,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 30,
+                  "sumR": 7
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 50,
+                "winrate": 40,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 29,
+                  "winrate": 37.9,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 42.9,
+                  "sumR": 15
+                }
+              },
+              "r5": {
+                "n": 49,
+                "winrate": 32.7,
+                "sumR": 47,
+                "Jan–Jun": {
+                  "n": 28,
+                  "winrate": 28.6,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 38.1,
+                  "sumR": 27
+                }
+              },
+              "konfig": {
+                "n": 50,
+                "winrate": 40,
+                "sumR": 48,
+                "Jan–Jun": {
+                  "n": 29,
+                  "winrate": 37.9,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 42.9,
+                  "sumR": 27
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 31.5,
+            "sumR": 105,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 30.3,
+              "sumR": 35
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 32.7,
+              "sumR": 70
+            }
+          }
+        },
+        "h1_7d_inner": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 85,
+                "winrate": 27.1,
+                "sumR": 7,
+                "Jan–Jun": {
+                  "n": 52,
+                  "winrate": 19.2,
+                  "sumR": -12
+                },
+                "Jul–Nov": {
+                  "n": 33,
+                  "winrate": 39.4,
+                  "sumR": 19
+                }
+              },
+              "r5": {
+                "n": 85,
+                "winrate": 15.3,
+                "sumR": -7,
+                "Jan–Jun": {
+                  "n": 52,
+                  "winrate": 9.6,
+                  "sumR": -22
+                },
+                "Jul–Nov": {
+                  "n": 33,
+                  "winrate": 24.2,
+                  "sumR": 15
+                }
+              },
+              "konfig": {
+                "n": 85,
+                "winrate": 28.2,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 52,
+                  "winrate": 23.1,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 33,
+                  "winrate": 36.4,
+                  "sumR": 21
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 56,
+                "winrate": 33.9,
+                "sumR": 20,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 45.5,
+                  "sumR": 18
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 26.5,
+                  "sumR": 2
+                }
+              },
+              "r5": {
+                "n": 56,
+                "winrate": 21.4,
+                "sumR": 16,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 31.8,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 14.7,
+                  "sumR": -4
+                }
+              },
+              "konfig": {
+                "n": 56,
+                "winrate": 33.9,
+                "sumR": 26,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 50,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 23.5,
+                  "sumR": 5
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 25,
+                "winrate": 28,
+                "sumR": 3,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 14.3,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 33.3,
+                  "sumR": 6
+                }
+              },
+              "r5": {
+                "n": 25,
+                "winrate": 24,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 14.3,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 27.8,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 25,
+                "winrate": 32,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 28.6,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 33.3,
+                  "sumR": 10
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 50,
+                "winrate": 42,
+                "sumR": 34,
+                "Jan–Jun": {
+                  "n": 28,
+                  "winrate": 39.3,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 22,
+                  "winrate": 45.5,
+                  "sumR": 18
+                }
+              },
+              "r5": {
+                "n": 49,
+                "winrate": 34.7,
+                "sumR": 53,
+                "Jan–Jun": {
+                  "n": 27,
+                  "winrate": 29.6,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 22,
+                  "winrate": 40.9,
+                  "sumR": 32
+                }
+              },
+              "konfig": {
+                "n": 50,
+                "winrate": 42,
+                "sumR": 53,
+                "Jan–Jun": {
+                  "n": 28,
+                  "winrate": 39.3,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 22,
+                  "winrate": 45.5,
+                  "sumR": 31
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.4,
+            "sumR": 112,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 43
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 32.7,
+              "sumR": 69
+            }
+          }
+        },
+        "h1_7d_range": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 84,
+                "winrate": 28.6,
+                "sumR": 12,
+                "Jan–Jun": {
+                  "n": 52,
+                  "winrate": 23.1,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 37.5,
+                  "sumR": 16
+                }
+              },
+              "r5": {
+                "n": 84,
+                "winrate": 16.7,
+                "sumR": 0,
+                "Jan–Jun": {
+                  "n": 52,
+                  "winrate": 13.5,
+                  "sumR": -10
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 21.9,
+                  "sumR": 10
+                }
+              },
+              "konfig": {
+                "n": 84,
+                "winrate": 29.8,
+                "sumR": 28,
+                "Jan–Jun": {
+                  "n": 52,
+                  "winrate": 26.9,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 34.4,
+                  "sumR": 17
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 56,
+                "winrate": 32.1,
+                "sumR": 16,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 40.9,
+                  "sumR": 14
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 26.5,
+                  "sumR": 2
+                }
+              },
+              "r5": {
+                "n": 56,
+                "winrate": 19.6,
+                "sumR": 10,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 27.3,
+                  "sumR": 14
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 14.7,
+                  "sumR": -4
+                }
+              },
+              "konfig": {
+                "n": 56,
+                "winrate": 32.1,
+                "sumR": 21,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 45.5,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 23.5,
+                  "sumR": 5
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 27,
+                "winrate": 29.6,
+                "sumR": 5,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 0,
+                  "sumR": -7
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 40,
+                  "sumR": 12
+                }
+              },
+              "r5": {
+                "n": 27,
+                "winrate": 25.9,
+                "sumR": 15,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 0,
+                  "sumR": -7
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 35,
+                  "sumR": 22
+                }
+              },
+              "konfig": {
+                "n": 27,
+                "winrate": 33.3,
+                "sumR": 14,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 14.3,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 40,
+                  "sumR": 18
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 49,
+                "winrate": 40.8,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 28,
+                  "winrate": 39.3,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 42.9,
+                  "sumR": 15
+                }
+              },
+              "r5": {
+                "n": 48,
+                "winrate": 33.3,
+                "sumR": 48,
+                "Jan–Jun": {
+                  "n": 27,
+                  "winrate": 29.6,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 38.1,
+                  "sumR": 27
+                }
+              },
+              "konfig": {
+                "n": 49,
+                "winrate": 40.8,
+                "sumR": 49,
+                "Jan–Jun": {
+                  "n": 28,
+                  "winrate": 39.3,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 42.9,
+                  "sumR": 27
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.4,
+            "sumR": 113,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 42
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 32.7,
+              "sumR": 71
+            }
+          }
+        },
+        "h1_10d_outer": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 110,
+                "winrate": 36.4,
+                "sumR": 50,
+                "Jan–Jun": {
+                  "n": 62,
+                  "winrate": 33.9,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 39.6,
+                  "sumR": 28
+                }
+              },
+              "r5": {
+                "n": 109,
+                "winrate": 22.9,
+                "sumR": 41,
+                "Jan–Jun": {
+                  "n": 61,
+                  "winrate": 21.3,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 25,
+                  "sumR": 24
+                }
+              },
+              "konfig": {
+                "n": 110,
+                "winrate": 40,
+                "sumR": 82,
+                "Jan–Jun": {
+                  "n": 62,
+                  "winrate": 38.7,
+                  "sumR": 38
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 41.7,
+                  "sumR": 44
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 34,
+                "winrate": 29.4,
+                "sumR": 6,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 14.3,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 40,
+                  "sumR": 12
+                }
+              },
+              "r5": {
+                "n": 34,
+                "winrate": 20.6,
+                "sumR": 8,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 7.1,
+                  "sumR": -8
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 30,
+                  "sumR": 16
+                }
+              },
+              "konfig": {
+                "n": 34,
+                "winrate": 26.5,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 14.3,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 35,
+                  "sumR": 17
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 52,
+                "winrate": 32.7,
+                "sumR": 16,
+                "Jan–Jun": {
+                  "n": 18,
+                  "winrate": 38.9,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 29.4,
+                  "sumR": 6
+                }
+              },
+              "r5": {
+                "n": 52,
+                "winrate": 28.8,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 18,
+                  "winrate": 33.3,
+                  "sumR": 18
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 26.5,
+                  "sumR": 20
+                }
+              },
+              "konfig": {
+                "n": 52,
+                "winrate": 32.7,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 18,
+                  "winrate": 44.4,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 34,
+                  "winrate": 26.5,
+                  "sumR": 11
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 20,
+                "winrate": 15,
+                "sumR": -8,
+                "Jan–Jun": {
+                  "n": 15,
+                  "winrate": 13.3,
+                  "sumR": -7
+                },
+                "Jul–Nov": {
+                  "n": 5,
+                  "winrate": 20,
+                  "sumR": -1
+                }
+              },
+              "r5": {
+                "n": 20,
+                "winrate": 5,
+                "sumR": -14,
+                "Jan–Jun": {
+                  "n": 15,
+                  "winrate": 6.7,
+                  "sumR": -9
+                },
+                "Jul–Nov": {
+                  "n": 5,
+                  "winrate": 0,
+                  "sumR": -5
+                }
+              },
+              "konfig": {
+                "n": 20,
+                "winrate": 10,
+                "sumR": -12,
+                "Jan–Jun": {
+                  "n": 15,
+                  "winrate": 13.3,
+                  "sumR": -7
+                },
+                "Jul–Nov": {
+                  "n": 5,
+                  "winrate": 0,
+                  "sumR": -5
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.4,
+            "sumR": 119,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 31.2,
+              "sumR": 43
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 33.6,
+              "sumR": 76
+            }
+          }
+        },
+        "h1_10d_inner": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 99,
+                "winrate": 30.3,
+                "sumR": 21,
+                "Jan–Jun": {
+                  "n": 58,
+                  "winrate": 22.4,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 41.5,
+                  "sumR": 27
+                }
+              },
+              "r5": {
+                "n": 99,
+                "winrate": 20.2,
+                "sumR": 21,
+                "Jan–Jun": {
+                  "n": 58,
+                  "winrate": 13.8,
+                  "sumR": -10
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 29.3,
+                  "sumR": 31
+                }
+              },
+              "konfig": {
+                "n": 99,
+                "winrate": 31.3,
+                "sumR": 45,
+                "Jan–Jun": {
+                  "n": 58,
+                  "winrate": 25.9,
+                  "sumR": 9
+                },
+                "Jul–Nov": {
+                  "n": 41,
+                  "winrate": 39,
+                  "sumR": 36
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 66,
+                "winrate": 37.9,
+                "sumR": 34,
+                "Jan–Jun": {
+                  "n": 24,
+                  "winrate": 50,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 31,
+                  "sumR": 10
+                }
+              },
+              "r5": {
+                "n": 65,
+                "winrate": 24.6,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 30.4,
+                  "sumR": 19
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 21.4,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 66,
+                "winrate": 40.9,
+                "sumR": 52,
+                "Jan–Jun": {
+                  "n": 24,
+                  "winrate": 54.2,
+                  "sumR": 27
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 33.3,
+                  "sumR": 25
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 31,
+                "winrate": 35.5,
+                "sumR": 13,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 38.5,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 33.3,
+                  "sumR": 6
+                }
+              },
+              "r5": {
+                "n": 31,
+                "winrate": 32.3,
+                "sumR": 29,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 38.5,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 27.8,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 31,
+                "winrate": 35.5,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 46.2,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 27.8,
+                  "sumR": 7
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 20,
+                "winrate": 20,
+                "sumR": -4,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 14.3,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 6,
+                  "winrate": 33.3,
+                  "sumR": 2
+                }
+              },
+              "r5": {
+                "n": 20,
+                "winrate": 10,
+                "sumR": -8,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 7.1,
+                  "sumR": -8
+                },
+                "Jul–Nov": {
+                  "n": 6,
+                  "winrate": 16.7,
+                  "sumR": 0
+                }
+              },
+              "konfig": {
+                "n": 20,
+                "winrate": 15,
+                "sumR": -7,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 14.3,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 6,
+                  "winrate": 16.7,
+                  "sumR": -1
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.9,
+            "sumR": 119,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 47
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 33.6,
+              "sumR": 72
+            }
+          }
+        },
+        "h1_10d_range": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 98,
+                "winrate": 30.6,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 58,
+                  "winrate": 25.9,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 40,
+                  "winrate": 37.5,
+                  "sumR": 20
+                }
+              },
+              "r5": {
+                "n": 98,
+                "winrate": 20.4,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 58,
+                  "winrate": 17.2,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 40,
+                  "winrate": 25,
+                  "sumR": 20
+                }
+              },
+              "konfig": {
+                "n": 98,
+                "winrate": 31.6,
+                "sumR": 46,
+                "Jan–Jun": {
+                  "n": 58,
+                  "winrate": 29.3,
+                  "sumR": 19
+                },
+                "Jul–Nov": {
+                  "n": 40,
+                  "winrate": 35,
+                  "sumR": 27
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 66,
+                "winrate": 36.4,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 24,
+                  "winrate": 45.8,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 31,
+                  "sumR": 10
+                }
+              },
+              "r5": {
+                "n": 65,
+                "winrate": 23.1,
+                "sumR": 25,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 21.4,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 66,
+                "winrate": 39.4,
+                "sumR": 47,
+                "Jan–Jun": {
+                  "n": 24,
+                  "winrate": 50,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 33.3,
+                  "sumR": 25
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 33,
+                "winrate": 39.4,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 30.8,
+                  "sumR": 3
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 45,
+                  "sumR": 16
+                }
+              },
+              "r5": {
+                "n": 33,
+                "winrate": 36.4,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 30.8,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 40,
+                  "sumR": 28
+                }
+              },
+              "konfig": {
+                "n": 33,
+                "winrate": 39.4,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 38.5,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 20,
+                  "winrate": 40,
+                  "sumR": 20
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 19,
+                "winrate": 15.8,
+                "sumR": -7,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 14.3,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 5,
+                  "winrate": 20,
+                  "sumR": -1
+                }
+              },
+              "r5": {
+                "n": 19,
+                "winrate": 5.3,
+                "sumR": -13,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 7.1,
+                  "sumR": -8
+                },
+                "Jul–Nov": {
+                  "n": 5,
+                  "winrate": 0,
+                  "sumR": -5
+                }
+              },
+              "konfig": {
+                "n": 19,
+                "winrate": 10.5,
+                "sumR": -11,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 14.3,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 5,
+                  "winrate": 0,
+                  "sumR": -5
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.9,
+            "sumR": 121,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 46
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 33.6,
+              "sumR": 75
+            }
+          }
+        },
+        "h1_14d_outer": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 110,
+                "winrate": 32.7,
+                "sumR": 34,
+                "Jan–Jun": {
+                  "n": 50,
+                  "winrate": 34,
+                  "sumR": 18
+                },
+                "Jul–Nov": {
+                  "n": 60,
+                  "winrate": 31.7,
+                  "sumR": 16
+                }
+              },
+              "r5": {
+                "n": 109,
+                "winrate": 21.1,
+                "sumR": 29,
+                "Jan–Jun": {
+                  "n": 49,
+                  "winrate": 22.4,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 60,
+                  "winrate": 20,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 110,
+                "winrate": 32.7,
+                "sumR": 46,
+                "Jan–Jun": {
+                  "n": 50,
+                  "winrate": 36,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 60,
+                  "winrate": 30,
+                  "sumR": 22
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 34,
+                "winrate": 20.6,
+                "sumR": -6,
+                "Jan–Jun": {
+                  "n": 20,
+                  "winrate": 15,
+                  "sumR": -8
+                },
+                "Jul–Nov": {
+                  "n": 14,
+                  "winrate": 28.6,
+                  "sumR": 2
+                }
+              },
+              "r5": {
+                "n": 34,
+                "winrate": 14.7,
+                "sumR": -4,
+                "Jan–Jun": {
+                  "n": 20,
+                  "winrate": 10,
+                  "sumR": -8
+                },
+                "Jul–Nov": {
+                  "n": 14,
+                  "winrate": 21.4,
+                  "sumR": 4
+                }
+              },
+              "konfig": {
+                "n": 34,
+                "winrate": 20.6,
+                "sumR": -3,
+                "Jan–Jun": {
+                  "n": 20,
+                  "winrate": 20,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 14,
+                  "winrate": 21.4,
+                  "sumR": 1
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 61,
+                "winrate": 41,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 33.3,
+                  "sumR": 12
+                },
+                "Jul–Nov": {
+                  "n": 25,
+                  "winrate": 52,
+                  "sumR": 27
+                }
+              },
+              "r5": {
+                "n": 61,
+                "winrate": 29.5,
+                "sumR": 47,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 22.2,
+                  "sumR": 12
+                },
+                "Jul–Nov": {
+                  "n": 25,
+                  "winrate": 40,
+                  "sumR": 35
+                }
+              },
+              "konfig": {
+                "n": 61,
+                "winrate": 42.6,
+                "sumR": 67,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 36.1,
+                  "sumR": 25
+                },
+                "Jul–Nov": {
+                  "n": 25,
+                  "winrate": 52,
+                  "sumR": 42
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 11,
+                "winrate": 18.2,
+                "sumR": -3,
+                "Jan–Jun": {
+                  "n": 3,
+                  "winrate": 0,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 25,
+                  "sumR": 0
+                }
+              },
+              "r5": {
+                "n": 11,
+                "winrate": 18.2,
+                "sumR": 1,
+                "Jan–Jun": {
+                  "n": 3,
+                  "winrate": 0,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 25,
+                  "sumR": 4
+                }
+              },
+              "konfig": {
+                "n": 11,
+                "winrate": 27.3,
+                "sumR": 2,
+                "Jan–Jun": {
+                  "n": 3,
+                  "winrate": 33.3,
+                  "sumR": 0
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 25,
+                  "sumR": 2
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 29.6,
+            "sumR": 92,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 28.4,
+              "sumR": 32
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 30.8,
+              "sumR": 60
+            }
+          }
+        },
+        "h1_14d_inner": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 105,
+                "winrate": 29.5,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 66,
+                  "winrate": 22.7,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 41,
+                  "sumR": 25
+                }
+              },
+              "r5": {
+                "n": 105,
+                "winrate": 19,
+                "sumR": 15,
+                "Jan–Jun": {
+                  "n": 66,
+                  "winrate": 13.6,
+                  "sumR": -12
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 28.2,
+                  "sumR": 27
+                }
+              },
+              "konfig": {
+                "n": 105,
+                "winrate": 29.5,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 66,
+                  "winrate": 24.2,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 38.5,
+                  "sumR": 33
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 69,
+                "winrate": 37.7,
+                "sumR": 35,
+                "Jan–Jun": {
+                  "n": 26,
+                  "winrate": 46.2,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 43,
+                  "winrate": 32.6,
+                  "sumR": 13
+                }
+              },
+              "r5": {
+                "n": 68,
+                "winrate": 23.5,
+                "sumR": 28,
+                "Jan–Jun": {
+                  "n": 25,
+                  "winrate": 28,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 43,
+                  "winrate": 20.9,
+                  "sumR": 11
+                }
+              },
+              "konfig": {
+                "n": 69,
+                "winrate": 39.1,
+                "sumR": 49,
+                "Jan–Jun": {
+                  "n": 26,
+                  "winrate": 50,
+                  "sumR": 25
+                },
+                "Jul–Nov": {
+                  "n": 43,
+                  "winrate": 32.6,
+                  "sumR": 24
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 29,
+                "winrate": 34.5,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 38.5,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 16,
+                  "winrate": 31.3,
+                  "sumR": 4
+                }
+              },
+              "r5": {
+                "n": 29,
+                "winrate": 31,
+                "sumR": 25,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 38.5,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 16,
+                  "winrate": 25,
+                  "sumR": 8
+                }
+              },
+              "konfig": {
+                "n": 29,
+                "winrate": 34.5,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 13,
+                  "winrate": 46.2,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 16,
+                  "winrate": 25,
+                  "sumR": 4
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 13,
+                "winrate": 23.1,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 0,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 9,
+                  "winrate": 33.3,
+                  "sumR": 3
+                }
+              },
+              "r5": {
+                "n": 13,
+                "winrate": 23.1,
+                "sumR": 5,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 0,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 9,
+                  "winrate": 33.3,
+                  "sumR": 9
+                }
+              },
+              "konfig": {
+                "n": 13,
+                "winrate": 30.8,
+                "sumR": 5,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 25,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 9,
+                  "winrate": 33.3,
+                  "sumR": 6
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.9,
+            "sumR": 118,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 47
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 33.6,
+              "sumR": 71
+            }
+          }
+        },
+        "h1_14d_range": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 100,
+                "winrate": 31,
+                "sumR": 24,
+                "Jan–Jun": {
+                  "n": 62,
+                  "winrate": 27.4,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 38,
+                  "winrate": 36.8,
+                  "sumR": 18
+                }
+              },
+              "r5": {
+                "n": 100,
+                "winrate": 20,
+                "sumR": 20,
+                "Jan–Jun": {
+                  "n": 62,
+                  "winrate": 17.7,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 38,
+                  "winrate": 23.7,
+                  "sumR": 16
+                }
+              },
+              "konfig": {
+                "n": 100,
+                "winrate": 31,
+                "sumR": 44,
+                "Jan–Jun": {
+                  "n": 62,
+                  "winrate": 29,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 38,
+                  "winrate": 34.2,
+                  "sumR": 24
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 69,
+                "winrate": 36.2,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 26,
+                  "winrate": 42.3,
+                  "sumR": 18
+                },
+                "Jul–Nov": {
+                  "n": 43,
+                  "winrate": 32.6,
+                  "sumR": 13
+                }
+              },
+              "r5": {
+                "n": 68,
+                "winrate": 22.1,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 25,
+                  "winrate": 24,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 43,
+                  "winrate": 20.9,
+                  "sumR": 11
+                }
+              },
+              "konfig": {
+                "n": 69,
+                "winrate": 37.7,
+                "sumR": 44,
+                "Jan–Jun": {
+                  "n": 26,
+                  "winrate": 46.2,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 43,
+                  "winrate": 32.6,
+                  "sumR": 24
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 35,
+                "winrate": 34.3,
+                "sumR": 13,
+                "Jan–Jun": {
+                  "n": 17,
+                  "winrate": 23.5,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 44.4,
+                  "sumR": 14
+                }
+              },
+              "r5": {
+                "n": 35,
+                "winrate": 31.4,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 17,
+                  "winrate": 23.5,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 38.9,
+                  "sumR": 24
+                }
+              },
+              "konfig": {
+                "n": 35,
+                "winrate": 34.3,
+                "sumR": 23,
+                "Jan–Jun": {
+                  "n": 17,
+                  "winrate": 29.4,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 38.9,
+                  "sumR": 17
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 12,
+                "winrate": 16.7,
+                "sumR": -4,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 0,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 25,
+                  "sumR": 0
+                }
+              },
+              "r5": {
+                "n": 12,
+                "winrate": 16.7,
+                "sumR": 0,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 0,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 25,
+                  "sumR": 4
+                }
+              },
+              "konfig": {
+                "n": 12,
+                "winrate": 25,
+                "sumR": 1,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 25,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 25,
+                  "sumR": 2
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 216,
+            "winrate": 32.9,
+            "sumR": 120,
+            "Jan–Jun": {
+              "n": 109,
+              "winrate": 32.1,
+              "sumR": 46
+            },
+            "Jul–Nov": {
+              "n": 107,
+              "winrate": 33.6,
+              "sumR": 74
+            }
+          }
+        }
+      }
+    },
+    "keiner + nur tote": {
+      "trades": 385,
+      "konfig": {
+        "n": 384,
+        "winrate": 27.1,
+        "sumR": 136,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 25.7,
+          "sumR": 56
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 28.9,
+          "sumR": 80
+        }
+      },
+      "windows": {
+        "h1_5d_outer": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 126,
+                "winrate": 30.2,
+                "sumR": 26,
+                "Jan–Jun": {
+                  "n": 61,
+                  "winrate": 19.7,
+                  "sumR": -13
+                },
+                "Jul–Nov": {
+                  "n": 65,
+                  "winrate": 40,
+                  "sumR": 39
+                }
+              },
+              "r5": {
+                "n": 126,
+                "winrate": 22.2,
+                "sumR": 42,
+                "Jan–Jun": {
+                  "n": 61,
+                  "winrate": 13.1,
+                  "sumR": -13
+                },
+                "Jul–Nov": {
+                  "n": 65,
+                  "winrate": 30.8,
+                  "sumR": 55
+                }
+              },
+              "konfig": {
+                "n": 126,
+                "winrate": 31.7,
+                "sumR": 68,
+                "Jan–Jun": {
+                  "n": 61,
+                  "winrate": 24.6,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 65,
+                  "winrate": 38.5,
+                  "sumR": 61
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 77,
+                "winrate": 33.8,
+                "sumR": 27,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 34.1,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 33,
+                  "winrate": 33.3,
+                  "sumR": 11
+                }
+              },
+              "r5": {
+                "n": 77,
+                "winrate": 22.1,
+                "sumR": 25,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 25,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 33,
+                  "winrate": 18.2,
+                  "sumR": 3
+                }
+              },
+              "konfig": {
+                "n": 77,
+                "winrate": 29.9,
+                "sumR": 35,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 31.8,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 33,
+                  "winrate": 27.3,
+                  "sumR": 11
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 30,
+                "winrate": 30,
+                "sumR": 6,
+                "Jan–Jun": {
+                  "n": 15,
+                  "winrate": 33.3,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 15,
+                  "winrate": 26.7,
+                  "sumR": 1
+                }
+              },
+              "r5": {
+                "n": 30,
+                "winrate": 23.3,
+                "sumR": 12,
+                "Jan–Jun": {
+                  "n": 15,
+                  "winrate": 26.7,
+                  "sumR": 9
+                },
+                "Jul–Nov": {
+                  "n": 15,
+                  "winrate": 20,
+                  "sumR": 3
+                }
+              },
+              "konfig": {
+                "n": 30,
+                "winrate": 26.7,
+                "sumR": 12,
+                "Jan–Jun": {
+                  "n": 15,
+                  "winrate": 33.3,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 15,
+                  "winrate": 20,
+                  "sumR": 2
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 151,
+                "winrate": 25.2,
+                "sumR": 1,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 25.5,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 24.5,
+                  "sumR": -1
+                }
+              },
+              "r5": {
+                "n": 150,
+                "winrate": 18.7,
+                "sumR": 18,
+                "Jan–Jun": {
+                  "n": 97,
+                  "winrate": 18.6,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 18.9,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 151,
+                "winrate": 21.9,
+                "sumR": 21,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 22.4,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 20.8,
+                  "sumR": 6
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.8,
+            "sumR": 136,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 55
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.9,
+              "sumR": 81
+            }
+          }
+        },
+        "h1_5d_inner": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 117,
+                "winrate": 29.1,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 68,
+                  "winrate": 22.1,
+                  "sumR": -8
+                },
+                "Jul–Nov": {
+                  "n": 49,
+                  "winrate": 38.8,
+                  "sumR": 27
+                }
+              },
+              "r5": {
+                "n": 117,
+                "winrate": 20.5,
+                "sumR": 27,
+                "Jan–Jun": {
+                  "n": 68,
+                  "winrate": 14.7,
+                  "sumR": -8
+                },
+                "Jul–Nov": {
+                  "n": 49,
+                  "winrate": 28.6,
+                  "sumR": 35
+                }
+              },
+              "konfig": {
+                "n": 117,
+                "winrate": 28.2,
+                "sumR": 46,
+                "Jan–Jun": {
+                  "n": 68,
+                  "winrate": 22.1,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 49,
+                  "winrate": 36.7,
+                  "sumR": 42
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 91,
+                "winrate": 35.2,
+                "sumR": 37,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 38.6,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 31.9,
+                  "sumR": 13
+                }
+              },
+              "r5": {
+                "n": 91,
+                "winrate": 23.1,
+                "sumR": 35,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 27.3,
+                  "sumR": 28
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 19.1,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 91,
+                "winrate": 33,
+                "sumR": 52,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 38.6,
+                  "sumR": 35
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 27.7,
+                  "sumR": 17
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 31,
+                "winrate": 32.3,
+                "sumR": 9,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 21.4,
+                  "sumR": -2
+                },
+                "Jul–Nov": {
+                  "n": 17,
+                  "winrate": 41.2,
+                  "sumR": 11
+                }
+              },
+              "r5": {
+                "n": 31,
+                "winrate": 29,
+                "sumR": 23,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 21.4,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 17,
+                  "winrate": 35.3,
+                  "sumR": 19
+                }
+              },
+              "konfig": {
+                "n": 31,
+                "winrate": 32.3,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 28.6,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 17,
+                  "winrate": 35.3,
+                  "sumR": 15
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 145,
+                "winrate": 24.1,
+                "sumR": -5,
+                "Jan–Jun": {
+                  "n": 92,
+                  "winrate": 23.9,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 24.5,
+                  "sumR": -1
+                }
+              },
+              "r5": {
+                "n": 144,
+                "winrate": 18.1,
+                "sumR": 12,
+                "Jan–Jun": {
+                  "n": 91,
+                  "winrate": 17.6,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 18.9,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 145,
+                "winrate": 21.4,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 92,
+                  "winrate": 21.7,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 20.8,
+                  "sumR": 6
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.8,
+            "sumR": 140,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 56
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.9,
+              "sumR": 84
+            }
+          }
+        },
+        "h1_5d_range": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 118,
+                "winrate": 29.7,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 69,
+                  "winrate": 23.2,
+                  "sumR": -5
+                },
+                "Jul–Nov": {
+                  "n": 49,
+                  "winrate": 38.8,
+                  "sumR": 27
+                }
+              },
+              "r5": {
+                "n": 118,
+                "winrate": 21.2,
+                "sumR": 32,
+                "Jan–Jun": {
+                  "n": 69,
+                  "winrate": 15.9,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 49,
+                  "winrate": 28.6,
+                  "sumR": 35
+                }
+              },
+              "konfig": {
+                "n": 118,
+                "winrate": 28.8,
+                "sumR": 50,
+                "Jan–Jun": {
+                  "n": 69,
+                  "winrate": 23.2,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 49,
+                  "winrate": 36.7,
+                  "sumR": 42
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 90,
+                "winrate": 34.4,
+                "sumR": 34,
+                "Jan–Jun": {
+                  "n": 43,
+                  "winrate": 37.2,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 31.9,
+                  "sumR": 13
+                }
+              },
+              "r5": {
+                "n": 90,
+                "winrate": 22.2,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 43,
+                  "winrate": 25.6,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 19.1,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 90,
+                "winrate": 32.2,
+                "sumR": 48,
+                "Jan–Jun": {
+                  "n": 43,
+                  "winrate": 37.2,
+                  "sumR": 31
+                },
+                "Jul–Nov": {
+                  "n": 47,
+                  "winrate": 27.7,
+                  "sumR": 17
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 31,
+                "winrate": 32.3,
+                "sumR": 9,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 21.4,
+                  "sumR": -2
+                },
+                "Jul–Nov": {
+                  "n": 17,
+                  "winrate": 41.2,
+                  "sumR": 11
+                }
+              },
+              "r5": {
+                "n": 31,
+                "winrate": 29,
+                "sumR": 23,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 21.4,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 17,
+                  "winrate": 35.3,
+                  "sumR": 19
+                }
+              },
+              "konfig": {
+                "n": 31,
+                "winrate": 32.3,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 14,
+                  "winrate": 28.6,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 17,
+                  "winrate": 35.3,
+                  "sumR": 15
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 145,
+                "winrate": 24.1,
+                "sumR": -5,
+                "Jan–Jun": {
+                  "n": 92,
+                  "winrate": 23.9,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 24.5,
+                  "sumR": -1
+                }
+              },
+              "r5": {
+                "n": 144,
+                "winrate": 18.1,
+                "sumR": 12,
+                "Jan–Jun": {
+                  "n": 91,
+                  "winrate": 17.6,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 18.9,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 145,
+                "winrate": 21.4,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 92,
+                  "winrate": 21.7,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 20.8,
+                  "sumR": 6
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.8,
+            "sumR": 140,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 56
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.9,
+              "sumR": 84
+            }
+          }
+        },
+        "h1_7d_outer": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 161,
+                "winrate": 25.5,
+                "sumR": 3,
+                "Jan–Jun": {
+                  "n": 93,
+                  "winrate": 21.5,
+                  "sumR": -13
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 30.9,
+                  "sumR": 16
+                }
+              },
+              "r5": {
+                "n": 161,
+                "winrate": 17.4,
+                "sumR": 7,
+                "Jan–Jun": {
+                  "n": 93,
+                  "winrate": 16.1,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 19.1,
+                  "sumR": 10
+                }
+              },
+              "konfig": {
+                "n": 161,
+                "winrate": 25.5,
+                "sumR": 35,
+                "Jan–Jun": {
+                  "n": 93,
+                  "winrate": 23.7,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 27.9,
+                  "sumR": 24
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 65,
+                "winrate": 27.7,
+                "sumR": 7,
+                "Jan–Jun": {
+                  "n": 38,
+                  "winrate": 23.7,
+                  "sumR": -2
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 33.3,
+                  "sumR": 9
+                }
+              },
+              "r5": {
+                "n": 65,
+                "winrate": 21.5,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 38,
+                  "winrate": 18.4,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 25.9,
+                  "sumR": 15
+                }
+              },
+              "konfig": {
+                "n": 65,
+                "winrate": 26.2,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 38,
+                  "winrate": 23.7,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 29.6,
+                  "sumR": 16
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 70,
+                "winrate": 32.9,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 31,
+                  "winrate": 38.7,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 28.2,
+                  "sumR": 5
+                }
+              },
+              "r5": {
+                "n": 70,
+                "winrate": 25.7,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 31,
+                  "winrate": 29,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 23.1,
+                  "sumR": 15
+                }
+              },
+              "konfig": {
+                "n": 70,
+                "winrate": 31.4,
+                "sumR": 45,
+                "Jan–Jun": {
+                  "n": 31,
+                  "winrate": 38.7,
+                  "sumR": 33
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 25.6,
+                  "sumR": 12
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 88,
+                "winrate": 33,
+                "sumR": 28,
+                "Jan–Jun": {
+                  "n": 56,
+                  "winrate": 28.6,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 40.6,
+                  "sumR": 20
+                }
+              },
+              "r5": {
+                "n": 87,
+                "winrate": 23,
+                "sumR": 33,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 18.2,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 31.3,
+                  "sumR": 28
+                }
+              },
+              "konfig": {
+                "n": 88,
+                "winrate": 27.3,
+                "sumR": 34,
+                "Jan–Jun": {
+                  "n": 56,
+                  "winrate": 23.2,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 34.4,
+                  "sumR": 28
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26,
+            "sumR": 129,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 24.3,
+              "sumR": 46
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.3,
+              "sumR": 83
+            }
+          }
+        },
+        "h1_7d_inner": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 155,
+                "winrate": 23.9,
+                "sumR": -7,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 18.4,
+                  "sumR": -26
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 33.3,
+                  "sumR": 19
+                }
+              },
+              "r5": {
+                "n": 155,
+                "winrate": 16.1,
+                "sumR": -5,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 12.2,
+                  "sumR": -26
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 22.8,
+                  "sumR": 21
+                }
+              },
+              "konfig": {
+                "n": 155,
+                "winrate": 23.2,
+                "sumR": 24,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 19.4,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 29.8,
+                  "sumR": 27
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 92,
+                "winrate": 31.5,
+                "sumR": 24,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 36.4,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 27.1,
+                  "sumR": 4
+                }
+              },
+              "r5": {
+                "n": 92,
+                "winrate": 23.9,
+                "sumR": 40,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 29.5,
+                  "sumR": 34
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 18.8,
+                  "sumR": 6
+                }
+              },
+              "konfig": {
+                "n": 92,
+                "winrate": 31.5,
+                "sumR": 50,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 38.6,
+                  "sumR": 35
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 25,
+                  "sumR": 15
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 51,
+                "winrate": 31.4,
+                "sumR": 13,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 31.8,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 29,
+                  "winrate": 31,
+                  "sumR": 7
+                }
+              },
+              "r5": {
+                "n": 51,
+                "winrate": 25.5,
+                "sumR": 27,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 27.3,
+                  "sumR": 14
+                },
+                "Jul–Nov": {
+                  "n": 29,
+                  "winrate": 24.1,
+                  "sumR": 13
+                }
+              },
+              "konfig": {
+                "n": 51,
+                "winrate": 29.4,
+                "sumR": 27,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 31.8,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 29,
+                  "winrate": 27.6,
+                  "sumR": 11
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 86,
+                "winrate": 33.7,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 54,
+                  "winrate": 29.6,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 40.6,
+                  "sumR": 20
+                }
+              },
+              "r5": {
+                "n": 85,
+                "winrate": 23.5,
+                "sumR": 35,
+                "Jan–Jun": {
+                  "n": 53,
+                  "winrate": 18.9,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 31.3,
+                  "sumR": 28
+                }
+              },
+              "konfig": {
+                "n": 86,
+                "winrate": 27.9,
+                "sumR": 35,
+                "Jan–Jun": {
+                  "n": 54,
+                  "winrate": 24.1,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 32,
+                  "winrate": 34.4,
+                  "sumR": 27
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.6,
+            "sumR": 136,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 54
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.3,
+              "sumR": 82
+            }
+          }
+        },
+        "h1_7d_range": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 151,
+                "winrate": 25.2,
+                "sumR": 1,
+                "Jan–Jun": {
+                  "n": 95,
+                  "winrate": 21.1,
+                  "sumR": -15
+                },
+                "Jul–Nov": {
+                  "n": 56,
+                  "winrate": 32.1,
+                  "sumR": 16
+                }
+              },
+              "r5": {
+                "n": 151,
+                "winrate": 17.2,
+                "sumR": 5,
+                "Jan–Jun": {
+                  "n": 95,
+                  "winrate": 14.7,
+                  "sumR": -11
+                },
+                "Jul–Nov": {
+                  "n": 56,
+                  "winrate": 21.4,
+                  "sumR": 16
+                }
+              },
+              "konfig": {
+                "n": 151,
+                "winrate": 24.5,
+                "sumR": 33,
+                "Jan–Jun": {
+                  "n": 95,
+                  "winrate": 22.1,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 56,
+                  "winrate": 28.6,
+                  "sumR": 23
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 95,
+                "winrate": 29.5,
+                "sumR": 17,
+                "Jan–Jun": {
+                  "n": 47,
+                  "winrate": 31.9,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 27.1,
+                  "sumR": 4
+                }
+              },
+              "r5": {
+                "n": 95,
+                "winrate": 22.1,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 47,
+                  "winrate": 25.5,
+                  "sumR": 25
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 18.8,
+                  "sumR": 6
+                }
+              },
+              "konfig": {
+                "n": 95,
+                "winrate": 29.5,
+                "sumR": 42,
+                "Jan–Jun": {
+                  "n": 47,
+                  "winrate": 34,
+                  "sumR": 27
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 25,
+                  "sumR": 15
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 53,
+                "winrate": 32.1,
+                "sumR": 15,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 27.3,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 35.5,
+                  "sumR": 13
+                }
+              },
+              "r5": {
+                "n": 53,
+                "winrate": 26.4,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 22.7,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 29,
+                  "sumR": 23
+                }
+              },
+              "konfig": {
+                "n": 53,
+                "winrate": 30.2,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 22,
+                  "winrate": 27.3,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 32.3,
+                  "sumR": 19
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 85,
+                "winrate": 32.9,
+                "sumR": 27,
+                "Jan–Jun": {
+                  "n": 54,
+                  "winrate": 29.6,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 38.7,
+                  "sumR": 17
+                }
+              },
+              "r5": {
+                "n": 84,
+                "winrate": 22.6,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 53,
+                  "winrate": 18.9,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 29,
+                  "sumR": 23
+                }
+              },
+              "konfig": {
+                "n": 85,
+                "winrate": 27.1,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 54,
+                  "winrate": 24.1,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 31,
+                  "winrate": 32.3,
+                  "sumR": 23
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.6,
+            "sumR": 137,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 53
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.3,
+              "sumR": 84
+            }
+          }
+        },
+        "h1_10d_outer": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 165,
+                "winrate": 30.9,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 96,
+                  "winrate": 29.2,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 69,
+                  "winrate": 33.3,
+                  "sumR": 23
+                }
+              },
+              "r5": {
+                "n": 164,
+                "winrate": 20.7,
+                "sumR": 40,
+                "Jan–Jun": {
+                  "n": 95,
+                  "winrate": 20,
+                  "sumR": 19
+                },
+                "Jul–Nov": {
+                  "n": 69,
+                  "winrate": 21.7,
+                  "sumR": 21
+                }
+              },
+              "konfig": {
+                "n": 165,
+                "winrate": 32.1,
+                "sumR": 81,
+                "Jan–Jun": {
+                  "n": 96,
+                  "winrate": 31.3,
+                  "sumR": 40
+                },
+                "Jul–Nov": {
+                  "n": 69,
+                  "winrate": 33.3,
+                  "sumR": 41
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 69,
+                "winrate": 30.4,
+                "sumR": 15,
+                "Jan–Jun": {
+                  "n": 39,
+                  "winrate": 25.6,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 30,
+                  "winrate": 36.7,
+                  "sumR": 14
+                }
+              },
+              "r5": {
+                "n": 69,
+                "winrate": 23.2,
+                "sumR": 27,
+                "Jan–Jun": {
+                  "n": 39,
+                  "winrate": 17.9,
+                  "sumR": 3
+                },
+                "Jul–Nov": {
+                  "n": 30,
+                  "winrate": 30,
+                  "sumR": 24
+                }
+              },
+              "konfig": {
+                "n": 69,
+                "winrate": 26.1,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 39,
+                  "winrate": 20.5,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 30,
+                  "winrate": 33.3,
+                  "sumR": 25
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 82,
+                "winrate": 32.9,
+                "sumR": 26,
+                "Jan–Jun": {
+                  "n": 29,
+                  "winrate": 34.5,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 32.1,
+                  "sumR": 15
+                }
+              },
+              "r5": {
+                "n": 82,
+                "winrate": 24.4,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 29,
+                  "winrate": 24.1,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 24.5,
+                  "sumR": 25
+                }
+              },
+              "konfig": {
+                "n": 82,
+                "winrate": 26.8,
+                "sumR": 31,
+                "Jan–Jun": {
+                  "n": 29,
+                  "winrate": 31,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 53,
+                  "winrate": 24.5,
+                  "sumR": 16
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 68,
+                "winrate": 17.6,
+                "sumR": -20,
+                "Jan–Jun": {
+                  "n": 54,
+                  "winrate": 16.7,
+                  "sumR": -18
+                },
+                "Jul–Nov": {
+                  "n": 14,
+                  "winrate": 21.4,
+                  "sumR": -2
+                }
+              },
+              "r5": {
+                "n": 68,
+                "winrate": 14.7,
+                "sumR": -8,
+                "Jan–Jun": {
+                  "n": 54,
+                  "winrate": 14.8,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 14,
+                  "winrate": 14.3,
+                  "sumR": -2
+                }
+              },
+              "konfig": {
+                "n": 68,
+                "winrate": 16.2,
+                "sumR": -6,
+                "Jan–Jun": {
+                  "n": 54,
+                  "winrate": 16.7,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 14,
+                  "winrate": 14.3,
+                  "sumR": -2
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.6,
+            "sumR": 143,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 24.8,
+              "sumR": 54
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.9,
+              "sumR": 89
+            }
+          }
+        },
+        "h1_10d_inner": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 169,
+                "winrate": 27.2,
+                "sumR": 15,
+                "Jan–Jun": {
+                  "n": 101,
+                  "winrate": 22.8,
+                  "sumR": -9
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 33.8,
+                  "sumR": 24
+                }
+              },
+              "r5": {
+                "n": 169,
+                "winrate": 18.9,
+                "sumR": 23,
+                "Jan–Jun": {
+                  "n": 101,
+                  "winrate": 14.9,
+                  "sumR": -11
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 25,
+                  "sumR": 34
+                }
+              },
+              "konfig": {
+                "n": 169,
+                "winrate": 25.4,
+                "sumR": 47,
+                "Jan–Jun": {
+                  "n": 101,
+                  "winrate": 21.8,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 30.9,
+                  "sumR": 39
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 107,
+                "winrate": 37.4,
+                "sumR": 53,
+                "Jan–Jun": {
+                  "n": 45,
+                  "winrate": 42.2,
+                  "sumR": 31
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 33.9,
+                  "sumR": 22
+                }
+              },
+              "r5": {
+                "n": 106,
+                "winrate": 26.4,
+                "sumR": 62,
+                "Jan–Jun": {
+                  "n": 44,
+                  "winrate": 29.5,
+                  "sumR": 34
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 24.2,
+                  "sumR": 28
+                }
+              },
+              "konfig": {
+                "n": 107,
+                "winrate": 36.4,
+                "sumR": 83,
+                "Jan–Jun": {
+                  "n": 45,
+                  "winrate": 42.2,
+                  "sumR": 42
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 32.3,
+                  "sumR": 41
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 50,
+                "winrate": 28,
+                "sumR": 6,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 30.4,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 25.9,
+                  "sumR": 1
+                }
+              },
+              "r5": {
+                "n": 50,
+                "winrate": 22,
+                "sumR": 16,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 18.5,
+                  "sumR": 3
+                }
+              },
+              "konfig": {
+                "n": 50,
+                "winrate": 24,
+                "sumR": 9,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 30.4,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 27,
+                  "winrate": 18.5,
+                  "sumR": -2
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 58,
+                "winrate": 19,
+                "sumR": -14,
+                "Jan–Jun": {
+                  "n": 49,
+                  "winrate": 16.3,
+                  "sumR": -17
+                },
+                "Jul–Nov": {
+                  "n": 9,
+                  "winrate": 33.3,
+                  "sumR": 3
+                }
+              },
+              "r5": {
+                "n": 58,
+                "winrate": 15.5,
+                "sumR": -4,
+                "Jan–Jun": {
+                  "n": 49,
+                  "winrate": 14.3,
+                  "sumR": -7
+                },
+                "Jul–Nov": {
+                  "n": 9,
+                  "winrate": 22.2,
+                  "sumR": 3
+                }
+              },
+              "konfig": {
+                "n": 58,
+                "winrate": 17.2,
+                "sumR": -3,
+                "Jan–Jun": {
+                  "n": 49,
+                  "winrate": 16.3,
+                  "sumR": -5
+                },
+                "Jul–Nov": {
+                  "n": 9,
+                  "winrate": 22.2,
+                  "sumR": 2
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.8,
+            "sumR": 143,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 58
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.9,
+              "sumR": 85
+            }
+          }
+        },
+        "h1_10d_range": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 165,
+                "winrate": 27.9,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 25.5,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 31.3,
+                  "sumR": 17
+                }
+              },
+              "r5": {
+                "n": 165,
+                "winrate": 19.4,
+                "sumR": 27,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 17.3,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 22.4,
+                  "sumR": 23
+                }
+              },
+              "konfig": {
+                "n": 165,
+                "winrate": 26.1,
+                "sumR": 51,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 24.5,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 28.4,
+                  "sumR": 30
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 110,
+                "winrate": 35.5,
+                "sumR": 46,
+                "Jan–Jun": {
+                  "n": 48,
+                  "winrate": 37.5,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 33.9,
+                  "sumR": 22
+                }
+              },
+              "r5": {
+                "n": 109,
+                "winrate": 24.8,
+                "sumR": 53,
+                "Jan–Jun": {
+                  "n": 47,
+                  "winrate": 25.5,
+                  "sumR": 25
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 24.2,
+                  "sumR": 28
+                }
+              },
+              "konfig": {
+                "n": 110,
+                "winrate": 34.5,
+                "sumR": 75,
+                "Jan–Jun": {
+                  "n": 48,
+                  "winrate": 37.5,
+                  "sumR": 34
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 32.3,
+                  "sumR": 41
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 52,
+                "winrate": 30.8,
+                "sumR": 12,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 29,
+                  "winrate": 34.5,
+                  "sumR": 11
+                }
+              },
+              "r5": {
+                "n": 52,
+                "winrate": 25,
+                "sumR": 26,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 21.7,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 29,
+                  "winrate": 27.6,
+                  "sumR": 19
+                }
+              },
+              "konfig": {
+                "n": 52,
+                "winrate": 26.9,
+                "sumR": 17,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 29,
+                  "winrate": 27.6,
+                  "sumR": 11
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 57,
+                "winrate": 17.5,
+                "sumR": -17,
+                "Jan–Jun": {
+                  "n": 49,
+                  "winrate": 16.3,
+                  "sumR": -17
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 25,
+                  "sumR": 0
+                }
+              },
+              "r5": {
+                "n": 57,
+                "winrate": 14,
+                "sumR": -9,
+                "Jan–Jun": {
+                  "n": 49,
+                  "winrate": 14.3,
+                  "sumR": -7
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 12.5,
+                  "sumR": -2
+                }
+              },
+              "konfig": {
+                "n": 57,
+                "winrate": 15.8,
+                "sumR": -7,
+                "Jan–Jun": {
+                  "n": 49,
+                  "winrate": 16.3,
+                  "sumR": -5
+                },
+                "Jul–Nov": {
+                  "n": 8,
+                  "winrate": 12.5,
+                  "sumR": -2
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.8,
+            "sumR": 145,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 57
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.9,
+              "sumR": 88
+            }
+          }
+        },
+        "h1_14d_outer": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 191,
+                "winrate": 28.3,
+                "sumR": 25,
+                "Jan–Jun": {
+                  "n": 104,
+                  "winrate": 25,
+                  "sumR": 0
+                },
+                "Jul–Nov": {
+                  "n": 87,
+                  "winrate": 32.2,
+                  "sumR": 25
+                }
+              },
+              "r5": {
+                "n": 190,
+                "winrate": 20,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 103,
+                  "winrate": 18.4,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 87,
+                  "winrate": 21.8,
+                  "sumR": 27
+                }
+              },
+              "konfig": {
+                "n": 191,
+                "winrate": 26.7,
+                "sumR": 55,
+                "Jan–Jun": {
+                  "n": 104,
+                  "winrate": 25,
+                  "sumR": 18
+                },
+                "Jul–Nov": {
+                  "n": 87,
+                  "winrate": 28.7,
+                  "sumR": 37
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 64,
+                "winrate": 23.4,
+                "sumR": -4,
+                "Jan–Jun": {
+                  "n": 40,
+                  "winrate": 20,
+                  "sumR": -8
+                },
+                "Jul–Nov": {
+                  "n": 24,
+                  "winrate": 29.2,
+                  "sumR": 4
+                }
+              },
+              "r5": {
+                "n": 64,
+                "winrate": 18.8,
+                "sumR": 8,
+                "Jan–Jun": {
+                  "n": 40,
+                  "winrate": 15,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 24,
+                  "winrate": 25,
+                  "sumR": 12
+                }
+              },
+              "konfig": {
+                "n": 64,
+                "winrate": 21.9,
+                "sumR": 9,
+                "Jan–Jun": {
+                  "n": 40,
+                  "winrate": 20,
+                  "sumR": 0
+                },
+                "Jul–Nov": {
+                  "n": 24,
+                  "winrate": 25,
+                  "sumR": 9
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 94,
+                "winrate": 35.1,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 30.9,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 41,
+                  "sumR": 25
+                }
+              },
+              "r5": {
+                "n": 94,
+                "winrate": 23.4,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 20,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 28.2,
+                  "sumR": 27
+                }
+              },
+              "konfig": {
+                "n": 94,
+                "winrate": 31.9,
+                "sumR": 58,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 29.1,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 35.9,
+                  "sumR": 34
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 35,
+                "winrate": 25.7,
+                "sumR": 1,
+                "Jan–Jun": {
+                  "n": 19,
+                  "winrate": 31.6,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 16,
+                  "winrate": 18.8,
+                  "sumR": -4
+                }
+              },
+              "r5": {
+                "n": 35,
+                "winrate": 22.9,
+                "sumR": 13,
+                "Jan–Jun": {
+                  "n": 19,
+                  "winrate": 26.3,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 16,
+                  "winrate": 18.8,
+                  "sumR": 2
+                }
+              },
+              "konfig": {
+                "n": 35,
+                "winrate": 25.7,
+                "sumR": 14,
+                "Jan–Jun": {
+                  "n": 19,
+                  "winrate": 31.6,
+                  "sumR": 14
+                },
+                "Jul–Nov": {
+                  "n": 16,
+                  "winrate": 18.8,
+                  "sumR": 0
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 25,
+            "sumR": 116,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 23.4,
+              "sumR": 43
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 27.1,
+              "sumR": 73
+            }
+          }
+        },
+        "h1_14d_inner": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 188,
+                "winrate": 26.1,
+                "sumR": 8,
+                "Jan–Jun": {
+                  "n": 120,
+                  "winrate": 21.7,
+                  "sumR": -16
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 33.8,
+                  "sumR": 24
+                }
+              },
+              "r5": {
+                "n": 188,
+                "winrate": 18.6,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 120,
+                  "winrate": 15,
+                  "sumR": -12
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 25,
+                  "sumR": 34
+                }
+              },
+              "konfig": {
+                "n": 188,
+                "winrate": 24.5,
+                "sumR": 46,
+                "Jan–Jun": {
+                  "n": 120,
+                  "winrate": 20.8,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 68,
+                  "winrate": 30.9,
+                  "sumR": 40
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 115,
+                "winrate": 34.8,
+                "sumR": 45,
+                "Jan–Jun": {
+                  "n": 52,
+                  "winrate": 34.6,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 63,
+                  "winrate": 34.9,
+                  "sumR": 25
+                }
+              },
+              "r5": {
+                "n": 114,
+                "winrate": 23.7,
+                "sumR": 48,
+                "Jan–Jun": {
+                  "n": 51,
+                  "winrate": 23.5,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 63,
+                  "winrate": 23.8,
+                  "sumR": 27
+                }
+              },
+              "konfig": {
+                "n": 115,
+                "winrate": 33,
+                "sumR": 69,
+                "Jan–Jun": {
+                  "n": 52,
+                  "winrate": 34.6,
+                  "sumR": 29
+                },
+                "Jul–Nov": {
+                  "n": 63,
+                  "winrate": 31.7,
+                  "sumR": 40
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 47,
+                "winrate": 27.7,
+                "sumR": 5,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 30.4,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 24,
+                  "winrate": 25,
+                  "sumR": 0
+                }
+              },
+              "r5": {
+                "n": 47,
+                "winrate": 21.3,
+                "sumR": 13,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 24,
+                  "winrate": 16.7,
+                  "sumR": 0
+                }
+              },
+              "konfig": {
+                "n": 47,
+                "winrate": 23.4,
+                "sumR": 7,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 30.4,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 24,
+                  "winrate": 16.7,
+                  "sumR": -4
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 34,
+                "winrate": 26.5,
+                "sumR": 2,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 11,
+                  "winrate": 27.3,
+                  "sumR": 1
+                }
+              },
+              "r5": {
+                "n": 34,
+                "winrate": 23.5,
+                "sumR": 14,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 21.7,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 11,
+                  "winrate": 27.3,
+                  "sumR": 7
+                }
+              },
+              "konfig": {
+                "n": 34,
+                "winrate": 26.5,
+                "sumR": 14,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 11,
+                  "winrate": 27.3,
+                  "sumR": 4
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.8,
+            "sumR": 142,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 58
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.9,
+              "sumR": 84
+            }
+          }
+        },
+        "h1_14d_range": {
+          "groups": {
+            "1a": {
+              "r3": {
+                "n": 180,
+                "winrate": 27.2,
+                "sumR": 16,
+                "Jan–Jun": {
+                  "n": 113,
+                  "winrate": 24.8,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 31.3,
+                  "sumR": 17
+                }
+              },
+              "r5": {
+                "n": 180,
+                "winrate": 19.4,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 113,
+                  "winrate": 17.7,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 22.4,
+                  "sumR": 23
+                }
+              },
+              "konfig": {
+                "n": 180,
+                "winrate": 25.6,
+                "sumR": 54,
+                "Jan–Jun": {
+                  "n": 113,
+                  "winrate": 23.9,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 28.4,
+                  "sumR": 31
+                }
+              }
+            },
+            "1b": {
+              "r3": {
+                "n": 118,
+                "winrate": 33.1,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 30.9,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 63,
+                  "winrate": 34.9,
+                  "sumR": 25
+                }
+              },
+              "r5": {
+                "n": 117,
+                "winrate": 22.2,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 54,
+                  "winrate": 20.4,
+                  "sumR": 12
+                },
+                "Jul–Nov": {
+                  "n": 63,
+                  "winrate": 23.8,
+                  "sumR": 27
+                }
+              },
+              "konfig": {
+                "n": 118,
+                "winrate": 31.4,
+                "sumR": 61,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 30.9,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 63,
+                  "winrate": 31.7,
+                  "sumR": 40
+                }
+              }
+            },
+            "1c": {
+              "r3": {
+                "n": 53,
+                "winrate": 28.3,
+                "sumR": 7,
+                "Jan–Jun": {
+                  "n": 27,
+                  "winrate": 22.2,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 26,
+                  "winrate": 34.6,
+                  "sumR": 10
+                }
+              },
+              "r5": {
+                "n": 53,
+                "winrate": 22.6,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 27,
+                  "winrate": 18.5,
+                  "sumR": 3
+                },
+                "Jul–Nov": {
+                  "n": 26,
+                  "winrate": 26.9,
+                  "sumR": 16
+                }
+              },
+              "konfig": {
+                "n": 53,
+                "winrate": 24.5,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 27,
+                  "winrate": 22.2,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 26,
+                  "winrate": 26.9,
+                  "sumR": 9
+                }
+              }
+            },
+            "unknown": {
+              "r3": {
+                "n": 33,
+                "winrate": 24.2,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 10,
+                  "winrate": 20,
+                  "sumR": -2
+                }
+              },
+              "r5": {
+                "n": 33,
+                "winrate": 21.2,
+                "sumR": 9,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 21.7,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 10,
+                  "winrate": 20,
+                  "sumR": 2
+                }
+              },
+              "konfig": {
+                "n": 33,
+                "winrate": 24.2,
+                "sumR": 10,
+                "Jan–Jun": {
+                  "n": 23,
+                  "winrate": 26.1,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 10,
+                  "winrate": 20,
+                  "sumR": 0
+                }
+              }
+            }
+          },
+          "rule1c5R": {
+            "n": 384,
+            "winrate": 26.8,
+            "sumR": 144,
+            "Jan–Jun": {
+              "n": 218,
+              "winrate": 25.2,
+              "sumR": 57
+            },
+            "Jul–Nov": {
+              "n": 166,
+              "winrate": 28.9,
+              "sumR": 87
+            }
+          }
+        }
+      }
+    }
+  },
+  "pins": {
+    "521": {
+      "note": "EMAs gegen den short. M5 Struktur echt unschön. nicht besonders bärisch. eher Korrektiv.",
+      "found": true,
+      "direction": "short",
+      "counterDob": "none",
+      "r3": "loss",
+      "levels": {
+        "h1_5d_outer": "unknown@null unknown",
+        "h1_5d_inner": "unknown@null unknown",
+        "h1_5d_range": "unknown@null unknown",
+        "h1_7d_outer": "downtrend@0 1a",
+        "h1_7d_inner": "downtrend@0 1a",
+        "h1_7d_range": "downtrend@0 1a",
+        "h1_10d_outer": "uptrend@0 1b",
+        "h1_10d_inner": "downtrend@1 1a",
+        "h1_10d_range": "downtrend@1 1a",
+        "h1_14d_outer": "downtrend@0 1a",
+        "h1_14d_inner": "downtrend@2 1a",
+        "h1_14d_range": "downtrend@2 1a"
+      }
+    },
+    "522": {
+      "note": "scheiß Price Action. keine gute bullische M5 Struktur",
+      "found": true,
+      "direction": "long",
+      "counterDob": "dead",
+      "r3": "loss",
+      "levels": {
+        "h1_5d_outer": "uptrend@0 1a",
+        "h1_5d_inner": "uptrend@0 1a",
+        "h1_5d_range": "uptrend@0 1a",
+        "h1_7d_outer": "unknown@null unknown",
+        "h1_7d_inner": "unknown@null unknown",
+        "h1_7d_range": "unknown@null unknown",
+        "h1_10d_outer": "uptrend@0 1a",
+        "h1_10d_inner": "uptrend@2 1a",
+        "h1_10d_range": "uptrend@2 1a",
+        "h1_14d_outer": "uptrend@0 1a",
+        "h1_14d_inner": "uptrend@2 1a",
+        "h1_14d_range": "uptrend@2 1a"
+      }
+    },
+    "523": {
+      "note": "mega bullischer outertrend. Shorten dann um die falsche Uhrzeit direkt nach einem bullischen 1h OB. nicht gut",
+      "found": true,
+      "direction": "short",
+      "counterDob": "none",
+      "r3": "loss",
+      "levels": {
+        "h1_5d_outer": "downtrend@0 1a",
+        "h1_5d_inner": "downtrend@2 1a",
+        "h1_5d_range": "downtrend@2 1a",
+        "h1_7d_outer": "unknown@null unknown",
+        "h1_7d_inner": "unknown@null unknown",
+        "h1_7d_range": "unknown@null unknown",
+        "h1_10d_outer": "uptrend@0 1c",
+        "h1_10d_inner": "downtrend@3 1a",
+        "h1_10d_range": "downtrend@3 1a",
+        "h1_14d_outer": "uptrend@0 1c",
+        "h1_14d_inner": "downtrend@3 1a",
+        "h1_14d_range": "downtrend@3 1a"
+      }
+    },
+    "524": {
+      "note": "schwierig umzusetzende anti-confluence: bärischer LS der NY Session am Vortag und sehr impulsive bärische Bewegung in den gescheiterten Long Versuch",
+      "found": true,
+      "direction": "long",
+      "counterDob": "dead",
+      "r3": "loss",
+      "levels": {
+        "h1_5d_outer": "unknown@null unknown",
+        "h1_5d_inner": "unknown@null unknown",
+        "h1_5d_range": "unknown@null unknown",
+        "h1_7d_outer": "downtrend@0 1b",
+        "h1_7d_inner": "downtrend@2 1c",
+        "h1_7d_range": "downtrend@2 1c",
+        "h1_10d_outer": "downtrend@0 1b",
+        "h1_10d_inner": "downtrend@2 1c",
+        "h1_10d_range": "downtrend@2 1c",
+        "h1_14d_outer": "downtrend@0 1b",
+        "h1_14d_inner": "downtrend@2 1c",
+        "h1_14d_range": "downtrend@2 1c"
+      }
+    },
+    "525": {
+      "note": "beide DOBs sind im Kraft-OB. Nicht sooo geil.\nHmmm Long geht eig auf. Problem ist, dass wir longen, bevor wir eine gute bullische M5 STruktur bekommen.",
+      "found": true,
+      "direction": "long",
+      "counterDob": "live",
+      "r3": "loss",
+      "levels": {
+        "h1_5d_outer": "unknown@null unknown",
+        "h1_5d_inner": "unknown@null unknown",
+        "h1_5d_range": "unknown@null unknown",
+        "h1_7d_outer": "downtrend@0 1b",
+        "h1_7d_inner": "uptrend@1 1a",
+        "h1_7d_range": "uptrend@1 1a",
+        "h1_10d_outer": "downtrend@0 1b",
+        "h1_10d_inner": "uptrend@1 1a",
+        "h1_10d_range": "uptrend@1 1a",
+        "h1_14d_outer": "downtrend@0 1b",
+        "h1_14d_inner": "uptrend@1 1a",
+        "h1_14d_range": "uptrend@1 1a"
+      }
+    },
+    "526": {
+      "note": "gescheiterter long gegen nen lang anhaltenden bärischen trend.\nund bärische DOBs direkt gegen den long",
+      "found": true,
+      "direction": "long",
+      "counterDob": "live",
+      "r3": "loss",
+      "levels": {
+        "h1_5d_outer": "downtrend@0 1b",
+        "h1_5d_inner": "downtrend@0 1b",
+        "h1_5d_range": "downtrend@0 1b",
+        "h1_7d_outer": "downtrend@0 1b",
+        "h1_7d_inner": "downtrend@0 1b",
+        "h1_7d_range": "downtrend@0 1b",
+        "h1_10d_outer": "downtrend@0 1c",
+        "h1_10d_inner": "downtrend@2 1b",
+        "h1_10d_range": "downtrend@0 1c",
+        "h1_14d_outer": "downtrend@0 1c",
+        "h1_14d_inner": "downtrend@2 1b",
+        "h1_14d_range": "downtrend@0 1c"
+      }
+    },
+    "527": {
+      "note": "weder bärische noch bullische kurzfristige M5 Sturktur => triangle pattern => das ist pures gambling",
+      "found": true,
+      "direction": "short",
+      "counterDob": "none",
+      "r3": "loss",
+      "levels": {
+        "h1_5d_outer": "uptrend@0 1b",
+        "h1_5d_inner": "uptrend@0 1b",
+        "h1_5d_range": "uptrend@0 1b",
+        "h1_7d_outer": "downtrend@0 1a",
+        "h1_7d_inner": "uptrend@1 1b",
+        "h1_7d_range": "uptrend@1 1b",
+        "h1_10d_outer": "downtrend@0 1a",
+        "h1_10d_inner": "uptrend@1 1b",
+        "h1_10d_range": "uptrend@1 1b",
+        "h1_14d_outer": "uptrend@0 1c",
+        "h1_14d_inner": "uptrend@2 1b",
+        "h1_14d_range": "uptrend@2 1b"
+      }
+    },
+    "528": {
+      "note": "wieder längerer uptrend. zwar bekommen wir ne gute kurzfristige bärische struktur rein, aber der bullische BOS-Pivot ist noch nicht gebrochen",
+      "found": true,
+      "direction": "short",
+      "counterDob": "none",
+      "r3": "loss",
+      "levels": {
+        "h1_5d_outer": "downtrend@0 1a",
+        "h1_5d_inner": "uptrend@1 1b",
+        "h1_5d_range": "uptrend@1 1b",
+        "h1_7d_outer": "downtrend@0 1a",
+        "h1_7d_inner": "uptrend@1 1b",
+        "h1_7d_range": "uptrend@1 1b",
+        "h1_10d_outer": "uptrend@0 1c",
+        "h1_10d_inner": "uptrend@2 1b",
+        "h1_10d_range": "uptrend@2 1b",
+        "h1_14d_outer": "downtrend@0 1a",
+        "h1_14d_inner": "uptrend@3 1b",
+        "h1_14d_range": "uptrend@3 1b"
+      }
+    },
+    "529": {
+      "note": "hier haben wir eine mittelfristige bullische struktur, aber bis zum short haben sich wieder zwei innerranges gebildet, die für einen short sprechen. \nvon der längeren uptrend ist der BOS-Pivot bereits gebrochen",
+      "found": true,
+      "direction": "short",
+      "counterDob": "none",
+      "r3": "success",
+      "levels": {
+        "h1_5d_outer": "downtrend@0 1a",
+        "h1_5d_inner": "uptrend@1 1b",
+        "h1_5d_range": "uptrend@1 1b",
+        "h1_7d_outer": "downtrend@0 1a",
+        "h1_7d_inner": "uptrend@1 1b",
+        "h1_7d_range": "uptrend@1 1b",
+        "h1_10d_outer": "downtrend@0 1a",
+        "h1_10d_inner": "uptrend@1 1b",
+        "h1_10d_range": "uptrend@1 1b",
+        "h1_14d_outer": "downtrend@0 1a",
+        "h1_14d_inner": "uptrend@1 1b",
+        "h1_14d_range": "uptrend@1 1b"
+      }
+    },
+    "530": {
+      "note": "win long gegen einen länger andauernden downtrend. aber BOS-Pivot wurde nach oben gebrohcen, von daher ok",
+      "found": true,
+      "direction": "long",
+      "counterDob": "none",
+      "r3": "success",
+      "levels": {
+        "h1_5d_outer": "downtrend@0 1b",
+        "h1_5d_inner": "downtrend@0 1b",
+        "h1_5d_range": "downtrend@0 1b",
+        "h1_7d_outer": "unknown@null unknown",
+        "h1_7d_inner": "unknown@null unknown",
+        "h1_7d_range": "unknown@null unknown",
+        "h1_10d_outer": "uptrend@0 1a",
+        "h1_10d_inner": "downtrend@1 1b",
+        "h1_10d_range": "downtrend@1 1b",
+        "h1_14d_outer": "downtrend@0 1c",
+        "h1_14d_inner": "downtrend@2 1b",
+        "h1_14d_range": "downtrend@2 1b"
+      }
+    }
+  }
+}
