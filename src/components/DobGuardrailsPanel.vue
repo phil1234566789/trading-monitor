@@ -5,7 +5,7 @@ import {dobGuardrailsToRow,dobGuardrailReason} from '../dobGuardrails.js';
 import {dobTotalStats,DOB_ZONE_AGE_BUCKETS} from '../dobTradeStatistics.js';
 import {minutesToTimeInput,timeInputToMinutes} from '../chartTimeUtils.js';
 import {berlinDateStrFor} from '../berlinTime.js';
-import {fmtR,pnlClass} from '../format.js';
+import DobStatCell from './DobStatCell.vue';
 
 // Sperr-Konfig je Instrument bearbeiten (Tabelle dob_guardrails). Erst „Speichern“ macht den Entwurf aktiv, damit Seite und Watcher
 // dieselbe Konfig sehen. Darunter die Halbjahre je Sperrgruppe: Sperren aus denselben Daten schönen die Winrate, ein Effekt, der
@@ -30,7 +30,6 @@ async function save(){
 }
 
 const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit'};
-const pct=v=>v==null?'–':`${(v*100).toFixed(1)} %`;
 const half=row=>Number(berlinDateStrFor(row.entry_time).slice(5,7))<=6?'h1':'h2';
 // Erlaubt und je Sperrgrund getrennt, jeweils Jan–Jun / Jul–Dez, alle Routen, beide R-Ziele.
 const robustness=computed(()=>{
@@ -68,13 +67,13 @@ const robustness=computed(()=>{
     <h3>Halbjahre zur aktiven Konfig</h3>
     <p class="note">Sperren aus denselben Daten schönen die Winrate. Trägt eine Sperrgruppe nur in einem Halbjahr, ist sie eher Zufall; kleine n sagen wenig.</p>
     <div class="scroll"><table>
-      <thead><tr><th scope="col" rowspan="2">Gruppe</th><th v-for="h in ['Jan–Jun','Jul–Dez']" :key="h" scope="colgroup" :colspan="1+2*targets.length">{{ h }}</th></tr>
-        <tr><template v-for="h in 2" :key="h"><th scope="col">n</th><template v-for="t in targets" :key="t.name"><th scope="col">{{ t.k.toLocaleString('de-DE') }}R Winrate</th><th scope="col">Σ R</th></template></template></tr></thead>
+      <thead><tr><th scope="col" rowspan="2">Gruppe</th><th v-for="h in ['Jan–Jun','Jul–Dez']" :key="h" scope="colgroup" :colspan="1+targets.length">{{ h }}</th></tr>
+        <tr><template v-for="h in 2" :key="h"><th scope="col">n</th><th v-for="t in targets" :key="t.name" scope="col">{{ t.k }}R · Σ R</th></template></tr></thead>
       <tbody><tr v-for="g in robustness" :key="g.key"><th scope="row">{{ g.label }}</th>
-        <template v-for="(part,h) in g.halves" :key="h"><td>{{ part.n }}</td><template v-for="t in part.targets" :key="t.name"><td :title="`${t.s.success} W / ${t.s.loss} L`">{{ pct(t.s.winrate) }}</td><td :class="pnlClass(t.s.sumR)">{{ fmtR(t.s.sumR) }}</td></template></template></tr></tbody>
+        <template v-for="(part,h) in g.halves" :key="h"><td>{{ part.n }}</td><td v-for="t in part.targets" :key="t.name"><DobStatCell :stats="t.s" :k="t.k" /></td></template></tr></tbody>
     </table></div>
   </details>
 </template>
 <style scoped>
-.guardrails{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:12px 16px;margin:16px 0}summary{cursor:pointer}summary h2{display:inline;font-size:15px;font-weight:600}h3{font-size:14px;margin:16px 0 4px}.note{font-size:13px;color:#b1b7c5}.editor{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}fieldset{border:1px solid #2a2e39;border-radius:4px;padding:8px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}legend{color:#b1b7c5}.window{display:flex;gap:6px;align-items:center}input[type=time],select,button{background:#131722;color:#d1d4dc;border:1px solid #434651;padding:4px 8px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:8px;align-items:center;width:100%}.error{color:#ff8b91}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child{text-align:left}.positive{color:var(--positive)}.negative{color:var(--negative)}:is(button,select,input,summary):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}
+.guardrails{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:12px 16px;margin:16px 0}summary{cursor:pointer}summary h2{display:inline;font-size:15px;font-weight:600}h3{font-size:14px;margin:16px 0 4px}.note{font-size:13px;color:#b1b7c5}.editor{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}fieldset{border:1px solid #2a2e39;border-radius:4px;padding:8px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}legend{color:#b1b7c5}.window{display:flex;gap:6px;align-items:center}input[type=time],select,button{background:#131722;color:#d1d4dc;border:1px solid #434651;padding:4px 8px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:8px;align-items:center;width:100%}.error{color:#ff8b91}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child{text-align:left}:is(button,select,input,summary):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}
 </style>

@@ -5,7 +5,6 @@ import {narrowByEntryPrice} from './simulationPinMatching.js';
 
 // Gleiche Zählung wie die Messung (dobWinrateAggregate): je Route Win/Loss/offen, Winrate nur aus Win+Loss, R = 2·Win − Loss.
 // R-Ziel k aus max_r/sl_hit: Win, wenn k vor dem SL erreicht wurde; Loss, wenn der SL vorher kam; sonst offen bzw. unbekannt. Ohne max_r (Lauf noch nicht neu befüllt) gilt nur der gespeicherte 2R-Ausgang.
-export const DOB_R_TARGETS=[2,2.5,3,3.5,4,4.5,5];
 export function dobTargetOutcome(row,k=2){
  if(row.max_r==null)return k===2?row.outcome:'unknown';
  if(row.max_r>=k)return 'success';
@@ -20,6 +19,11 @@ export function dobRouteStats(rows,k=2){
  return routes;
 }
 export const dobBreakEven=k=>1/(1+k);
+// Die Seite zeigt diese Ziele fest nebeneinander (Schwerpunkt 3R und 5R); kompakt „37,9 % · +54“.
+export const DOB_STAT_TARGETS=[2,3,4,5];
+export const dobPct=v=>v==null?'–':`${(v*100).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})} %`;
+export const dobSignedR=r=>r==null?'–':`${r>0?'+':r<0?'−':'±'}${Math.abs(r).toLocaleString('de-DE')}`;
+export const dobWinTone=(v,k)=>v==null?'':v>dobBreakEven(k)?'positive':v<dobBreakEven(k)?'negative':'';
 
 // Jahr und Monat nach Erkennung des Paars (Berlin), wie die Messung zählt; die Session nach Entry-Zeit.
 export const dobTradeMonth=row=>berlinDateStrFor(row.recognized_at).slice(0,7);

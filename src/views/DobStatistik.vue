@@ -4,8 +4,9 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_R_TARGETS,dobBreakEven,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
+import DobStatCell from '../components/DobStatCell.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
 import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailReason} from '../dobGuardrails.js';
 import {fetchDobTradePins,addDobTradePin,removePinEntry,updatePinNote} from '../pinContext.js';
@@ -98,11 +99,9 @@ async function revealLast(){
 onMounted(()=>{document.addEventListener('visibilitychange',revealLast);window.addEventListener('focus',revealLast);});
 onUnmounted(()=>{document.removeEventListener('visibilitychange',revealLast);window.removeEventListener('focus',revealLast);});
 const removePin=()=>pinAction(async()=>{if(!await removePinEntry(pinTarget.value.existingId))throw new Error('Pin konnte nicht entfernt werden.');});
-// Zwei R-Ziele zum Vergleichen (Ziel A = bisheriger 2R-Wert), in der URL als ?rA=&rB=.
-const targetFrom=(value,fallback)=>DOB_R_TARGETS.includes(Number(value))?Number(value):fallback;
-const rA=ref(targetFrom(route.query.rA,2)),rB=ref(targetFrom(route.query.rB,3));
-const targets=computed(()=>[{name:'A',k:rA.value},{name:'B',k:rB.value}]);
-watch([instrument,year,run,rA,rB],([i,y,r,a,b])=>{shown.value=PAGE;router.replace({query:{run:r,instrument:i,year:y,rA:String(a),rB:String(b)}});});
+// Feste R-Ziele 2R/3R/4R/5R nebeneinander statt Auswahl; alte Links mit ?rA=&rB= laden weiter, die Parameter fallen weg.
+const targets=computed(()=>DOB_STAT_TARGETS.map(k=>({name:String(k),k})));
+watch([instrument,year,run],([i,y,r])=>{shown.value=PAGE;router.replace({query:{run:r,instrument:i,year:y}});},{immediate:true});
 
 const years=computed(()=>[...new Set([year.value,...rows.value.map(r=>dobTradeMonth(r).slice(0,4))])].sort().reverse());
 const yearRows=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(year.value)));
@@ -152,8 +151,7 @@ const tables=computed(()=>{
 });
 const computedAt=computed(()=>selectedRun.value?.computed_at);
 
-const pct=v=>v==null?'–':`${(v*100).toFixed(1)} %`;
-const winTone=(v,k=2)=>v==null?'':v>dobBreakEven(k)?'positive':v<dobBreakEven(k)?'negative':'';
+const pct=dobPct,winTone=(v,k=2)=>dobWinTone(v,k);
 const rLabel=k=>`${k.toLocaleString('de-DE')}R`;
 const MONTHS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
@@ -166,8 +164,6 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
         <label>Lauf <select v-model="run"><option value="" disabled>Lauf wählen</option><option v-for="r in runs" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
         <label>Instrument <select v-model="instrument"><option v-for="i in INSTRUMENTS" :key="i">{{ i }}</option></select></label>
         <label>Jahr <select v-model="year"><option v-for="y in years" :key="y">{{ y }}</option></select></label>
-        <label>Ziel A <select v-model.number="rA"><option v-for="k in DOB_R_TARGETS" :key="k" :value="k">{{ rLabel(k) }}</option></select></label>
-        <label>Ziel B <select v-model.number="rB"><option v-for="k in DOB_R_TARGETS" :key="k" :value="k">{{ rLabel(k) }}</option></select></label>
         <button type="button" :disabled="loading" @click="refresh">{{ loading?'Wird geladen…':'Aktualisieren' }}</button>
       </div>
     </header>
@@ -183,17 +179,17 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
         <article v-for="r in ROUTES" :key="r" class="tile">
           <h2>Route {{ r }}</h2>
           <div class="targets"><div v-for="t in targets" :key="t.name">
-            <p class="note">Ziel {{ t.name }} · {{ rLabel(t.k) }} · BE {{ pct(dobBreakEven(t.k)) }}</p>
+            <p class="note">{{ rLabel(t.k) }} · BE {{ pct(dobBreakEven(t.k)) }}</p>
             <p class="big" :class="winTone(totals[t.name][r].winrate,t.k)">{{ pct(totals[t.name][r].winrate) }}</p>
-            <p>{{ totals[t.name][r].success }} W / {{ totals[t.name][r].loss }} L · <span :class="pnlClass(totals[t.name][r].sumR)">{{ fmtR(totals[t.name][r].sumR) }}</span></p>
-            <p class="note">offen {{ totals[t.name][r].open }} · uneindeutig/unbekannt {{ totals[t.name][r].ambiguous+totals[t.name][r].unknown }}</p>
+            <p>{{ totals[t.name][r].success }} W / {{ totals[t.name][r].loss }} L · <span :class="pnlClass(totals[t.name][r].sumR)">{{ dobSignedR(totals[t.name][r].sumR) }} R</span></p>
+            <p class="note" title="offen: bis Datenende weder Ziel noch SL · unklar: SL und Ziel in derselben Kerze oder fehlende Kerzen">offen {{ totals[t.name][r].open }} · unklar {{ totals[t.name][r].ambiguous+totals[t.name][r].unknown }}</p>
           </div></div>
         </article>
         <article v-if="retestTiles.length" class="tile">
           <h2>Retest der Kraftquelle</h2>
           <div v-for="r in retestTiles" :key="r.kind" class="retest">
             <p class="note">{{ r.label }} · {{ r.n }} Trades</p>
-            <p><span v-for="t in r.targets" :key="t.name" class="retest-target">{{ rLabel(t.k) }} <b :class="winTone(t.s.winrate,t.k)">{{ pct(t.s.winrate) }}</b> <span :class="pnlClass(t.s.sumR)">{{ fmtR(t.s.sumR) }}</span></span></p>
+            <p><span v-for="t in r.targets" :key="t.name" class="retest-target">{{ rLabel(t.k) }} <DobStatCell :stats="t.s" :k="t.k" /></span></p>
           </div>
         </article>
         <article v-if="hasMaxR" class="tile">
@@ -203,7 +199,7 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
           <p class="note">Anteil der {{ maxRShares.n }} entschiedenen Trades, die die Stufe vor dem SL erreicht hätten.</p>
         </article>
       </section>
-      <p class="note">Ziel k: Win, wenn k vor dem SL erreicht wurde (+k R), Loss, wenn der SL vorher kam (−1 R), offen, wenn bis Datenende keins von beiden; Break-even = 1/(1+k). Winrate = Win / (Win + Loss). Ziel 2R entspricht dem bisherigen Ausgang. Jahr und Monat nach Erkennung des Paars, Session und Stunde nach Entry-Zeit (Europe/Berlin).<template v-if="computedAt"> Stand der Berechnung: {{ formatDatedTime(Date.parse(computedAt)/1000) }}.</template></p>
+      <p class="note">Ziel k: Win, wenn k vor dem SL erreicht wurde (+k R), Loss, wenn der SL vorher kam (−1 R), offen, wenn bis Datenende keins von beiden; Break-even = 1/(1+k). Winrate = Win / (Win + Loss). Zellen: Winrate · Σ R, Details im Tooltip. Ziel 2R entspricht dem bisherigen Ausgang. Jahr und Monat nach Erkennung des Paars, Session und Stunde nach Entry-Zeit (Europe/Berlin).<template v-if="computedAt"> Stand der Berechnung: {{ formatDatedTime(Date.parse(computedAt)/1000) }}.</template></p>
 
       <template v-for="table in tables" :key="table.key">
         <DobStatsTable :title="table.title" :first-col="table.firstCol" :sections="table.sections" :targets="targets"
@@ -226,11 +222,11 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
         </fieldset>
         <p v-if="pinError&&!pinTarget" role="alert" class="error">{{ pinError }}</p>
         <div class="scroll"><table>
-          <thead><tr><th scope="col">Entry</th><th scope="col">Richtung</th><th scope="col">Route</th><th scope="col">Ausgang</th><th scope="col">R (Ziel A)</th><th scope="col">Session</th><th scope="col">Kraftquelle</th><th scope="col" :aria-sort="maxRSort==='desc'?'descending':maxRSort==='asc'?'ascending':'none'"><button type="button" class="sort" @click="cycleMaxRSort">Max R {{ maxRSort==='desc'?'▼':maxRSort==='asc'?'▲':'↕' }}</button></th><th scope="col">Chart</th><th scope="col">Pin</th></tr></thead>
+          <thead><tr><th scope="col">Entry</th><th scope="col">Richtung</th><th scope="col">Route</th><th scope="col">Ausgang</th><th scope="col">R (2R)</th><th scope="col">Session</th><th scope="col">Kraftquelle</th><th scope="col" :aria-sort="maxRSort==='desc'?'descending':maxRSort==='asc'?'ascending':'none'"><button type="button" class="sort" @click="cycleMaxRSort">Max R {{ maxRSort==='desc'?'▼':maxRSort==='asc'?'▲':'↕' }}</button></th><th scope="col">Chart</th><th scope="col">Pin</th></tr></thead>
           <tbody><tr v-for="t in listed.slice(0,shown)" :key="t.id" :class="{'last-opened':isLast(t)}" @contextmenu.prevent="openPin(t)">
             <td><SimulationPinFlag v-if="pinOf(t)" :note="pinOf(t).note||undefined" />{{ formatDatedTime(t.entry_time) }}</td><td>{{ t.direction==='long'?'Long':'Short' }}</td><td>{{ t.route }}</td>
             <td>{{ DOB_OUTCOME_LABELS[t.outcome]??t.outcome }}<template v-if="t.exit_time"> · {{ formatDatedTime(t.exit_time) }}</template></td>
-            <td :class="pnlClass(dobTradeR(t,rA))">{{ dobTradeR(t,rA)==null?'–':fmtR(dobTradeR(t,rA)) }}</td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobSourceLabel(t) }}</td>
+            <td :class="pnlClass(dobTradeR(t,2))">{{ dobTradeR(t,2)==null?'–':fmtR(dobTradeR(t,2)) }}</td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobSourceLabel(t) }}</td>
             <td class="max-r"><span class="bar" :title="`Max R ${dobMaxRLabel(t.max_r)}`"><i :style="{width:`${Math.min(t.max_r??0,5)/5*100}%`}" :class="{hit:(t.max_r??0)>=2}"></i></span> {{ dobMaxRLabel(t.max_r) }}</td>
             <td><button type="button" class="chart" :class="{seen:seenKeys.has(dobTradePinKey(t))}" :aria-label="`DOB ${formatDatedTime(t.entry_time)} im Chart öffnen${seenKeys.has(dobTradePinKey(t))?' (gesehen)':''}`" @click="openChart(t)">{{ seenKeys.has(dobTradePinKey(t))?'✓ Im Chart':'Im Chart' }}</button></td>
             <td><button type="button" class="pin" :aria-label="`DOB ${formatDatedTime(t.entry_time)} ${pinOf(t)?'Pin bearbeiten':'anpinnen'}`" @click="openPin(t)">{{ pinOf(t)?'⚑ bearbeiten':'⚑' }}</button></td>
@@ -243,5 +239,5 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
   </main>
 </template>
 <style scoped>
-.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.targets{display:grid;grid-template-columns:1fr 1fr;gap:12px}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}tr.last-opened{background:rgba(145,184,255,.24);box-shadow:inset 4px 0 0 #91b8ff;font-weight:600}.retest{margin-top:6px}.retest-target{margin-right:12px}.max-r-filter{border:1px solid #2a2e39;border-radius:4px;margin:8px 0;padding:6px 10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.max-r-filter legend{color:#b1b7c5;padding:0 4px}button.sort{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600}td.max-r{text-align:left}.bar{display:inline-block;vertical-align:middle;width:70px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,#2a2e39 0 6px,#1e222d 6px 7px);position:relative;overflow:hidden}.bar::after{content:'';position:absolute;left:40%;top:0;bottom:0;width:1px;background:#b1b7c5}.bar i{display:block;height:100%;background:var(--negative)}.bar i.hit{background:var(--positive)}button.chart{padding:2px 10px;border-color:#91b8ff;color:#91b8ff}button.chart.seen{border-color:#434651;color:#7f8696}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
+.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.targets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.targets .big{font-size:22px!important}.tiles .tile:has(.targets){grid-column:span 2}@media(max-width:900px){.tiles .tile:has(.targets){grid-column:auto}.targets{grid-template-columns:1fr 1fr}}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}tr.last-opened{background:rgba(145,184,255,.24);box-shadow:inset 4px 0 0 #91b8ff;font-weight:600}.retest{margin-top:6px}.retest-target{margin-right:12px}.max-r-filter{border:1px solid #2a2e39;border-radius:4px;margin:8px 0;padding:6px 10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.max-r-filter legend{color:#b1b7c5;padding:0 4px}button.sort{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600}td.max-r{text-align:left}.bar{display:inline-block;vertical-align:middle;width:70px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,#2a2e39 0 6px,#1e222d 6px 7px);position:relative;overflow:hidden}.bar::after{content:'';position:absolute;left:40%;top:0;bottom:0;width:1px;background:#b1b7c5}.bar i{display:block;height:100%;background:var(--negative)}.bar i.hit{background:var(--positive)}button.chart{padding:2px 10px;border-color:#91b8ff;color:#91b8ff}button.chart.seen{border-color:#434651;color:#7f8696}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
 </style>
