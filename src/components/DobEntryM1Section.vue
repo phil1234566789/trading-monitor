@@ -84,6 +84,9 @@ function draw(){
   series.attachPrimitive(p);primitives.push(p);
  }
  drawStructure();
+ // Nach jedem Fall-/TF-/Vor-/Nachlauf-Wechsel Achsen zurücksetzen, sonst bleibt eine manuell verschobene Preisachse stehen.
+ // Sichtfenster statt fitContent: der Ladebereich enthält 2 h Vorlauf für die Fraktal-Bestätigung, der soll nicht ins Bild.
+ series.priceScale().applyOptions({autoScale:true});
  chart.timeScale().setVisibleRange({from:view.from,to:view.to});
 }
 // Debug wie im Dashboard: Pivots mit Ereignis-Labels, Range und Trend je Ebene, auf die gerade angezeigten Kerzen.
