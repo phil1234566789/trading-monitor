@@ -1,5 +1,5 @@
 // Fixture für das M5-Trend-Gate (DOB-Setup v3) aus Philips dob_trade-Pins: je Pin die OB2-Retest-Zeit des gepinnten Setups
-// (checkDobTradeSetup am Entry) und die M5-Kerzen der 26 h davor, session-markiert. Schreibt test/fixtures/dob-native/m5-trend-pins.json.
+// (checkDobTradeSetup am Entry) und die M5-Kerzen der gefundenen Fensterstufe plus 2 h Vorlauf, session-markiert. Schreibt test/fixtures/dob-native/m5-trend-pins.json.
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -38,16 +38,16 @@ try {
     const result = checkDobTradeSetup({ ...dobLiveWindowInput(dobGridInputAt(grid, at, 2 * 86400)), sourceContext });
     const setup = [...result.setups, ...result.rejected].find(s => s.id === ctx.setup_id);
     if (!setup) throw new Error(`Pin ${id}: Setup ${ctx.setup_id} nicht gefunden`);
-    const retestAt = setup.chart.secondRetestTime + 60, from = retestAt - 26 * 3600;
+    const retestAt = setup.chart.secondRetestTime + 60, trend = dobM5Trend(m5Marked, retestAt);
+    const from = retestAt - trend.windowDays * 86400 - 2 * 3600;
     const m5 = m5Marked.filter(c => c.time >= from && c.time + 300 <= retestAt);
-    const trend = dobM5Trend(m5Marked, retestAt);
     cases.push({ pin: id, note: pin.note, expected, direction: setup.direction, setupId: setup.id, entryTime: ctx.entry_time, retestAt,
       m5: m5.map(c => [c.time, c.open, c.high, c.low, c.close, c.ignored ? 1 : 0]) });
-    console.log(`Pin ${id} ${expected} ${setup.direction} · Retest ${formatDatedTime(retestAt)} · Trend ${trend.trend} · Reaktion ${trend.reaction ? `${trend.reaction.type} ${formatDatedTime(trend.reaction.time)} @${trend.reaction.price}` : '–'}`);
+    console.log(`Pin ${id} ${expected} ${setup.direction} · Retest ${formatDatedTime(retestAt)} · Trend ${trend.trend} (${trend.windowDays} Tg) · Reaktion ${trend.reaction ? `${trend.reaction.type} ${formatDatedTime(trend.reaction.time)} @${trend.reaction.price}` : '–'}`);
   }
   await fs.writeFile(path.join(root, 'test', 'fixtures', 'dob-native', 'm5-trend-pins.json'), JSON.stringify({ schemaVersion: 1, instrument: SYMBOL,
     provenance: { source: 'native FXCM Bid via forex_candles (Cache .debug/dob-setup), Pins aus pin_context kind=dob_trade',
-      rowFormat: ['time', 'open', 'high', 'low', 'close', 'ignored'], window: '26 h M5 vor der OB2-Retest-Zeit' }, cases }));
+      rowFormat: ['time', 'open', 'high', 'low', 'close', 'ignored'], window: 'M5 der gefundenen Fensterstufe (windowDays · 24 h) plus 2 h Vorlauf vor der OB2-Retest-Zeit' }, cases }));
 } finally {
   await server.close();
 }
