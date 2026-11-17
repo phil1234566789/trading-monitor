@@ -8,25 +8,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { createServer } from 'vite';
+import { loadDobConfigTrades, DOB_CONFIG_RUN as RUN } from './dobConfigTrades.mjs';
 
-const RUN = 'dob-setup-v3', MIN_STREAK = 4;
+const MIN_STREAK = 4;
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 let envDir = root;
 while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir) envDir = path.dirname(envDir);
 
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
-  const L = p => server.ssrLoadModule(p);
-  const [{ supabase }, g, pp, st, bt, db] = await Promise.all(['/src/supabaseClient.js', '/src/dobGuardrails.js', '/src/dobPartialProfit.js',
-    '/src/dobTradeStatistics.js', '/src/berlinTime.js', '/src/dbReadPaging.js'].map(L));
-  const { data: cfgRow, error } = await supabase.from('dob_guardrails').select('*').eq('instrument', 'XAUUSD').single();
-  if (error) throw error;
-  const cfg = g.dobGuardrailsFromRow(cfgRow);
-  const { data: rows, error: rowsError } = await db.fetchAllRows((from, to) => supabase.from('dob_trade_setups').select('*').eq('instrument', 'XAUUSD').eq('run_id', RUN).order('id').range(from, to));
-  if (rowsError) throw rowsError;
-  const { data: sessions } = await supabase.from('sessions').select('label,from_minutes,to_minutes,days').eq('instrument', 'XAUUSD').limit(200);
-  const allowed = [...new Map(rows.filter(r => !g.dobRowGuardrailReason(cfg, r)).map(r => [st.dobTradePinKey(r), r])).values()]
-    .sort((a, b) => a.entry_time - b.entry_time);
+  const { cfg, allowed, sessions, g, pp, st, bt } = await loadDobConfigTrades(server);
   const when = s => bt.formatDatedTime(s), r1 = v => Math.round(v * 10) / 10;
   const ideaOf = r => `${r.direction}:${r.source_kind}:${r.source_zone_start}:${r.source_zone_bottom}:${r.source_zone_top}`;
 

@@ -1,0 +1,1392 @@
+{
+  "measurement": "dob-lab-day-limit-v1",
+  "git": "ebd52550",
+  "config": "Sperren 19:00–22:00, 10:30–11:00 · Jan · 07:00–09:00 TP 5R · 14:00–19:00 TP 4R · 02:00–07:00 TP 4R · sonst 2R · 3 von 3 Gegenkerzen sperrt · Teilprofit 50 % bei 3R → SL auf Entry",
+  "account": {
+    "start": 50000,
+    "maxLoss": 3000,
+    "buffer": 1.2,
+    "riskPct": 0.5
+  },
+  "methodology": [
+    "Träger wie lab-drawdown: v3 aus der DB, Philips gespeicherte Konfig inkl. Teilprofit, R je Trade aus dobRowConfigScore; offene fehlen.",
+    "Ausstieg je Trade = Ende der M1-Kerze, die den Rest (Ziel, BE) bzw. den SL trifft; ein Trade zählt fürs Limit nur, wenn er vor dem nächsten Entry geschlossen ist.",
+    "Tag = Berliner Entry-Datum. Serienpause: Serie in Ausstiegsreihenfolge, erster Papier-Win nach Pausenbeginn zählt nicht, Entries ab dessen Ausstieg.",
+    "Risiko je Trade = 3000 $ / (1.2 × Max-DD R); $-Ergebnis bei 0.5 % = 250 $ je R."
+  ],
+  "variants": {
+    "base": {
+      "kept": 234,
+      "sumR": 85,
+      "h1": 18,
+      "h2": 67,
+      "maxDdR": 20.5,
+      "longestStreak": 12,
+      "worstDay": {
+        "day": "2026-03-05",
+        "sumR": -7
+      },
+      "money": {
+        "riskPerTradeUsd": 121,
+        "riskPerTradePct": 0.24,
+        "at05pct": {
+          "resultUsd": 21250,
+          "maxDdUsd": 5125,
+          "worstDayUsd": -1750,
+          "floorHit": true
+        }
+      }
+    },
+    "A: nach 2 Losses": {
+      "kept": 196,
+      "sumR": 65,
+      "h1": 15,
+      "h2": 50,
+      "maxDdR": 16,
+      "longestStreak": 15,
+      "worstDay": {
+        "day": "2026-02-19",
+        "sumR": -3
+      },
+      "money": {
+        "riskPerTradeUsd": 156,
+        "riskPerTradePct": 0.31,
+        "at05pct": {
+          "resultUsd": 16250,
+          "maxDdUsd": 4000,
+          "worstDayUsd": -750,
+          "floorHit": true
+        }
+      },
+      "daysTriggered": 18,
+      "days": [
+        {
+          "day": "2026-02-05",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "18:01",
+              "direction": "short",
+              "r": 3.5
+            }
+          ],
+          "cutWinners": [
+            "18:01 +3.5R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -3.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1770281100%3A1770282000%3Ab&instrument=XAUUSD&bar=5m&replay=1770321240"
+        },
+        {
+          "day": "2026-02-19",
+          "before": 3,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "11:34",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "12:35",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "15:40",
+              "direction": "long",
+              "r": 4
+            }
+          ],
+          "cutWinners": [
+            "15:40 +4R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1771472700%3A1771476900%3Aa&instrument=XAUUSD&bar=5m&replay=1771506180"
+        },
+        {
+          "day": "2026-02-26",
+          "before": 3,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "09:58",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "14:06",
+              "direction": "short",
+              "r": 4
+            },
+            {
+              "entry": "14:20",
+              "direction": "short",
+              "r": 1.5
+            }
+          ],
+          "cutWinners": [
+            "14:06 +4R",
+            "14:20 +1.5R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -4.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1772064600%3A1772095500%3Aa&instrument=XAUUSD&bar=5m&replay=1772103540"
+        },
+        {
+          "day": "2026-03-05",
+          "before": 2,
+          "after": 5,
+          "dropped": [
+            {
+              "entry": "06:26",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "11:28",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "12:46",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "13:00",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "13:20",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 5,
+          "netEffectR": 5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1772669100%3A1772686800%3Aa&instrument=XAUUSD&bar=5m&replay=1772688720"
+        },
+        {
+          "day": "2026-03-16",
+          "before": 2,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "09:58",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "16:32",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "17:47",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 3,
+          "netEffectR": 3,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1773646500%3A1773650100%3Aa&instrument=XAUUSD&bar=5m&replay=1773654420"
+        },
+        {
+          "day": "2026-03-17",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "14:03",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1773745500%3A1773749700%3Aa&instrument=XAUUSD&bar=5m&replay=1773761280"
+        },
+        {
+          "day": "2026-05-08",
+          "before": 2,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "11:08",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "11:59",
+              "direction": "long",
+              "r": 4
+            },
+            {
+              "entry": "12:54",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [
+            "11:59 +4R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1778225400%3A1778228400%3Ab&instrument=XAUUSD&bar=5m&replay=1778233980"
+        },
+        {
+          "day": "2026-05-18",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "12:04",
+              "direction": "short",
+              "r": 2
+            }
+          ],
+          "cutWinners": [
+            "12:04 +2R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1779096300%3A1779097200%3Aa&instrument=XAUUSD&bar=5m&replay=1779099300"
+        },
+        {
+          "day": "2026-06-09",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "11:44",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1780994700%3A1780997100%3Aa&instrument=XAUUSD&bar=5m&replay=1781000160"
+        },
+        {
+          "day": "2026-06-17",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "07:25",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1781670300%3A1781672700%3Aa&instrument=XAUUSD&bar=5m&replay=1781674260"
+        },
+        {
+          "day": "2026-07-02",
+          "before": 4,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "11:42",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1782977700%3A1782979500%3Aa&instrument=XAUUSD&bar=5m&replay=1782986520"
+        },
+        {
+          "day": "2026-08-10",
+          "before": 3,
+          "after": 6,
+          "dropped": [
+            {
+              "entry": "12:55",
+              "direction": "short",
+              "r": 1.5
+            },
+            {
+              "entry": "13:46",
+              "direction": "short",
+              "r": 4
+            },
+            {
+              "entry": "14:13",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "14:35",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "18:09",
+              "direction": "long",
+              "r": 3.5
+            },
+            {
+              "entry": "18:50",
+              "direction": "long",
+              "r": 3.5
+            }
+          ],
+          "cutWinners": [
+            "12:55 +1.5R",
+            "13:46 +4R",
+            "18:09 +3.5R",
+            "18:50 +3.5R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -10.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1786354200%3A1786358100%3Aa&instrument=XAUUSD&bar=5m&replay=1786360320"
+        },
+        {
+          "day": "2026-08-18",
+          "before": 3,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "16:23",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1787059800%3A1787061600%3Ab&instrument=XAUUSD&bar=5m&replay=1787063460"
+        },
+        {
+          "day": "2026-08-24",
+          "before": 5,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "18:19",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1787564700%3A1787587200%3Aa&instrument=XAUUSD&bar=5m&replay=1787592060"
+        },
+        {
+          "day": "2026-09-21",
+          "before": 3,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "15:32",
+              "direction": "short",
+              "r": 3.5
+            }
+          ],
+          "cutWinners": [
+            "15:32 +3.5R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -3.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1789956600%3A1789993200%3Aa&instrument=XAUUSD&bar=5m&replay=1789999260"
+        },
+        {
+          "day": "2026-09-22",
+          "before": 2,
+          "after": 2,
+          "dropped": [
+            {
+              "entry": "04:04",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "04:42",
+              "direction": "short",
+              "r": 4
+            }
+          ],
+          "cutWinners": [
+            "04:42 +4R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -3,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1790039400%3A1790041500%3Aa&instrument=XAUUSD&bar=5m&replay=1790042700"
+        },
+        {
+          "day": "2026-10-05",
+          "before": 2,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "07:43",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "14:16",
+              "direction": "short",
+              "r": 1.5
+            },
+            {
+              "entry": "17:32",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [
+            "14:16 +1.5R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": 0.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1791175200%3A1791176700%3Ab&instrument=XAUUSD&bar=5m&replay=1791179700"
+        },
+        {
+          "day": "2026-10-16",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "14:38",
+              "direction": "short",
+              "r": 3.5
+            }
+          ],
+          "cutWinners": [
+            "14:38 +3.5R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -3.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1792147500%3A1792150200%3Aa&instrument=XAUUSD&bar=5m&replay=1792155360"
+        }
+      ]
+    },
+    "A: nach 3 Losses": {
+      "kept": 211,
+      "sumR": 69,
+      "h1": 14.5,
+      "h2": 54.5,
+      "maxDdR": 19,
+      "longestStreak": 12,
+      "worstDay": {
+        "day": "2026-02-19",
+        "sumR": -3
+      },
+      "money": {
+        "riskPerTradeUsd": 131,
+        "riskPerTradePct": 0.26,
+        "at05pct": {
+          "resultUsd": 17250,
+          "maxDdUsd": 4750,
+          "worstDayUsd": -750,
+          "floorHit": true
+        }
+      },
+      "daysTriggered": 9,
+      "days": [
+        {
+          "day": "2026-02-19",
+          "before": 3,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "11:34",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "12:35",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "15:40",
+              "direction": "long",
+              "r": 4
+            }
+          ],
+          "cutWinners": [
+            "15:40 +4R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1771472700%3A1771476900%3Aa&instrument=XAUUSD&bar=5m&replay=1771506180"
+        },
+        {
+          "day": "2026-02-26",
+          "before": 3,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "09:58",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "14:06",
+              "direction": "short",
+              "r": 4
+            },
+            {
+              "entry": "14:20",
+              "direction": "short",
+              "r": 1.5
+            }
+          ],
+          "cutWinners": [
+            "14:06 +4R",
+            "14:20 +1.5R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -4.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1772064600%3A1772095500%3Aa&instrument=XAUUSD&bar=5m&replay=1772103540"
+        },
+        {
+          "day": "2026-03-05",
+          "before": 3,
+          "after": 4,
+          "dropped": [
+            {
+              "entry": "11:28",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "12:46",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "13:00",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "13:20",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 4,
+          "netEffectR": 4,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1772699400%3A1772705400%3Aa&instrument=XAUUSD&bar=5m&replay=1772707020"
+        },
+        {
+          "day": "2026-03-16",
+          "before": 3,
+          "after": 2,
+          "dropped": [
+            {
+              "entry": "16:32",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "17:47",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 2,
+          "netEffectR": 2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1773656400%3A1773657900%3Aa&instrument=XAUUSD&bar=5m&replay=1773678420"
+        },
+        {
+          "day": "2026-05-08",
+          "before": 3,
+          "after": 2,
+          "dropped": [
+            {
+              "entry": "11:59",
+              "direction": "long",
+              "r": 4
+            },
+            {
+              "entry": "12:54",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [
+            "11:59 +4R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -3,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1778225400%3A1778228100%3Aa&instrument=XAUUSD&bar=5m&replay=1778235240"
+        },
+        {
+          "day": "2026-08-10",
+          "before": 4,
+          "after": 5,
+          "dropped": [
+            {
+              "entry": "13:46",
+              "direction": "short",
+              "r": 4
+            },
+            {
+              "entry": "14:13",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "14:35",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "18:09",
+              "direction": "long",
+              "r": 3.5
+            },
+            {
+              "entry": "18:50",
+              "direction": "long",
+              "r": 3.5
+            }
+          ],
+          "cutWinners": [
+            "13:46 +4R",
+            "18:09 +3.5R",
+            "18:50 +3.5R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -9,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1786358100%3A1786359300%3Ab&instrument=XAUUSD&bar=5m&replay=1786364040"
+        },
+        {
+          "day": "2026-08-24",
+          "before": 5,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "18:19",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1787564700%3A1787587200%3Aa&instrument=XAUUSD&bar=5m&replay=1787592060"
+        },
+        {
+          "day": "2026-09-22",
+          "before": 3,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "04:42",
+              "direction": "short",
+              "r": 4
+            }
+          ],
+          "cutWinners": [
+            "04:42 +4R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -4,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1790039400%3A1790041200%3Aa&instrument=XAUUSD&bar=5m&replay=1790049780"
+        },
+        {
+          "day": "2026-10-05",
+          "before": 3,
+          "after": 2,
+          "dropped": [
+            {
+              "entry": "14:16",
+              "direction": "short",
+              "r": 1.5
+            },
+            {
+              "entry": "17:32",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [
+            "14:16 +1.5R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -0.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1791192600%3A1791200400%3Aa&instrument=XAUUSD&bar=5m&replay=1791213720"
+        }
+      ]
+    },
+    "A: nach −2R": {
+      "kept": 199,
+      "sumR": 66.5,
+      "h1": 15,
+      "h2": 51.5,
+      "maxDdR": 16,
+      "longestStreak": 15,
+      "worstDay": {
+        "day": "2026-02-19",
+        "sumR": -3
+      },
+      "money": {
+        "riskPerTradeUsd": 156,
+        "riskPerTradePct": 0.31,
+        "at05pct": {
+          "resultUsd": 16625,
+          "maxDdUsd": 4000,
+          "worstDayUsd": -750,
+          "floorHit": true
+        }
+      },
+      "daysTriggered": 15,
+      "days": [
+        {
+          "day": "2026-02-05",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "18:01",
+              "direction": "short",
+              "r": 3.5
+            }
+          ],
+          "cutWinners": [
+            "18:01 +3.5R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -3.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1770281100%3A1770282000%3Ab&instrument=XAUUSD&bar=5m&replay=1770321240"
+        },
+        {
+          "day": "2026-02-19",
+          "before": 3,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "11:34",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "12:35",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "15:40",
+              "direction": "long",
+              "r": 4
+            }
+          ],
+          "cutWinners": [
+            "15:40 +4R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1771472700%3A1771476900%3Aa&instrument=XAUUSD&bar=5m&replay=1771506180"
+        },
+        {
+          "day": "2026-02-26",
+          "before": 3,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "09:58",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "14:06",
+              "direction": "short",
+              "r": 4
+            },
+            {
+              "entry": "14:20",
+              "direction": "short",
+              "r": 1.5
+            }
+          ],
+          "cutWinners": [
+            "14:06 +4R",
+            "14:20 +1.5R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -4.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1772064600%3A1772095500%3Aa&instrument=XAUUSD&bar=5m&replay=1772103540"
+        },
+        {
+          "day": "2026-03-05",
+          "before": 2,
+          "after": 5,
+          "dropped": [
+            {
+              "entry": "06:26",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "11:28",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "12:46",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "13:00",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "13:20",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 5,
+          "netEffectR": 5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1772669100%3A1772686800%3Aa&instrument=XAUUSD&bar=5m&replay=1772688720"
+        },
+        {
+          "day": "2026-03-16",
+          "before": 2,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "09:58",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "16:32",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "17:47",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 3,
+          "netEffectR": 3,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1773646500%3A1773650100%3Aa&instrument=XAUUSD&bar=5m&replay=1773654420"
+        },
+        {
+          "day": "2026-03-17",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "14:03",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1773745500%3A1773749700%3Aa&instrument=XAUUSD&bar=5m&replay=1773761280"
+        },
+        {
+          "day": "2026-05-08",
+          "before": 2,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "11:08",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "11:59",
+              "direction": "long",
+              "r": 4
+            },
+            {
+              "entry": "12:54",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [
+            "11:59 +4R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1778225400%3A1778228400%3Ab&instrument=XAUUSD&bar=5m&replay=1778233980"
+        },
+        {
+          "day": "2026-05-18",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "12:04",
+              "direction": "short",
+              "r": 2
+            }
+          ],
+          "cutWinners": [
+            "12:04 +2R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1779096300%3A1779097200%3Aa&instrument=XAUUSD&bar=5m&replay=1779099300"
+        },
+        {
+          "day": "2026-06-09",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "11:44",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1780994700%3A1780997100%3Aa&instrument=XAUUSD&bar=5m&replay=1781000160"
+        },
+        {
+          "day": "2026-06-17",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "07:25",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1781670300%3A1781672700%3Aa&instrument=XAUUSD&bar=5m&replay=1781674260"
+        },
+        {
+          "day": "2026-07-02",
+          "before": 4,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "11:42",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 1,
+          "netEffectR": 1,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1782977700%3A1782979500%3Aa&instrument=XAUUSD&bar=5m&replay=1782986520"
+        },
+        {
+          "day": "2026-08-10",
+          "before": 3,
+          "after": 6,
+          "dropped": [
+            {
+              "entry": "12:55",
+              "direction": "short",
+              "r": 1.5
+            },
+            {
+              "entry": "13:46",
+              "direction": "short",
+              "r": 4
+            },
+            {
+              "entry": "14:13",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "14:35",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "18:09",
+              "direction": "long",
+              "r": 3.5
+            },
+            {
+              "entry": "18:50",
+              "direction": "long",
+              "r": 3.5
+            }
+          ],
+          "cutWinners": [
+            "12:55 +1.5R",
+            "13:46 +4R",
+            "18:09 +3.5R",
+            "18:50 +3.5R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -10.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1786354200%3A1786358100%3Aa&instrument=XAUUSD&bar=5m&replay=1786360320"
+        },
+        {
+          "day": "2026-09-22",
+          "before": 2,
+          "after": 2,
+          "dropped": [
+            {
+              "entry": "04:04",
+              "direction": "short",
+              "r": -1
+            },
+            {
+              "entry": "04:42",
+              "direction": "short",
+              "r": 4
+            }
+          ],
+          "cutWinners": [
+            "04:42 +4R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -3,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1790039400%3A1790041500%3Aa&instrument=XAUUSD&bar=5m&replay=1790042700"
+        },
+        {
+          "day": "2026-10-05",
+          "before": 2,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "07:43",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "14:16",
+              "direction": "short",
+              "r": 1.5
+            },
+            {
+              "entry": "17:32",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [
+            "14:16 +1.5R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": 0.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1791175200%3A1791176700%3Ab&instrument=XAUUSD&bar=5m&replay=1791179700"
+        },
+        {
+          "day": "2026-10-16",
+          "before": 2,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "14:38",
+              "direction": "short",
+              "r": 3.5
+            }
+          ],
+          "cutWinners": [
+            "14:38 +3.5R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -3.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1792147500%3A1792150200%3Aa&instrument=XAUUSD&bar=5m&replay=1792155360"
+        }
+      ]
+    },
+    "A: nach −3R": {
+      "kept": 217,
+      "sumR": 77,
+      "h1": 14.5,
+      "h2": 62.5,
+      "maxDdR": 19,
+      "longestStreak": 12,
+      "worstDay": {
+        "day": "2026-02-19",
+        "sumR": -3
+      },
+      "money": {
+        "riskPerTradeUsd": 131,
+        "riskPerTradePct": 0.26,
+        "at05pct": {
+          "resultUsd": 19250,
+          "maxDdUsd": 4750,
+          "worstDayUsd": -750,
+          "floorHit": true
+        }
+      },
+      "daysTriggered": 7,
+      "days": [
+        {
+          "day": "2026-02-19",
+          "before": 3,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "11:34",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "12:35",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "15:40",
+              "direction": "long",
+              "r": 4
+            }
+          ],
+          "cutWinners": [
+            "15:40 +4R"
+          ],
+          "savedLosses": 2,
+          "netEffectR": -2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1771472700%3A1771476900%3Aa&instrument=XAUUSD&bar=5m&replay=1771506180"
+        },
+        {
+          "day": "2026-02-26",
+          "before": 3,
+          "after": 3,
+          "dropped": [
+            {
+              "entry": "09:58",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "14:06",
+              "direction": "short",
+              "r": 4
+            },
+            {
+              "entry": "14:20",
+              "direction": "short",
+              "r": 1.5
+            }
+          ],
+          "cutWinners": [
+            "14:06 +4R",
+            "14:20 +1.5R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -4.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1772064600%3A1772095500%3Aa&instrument=XAUUSD&bar=5m&replay=1772103540"
+        },
+        {
+          "day": "2026-03-05",
+          "before": 3,
+          "after": 4,
+          "dropped": [
+            {
+              "entry": "11:28",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "12:46",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "13:00",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "13:20",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 4,
+          "netEffectR": 4,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1772699400%3A1772705400%3Aa&instrument=XAUUSD&bar=5m&replay=1772707020"
+        },
+        {
+          "day": "2026-03-16",
+          "before": 3,
+          "after": 2,
+          "dropped": [
+            {
+              "entry": "16:32",
+              "direction": "long",
+              "r": -1
+            },
+            {
+              "entry": "17:47",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [],
+          "savedLosses": 2,
+          "netEffectR": 2,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1773656400%3A1773657900%3Aa&instrument=XAUUSD&bar=5m&replay=1773678420"
+        },
+        {
+          "day": "2026-05-08",
+          "before": 3,
+          "after": 2,
+          "dropped": [
+            {
+              "entry": "11:59",
+              "direction": "long",
+              "r": 4
+            },
+            {
+              "entry": "12:54",
+              "direction": "long",
+              "r": -1
+            }
+          ],
+          "cutWinners": [
+            "11:59 +4R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -3,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1778225400%3A1778228100%3Aa&instrument=XAUUSD&bar=5m&replay=1778235240"
+        },
+        {
+          "day": "2026-09-22",
+          "before": 3,
+          "after": 1,
+          "dropped": [
+            {
+              "entry": "04:42",
+              "direction": "short",
+              "r": 4
+            }
+          ],
+          "cutWinners": [
+            "04:42 +4R"
+          ],
+          "savedLosses": 0,
+          "netEffectR": -4,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1790039400%3A1790041200%3Aa&instrument=XAUUSD&bar=5m&replay=1790049780"
+        },
+        {
+          "day": "2026-10-05",
+          "before": 3,
+          "after": 2,
+          "dropped": [
+            {
+              "entry": "14:16",
+              "direction": "short",
+              "r": 1.5
+            },
+            {
+              "entry": "17:32",
+              "direction": "short",
+              "r": -1
+            }
+          ],
+          "cutWinners": [
+            "14:16 +1.5R"
+          ],
+          "savedLosses": 1,
+          "netEffectR": -0.5,
+          "chart": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1791192600%3A1791200400%3Aa&instrument=XAUUSD&bar=5m&replay=1791213720"
+        }
+      ]
+    },
+    "B: Pause nach 3": {
+      "kept": 150,
+      "sumR": 59,
+      "h1": 14.5,
+      "h2": 44.5,
+      "maxDdR": 14,
+      "longestStreak": 9,
+      "worstDay": {
+        "day": "2026-02-19",
+        "sumR": -3
+      },
+      "money": {
+        "riskPerTradeUsd": 178,
+        "riskPerTradePct": 0.36,
+        "at05pct": {
+          "resultUsd": 14750,
+          "maxDdUsd": 3500,
+          "worstDayUsd": -750,
+          "floorHit": true
+        }
+      },
+      "skipped": 84,
+      "skippedWins": 27,
+      "skippedR": 26
+    },
+    "B: Pause nach 4": {
+      "kept": 215,
+      "sumR": 71,
+      "h1": 13.5,
+      "h2": 57.5,
+      "maxDdR": 18.5,
+      "longestStreak": 11,
+      "worstDay": {
+        "day": "2026-03-16",
+        "sumR": -5
+      },
+      "money": {
+        "riskPerTradeUsd": 135,
+        "riskPerTradePct": 0.27,
+        "at05pct": {
+          "resultUsd": 17750,
+          "maxDdUsd": 4625,
+          "worstDayUsd": -1250,
+          "floorHit": true
+        }
+      },
+      "skipped": 19,
+      "skippedWins": 8,
+      "skippedR": 14
+    },
+    "B: Pause nach 5": {
+      "kept": 232,
+      "sumR": 82,
+      "h1": 15,
+      "h2": 67,
+      "maxDdR": 23.5,
+      "longestStreak": 13,
+      "worstDay": {
+        "day": "2026-03-05",
+        "sumR": -7
+      },
+      "money": {
+        "riskPerTradeUsd": 106,
+        "riskPerTradePct": 0.21,
+        "at05pct": {
+          "resultUsd": 20500,
+          "maxDdUsd": 5875,
+          "worstDayUsd": -1750,
+          "floorHit": true
+        }
+      },
+      "skipped": 2,
+      "skippedWins": 1,
+      "skippedR": 3
+    }
+  }
+}
