@@ -1,0 +1,3197 @@
+{
+  "measurement": "dob-lab-drawdown-v1",
+  "git": "aad6908e",
+  "run": "dob-setup-v3",
+  "config": "Sperren 19:00–22:00, 10:30–11:00 · Jan · 07:00–09:00 TP 5R · 14:00–19:00 TP 4R · 02:00–07:00 TP 4R · sonst 2R · 3 von 3 Gegenkerzen sperrt · Teilprofit 50 % bei 3R → SL auf Entry",
+  "methodology": [
+    "Lauf dob-setup-v3 (DB), Philips gespeicherte Konfig (Sperren, Fenster-TP, tot → 5R, Gegenkerzen), eindeutige Trades, sortiert nach Entry.",
+    "R je Trade aus dobRowConfigScore (src/dobPartialProfit.js); offene/unklare Trades fehlen. Serie = aufeinanderfolgende Trades mit R < 0.",
+    "Drawdown = Peak bis Tal der R-Equity nach Entry-Reihenfolge; Tage nach Berliner Entry-Datum. 1 % Risiko linear: 1R = 1 % der Startbasis."
+  ],
+  "withPartial": {
+    "trades": 234,
+    "sumR": 85,
+    "streakLengths": {
+      "1": 13,
+      "2": 11,
+      "3": 5,
+      "4": 3,
+      "5": 5,
+      "6": 2,
+      "7": 1,
+      "8": 2,
+      "9": 1,
+      "12": 2
+    },
+    "longestStreak": 12,
+    "streaksFrom4": [
+      {
+        "from": "2026-02-03 18:32",
+        "to": "2026-02-05 14:59",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-02-03 18:32",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1770102000:4871.64:4893.77",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-04 02:08",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1770102000:4871.64:4893.77",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-04 02:25",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1770102000:4871.64:4893.77",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-05 07:18",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1769781600:4991.96:5113.25",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-05 14:59",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1770256800:4935.77:4958.79",
+            "tpR": 4
+          }
+        ]
+      },
+      {
+        "from": "2026-02-19 04:16",
+        "to": "2026-02-19 12:35",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-02-19 04:16",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1771207200:5006.75:5031.39",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-19 08:57",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1771207200:5006.75:5031.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-19 09:35",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1771207200:5006.75:5031.39",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-02-19 11:34",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-19 12:35",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-02-25 16:36",
+        "to": "2026-02-26 09:58",
+        "n": 6,
+        "sumR": -6,
+        "trades": [
+          {
+            "entry": "2026-02-25 16:36",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-25 16:36",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-26 04:03",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-26 05:35",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-26 08:55",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-26 09:58",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 2
+          }
+        ]
+      },
+      {
+        "from": "2026-03-02 04:43",
+        "to": "2026-03-05 13:20",
+        "n": 12,
+        "sumR": -12,
+        "trades": [
+          {
+            "entry": "2026-03-02 04:43",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1769734800:5389.58:5409.78",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-03 18:52",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1772546400:5127.1:5175.29",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-04 12:11",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-04 14:34",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-04 15:06",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-05 02:53",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-05 04:42",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-05 06:26",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-05 11:28",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-05 12:46",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-05 13:00",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-05 13:20",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-03-13 09:54",
+        "to": "2026-03-24 06:20",
+        "n": 12,
+        "sumR": -12,
+        "trades": [
+          {
+            "entry": "2026-03-13 09:54",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773334800:5121.2:5129.69",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-16 06:40",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-16 08:02",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-16 09:58",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773428400:5036:5049.89",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-16 16:32",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-16 17:47",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773428400:5036:5049.89",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-17 04:54",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1773684000:4989.77:5003.68",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-17 11:59",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1773723600:5025.95:5044.43",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-03-17 14:03",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1773684000:4989.77:5003.68",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-18 05:38",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773723600:5025.95:5044.43",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-24 05:11",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1774278000:4453.11:4486.9",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-24 06:20",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1774278000:4453.11:4486.9",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-04-07 12:03",
+        "to": "2026-04-22 18:46",
+        "n": 9,
+        "sumR": -9,
+        "trades": [
+          {
+            "entry": "2026-04-07 12:03",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h4:1775134800:4580.33:4635.02",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-07 14:39",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h4:1775134800:4580.33:4635.02",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-04-13 17:02",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1776031200:4740.69:4750.78",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-04-13 17:26",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1776031200:4740.69:4750.78",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-04-16 07:41",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1776294000:4807.1:4811.63",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-17 12:53",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1776344400:4804.98:4823.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-21 11:19",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1776646800:4771.03:4774.43",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-22 18:00",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1776780000:4760.9:4782.54",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-22 18:46",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1776780000:4760.9:4782.54",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-05-07 09:55",
+        "to": "2026-05-08 11:08",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-05-07 09:55",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1778072400:4668.74:4693.04",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-05-07 12:24",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1778072400:4668.74:4693.04",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-05-08 05:20",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1776780000:4760.9:4782.54",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-08 06:06",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1776780000:4760.9:4782.54",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-08 11:08",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1778072400:4668.74:4693.04",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-05-08 12:54",
+        "to": "2026-05-18 06:49",
+        "n": 8,
+        "sumR": -8,
+        "trades": [
+          {
+            "entry": "2026-05-08 12:54",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1778072400:4668.74:4693.04",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-11 18:11",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1778166000:4740.79:4764.78",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-05-13 16:42",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1778634000:4714.01:4717.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-14 03:05",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1778684400:4672.89:4690.88",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-05-14 07:59",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1778634000:4714.01:4717.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-14 08:51",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1778634000:4714.01:4717.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-18 03:04",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1778871600:4552.4:4562.9",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-05-18 06:49",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1778871600:4552.4:4562.9",
+            "tpR": 4
+          }
+        ]
+      },
+      {
+        "from": "2026-05-21 16:53",
+        "to": "2026-05-28 11:55",
+        "n": 4,
+        "sumR": -4,
+        "trades": [
+          {
+            "entry": "2026-05-21 16:53",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1779285600:4466.96:4506.16",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-05-27 07:05",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1779285600:4466.96:4506.16",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-27 11:46",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1779285600:4466.96:4506.16",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-05-28 11:55",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1774360800:4350.85:4389.63",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-05-29 06:06",
+        "to": "2026-06-09 11:44",
+        "n": 6,
+        "sumR": -6,
+        "trades": [
+          {
+            "entry": "2026-05-29 06:06",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1779843600:4513.67:4521.05",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-06-04 07:15",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1779976800:4420.36:4439.02",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-04 07:15",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1779976800:4420.36:4439.02",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-09 06:14",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1780880400:4339.71:4353.35",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-06-09 07:11",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1780880400:4339.71:4353.35",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-09 11:44",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1780880400:4339.71:4353.35",
+            "tpR": 2
+          }
+        ]
+      },
+      {
+        "from": "2026-07-02 09:14",
+        "to": "2026-07-03 12:48",
+        "n": 4,
+        "sumR": -4,
+        "trades": [
+          {
+            "entry": "2026-07-02 09:14",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1782921600:4076.62:4088.38",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-07-02 10:16",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1782921600:4076.62:4088.38",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-07-02 11:42",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1782910800:4012.55:4033.98",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-07-03 12:48",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1782176400:4178.28:4198.38",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-07-21 04:20",
+        "to": "2026-08-10 07:07",
+        "n": 8,
+        "sumR": -8,
+        "trades": [
+          {
+            "entry": "2026-07-21 04:20",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1784203200:4021.03:4043.3",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-07-22 14:47",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1783447200:4140.51:4148.2",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-07-24 15:44",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1784811600:4061.02:4067.36",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-07-31 06:25",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h4:1785416400:4065.03:4086.39",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-07-31 07:19",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h4:1785416400:4065.03:4086.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-08-10 02:57",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1781719200:4355.13:4379.59",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-10 04:07",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1781719200:4355.13:4379.59",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-10 07:07",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1786104000:4300.84:4327.68",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-08-24 14:05",
+        "to": "2026-09-07 13:54",
+        "n": 7,
+        "sumR": -7,
+        "trades": [
+          {
+            "entry": "2026-08-24 14:05",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1787324400:4587.21:4603.61",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-24 14:37",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1787324400:4587.21:4603.61",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-24 18:19",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1787324400:4587.21:4603.61",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-28 15:11",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1787806800:4617.17:4621.65",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-09-07 07:12",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1788541200:4432.21:4443.54",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-09-07 13:24",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1788739200:4420.91:4429.49",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-09-07 13:54",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1788739200:4420.91:4429.49",
+            "tpR": 2
+          }
+        ]
+      },
+      {
+        "from": "2026-09-24 16:32",
+        "to": "2026-10-05 07:43",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-09-24 16:32",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1790236800:4274.21:4285.49",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-02 11:41",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1790913600:4177.35:4179.05",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-10-05 03:06",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1790658000:4122.02:4134.05",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-05 03:18",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1790658000:4122.02:4134.05",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-05 07:43",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1790658000:4122.02:4134.05",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-10-09 14:15",
+        "to": "2026-10-14 05:11",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-10-09 14:15",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-12 17:58",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-13 02:27",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-13 08:55",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-14 05:11",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1791507600:4142.93:4150.34",
+            "tpR": 4
+          }
+        ]
+      },
+      {
+        "from": "2026-10-28 10:07",
+        "to": "2026-10-29 02:05",
+        "n": 4,
+        "sumR": -4,
+        "trades": [
+          {
+            "entry": "2026-10-28 10:07",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-28 10:08",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-28 12:20",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-29 02:05",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 4
+          }
+        ]
+      }
+    ],
+    "maxDrawdownR": 20.5,
+    "topDrawdowns": [
+      {
+        "ddR": 20.5,
+        "from": "2026-03-02 02:46",
+        "trough": "2026-03-24 06:20",
+        "tradesInPhase": 95,
+        "recovered": true
+      },
+      {
+        "ddR": 8,
+        "from": "2026-07-20 06:24",
+        "trough": "2026-08-10 07:07",
+        "tradesInPhase": 13,
+        "recovered": true
+      },
+      {
+        "ddR": 7,
+        "from": "2026-08-24 13:14",
+        "trough": "2026-09-07 13:54",
+        "tradesInPhase": 8,
+        "recovered": true
+      },
+      {
+        "ddR": 6,
+        "from": "2026-02-20 04:41",
+        "trough": "2026-02-26 09:58",
+        "tradesInPhase": 9,
+        "recovered": true
+      },
+      {
+        "ddR": 5,
+        "from": "Start",
+        "trough": "2026-02-05 14:59",
+        "tradesInPhase": 6,
+        "recovered": true
+      }
+    ],
+    "worstDays": [
+      {
+        "day": "2026-03-05",
+        "n": 7,
+        "sumR": -7
+      },
+      {
+        "day": "2026-03-16",
+        "n": 5,
+        "sumR": -5
+      },
+      {
+        "day": "2026-03-04",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-03-17",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-05-14",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-06-09",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-06-17",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-09-07",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-09-15",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-10-05",
+        "n": 5,
+        "sumR": -2.5
+      }
+    ],
+    "daysLeMinus3R": 9,
+    "daysLeMinus5R": 2,
+    "tradingDays": 107,
+    "at1pctRisk": {
+      "maxDrawdownPct": 20.5,
+      "worstDayPct": -7,
+      "totalPct": 85
+    },
+    "patterns": {
+      "tradesInStreaks": 105,
+      "month": {
+        "streaks": {
+          "2026-03": 24,
+          "2026-05": 18,
+          "2026-02": 16,
+          "2026-10": 13,
+          "2026-04": 9,
+          "2026-07": 9,
+          "2026-08": 7,
+          "2026-06": 5,
+          "2026-09": 4
+        },
+        "all": {
+          "2026-03": 36,
+          "2026-10": 33,
+          "2026-02": 27,
+          "2026-06": 26,
+          "2026-05": 25,
+          "2026-09": 25,
+          "2026-08": 21,
+          "2026-07": 16,
+          "2026-04": 14,
+          "2026-11": 11
+        }
+      },
+      "direction": {
+        "streaksShortPct": 49.5,
+        "allShortPct": 50
+      },
+      "deadCounterDob": {
+        "streaksPct": 41.9,
+        "allPct": 38.5
+      },
+      "session": {
+        "streaks": {
+          "Asia": 30,
+          "ohne Session": 29,
+          "NY": 27,
+          "MMM": 19
+        },
+        "all": {
+          "Asia": 73,
+          "ohne Session": 66,
+          "NY": 61,
+          "MMM": 34
+        }
+      },
+      "sameIdea": [
+        {
+          "from": "2026-02-03 18:32",
+          "n": 5,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-02-19 04:16",
+          "n": 5,
+          "distinctIdeas": 2,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-02-25 16:36",
+          "n": 6,
+          "distinctIdeas": 1,
+          "sameDirection": true
+        },
+        {
+          "from": "2026-03-02 04:43",
+          "n": 12,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-03-13 09:54",
+          "n": 12,
+          "distinctIdeas": 6,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-04-07 12:03",
+          "n": 9,
+          "distinctIdeas": 6,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-05-07 09:55",
+          "n": 5,
+          "distinctIdeas": 2,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-05-08 12:54",
+          "n": 8,
+          "distinctIdeas": 5,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-05-21 16:53",
+          "n": 4,
+          "distinctIdeas": 2,
+          "sameDirection": true
+        },
+        {
+          "from": "2026-05-29 06:06",
+          "n": 6,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-07-02 09:14",
+          "n": 4,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-07-21 04:20",
+          "n": 8,
+          "distinctIdeas": 6,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-08-24 14:05",
+          "n": 7,
+          "distinctIdeas": 4,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-09-24 16:32",
+          "n": 5,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-10-09 14:15",
+          "n": 5,
+          "distinctIdeas": 2,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-10-28 10:07",
+          "n": 4,
+          "distinctIdeas": 1,
+          "sameDirection": true
+        }
+      ]
+    }
+  },
+  "withoutPartial": {
+    "trades": 234,
+    "sumR": 111,
+    "streakLengths": {
+      "1": 10,
+      "2": 10,
+      "3": 4,
+      "4": 3,
+      "5": 5,
+      "6": 2,
+      "7": 3,
+      "8": 2,
+      "9": 1,
+      "12": 1,
+      "15": 1
+    },
+    "longestStreak": 15,
+    "streaksFrom4": [
+      {
+        "from": "2026-02-03 18:32",
+        "to": "2026-02-05 14:59",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-02-03 18:32",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1770102000:4871.64:4893.77",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-04 02:08",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1770102000:4871.64:4893.77",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-04 02:25",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1770102000:4871.64:4893.77",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-05 07:18",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1769781600:4991.96:5113.25",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-05 14:59",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1770256800:4935.77:4958.79",
+            "tpR": 4
+          }
+        ]
+      },
+      {
+        "from": "2026-02-19 04:16",
+        "to": "2026-02-19 12:35",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-02-19 04:16",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1771207200:5006.75:5031.39",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-19 08:57",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1771207200:5006.75:5031.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-19 09:35",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1771207200:5006.75:5031.39",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-02-19 11:34",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-19 12:35",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-02-25 16:36",
+        "to": "2026-02-26 09:58",
+        "n": 6,
+        "sumR": -6,
+        "trades": [
+          {
+            "entry": "2026-02-25 16:36",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-25 16:36",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-26 04:03",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-26 05:35",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-02-26 08:55",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-02-26 09:58",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771981200:5143.85:5156.33",
+            "tpR": 2
+          }
+        ]
+      },
+      {
+        "from": "2026-03-02 04:43",
+        "to": "2026-03-05 13:20",
+        "n": 12,
+        "sumR": -12,
+        "trades": [
+          {
+            "entry": "2026-03-02 04:43",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1769734800:5389.58:5409.78",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-03 18:52",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1772546400:5127.1:5175.29",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-04 12:11",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-04 14:34",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-04 15:06",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-05 02:53",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-05 04:42",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-05 06:26",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-05 11:28",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-05 12:46",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-05 13:00",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-05 13:20",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1772582400:5105.6:5129.92",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-03-10 03:28",
+        "to": "2026-03-24 06:20",
+        "n": 15,
+        "sumR": -15,
+        "trades": [
+          {
+            "entry": "2026-03-10 03:28",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1773082800:5118.24:5126.63",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-11 11:58",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1772532000:5225.07:5287.65",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-13 06:53",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773334800:5121.2:5129.69",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-13 09:54",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773334800:5121.2:5129.69",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-16 06:40",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-16 08:02",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-16 09:58",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773428400:5036:5049.89",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-16 16:32",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1771423200:4951.89:4969.07",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-16 17:47",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773428400:5036:5049.89",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-17 04:54",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1773684000:4989.77:5003.68",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-03-17 11:59",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1773723600:5025.95:5044.43",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-03-17 14:03",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1773684000:4989.77:5003.68",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-18 05:38",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1773723600:5025.95:5044.43",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-24 05:11",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1774278000:4453.11:4486.9",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-03-24 06:20",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1774278000:4453.11:4486.9",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-04-07 12:03",
+        "to": "2026-04-22 18:46",
+        "n": 9,
+        "sumR": -9,
+        "trades": [
+          {
+            "entry": "2026-04-07 12:03",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h4:1775134800:4580.33:4635.02",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-07 14:39",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h4:1775134800:4580.33:4635.02",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-04-13 17:02",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1776031200:4740.69:4750.78",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-04-13 17:26",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1776031200:4740.69:4750.78",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-04-16 07:41",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1776294000:4807.1:4811.63",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-17 12:53",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1776344400:4804.98:4823.92",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-21 11:19",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1776646800:4771.03:4774.43",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-22 18:00",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1776780000:4760.9:4782.54",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-04-22 18:46",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1776780000:4760.9:4782.54",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-05-07 09:55",
+        "to": "2026-05-08 11:08",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-05-07 09:55",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1778072400:4668.74:4693.04",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-05-07 12:24",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1778072400:4668.74:4693.04",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-05-08 05:20",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1776780000:4760.9:4782.54",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-08 06:06",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1776780000:4760.9:4782.54",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-08 11:08",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1778072400:4668.74:4693.04",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-05-08 12:54",
+        "to": "2026-05-18 06:49",
+        "n": 8,
+        "sumR": -8,
+        "trades": [
+          {
+            "entry": "2026-05-08 12:54",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1778072400:4668.74:4693.04",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-11 18:11",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1778166000:4740.79:4764.78",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-05-13 16:42",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1778634000:4714.01:4717.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-14 03:05",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1778684400:4672.89:4690.88",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-05-14 07:59",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1778634000:4714.01:4717.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-14 08:51",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1778634000:4714.01:4717.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-18 03:04",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1778871600:4552.4:4562.9",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-05-18 06:49",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1778871600:4552.4:4562.9",
+            "tpR": 4
+          }
+        ]
+      },
+      {
+        "from": "2026-05-21 16:53",
+        "to": "2026-05-28 11:55",
+        "n": 4,
+        "sumR": -4,
+        "trades": [
+          {
+            "entry": "2026-05-21 16:53",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1779285600:4466.96:4506.16",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-05-27 07:05",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1779285600:4466.96:4506.16",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-05-27 11:46",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1779285600:4466.96:4506.16",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-05-28 11:55",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1774360800:4350.85:4389.63",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-05-29 06:06",
+        "to": "2026-06-09 11:44",
+        "n": 6,
+        "sumR": -6,
+        "trades": [
+          {
+            "entry": "2026-05-29 06:06",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1779843600:4513.67:4521.05",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-06-04 07:15",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1779976800:4420.36:4439.02",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-04 07:15",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1779976800:4420.36:4439.02",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-09 06:14",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1780880400:4339.71:4353.35",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-06-09 07:11",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1780880400:4339.71:4353.35",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-09 11:44",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1780880400:4339.71:4353.35",
+            "tpR": 2
+          }
+        ]
+      },
+      {
+        "from": "2026-06-17 03:52",
+        "to": "2026-06-24 07:41",
+        "n": 7,
+        "sumR": -7,
+        "trades": [
+          {
+            "entry": "2026-06-17 03:52",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1781506800:4300.74:4313.48",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-17 03:55",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1781506800:4300.74:4313.48",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-17 07:25",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1781539200:4349.14:4358.67",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-22 07:09",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1781848800:4132.61:4141.49",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-23 13:40",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1781197200:4071.87:4107.59",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-23 17:55",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1782205200:4103.8:4110.81",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-06-24 07:41",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1782252000:4107.59:4114.97",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-07-02 09:14",
+        "to": "2026-07-03 12:48",
+        "n": 4,
+        "sumR": -4,
+        "trades": [
+          {
+            "entry": "2026-07-02 09:14",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1782921600:4076.62:4088.38",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-07-02 10:16",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1782921600:4076.62:4088.38",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-07-02 11:42",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1782910800:4012.55:4033.98",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-07-03 12:48",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1782176400:4178.28:4198.38",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-07-21 04:20",
+        "to": "2026-08-10 07:07",
+        "n": 8,
+        "sumR": -8,
+        "trades": [
+          {
+            "entry": "2026-07-21 04:20",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1784203200:4021.03:4043.3",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-07-22 14:47",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1783447200:4140.51:4148.2",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-07-24 15:44",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1784811600:4061.02:4067.36",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-07-31 06:25",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h4:1785416400:4065.03:4086.39",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-07-31 07:19",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h4:1785416400:4065.03:4086.39",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-08-10 02:57",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1781719200:4355.13:4379.59",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-10 04:07",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1781719200:4355.13:4379.59",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-10 07:07",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1786104000:4300.84:4327.68",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-08-18 08:35",
+        "to": "2026-08-18 16:23",
+        "n": 4,
+        "sumR": -4,
+        "trades": [
+          {
+            "entry": "2026-08-18 08:35",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1780650000:4428.23:4475.78",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-08-18 12:39",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1780650000:4428.23:4475.78",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-08-18 12:39",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1780650000:4428.23:4475.78",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-08-18 16:23",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "long:ob_h1:1786924800:4367.94:4386.29",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-08-24 14:05",
+        "to": "2026-09-07 13:54",
+        "n": 7,
+        "sumR": -7,
+        "trades": [
+          {
+            "entry": "2026-08-24 14:05",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1787324400:4587.21:4603.61",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-24 14:37",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1787324400:4587.21:4603.61",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-24 18:19",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1787324400:4587.21:4603.61",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-08-28 15:11",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1787806800:4617.17:4621.65",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-09-07 07:12",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h1:1788541200:4432.21:4443.54",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-09-07 13:24",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1788739200:4420.91:4429.49",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-09-07 13:54",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1788739200:4420.91:4429.49",
+            "tpR": 2
+          }
+        ]
+      },
+      {
+        "from": "2026-09-24 16:32",
+        "to": "2026-10-05 17:32",
+        "n": 7,
+        "sumR": -7,
+        "trades": [
+          {
+            "entry": "2026-09-24 16:32",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h1:1790236800:4274.21:4285.49",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-02 11:41",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1790913600:4177.35:4179.05",
+            "tpR": 2
+          },
+          {
+            "entry": "2026-10-05 03:06",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1790658000:4122.02:4134.05",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-05 03:18",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1790658000:4122.02:4134.05",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-05 07:43",
+            "direction": "long",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1790658000:4122.02:4134.05",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-05 14:16",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-05 17:32",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 5
+          }
+        ]
+      },
+      {
+        "from": "2026-10-09 14:15",
+        "to": "2026-10-14 05:11",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-10-09 14:15",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-12 17:58",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "NY"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-13 02:27",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-13 08:55",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1790946000:4166.18:4225.24",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-14 05:11",
+            "direction": "long",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "long:ob_h1:1791507600:4142.93:4150.34",
+            "tpR": 4
+          }
+        ]
+      },
+      {
+        "from": "2026-10-28 04:18",
+        "to": "2026-10-29 02:05",
+        "n": 5,
+        "sumR": -5,
+        "trades": [
+          {
+            "entry": "2026-10-28 04:18",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 4
+          },
+          {
+            "entry": "2026-10-28 10:07",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-28 10:08",
+            "direction": "short",
+            "r": -1,
+            "sessions": [],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-28 12:20",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "MMM"
+            ],
+            "counterDob": "dead",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 5
+          },
+          {
+            "entry": "2026-10-29 02:05",
+            "direction": "short",
+            "r": -1,
+            "sessions": [
+              "Asia"
+            ],
+            "counterDob": "none",
+            "idea": "short:ob_h4:1792674000:4057.36:4088.24",
+            "tpR": 4
+          }
+        ]
+      }
+    ],
+    "maxDrawdownR": 22,
+    "topDrawdowns": [
+      {
+        "ddR": 22,
+        "from": "2026-03-02 02:46",
+        "trough": "2026-03-24 06:20",
+        "tradesInPhase": 85,
+        "recovered": true
+      },
+      {
+        "ddR": 8,
+        "from": "2026-07-20 06:24",
+        "trough": "2026-08-10 07:07",
+        "tradesInPhase": 9,
+        "recovered": true
+      },
+      {
+        "ddR": 7,
+        "from": "2026-06-16 17:31",
+        "trough": "2026-06-24 07:41",
+        "tradesInPhase": 8,
+        "recovered": true
+      },
+      {
+        "ddR": 7,
+        "from": "2026-08-24 13:14",
+        "trough": "2026-09-07 13:54",
+        "tradesInPhase": 8,
+        "recovered": true
+      },
+      {
+        "ddR": 7,
+        "from": "2026-09-22 04:42",
+        "trough": "2026-10-05 17:32",
+        "tradesInPhase": 8,
+        "recovered": true
+      }
+    ],
+    "worstDays": [
+      {
+        "day": "2026-03-05",
+        "n": 7,
+        "sumR": -7
+      },
+      {
+        "day": "2026-03-16",
+        "n": 5,
+        "sumR": -5
+      },
+      {
+        "day": "2026-10-05",
+        "n": 5,
+        "sumR": -5
+      },
+      {
+        "day": "2026-08-18",
+        "n": 4,
+        "sumR": -4
+      },
+      {
+        "day": "2026-10-28",
+        "n": 4,
+        "sumR": -4
+      },
+      {
+        "day": "2026-03-04",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-03-17",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-05-14",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-06-09",
+        "n": 3,
+        "sumR": -3
+      },
+      {
+        "day": "2026-06-17",
+        "n": 3,
+        "sumR": -3
+      }
+    ],
+    "daysLeMinus3R": 12,
+    "daysLeMinus5R": 3,
+    "tradingDays": 107,
+    "at1pctRisk": {
+      "maxDrawdownPct": 22,
+      "worstDayPct": -7,
+      "totalPct": 111
+    },
+    "patterns": {
+      "tradesInStreaks": 122,
+      "month": {
+        "streaks": {
+          "2026-03": 27,
+          "2026-05": 18,
+          "2026-02": 16,
+          "2026-10": 16,
+          "2026-06": 12,
+          "2026-08": 11,
+          "2026-04": 9,
+          "2026-07": 9,
+          "2026-09": 4
+        },
+        "all": {
+          "2026-03": 36,
+          "2026-10": 33,
+          "2026-02": 27,
+          "2026-06": 26,
+          "2026-05": 25,
+          "2026-09": 25,
+          "2026-08": 21,
+          "2026-07": 16,
+          "2026-04": 14,
+          "2026-11": 11
+        }
+      },
+      "direction": {
+        "streaksShortPct": 50.8,
+        "allShortPct": 50
+      },
+      "deadCounterDob": {
+        "streaksPct": 45.1,
+        "allPct": 38.5
+      },
+      "session": {
+        "streaks": {
+          "Asia": 35,
+          "ohne Session": 34,
+          "NY": 31,
+          "MMM": 22
+        },
+        "all": {
+          "Asia": 73,
+          "ohne Session": 66,
+          "NY": 61,
+          "MMM": 34
+        }
+      },
+      "sameIdea": [
+        {
+          "from": "2026-02-03 18:32",
+          "n": 5,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-02-19 04:16",
+          "n": 5,
+          "distinctIdeas": 2,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-02-25 16:36",
+          "n": 6,
+          "distinctIdeas": 1,
+          "sameDirection": true
+        },
+        {
+          "from": "2026-03-02 04:43",
+          "n": 12,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-03-10 03:28",
+          "n": 15,
+          "distinctIdeas": 8,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-04-07 12:03",
+          "n": 9,
+          "distinctIdeas": 6,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-05-07 09:55",
+          "n": 5,
+          "distinctIdeas": 2,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-05-08 12:54",
+          "n": 8,
+          "distinctIdeas": 5,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-05-21 16:53",
+          "n": 4,
+          "distinctIdeas": 2,
+          "sameDirection": true
+        },
+        {
+          "from": "2026-05-29 06:06",
+          "n": 6,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-06-17 03:52",
+          "n": 7,
+          "distinctIdeas": 6,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-07-02 09:14",
+          "n": 4,
+          "distinctIdeas": 3,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-07-21 04:20",
+          "n": 8,
+          "distinctIdeas": 6,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-08-18 08:35",
+          "n": 4,
+          "distinctIdeas": 2,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-08-24 14:05",
+          "n": 7,
+          "distinctIdeas": 4,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-09-24 16:32",
+          "n": 7,
+          "distinctIdeas": 4,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-10-09 14:15",
+          "n": 5,
+          "distinctIdeas": 2,
+          "sameDirection": false
+        },
+        {
+          "from": "2026-10-28 04:18",
+          "n": 5,
+          "distinctIdeas": 1,
+          "sameDirection": true
+        }
+      ]
+    }
+  }
+}
