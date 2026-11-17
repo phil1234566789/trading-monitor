@@ -25,7 +25,7 @@ import { detectSetupObs, detectTradeSetups, TRADE_SETUP_DETECTOR_VERSION, hasUni
 import { setup1Configuration } from '../../supabase/functions/_shared/tradeSetupProvenance.js';
 import { mergeDbTradeSetups } from "../tradeSetups.js";
 import { setupInvalidationTarget } from "../setupInvalidationTarget.js";
-import { sessions, isForbiddenAt } from "../sessions.js";
+import { sessions } from "../sessions.js";
 import { markIgnored } from "../ignoredCandles.js";
 import {
   TRADE_SETUP_M5_FRACTAL_PERIOD,
@@ -92,33 +92,26 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
     // Sonderfall).
     const n = Math.max(0, tradeSetupHistoryCount);
     const takeLast = (arr) => (n === 0 ? [] : arr.slice(-n));
-    // Setups, deren bestätigende M5-OB in einer "forbidden"-Session entstanden ist, direkt raus
-    // (z.B. Asia/Spread Hour, siehe isForbiddenAt in sessions.js) statt nur als TSC-No-Go
-    // anzuzeigen. obStartTime statt fractal.pivotTime, weil der OB der früheste plausible
-    // Entry-Zeitpunkt ist. VOR takeLast gefiltert, sonst würde ein rausgefiltertes Setup einen
-    // History-Platz "verbrauchen".
+    // Kein Ausblenden nach forbidden-Session: Setups mit OB in Asia sollen sichtbar und für TS1.1
+    // bewertbar bleiben, wie poi-watcher sie auch speichert.
     const detectionConfiguration = setup1Configuration({ instrument: symbol, params,
       minGap, sessions: symbolSessions,
       m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD, m5Window: TRADE_SETUP_M5_CANDLE_COUNT,
-      h1Source: 'marketStructurePivots', forbiddenSessionTimezone: 'browser-local',
-      forbiddenSessions: symbolSessions.filter(s => s.danger === 'forbidden')
-        .map(s => ({ fromMinutes: s.fromMinutes, toMinutes: s.toMinutes, days: s.days })) });
-    const tzOffsetMinutes = (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset();
+      h1Source: 'marketStructurePivots' });
     // Alte DB-Treffer dürfen die inzwischen widerlegte Sweep-Reaktion nicht zurück in den Chart mischen.
-    const notForbidden = (s) => !isForbiddenAt(symbolSessions, s.obStartTime, tzOffsetMinutes) && hasUninterruptedSweepReaction(s, setupObs, kerzenOhneIgnorierte);
+    const keep = (s) => hasUninterruptedSweepReaction(s, setupObs, kerzenOhneIgnorierte);
     // IMMER beide Richtungen berechnen (unabhängig von showTradeSetupsLong/-Short, siehe Chat
     // 2026-07-19: "TSC soll den aktuellsten und wahren Stand anzeigen") — die Long/Short-Toggles
     // filtern erst beim ZEICHNEN (renderTradeSetupsInternal in PriceChart.vue).
     // Die persistierten Setups (Task "Chart zeichnet die persistierten Trade-Setups", siehe
-    // tradeSetups.js) dazu, BEVOR notForbidden/takeLast greifen — sonst käme genau das zurück, was
-    // der Chart absichtlich versteckt (Forbidden-Sessions), und die Historie-Begrenzung wäre
+    // tradeSetups.js) dazu, BEVOR keep/takeLast greifen — sonst wäre die Historie-Begrenzung
     // wirkungslos. Symbol-Filter, weil der Poll nach einem Symbolwechsel kurz noch die Setups des
     // vorherigen Instruments hält (gleicher Grund wie filterDbObZones).
     const dbFor = (dir) => dbTradeSetups.filter((s) => s.instrument === symbol && s.dir === dir);
     const merged = [
       ...mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, kerzenOhneIgnorierte, kerzen), dbFor(1)),
       ...mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, kerzenOhneIgnorierte, kerzen), dbFor(-1)),
-    ].filter(notForbidden).map(s => s.fromDb ? s : { ...s, instrument:symbol, detectorVersion: TRADE_SETUP_DETECTOR_VERSION, detectionConfiguration });
+    ].filter(keep).map(s => s.fromDb ? s : { ...s, instrument:symbol, detectorVersion: TRADE_SETUP_DETECTOR_VERSION, detectionConfiguration });
     // Neue Policies prüfen auch DB-Treffer vor der Historie; verworfene Treffer dürfen keinen Platz belegen.
     const candidates = evaluateCandidates ? evaluateCandidates(merged, policyContext) : merged;
     const apply = rows => {
