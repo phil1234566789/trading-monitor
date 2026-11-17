@@ -1,0 +1,1923 @@
+{
+  "measurement": "dob-breakeven-v1",
+  "git": "035dfff6-dirty",
+  "symbol": "XAUUSD",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "targets": [
+    3,
+    4,
+    5,
+    2
+  ],
+  "triggers": [
+    null,
+    1,
+    1.5,
+    2,
+    2.5,
+    3
+  ],
+  "methodology": [
+    "Trades: einmalige Trades der Statistikläufe v2 (Hauptlauf) und v1 (Vergleich), dobRuns.mjs, Entry/SL unverändert.",
+    "Ausgang: evaluateDoubleOrderBlockOutcome mit rMultiple = Ziel und breakevenAtR = Trigger auf M1 ab Entry bis Datenende.",
+    "Trigger erreicht (Kerzenhoch/-tief) → SL liegt ab der NÄCHSTEN M1-Kerze auf Entry (Reihenfolge in der Trigger-Kerze unbekannt, dort gilt der alte SL).",
+    "Rückkehr auf Entry nach dem Trigger = BE (0R). Kerze, die SL (bzw. Entry nach Trigger) und TP zugleich berührt = ambiguous, nicht in n.",
+    "n = Win + BE + Loss; Winrate = Win / n; ΣR = Ziel·Win − Loss. Halbjahre nach Berliner Entry-Monat. Trigger ≥ Ziel entfällt.",
+    "gerettet = ohne BE Loss, mit BE BE; gestoppteGewinner = ohne BE Win, mit BE BE (vorzeitig auf 0). Übergänge = alle Wechsel ohne BE → mit BE."
+  ],
+  "runs": {
+    "v2": {
+      "trades": 524,
+      "byTarget": {
+        "2": {
+          "keinBE": {
+            "n": 521,
+            "win": 187,
+            "be": 0,
+            "loss": 334,
+            "winShare": 35.9,
+            "beShare": 0,
+            "lossShare": 64.1,
+            "winrate": 35.9,
+            "sumR": 40,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 103,
+                "be": 0,
+                "loss": 200,
+                "winShare": 34,
+                "beShare": 0,
+                "lossShare": 66,
+                "winrate": 34,
+                "sumR": 6,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 84,
+                "be": 0,
+                "loss": 134,
+                "winShare": 38.5,
+                "beShare": 0,
+                "lossShare": 61.5,
+                "winrate": 38.5,
+                "sumR": 34,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            }
+          },
+          "be1R": {
+            "n": 523,
+            "win": 148,
+            "be": 112,
+            "loss": 263,
+            "winShare": 28.3,
+            "beShare": 21.4,
+            "lossShare": 50.3,
+            "winrate": 28.3,
+            "sumR": 33,
+            "ambiguous": 0,
+            "openOrUnknown": 1,
+            "halves": {
+              "Jan–Jun": {
+                "n": 304,
+                "win": 79,
+                "be": 67,
+                "loss": 158,
+                "winShare": 26,
+                "beShare": 22,
+                "lossShare": 52,
+                "winrate": 26,
+                "sumR": 0,
+                "ambiguous": 0,
+                "openOrUnknown": 0
+              },
+              "Jul–Nov": {
+                "n": 219,
+                "win": 69,
+                "be": 45,
+                "loss": 105,
+                "winShare": 31.5,
+                "beShare": 20.5,
+                "lossShare": 47.9,
+                "winrate": 31.5,
+                "sumR": 33,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              }
+            },
+            "gerettet": 71,
+            "gestoppteGewinner": 39,
+            "transitions": {
+              "loss→breakeven": 71,
+              "success→breakeven": 39,
+              "unknown→breakeven": 2
+            }
+          },
+          "be1.5R": {
+            "n": 522,
+            "win": 169,
+            "be": 47,
+            "loss": 306,
+            "winShare": 32.4,
+            "beShare": 9,
+            "lossShare": 58.6,
+            "winrate": 32.4,
+            "sumR": 32,
+            "ambiguous": 0,
+            "openOrUnknown": 2,
+            "halves": {
+              "Jan–Jun": {
+                "n": 304,
+                "win": 94,
+                "be": 27,
+                "loss": 183,
+                "winShare": 30.9,
+                "beShare": 8.9,
+                "lossShare": 60.2,
+                "winrate": 30.9,
+                "sumR": 5,
+                "ambiguous": 0,
+                "openOrUnknown": 0
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 75,
+                "be": 20,
+                "loss": 123,
+                "winShare": 34.4,
+                "beShare": 9.2,
+                "lossShare": 56.4,
+                "winrate": 34.4,
+                "sumR": 27,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 28,
+            "gestoppteGewinner": 18,
+            "transitions": {
+              "loss→breakeven": 28,
+              "success→breakeven": 18,
+              "unknown→breakeven": 1
+            }
+          }
+        },
+        "3": {
+          "keinBE": {
+            "n": 521,
+            "win": 145,
+            "be": 0,
+            "loss": 376,
+            "winShare": 27.8,
+            "beShare": 0,
+            "lossShare": 72.2,
+            "winrate": 27.8,
+            "sumR": 59,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 74,
+                "be": 0,
+                "loss": 229,
+                "winShare": 24.4,
+                "beShare": 0,
+                "lossShare": 75.6,
+                "winrate": 24.4,
+                "sumR": -7,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 71,
+                "be": 0,
+                "loss": 147,
+                "winShare": 32.6,
+                "beShare": 0,
+                "lossShare": 67.4,
+                "winrate": 32.6,
+                "sumR": 66,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            }
+          },
+          "be1R": {
+            "n": 523,
+            "win": 97,
+            "be": 163,
+            "loss": 263,
+            "winShare": 18.5,
+            "beShare": 31.2,
+            "lossShare": 50.3,
+            "winrate": 18.5,
+            "sumR": 28,
+            "ambiguous": 0,
+            "openOrUnknown": 1,
+            "halves": {
+              "Jan–Jun": {
+                "n": 304,
+                "win": 46,
+                "be": 100,
+                "loss": 158,
+                "winShare": 15.1,
+                "beShare": 32.9,
+                "lossShare": 52,
+                "winrate": 15.1,
+                "sumR": -20,
+                "ambiguous": 0,
+                "openOrUnknown": 0
+              },
+              "Jul–Nov": {
+                "n": 219,
+                "win": 51,
+                "be": 63,
+                "loss": 105,
+                "winShare": 23.3,
+                "beShare": 28.8,
+                "lossShare": 47.9,
+                "winrate": 23.3,
+                "sumR": 48,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              }
+            },
+            "gerettet": 113,
+            "gestoppteGewinner": 48,
+            "transitions": {
+              "loss→breakeven": 113,
+              "success→breakeven": 48,
+              "unknown→breakeven": 2
+            }
+          },
+          "be1.5R": {
+            "n": 522,
+            "win": 111,
+            "be": 105,
+            "loss": 306,
+            "winShare": 21.3,
+            "beShare": 20.1,
+            "lossShare": 58.6,
+            "winrate": 21.3,
+            "sumR": 27,
+            "ambiguous": 0,
+            "openOrUnknown": 2,
+            "halves": {
+              "Jan–Jun": {
+                "n": 304,
+                "win": 55,
+                "be": 66,
+                "loss": 183,
+                "winShare": 18.1,
+                "beShare": 21.7,
+                "lossShare": 60.2,
+                "winrate": 18.1,
+                "sumR": -18,
+                "ambiguous": 0,
+                "openOrUnknown": 0
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 56,
+                "be": 39,
+                "loss": 123,
+                "winShare": 25.7,
+                "beShare": 17.9,
+                "lossShare": 56.4,
+                "winrate": 25.7,
+                "sumR": 45,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 70,
+            "gestoppteGewinner": 34,
+            "transitions": {
+              "loss→breakeven": 70,
+              "success→breakeven": 34,
+              "unknown→breakeven": 1
+            }
+          },
+          "be2R": {
+            "n": 521,
+            "win": 126,
+            "be": 61,
+            "loss": 334,
+            "winShare": 24.2,
+            "beShare": 11.7,
+            "lossShare": 64.1,
+            "winrate": 24.2,
+            "sumR": 44,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 61,
+                "be": 42,
+                "loss": 200,
+                "winShare": 20.1,
+                "beShare": 13.9,
+                "lossShare": 66,
+                "winrate": 20.1,
+                "sumR": -17,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 65,
+                "be": 19,
+                "loss": 134,
+                "winShare": 29.8,
+                "beShare": 8.7,
+                "lossShare": 61.5,
+                "winrate": 29.8,
+                "sumR": 61,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 42,
+            "gestoppteGewinner": 19,
+            "transitions": {
+              "loss→breakeven": 42,
+              "success→breakeven": 19
+            }
+          },
+          "be2.5R": {
+            "n": 521,
+            "win": 137,
+            "be": 30,
+            "loss": 354,
+            "winShare": 26.3,
+            "beShare": 5.8,
+            "lossShare": 67.9,
+            "winrate": 26.3,
+            "sumR": 57,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 69,
+                "be": 20,
+                "loss": 214,
+                "winShare": 22.8,
+                "beShare": 6.6,
+                "lossShare": 70.6,
+                "winrate": 22.8,
+                "sumR": -7,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 68,
+                "be": 10,
+                "loss": 140,
+                "winShare": 31.2,
+                "beShare": 4.6,
+                "lossShare": 64.2,
+                "winrate": 31.2,
+                "sumR": 64,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 22,
+            "gestoppteGewinner": 8,
+            "transitions": {
+              "loss→breakeven": 22,
+              "success→breakeven": 8
+            }
+          }
+        },
+        "4": {
+          "keinBE": {
+            "n": 519,
+            "win": 122,
+            "be": 0,
+            "loss": 397,
+            "winShare": 23.5,
+            "beShare": 0,
+            "lossShare": 76.5,
+            "winrate": 23.5,
+            "sumR": 91,
+            "ambiguous": 0,
+            "openOrUnknown": 5,
+            "halves": {
+              "Jan–Jun": {
+                "n": 302,
+                "win": 66,
+                "be": 0,
+                "loss": 236,
+                "winShare": 21.9,
+                "beShare": 0,
+                "lossShare": 78.1,
+                "winrate": 21.9,
+                "sumR": 28,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 56,
+                "be": 0,
+                "loss": 161,
+                "winShare": 25.8,
+                "beShare": 0,
+                "lossShare": 74.2,
+                "winrate": 25.8,
+                "sumR": 63,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            }
+          },
+          "be1R": {
+            "n": 522,
+            "win": 80,
+            "be": 179,
+            "loss": 263,
+            "winShare": 15.3,
+            "beShare": 34.3,
+            "lossShare": 50.4,
+            "winrate": 15.3,
+            "sumR": 57,
+            "ambiguous": 0,
+            "openOrUnknown": 2,
+            "halves": {
+              "Jan–Jun": {
+                "n": 304,
+                "win": 37,
+                "be": 109,
+                "loss": 158,
+                "winShare": 12.2,
+                "beShare": 35.9,
+                "lossShare": 52,
+                "winrate": 12.2,
+                "sumR": -10,
+                "ambiguous": 0,
+                "openOrUnknown": 0
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 43,
+                "be": 70,
+                "loss": 105,
+                "winShare": 19.7,
+                "beShare": 32.1,
+                "lossShare": 48.2,
+                "winrate": 19.7,
+                "sumR": 67,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 134,
+            "gestoppteGewinner": 42,
+            "transitions": {
+              "loss→breakeven": 134,
+              "success→breakeven": 42,
+              "unknown→breakeven": 3
+            }
+          },
+          "be1.5R": {
+            "n": 521,
+            "win": 90,
+            "be": 125,
+            "loss": 306,
+            "winShare": 17.3,
+            "beShare": 24,
+            "lossShare": 58.7,
+            "winrate": 17.3,
+            "sumR": 54,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 304,
+                "win": 46,
+                "be": 75,
+                "loss": 183,
+                "winShare": 15.1,
+                "beShare": 24.7,
+                "lossShare": 60.2,
+                "winrate": 15.1,
+                "sumR": 1,
+                "ambiguous": 0,
+                "openOrUnknown": 0
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 44,
+                "be": 50,
+                "loss": 123,
+                "winShare": 20.3,
+                "beShare": 23,
+                "lossShare": 56.7,
+                "winrate": 20.3,
+                "sumR": 53,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 91,
+            "gestoppteGewinner": 32,
+            "transitions": {
+              "loss→breakeven": 91,
+              "unknown→breakeven": 2,
+              "success→breakeven": 32
+            }
+          },
+          "be2R": {
+            "n": 520,
+            "win": 99,
+            "be": 87,
+            "loss": 334,
+            "winShare": 19,
+            "beShare": 16.7,
+            "lossShare": 64.2,
+            "winrate": 19,
+            "sumR": 62,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 51,
+                "be": 52,
+                "loss": 200,
+                "winShare": 16.8,
+                "beShare": 17.2,
+                "lossShare": 66,
+                "winrate": 16.8,
+                "sumR": 4,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 48,
+                "be": 35,
+                "loss": 134,
+                "winShare": 22.1,
+                "beShare": 16.1,
+                "lossShare": 61.8,
+                "winrate": 22.1,
+                "sumR": 58,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 63,
+            "gestoppteGewinner": 23,
+            "transitions": {
+              "loss→breakeven": 63,
+              "unknown→breakeven": 1,
+              "success→breakeven": 23
+            }
+          },
+          "be2.5R": {
+            "n": 520,
+            "win": 107,
+            "be": 59,
+            "loss": 354,
+            "winShare": 20.6,
+            "beShare": 11.3,
+            "lossShare": 68.1,
+            "winrate": 20.6,
+            "sumR": 74,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 57,
+                "be": 32,
+                "loss": 214,
+                "winShare": 18.8,
+                "beShare": 10.6,
+                "lossShare": 70.6,
+                "winrate": 18.8,
+                "sumR": 14,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 50,
+                "be": 27,
+                "loss": 140,
+                "winShare": 23,
+                "beShare": 12.4,
+                "lossShare": 64.5,
+                "winrate": 23,
+                "sumR": 60,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 43,
+            "gestoppteGewinner": 15,
+            "transitions": {
+              "loss→breakeven": 43,
+              "unknown→breakeven": 1,
+              "success→breakeven": 15
+            }
+          },
+          "be3R": {
+            "n": 520,
+            "win": 114,
+            "be": 30,
+            "loss": 376,
+            "winShare": 21.9,
+            "beShare": 5.8,
+            "lossShare": 72.3,
+            "winrate": 21.9,
+            "sumR": 80,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 61,
+                "be": 13,
+                "loss": 229,
+                "winShare": 20.1,
+                "beShare": 4.3,
+                "lossShare": 75.6,
+                "winrate": 20.1,
+                "sumR": 15,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 53,
+                "be": 17,
+                "loss": 147,
+                "winShare": 24.4,
+                "beShare": 7.8,
+                "lossShare": 67.7,
+                "winrate": 24.4,
+                "sumR": 65,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 21,
+            "gestoppteGewinner": 8,
+            "transitions": {
+              "unknown→breakeven": 1,
+              "loss→breakeven": 21,
+              "success→breakeven": 8
+            }
+          }
+        },
+        "5": {
+          "keinBE": {
+            "n": 519,
+            "win": 102,
+            "be": 0,
+            "loss": 417,
+            "winShare": 19.7,
+            "beShare": 0,
+            "lossShare": 80.3,
+            "winrate": 19.7,
+            "sumR": 93,
+            "ambiguous": 0,
+            "openOrUnknown": 5,
+            "halves": {
+              "Jan–Jun": {
+                "n": 302,
+                "win": 55,
+                "be": 0,
+                "loss": 247,
+                "winShare": 18.2,
+                "beShare": 0,
+                "lossShare": 81.8,
+                "winrate": 18.2,
+                "sumR": 28,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 47,
+                "be": 0,
+                "loss": 170,
+                "winShare": 21.7,
+                "beShare": 0,
+                "lossShare": 78.3,
+                "winrate": 21.7,
+                "sumR": 65,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            }
+          },
+          "be1R": {
+            "n": 522,
+            "win": 67,
+            "be": 192,
+            "loss": 263,
+            "winShare": 12.8,
+            "beShare": 36.8,
+            "lossShare": 50.4,
+            "winrate": 12.8,
+            "sumR": 72,
+            "ambiguous": 0,
+            "openOrUnknown": 2,
+            "halves": {
+              "Jan–Jun": {
+                "n": 304,
+                "win": 30,
+                "be": 116,
+                "loss": 158,
+                "winShare": 9.9,
+                "beShare": 38.2,
+                "lossShare": 52,
+                "winrate": 9.9,
+                "sumR": -8,
+                "ambiguous": 0,
+                "openOrUnknown": 0
+              },
+              "Jul–Nov": {
+                "n": 218,
+                "win": 37,
+                "be": 76,
+                "loss": 105,
+                "winShare": 17,
+                "beShare": 34.9,
+                "lossShare": 48.2,
+                "winrate": 17,
+                "sumR": 80,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 154,
+            "gestoppteGewinner": 35,
+            "transitions": {
+              "loss→breakeven": 154,
+              "success→breakeven": 35,
+              "unknown→breakeven": 3
+            }
+          },
+          "be1.5R": {
+            "n": 521,
+            "win": 75,
+            "be": 140,
+            "loss": 306,
+            "winShare": 14.4,
+            "beShare": 26.9,
+            "lossShare": 58.7,
+            "winrate": 14.4,
+            "sumR": 69,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 304,
+                "win": 37,
+                "be": 84,
+                "loss": 183,
+                "winShare": 12.2,
+                "beShare": 27.6,
+                "lossShare": 60.2,
+                "winrate": 12.2,
+                "sumR": 2,
+                "ambiguous": 0,
+                "openOrUnknown": 0
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 38,
+                "be": 56,
+                "loss": 123,
+                "winShare": 17.5,
+                "beShare": 25.8,
+                "lossShare": 56.7,
+                "winrate": 17.5,
+                "sumR": 67,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 111,
+            "gestoppteGewinner": 27,
+            "transitions": {
+              "loss→breakeven": 111,
+              "unknown→breakeven": 2,
+              "success→breakeven": 27
+            }
+          },
+          "be2R": {
+            "n": 520,
+            "win": 82,
+            "be": 104,
+            "loss": 334,
+            "winShare": 15.8,
+            "beShare": 20,
+            "lossShare": 64.2,
+            "winrate": 15.8,
+            "sumR": 76,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 41,
+                "be": 62,
+                "loss": 200,
+                "winShare": 13.5,
+                "beShare": 20.5,
+                "lossShare": 66,
+                "winrate": 13.5,
+                "sumR": 5,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 41,
+                "be": 42,
+                "loss": 134,
+                "winShare": 18.9,
+                "beShare": 19.4,
+                "lossShare": 61.8,
+                "winrate": 18.9,
+                "sumR": 71,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 83,
+            "gestoppteGewinner": 20,
+            "transitions": {
+              "loss→breakeven": 83,
+              "unknown→breakeven": 1,
+              "success→breakeven": 20
+            }
+          },
+          "be2.5R": {
+            "n": 520,
+            "win": 86,
+            "be": 80,
+            "loss": 354,
+            "winShare": 16.5,
+            "beShare": 15.4,
+            "lossShare": 68.1,
+            "winrate": 16.5,
+            "sumR": 76,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 45,
+                "be": 44,
+                "loss": 214,
+                "winShare": 14.9,
+                "beShare": 14.5,
+                "lossShare": 70.6,
+                "winrate": 14.9,
+                "sumR": 11,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 41,
+                "be": 36,
+                "loss": 140,
+                "winShare": 18.9,
+                "beShare": 16.6,
+                "lossShare": 64.5,
+                "winrate": 18.9,
+                "sumR": 65,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 63,
+            "gestoppteGewinner": 16,
+            "transitions": {
+              "loss→breakeven": 63,
+              "unknown→breakeven": 1,
+              "success→breakeven": 16
+            }
+          },
+          "be3R": {
+            "n": 520,
+            "win": 93,
+            "be": 51,
+            "loss": 376,
+            "winShare": 17.9,
+            "beShare": 9.8,
+            "lossShare": 72.3,
+            "winrate": 17.9,
+            "sumR": 89,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 303,
+                "win": 49,
+                "be": 25,
+                "loss": 229,
+                "winShare": 16.2,
+                "beShare": 8.3,
+                "lossShare": 75.6,
+                "winrate": 16.2,
+                "sumR": 16,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 217,
+                "win": 44,
+                "be": 26,
+                "loss": 147,
+                "winShare": 20.3,
+                "beShare": 12,
+                "lossShare": 67.7,
+                "winrate": 20.3,
+                "sumR": 73,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 41,
+            "gestoppteGewinner": 9,
+            "transitions": {
+              "loss→breakeven": 41,
+              "unknown→breakeven": 1,
+              "success→breakeven": 9
+            }
+          }
+        }
+      }
+    },
+    "v1": {
+      "trades": 984,
+      "byTarget": {
+        "2": {
+          "keinBE": {
+            "n": 978,
+            "win": 359,
+            "be": 0,
+            "loss": 619,
+            "winShare": 36.7,
+            "beShare": 0,
+            "lossShare": 63.3,
+            "winrate": 36.7,
+            "sumR": 99,
+            "ambiguous": 2,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 540,
+                "win": 196,
+                "be": 0,
+                "loss": 344,
+                "winShare": 36.3,
+                "beShare": 0,
+                "lossShare": 63.7,
+                "winrate": 36.3,
+                "sumR": 48,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 163,
+                "be": 0,
+                "loss": 275,
+                "winShare": 37.2,
+                "beShare": 0,
+                "lossShare": 62.8,
+                "winrate": 37.2,
+                "sumR": 51,
+                "ambiguous": 2,
+                "openOrUnknown": 2
+              }
+            }
+          },
+          "be1R": {
+            "n": 981,
+            "win": 279,
+            "be": 222,
+            "loss": 480,
+            "winShare": 28.4,
+            "beShare": 22.6,
+            "lossShare": 48.9,
+            "winrate": 28.4,
+            "sumR": 78,
+            "ambiguous": 1,
+            "openOrUnknown": 2,
+            "halves": {
+              "Jan–Jun": {
+                "n": 541,
+                "win": 147,
+                "be": 131,
+                "loss": 263,
+                "winShare": 27.2,
+                "beShare": 24.2,
+                "lossShare": 48.6,
+                "winrate": 27.2,
+                "sumR": 31,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 132,
+                "be": 91,
+                "loss": 217,
+                "winShare": 30,
+                "beShare": 20.7,
+                "lossShare": 49.3,
+                "winrate": 30,
+                "sumR": 47,
+                "ambiguous": 1,
+                "openOrUnknown": 1
+              }
+            },
+            "gerettet": 139,
+            "gestoppteGewinner": 80,
+            "transitions": {
+              "loss→breakeven": 139,
+              "success→breakeven": 80,
+              "unknown→breakeven": 2,
+              "ambiguous→breakeven": 1
+            }
+          },
+          "be1.5R": {
+            "n": 980,
+            "win": 322,
+            "be": 89,
+            "loss": 569,
+            "winShare": 32.9,
+            "beShare": 9.1,
+            "lossShare": 58.1,
+            "winrate": 32.9,
+            "sumR": 75,
+            "ambiguous": 1,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 541,
+                "win": 174,
+                "be": 53,
+                "loss": 314,
+                "winShare": 32.2,
+                "beShare": 9.8,
+                "lossShare": 58,
+                "winrate": 32.2,
+                "sumR": 34,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 148,
+                "be": 36,
+                "loss": 255,
+                "winShare": 33.7,
+                "beShare": 8.2,
+                "lossShare": 58.1,
+                "winrate": 33.7,
+                "sumR": 41,
+                "ambiguous": 1,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 50,
+            "gestoppteGewinner": 37,
+            "transitions": {
+              "loss→breakeven": 50,
+              "success→breakeven": 37,
+              "unknown→breakeven": 1,
+              "ambiguous→breakeven": 1
+            }
+          }
+        },
+        "3": {
+          "keinBE": {
+            "n": 978,
+            "win": 275,
+            "be": 0,
+            "loss": 703,
+            "winShare": 28.1,
+            "beShare": 0,
+            "lossShare": 71.9,
+            "winrate": 28.1,
+            "sumR": 122,
+            "ambiguous": 0,
+            "openOrUnknown": 6,
+            "halves": {
+              "Jan–Jun": {
+                "n": 538,
+                "win": 142,
+                "be": 0,
+                "loss": 396,
+                "winShare": 26.4,
+                "beShare": 0,
+                "lossShare": 73.6,
+                "winrate": 26.4,
+                "sumR": 30,
+                "ambiguous": 0,
+                "openOrUnknown": 4
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 133,
+                "be": 0,
+                "loss": 307,
+                "winShare": 30.2,
+                "beShare": 0,
+                "lossShare": 69.8,
+                "winrate": 30.2,
+                "sumR": 92,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            }
+          },
+          "be1R": {
+            "n": 982,
+            "win": 182,
+            "be": 320,
+            "loss": 480,
+            "winShare": 18.5,
+            "beShare": 32.6,
+            "lossShare": 48.9,
+            "winrate": 18.5,
+            "sumR": 66,
+            "ambiguous": 0,
+            "openOrUnknown": 2,
+            "halves": {
+              "Jan–Jun": {
+                "n": 541,
+                "win": 88,
+                "be": 190,
+                "loss": 263,
+                "winShare": 16.3,
+                "beShare": 35.1,
+                "lossShare": 48.6,
+                "winrate": 16.3,
+                "sumR": 1,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 441,
+                "win": 94,
+                "be": 130,
+                "loss": 217,
+                "winShare": 21.3,
+                "beShare": 29.5,
+                "lossShare": 49.2,
+                "winrate": 21.3,
+                "sumR": 65,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              }
+            },
+            "gerettet": 223,
+            "gestoppteGewinner": 93,
+            "transitions": {
+              "loss→breakeven": 223,
+              "success→breakeven": 93,
+              "unknown→breakeven": 4
+            }
+          },
+          "be1.5R": {
+            "n": 981,
+            "win": 211,
+            "be": 201,
+            "loss": 569,
+            "winShare": 21.5,
+            "beShare": 20.5,
+            "lossShare": 58,
+            "winrate": 21.5,
+            "sumR": 64,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 541,
+                "win": 104,
+                "be": 123,
+                "loss": 314,
+                "winShare": 19.2,
+                "beShare": 22.7,
+                "lossShare": 58,
+                "winrate": 19.2,
+                "sumR": -2,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 107,
+                "be": 78,
+                "loss": 255,
+                "winShare": 24.3,
+                "beShare": 17.7,
+                "lossShare": 58,
+                "winrate": 24.3,
+                "sumR": 66,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 134,
+            "gestoppteGewinner": 64,
+            "transitions": {
+              "loss→breakeven": 134,
+              "success→breakeven": 64,
+              "unknown→breakeven": 3
+            }
+          },
+          "be2R": {
+            "n": 980,
+            "win": 241,
+            "be": 118,
+            "loss": 621,
+            "winShare": 24.6,
+            "beShare": 12,
+            "lossShare": 63.4,
+            "winrate": 24.6,
+            "sumR": 102,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 540,
+                "win": 119,
+                "be": 77,
+                "loss": 344,
+                "winShare": 22,
+                "beShare": 14.3,
+                "lossShare": 63.7,
+                "winrate": 22,
+                "sumR": 13,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 122,
+                "be": 41,
+                "loss": 277,
+                "winShare": 27.7,
+                "beShare": 9.3,
+                "lossShare": 63,
+                "winrate": 27.7,
+                "sumR": 89,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 82,
+            "gestoppteGewinner": 34,
+            "transitions": {
+              "loss→breakeven": 82,
+              "success→breakeven": 34,
+              "unknown→breakeven": 2
+            }
+          },
+          "be2.5R": {
+            "n": 979,
+            "win": 260,
+            "be": 62,
+            "loss": 657,
+            "winShare": 26.6,
+            "beShare": 6.3,
+            "lossShare": 67.1,
+            "winrate": 26.6,
+            "sumR": 123,
+            "ambiguous": 0,
+            "openOrUnknown": 5,
+            "halves": {
+              "Jan–Jun": {
+                "n": 539,
+                "win": 133,
+                "be": 39,
+                "loss": 367,
+                "winShare": 24.7,
+                "beShare": 7.2,
+                "lossShare": 68.1,
+                "winrate": 24.7,
+                "sumR": 32,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 127,
+                "be": 23,
+                "loss": 290,
+                "winShare": 28.9,
+                "beShare": 5.2,
+                "lossShare": 65.9,
+                "winrate": 28.9,
+                "sumR": 91,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 46,
+            "gestoppteGewinner": 15,
+            "transitions": {
+              "loss→breakeven": 46,
+              "success→breakeven": 15,
+              "unknown→breakeven": 1
+            }
+          }
+        },
+        "4": {
+          "keinBE": {
+            "n": 976,
+            "win": 233,
+            "be": 0,
+            "loss": 743,
+            "winShare": 23.9,
+            "beShare": 0,
+            "lossShare": 76.1,
+            "winrate": 23.9,
+            "sumR": 189,
+            "ambiguous": 0,
+            "openOrUnknown": 8,
+            "halves": {
+              "Jan–Jun": {
+                "n": 537,
+                "win": 125,
+                "be": 0,
+                "loss": 412,
+                "winShare": 23.3,
+                "beShare": 0,
+                "lossShare": 76.7,
+                "winrate": 23.3,
+                "sumR": 88,
+                "ambiguous": 0,
+                "openOrUnknown": 5
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 108,
+                "be": 0,
+                "loss": 331,
+                "winShare": 24.6,
+                "beShare": 0,
+                "lossShare": 75.4,
+                "winrate": 24.6,
+                "sumR": 101,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            }
+          },
+          "be1R": {
+            "n": 981,
+            "win": 152,
+            "be": 349,
+            "loss": 480,
+            "winShare": 15.5,
+            "beShare": 35.6,
+            "lossShare": 48.9,
+            "winrate": 15.5,
+            "sumR": 128,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 541,
+                "win": 72,
+                "be": 206,
+                "loss": 263,
+                "winShare": 13.3,
+                "beShare": 38.1,
+                "lossShare": 48.6,
+                "winrate": 13.3,
+                "sumR": 25,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 80,
+                "be": 143,
+                "loss": 217,
+                "winShare": 18.2,
+                "beShare": 32.5,
+                "lossShare": 49.3,
+                "winrate": 18.2,
+                "sumR": 103,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 263,
+            "gestoppteGewinner": 81,
+            "transitions": {
+              "loss→breakeven": 263,
+              "success→breakeven": 81,
+              "unknown→breakeven": 5
+            }
+          },
+          "be1.5R": {
+            "n": 980,
+            "win": 175,
+            "be": 236,
+            "loss": 569,
+            "winShare": 17.9,
+            "beShare": 24.1,
+            "lossShare": 58.1,
+            "winrate": 17.9,
+            "sumR": 131,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 541,
+                "win": 87,
+                "be": 140,
+                "loss": 314,
+                "winShare": 16.1,
+                "beShare": 25.9,
+                "lossShare": 58,
+                "winrate": 16.1,
+                "sumR": 34,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 88,
+                "be": 96,
+                "loss": 255,
+                "winShare": 20,
+                "beShare": 21.9,
+                "lossShare": 58.1,
+                "winrate": 20,
+                "sumR": 97,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 174,
+            "gestoppteGewinner": 58,
+            "transitions": {
+              "loss→breakeven": 174,
+              "success→breakeven": 58,
+              "unknown→breakeven": 4
+            }
+          },
+          "be2R": {
+            "n": 979,
+            "win": 196,
+            "be": 162,
+            "loss": 621,
+            "winShare": 20,
+            "beShare": 16.5,
+            "lossShare": 63.4,
+            "winrate": 20,
+            "sumR": 163,
+            "ambiguous": 0,
+            "openOrUnknown": 5,
+            "halves": {
+              "Jan–Jun": {
+                "n": 540,
+                "win": 99,
+                "be": 97,
+                "loss": 344,
+                "winShare": 18.3,
+                "beShare": 18,
+                "lossShare": 63.7,
+                "winrate": 18.3,
+                "sumR": 52,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 97,
+                "be": 65,
+                "loss": 277,
+                "winShare": 22.1,
+                "beShare": 14.8,
+                "lossShare": 63.1,
+                "winrate": 22.1,
+                "sumR": 111,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 122,
+            "gestoppteGewinner": 37,
+            "transitions": {
+              "loss→breakeven": 122,
+              "success→breakeven": 37,
+              "unknown→breakeven": 3
+            }
+          },
+          "be2.5R": {
+            "n": 978,
+            "win": 211,
+            "be": 110,
+            "loss": 657,
+            "winShare": 21.6,
+            "beShare": 11.2,
+            "lossShare": 67.2,
+            "winrate": 21.6,
+            "sumR": 187,
+            "ambiguous": 0,
+            "openOrUnknown": 6,
+            "halves": {
+              "Jan–Jun": {
+                "n": 539,
+                "win": 111,
+                "be": 61,
+                "loss": 367,
+                "winShare": 20.6,
+                "beShare": 11.3,
+                "lossShare": 68.1,
+                "winrate": 20.6,
+                "sumR": 77,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 100,
+                "be": 49,
+                "loss": 290,
+                "winShare": 22.8,
+                "beShare": 11.2,
+                "lossShare": 66.1,
+                "winrate": 22.8,
+                "sumR": 110,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 86,
+            "gestoppteGewinner": 22,
+            "transitions": {
+              "loss→breakeven": 86,
+              "success→breakeven": 22,
+              "unknown→breakeven": 2
+            }
+          },
+          "be3R": {
+            "n": 977,
+            "win": 223,
+            "be": 51,
+            "loss": 703,
+            "winShare": 22.8,
+            "beShare": 5.2,
+            "lossShare": 72,
+            "winrate": 22.8,
+            "sumR": 189,
+            "ambiguous": 0,
+            "openOrUnknown": 7,
+            "halves": {
+              "Jan–Jun": {
+                "n": 538,
+                "win": 119,
+                "be": 23,
+                "loss": 396,
+                "winShare": 22.1,
+                "beShare": 4.3,
+                "lossShare": 73.6,
+                "winrate": 22.1,
+                "sumR": 80,
+                "ambiguous": 0,
+                "openOrUnknown": 4
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 104,
+                "be": 28,
+                "loss": 307,
+                "winShare": 23.7,
+                "beShare": 6.4,
+                "lossShare": 69.9,
+                "winrate": 23.7,
+                "sumR": 109,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 40,
+            "gestoppteGewinner": 10,
+            "transitions": {
+              "loss→breakeven": 40,
+              "unknown→breakeven": 1,
+              "success→breakeven": 10
+            }
+          }
+        },
+        "5": {
+          "keinBE": {
+            "n": 975,
+            "win": 204,
+            "be": 0,
+            "loss": 771,
+            "winShare": 20.9,
+            "beShare": 0,
+            "lossShare": 79.1,
+            "winrate": 20.9,
+            "sumR": 249,
+            "ambiguous": 0,
+            "openOrUnknown": 9,
+            "halves": {
+              "Jan–Jun": {
+                "n": 537,
+                "win": 112,
+                "be": 0,
+                "loss": 425,
+                "winShare": 20.9,
+                "beShare": 0,
+                "lossShare": 79.1,
+                "winrate": 20.9,
+                "sumR": 135,
+                "ambiguous": 0,
+                "openOrUnknown": 5
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 92,
+                "be": 0,
+                "loss": 346,
+                "winShare": 21,
+                "beShare": 0,
+                "lossShare": 79,
+                "winrate": 21,
+                "sumR": 114,
+                "ambiguous": 0,
+                "openOrUnknown": 4
+              }
+            }
+          },
+          "be1R": {
+            "n": 981,
+            "win": 133,
+            "be": 368,
+            "loss": 480,
+            "winShare": 13.6,
+            "beShare": 37.5,
+            "lossShare": 48.9,
+            "winrate": 13.6,
+            "sumR": 185,
+            "ambiguous": 0,
+            "openOrUnknown": 3,
+            "halves": {
+              "Jan–Jun": {
+                "n": 541,
+                "win": 62,
+                "be": 216,
+                "loss": 263,
+                "winShare": 11.5,
+                "beShare": 39.9,
+                "lossShare": 48.6,
+                "winrate": 11.5,
+                "sumR": 47,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 440,
+                "win": 71,
+                "be": 152,
+                "loss": 217,
+                "winShare": 16.1,
+                "beShare": 34.5,
+                "lossShare": 49.3,
+                "winrate": 16.1,
+                "sumR": 138,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              }
+            },
+            "gerettet": 291,
+            "gestoppteGewinner": 71,
+            "transitions": {
+              "loss→breakeven": 291,
+              "success→breakeven": 71,
+              "unknown→breakeven": 5,
+              "open→breakeven": 1
+            }
+          },
+          "be1.5R": {
+            "n": 980,
+            "win": 149,
+            "be": 262,
+            "loss": 569,
+            "winShare": 15.2,
+            "beShare": 26.7,
+            "lossShare": 58.1,
+            "winrate": 15.2,
+            "sumR": 176,
+            "ambiguous": 0,
+            "openOrUnknown": 4,
+            "halves": {
+              "Jan–Jun": {
+                "n": 541,
+                "win": 74,
+                "be": 153,
+                "loss": 314,
+                "winShare": 13.7,
+                "beShare": 28.3,
+                "lossShare": 58,
+                "winrate": 13.7,
+                "sumR": 56,
+                "ambiguous": 0,
+                "openOrUnknown": 1
+              },
+              "Jul–Nov": {
+                "n": 439,
+                "win": 75,
+                "be": 109,
+                "loss": 255,
+                "winShare": 17.1,
+                "beShare": 24.8,
+                "lossShare": 58.1,
+                "winrate": 17.1,
+                "sumR": 120,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              }
+            },
+            "gerettet": 202,
+            "gestoppteGewinner": 55,
+            "transitions": {
+              "loss→breakeven": 202,
+              "success→breakeven": 55,
+              "unknown→breakeven": 4,
+              "open→breakeven": 1
+            }
+          },
+          "be2R": {
+            "n": 978,
+            "win": 166,
+            "be": 191,
+            "loss": 621,
+            "winShare": 17,
+            "beShare": 19.5,
+            "lossShare": 63.5,
+            "winrate": 17,
+            "sumR": 209,
+            "ambiguous": 0,
+            "openOrUnknown": 6,
+            "halves": {
+              "Jan–Jun": {
+                "n": 540,
+                "win": 85,
+                "be": 111,
+                "loss": 344,
+                "winShare": 15.7,
+                "beShare": 20.6,
+                "lossShare": 63.7,
+                "winrate": 15.7,
+                "sumR": 81,
+                "ambiguous": 0,
+                "openOrUnknown": 2
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 81,
+                "be": 80,
+                "loss": 277,
+                "winShare": 18.5,
+                "beShare": 18.3,
+                "lossShare": 63.2,
+                "winrate": 18.5,
+                "sumR": 128,
+                "ambiguous": 0,
+                "openOrUnknown": 4
+              }
+            },
+            "gerettet": 150,
+            "gestoppteGewinner": 38,
+            "transitions": {
+              "loss→breakeven": 150,
+              "success→breakeven": 38,
+              "unknown→breakeven": 3
+            }
+          },
+          "be2.5R": {
+            "n": 977,
+            "win": 177,
+            "be": 143,
+            "loss": 657,
+            "winShare": 18.1,
+            "beShare": 14.6,
+            "lossShare": 67.2,
+            "winrate": 18.1,
+            "sumR": 228,
+            "ambiguous": 0,
+            "openOrUnknown": 7,
+            "halves": {
+              "Jan–Jun": {
+                "n": 539,
+                "win": 95,
+                "be": 77,
+                "loss": 367,
+                "winShare": 17.6,
+                "beShare": 14.3,
+                "lossShare": 68.1,
+                "winrate": 17.6,
+                "sumR": 108,
+                "ambiguous": 0,
+                "openOrUnknown": 3
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 82,
+                "be": 66,
+                "loss": 290,
+                "winShare": 18.7,
+                "beShare": 15.1,
+                "lossShare": 66.2,
+                "winrate": 18.7,
+                "sumR": 120,
+                "ambiguous": 0,
+                "openOrUnknown": 4
+              }
+            },
+            "gerettet": 114,
+            "gestoppteGewinner": 27,
+            "transitions": {
+              "loss→breakeven": 114,
+              "success→breakeven": 27,
+              "unknown→breakeven": 2
+            }
+          },
+          "be3R": {
+            "n": 976,
+            "win": 189,
+            "be": 84,
+            "loss": 703,
+            "winShare": 19.4,
+            "beShare": 8.6,
+            "lossShare": 72,
+            "winrate": 19.4,
+            "sumR": 242,
+            "ambiguous": 0,
+            "openOrUnknown": 8,
+            "halves": {
+              "Jan–Jun": {
+                "n": 538,
+                "win": 103,
+                "be": 39,
+                "loss": 396,
+                "winShare": 19.1,
+                "beShare": 7.2,
+                "lossShare": 73.6,
+                "winrate": 19.1,
+                "sumR": 119,
+                "ambiguous": 0,
+                "openOrUnknown": 4
+              },
+              "Jul–Nov": {
+                "n": 438,
+                "win": 86,
+                "be": 45,
+                "loss": 307,
+                "winShare": 19.6,
+                "beShare": 10.3,
+                "lossShare": 70.1,
+                "winrate": 19.6,
+                "sumR": 123,
+                "ambiguous": 0,
+                "openOrUnknown": 4
+              }
+            },
+            "gerettet": 68,
+            "gestoppteGewinner": 15,
+            "transitions": {
+              "loss→breakeven": 68,
+              "success→breakeven": 15,
+              "unknown→breakeven": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

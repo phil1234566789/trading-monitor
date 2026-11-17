@@ -43,6 +43,16 @@ describe('DOB price-only 2R observation',()=>{
   expect(run(intraday,at('2026-11-10T12:05:00-05:00'),{...xau,entryTime:intraday[0].time})).toMatchObject({status:'unknown',reason:'missingHistory'});
   expect(run(daily,at('2026-11-10T18:05:00-05:00'),{...xau,instrument:'EURUSD'})).toMatchObject({status:'unknown'});
  });
+ it('moves the stop to entry only from the candle after the break-even trigger',()=>{
+  const be={breakevenAtR:1};
+  expect(run([candle(120,99.5,101),candle(180,99.9,101.5)],300,be)).toMatchObject({status:'breakeven',exitPrice:100,recognizedAt:240});
+  // Trigger und Rückkehr in derselben Kerze: Reihenfolge unbekannt, SL liegt dort noch am alten Stop.
+  expect(run([candle(120,99.9,101),candle(180,100.5,102)],300,be)).toMatchObject({status:'success'});
+  expect(run([candle(120,99.5,101),candle(180,99.9,102)],300,be)).toMatchObject({status:'ambiguous',reason:'sameCandle'});
+  expect(run([candle(120,99.5,100.9),candle(180,99,100)],300,be)).toMatchObject({status:'loss'});
+  expect(run([candle(120,99,100.5)],180,{direction:'short',stopPrice:101,breakevenAtR:0.5,rMultiple:3})).toMatchObject({status:'open'});
+  expect(run([candle(120,99.4,100.5),candle(180,99.5,100)],240,{direction:'short',stopPrice:101,breakevenAtR:0.5,rMultiple:3})).toMatchObject({status:'breakeven'});
+ });
  it('counts session-ignored candles as real prices instead of aborting',()=>{
   expect(run([{...candle(120,99.5,101),ignored:true},candle(180,99.5,102)])).toMatchObject({status:'success'});
  });

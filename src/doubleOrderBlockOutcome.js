@@ -5,7 +5,9 @@ import {m1GapCovered} from './goldWeekendGap.js';
 
 // Preisbeobachtung des Indikators: keine Lots, Teilverkäufe, Commission oder Handelsfreigabe.
 // rMultiple: Ziel in R (Default 2R = DOB-Setup); dobMaxR fragt damit höhere Stufen mit derselben Ausgangslogik ab.
-export function evaluateDoubleOrderBlockOutcome({direction,entryTime,entryPrice,stopPrice,candles,evaluatedAt,instrument='XAUUSD',rMultiple=2}) {
+// breakevenAtR (Messung, Philips manueller BE): ab dieser R-Weite liegt der SL auf Entry, Rückkehr dorthin = 'breakeven'.
+// Der Nachzug gilt erst ab der Kerze nach dem Trigger, weil die Reihenfolge innerhalb der M1-Kerze unbekannt ist.
+export function evaluateDoubleOrderBlockOutcome({direction,entryTime,entryPrice,stopPrice,candles,evaluatedAt,instrument='XAUUSD',rMultiple=2,breakevenAtR=null}) {
  const scale=entryRiskScale(entryPrice,stopPrice,[],instrument,direction);
  const targetPrice=scale.status==='ready'?entryPrice+(direction==='long'?1:-1)*rMultiple*scale.risk:null;
  const result={status:'open',recognizedAt:null,exitPrice:null,targetPrice,checkedThrough:entryTime,reason:null};
@@ -14,16 +16,19 @@ export function evaluateDoubleOrderBlockOutcome({direction,entryTime,entryPrice,
  // Geschlossener Markt hat keine Preise, also auch keinen verpassten SL/TP; offene Lücken bleiben unknown.
  // Session-ignorierte Kerzen sind echte Brokerpreise und zählen deshalb normal mit.
  const continuous=(from,to)=>m1GapCovered(instrument,from,to);
- let next=entryTime;
+ const triggerPrice=breakevenAtR!=null&&targetPrice!=null?entryPrice+(direction==='long'?1:-1)*breakevenAtR*scale.risk:null;
+ let next=entryTime,breakeven=false;
  for(const candle of closedChecklistCandles(candles,'1m',evaluatedAt)){
   if(candle.time<entryTime)continue;
   if(!continuous(next,candle.time)||![candle.low,candle.high].every(Number.isFinite)||candle.low>candle.high)
    return {...result,status:'unknown',reason:'missingHistory',checkedThrough:next,unavailableAt:next+60};
   next=candle.time+60;
-  const short=direction==='short',stop=candleTouchesPrice(candle,stopPrice,!short),target=candleTouchesPrice(candle,targetPrice,short);
-  if(stop||target)return {...result,status:stop&&target?'ambiguous':stop?'loss':'success',
-   recognizedAt:next,checkedThrough:next,exitPrice:stop&&target?null:stop?stopPrice:targetPrice,
+  const short=direction==='short',activeStop=breakeven?entryPrice:stopPrice;
+  const stop=candleTouchesPrice(candle,activeStop,!short),target=candleTouchesPrice(candle,targetPrice,short);
+  if(stop||target)return {...result,status:stop&&target?'ambiguous':stop?breakeven?'breakeven':'loss':'success',
+   recognizedAt:next,checkedThrough:next,exitPrice:stop&&target?null:stop?activeStop:targetPrice,
    reason:stop&&target?'sameCandle':null};
+  if(triggerPrice!=null&&candleTouchesPrice(candle,triggerPrice,short))breakeven=true;
  }
  return {...result,checkedThrough:next,...(!continuous(next,Math.max(next,Math.floor(evaluatedAt/60)*60))?{status:'unknown',reason:'missingHistory',unavailableAt:next+60}:{})};
 }
