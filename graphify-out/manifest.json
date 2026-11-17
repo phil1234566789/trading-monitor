@@ -10218,9 +10218,9 @@
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
-    "mtime": 1794870300.9682312,
-    "seen": 1794901128.2327485,
-    "ast_hash": "87e3355934a32362bfabdf69242fb2d9",
+    "mtime": 1794901979.1160228,
+    "seen": 1794902132.1708715,
+    "ast_hash": "5a3106e40947eb62f12d29001b0366e6",
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
@@ -10332,9 +10332,9 @@
     "semantic_hash": ""
   },
   "src/components/DobStatsTable.vue": {
-    "mtime": 1794870300.965724,
-    "seen": 1794901128.2327485,
-    "ast_hash": "2d905c07d281dc620657cf161e523812",
+    "mtime": 1794901967.9797463,
+    "seen": 1794902132.0507953,
+    "ast_hash": "0420d6e764809ba5633819b32dfc39c6",
     "semantic_hash": ""
   },
   "analysis/dob-setup/sl-variants-xau-2026.json": {
