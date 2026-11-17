@@ -20,7 +20,10 @@ export function dobTs11FromRow(row){
   lsTimeframe:row.ls_timeframe??null,detectorVersion:row.detector_version??null};
 }
 
-// Beste Verbindung eines TS1.1-OBs zu OB1/OB2: gleiche Kante vor Überlappung vor Abstand; bei Gleichstand OB1.
+// Rang einer Verbindung (kleiner = stärker): Stufe, dann beide Kanten gleich vor einer (Philip verknüpft #135 mit dem TS1.1, das OB2
+// exakt trifft), dann Abstand. Gemeinsam für die Wahl je Paar und über alle tragenden Paare eines Trades (Fill).
+export const dobLqMatchRank=m=>DOB_LQ_MATCH_LEVELS.indexOf(m.match)*1e6+(m.matchedEdge==='both'?0:1e5)+m.gapUsd;
+// Beste Verbindung eines TS1.1-OBs zu OB1/OB2 nach dobLqMatchRank; bei Gleichstand OB1.
 export function dobLqSweepMatch(pair,ts,tick){
  const tsEdges=[ts.top,ts.bottom,ts.rawTop,ts.rawBottom].filter(Number.isFinite);
  const tsLow=Math.min(ts.bottom,ts.rawBottom??Infinity),tsHigh=Math.max(ts.top,ts.rawTop??-Infinity);
@@ -30,8 +33,7 @@ export function dobLqSweepMatch(pair,ts,tick){
   const top=same(ob.top),bottom=same(ob.bottom),gapUsd=Math.max(0,tsLow-ob.top,ob.bottom-tsHigh);
   const match=top||bottom?'edge':gapUsd===0?'overlap':gapUsd<=DOB_LQ_ADJACENT_MAX_USD?'adjacent':null;
   const candidate={match,matchedOb:name,matchedEdge:top&&bottom?'both':top?'top':bottom?'bottom':null,gapUsd:Math.round(gapUsd*100)/100};
-  if(match&&(!best||DOB_LQ_MATCH_LEVELS.indexOf(match)<DOB_LQ_MATCH_LEVELS.indexOf(best.match)||
-   (match===best.match&&candidate.gapUsd<best.gapUsd)))best=candidate;
+  if(match&&(!best||dobLqMatchRank(candidate)<dobLqMatchRank(best)))best=candidate;
  }
  return best;
 }
@@ -49,8 +51,7 @@ export function lqSweepPoi(input){
     ||ts.startTime<pair.firstOrderBlock.startTime-MAX_AGE_SECONDS)continue;
    const m=dobLqSweepMatch(pair,ts,tick);
    if(!m)continue;
-   const rank=DOB_LQ_MATCH_LEVELS.indexOf(m.match),bestRank=poi?DOB_LQ_MATCH_LEVELS.indexOf(poi.match):Infinity;
-   if(rank<bestRank||(rank===bestRank&&m.gapUsd<poi.gapUsd))poi={kind:'ts11',tradeSetupId:ts.id,zone:{top:ts.top,bottom:ts.bottom},
+   if(!poi||dobLqMatchRank(m)<dobLqMatchRank(poi))poi={kind:'ts11',tradeSetupId:ts.id,zone:{top:ts.top,bottom:ts.bottom},
     zoneStartTime:ts.startTime,lsPrice:ts.lsPrice,lsTouchedTime:ts.lsTouchedTime,lsTimeframe:ts.lsTimeframe,detectorVersion:ts.detectorVersion,...m};
   }
   return {poi,reason:poi&&DOB_LQ_MATCH_LEVELS.indexOf(poi.match)<=allowed?null:list.length?'noPoi':'missingTradeSetups'};

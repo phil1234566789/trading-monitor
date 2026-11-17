@@ -41,7 +41,7 @@ try {
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { dobPoiContext, dobPoiZoneAgeSeconds }, { dobMaxR, dobWideVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, dobPoiFeatures, DOB_BREAKEVEN_AT_R_LEVELS },
-    { dobTs11FromRow, DOB_LQ_MATCH_LEVELS }, { fetchAllRows }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js',
       '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js'].map(load));
   const LQ = RUNS[RUN_ID].poiType === 'lq_sweep';
@@ -77,8 +77,8 @@ try {
   // Gegen-DOB-Status je Trade über alle tragenden Paare, bester gewinnt (none > dead > live): wie die Dedup „bleibt, sobald ein Paar passiert“.
   const RANK = { none: 0, dead: 1, live: 2 }, counterStatus = new Map();
   for (const t of trades) { const s = t.counterDob?.status, k = dobTradeKey(t); if (s && (!counterStatus.has(k) || RANK[s] < RANK[counterStatus.get(k)])) counterStatus.set(k, s); }
-  // LQ-Sweep: stärkste Verbindung über alle tragenden Paare (gleiche Kante vor Überlappung vor daneben, dann kleinster Abstand).
-  const bestPoi = new Map(), poiRank = poi => DOB_LQ_MATCH_LEVELS.indexOf(poi.match) * 1e6 + poi.gapUsd;
+  // LQ-Sweep: stärkste Verbindung über alle tragenden Paare (dobLqMatchRank, wie je Paar).
+  const bestPoi = new Map(), poiRank = dobLqMatchRank;
   if (LQ) for (const t of trades) { const k = dobTradeKey(t); if (t.poi && (!bestPoi.has(k) || poiRank(t.poi) < poiRank(bestPoi.get(k)))) bestPoi.set(k, t.poi); }
 
   const rows = unique.map(t => ({ id: `${RUN_ID}:${t.id}`, run_id: RUN_ID, instrument: SYMBOL,

@@ -12,8 +12,8 @@ const SAMPLES=[
  {trade:'#137',day:'2026-11-02',at:'09:05',direction:'short',ts:47184,match:'edge',ob:'ob1',edge:'both'},
  {trade:'#140 (K10)',day:'2026-10-22',at:'05:24',direction:'short',ts:50160,match:'edge',ob:'ob1',edge:'both'},
  {trade:'#141',day:'2026-10-12',at:'15:34',direction:'short',ts:17262,match:'edge',ob:'ob1',edge:'top'},
- // #135: Philips Level 4142,14 (TS 37679) trifft OB1 über die rohe OB-Oberkante 4142,29; TS 38280 teilt zusätzlich beide Kanten mit OB2.
- {trade:'#135',day:'2026-11-05',at:'16:19',direction:'short',ts:37679,match:'edge',ob:'ob1',edge:'top'},
+ // #135: TS 38280 (von Philip verknüpft) teilt beide Kanten mit OB2 und schlägt TS 37679 (Level 4142,14, nur rohe Oberkante an OB1).
+ {trade:'#135',day:'2026-11-05',at:'16:19',direction:'short',ts:38280,match:'edge',ob:'ob2',edge:'both'},
  {trade:'#143',day:'2026-06-04',at:'05:52',direction:'long',ts:49404,match:'edge',ob:'ob1',edge:'bottom'},
  {trade:'#139',day:'2026-10-22',at:'10:52',direction:'short',ts:24767,match:'overlap',ob:'ob1',edge:null},
  {trade:'#138',day:'2026-10-26',at:'14:34',direction:'short',ts:27646,match:'adjacent',ob:'ob1',edge:null,gapUsd:0.84},
