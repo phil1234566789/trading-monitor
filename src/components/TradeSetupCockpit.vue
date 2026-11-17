@@ -216,11 +216,7 @@ const accentStyle = computed(() => {
       {{ trendAlignmentInfo.text }} {{ trendAlignmentInfo.icon }}
     </div>
 
-    <!-- Nur noch Risiko und Sweep-Alter der laufenden Range. Die beiden Quoten-Leitern standen bis
-         2026-09-23 hier und sind auf Philips Ansage raus ("das alte zeug zur statistik im TSC muss
-         weg") — die Einordnung macht jetzt der Bewertungs-Bereich daneben
-         (TradeSetupBewertung.vue), und zwar über die FVG statt über das Risiko-Band: die trennt bei
-         3R über 47 bis 90 %, das Risiko-Band nur über 49 bis 66 und dabei nicht einmal monoton. -->
+    <!-- Nur Risiko und Sweep-Alter der laufenden Range, bewusst ohne Quoten-Leitern. -->
     <div v-if="riskPips > 0" class="tsc-dr-quoten">
       <div class="tsc-dr-quoten-head">
         <span>Deine Dealing Range</span>

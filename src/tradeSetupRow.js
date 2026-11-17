@@ -52,8 +52,8 @@ export function tradeSetupFromRow(row) {
     obBottom: row.ob_bottom,
     obStartTime: toSec(row.ob_start_time),
     // Groesse der bestaetigenden FVG in Preiseinheiten, wie sie detectTradeSetups selbst liefert —
-    // fehlte hier, wodurch ein aus der DB gelesenes Setup als einziges keine FVG trug (Bewertungs-
-    // Bereich, 2026-09-23). Altzeilen von vor der ob_fvg-Migration haben null.
+    // fehlte hier, wodurch ein aus der DB gelesenes Setup als einziges keine FVG trug. Altzeilen
+    // von vor der ob_fvg-Migration haben null.
     obFvg: row.ob_fvg ?? null,
     tradeSetupId: row.id,
     // Rohzeit beibehalten; setup1RecognitionTime berücksichtigt zusätzlich den FVG-Schluss.
