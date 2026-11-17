@@ -10218,9 +10218,9 @@
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
-    "mtime": 1794912727.7217562,
-    "seen": 1794912955.695627,
-    "ast_hash": "655cd16903e234c2a8cb1455b2b74684",
+    "mtime": 1794913357.9385822,
+    "seen": 1794913542.6212556,
+    "ast_hash": "45fc6aa0aebd70e2a422c8e9c0327ae6",
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
@@ -10392,21 +10392,21 @@
     "semantic_hash": ""
   },
   "src/components/DobGuardrailsPanel.vue": {
-    "mtime": 1794911803.1826487,
-    "seen": 1794911954.5106876,
-    "ast_hash": "d421b9299aab66646fd49ba8d5ccfb8e",
+    "mtime": 1794913367.1860297,
+    "seen": 1794913542.4670436,
+    "ast_hash": "5f459c4f1a6196697387ea3b6bb2c08f",
     "semantic_hash": ""
   },
   "src/dobGuardrails.js": {
-    "mtime": 1794912840.8761806,
-    "seen": 1794912955.629622,
-    "ast_hash": "91cf913a189361ee4992ada7d513c03d",
+    "mtime": 1794913320.4692793,
+    "seen": 1794913542.5185637,
+    "ast_hash": "3e18ecadb7310273e30150a972698a90",
     "semantic_hash": ""
   },
   "test/dobGuardrails.test.js": {
-    "mtime": 1794912840.8761806,
-    "seen": 1794912955.7491105,
-    "ast_hash": "1bc60d52bfa826762e3b70bd6602cbe4",
+    "mtime": 1794913320.4692793,
+    "seen": 1794913542.6917949,
+    "ast_hash": "6d1e57ed4bbf1c6d9fe5d895e7ddd624",
     "semantic_hash": ""
   },
   "src/components/DobStatCell.vue": {
@@ -10425,6 +10425,12 @@
     "mtime": 1794911066.4780326,
     "seen": 1794911487.7359738,
     "ast_hash": "e504cabe1662e388f7d2fdcb9310c581",
+    "semantic_hash": ""
+  },
+  "src/components/DobAccountTile.vue": {
+    "mtime": 1794913335.1951323,
+    "seen": 1794913542.4670436,
+    "ast_hash": "cdc6f738f29ae4b22dfa9751a0a8ae7a",
     "semantic_hash": ""
   }
 }
