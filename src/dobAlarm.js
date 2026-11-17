@@ -10,6 +10,10 @@ export const DOB_ALARM_FRESH_SECONDS=15*60;
 // Ohne neue M1-Kerze so lange bei offenem Markt: lieber ein Hinweis als stilles Schweigen.
 export const DOB_STALE_SECONDS=5*60;
 const ENTERED=new Set(['entry','win','loss','ambiguous','unknown']);
+// Sperren aus dob_guardrails: gesperrte Fälle kommen ins Protokoll (dob_alarm_events.guardrail), aber nicht als normaler Alarm.
+const GUARDRAILS=new Set(['blockedZoneAge','blockedEntryHour']);
+// Q23 (Philip offen): Entry in gesperrter Stunde → 'warn' = Entry-Alarm mit Hinweis „kein Trade“, 'none' = nur Protokoll.
+export const DOB_BLOCKED_ENTRY_ALARM='warn';
 
 const price=v=>Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}):'–';
 const zone=z=>`${price(z.bottom)}–${price(z.top)}`;
@@ -26,21 +30,25 @@ const obLines=({chart})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} �
  `OB2 ${formatBerlinTime(chart.secondOrderBlockStart)} · ${zone(chart.secondOrderBlock)}`];
 
 // Dedup: mehrere OB1-Partner tragen oft dasselbe OB2 bzw. denselben Trade, deshalb Schlüssel über OB2 bzw. Entry/SL statt Setup-ID.
-export function dobAlarmEvents(result,evaluatedAt){
+// Erlaubte Setups zuerst: trägt irgendein Paar den Alarm ungesperrt, gewinnt es den Schlüssel (wie die Statistik-Dedup).
+// suppressed = nur Protokoll, nicht senden.
+export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED_ENTRY_ALARM}={}){
  const events=new Map();
- for(const s of result.setups){
-  const instrument=s.instrument??'XAUUSD';
+ for(const s of [...result.setups,...result.rejected.filter(r=>GUARDRAILS.has(r.reason))]){
+  const instrument=s.instrument??'XAUUSD',guardrail=s.reason??null;
   if(s.phase==='ob2Retest'&&s.phaseSince>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){
    const id=`dob:retest:${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`;
-   if(!events.has(id))events.set(id,{id,phase:'ob2Retest',setupId:s.id,instrument,direction:s.direction,signalAt:s.phaseSince,
+   if(!events.has(id))events.set(id,{id,phase:'ob2Retest',setupId:s.id,instrument,direction:s.direction,signalAt:s.phaseSince,guardrail,suppressed:!!guardrail,
     text:[`🟡 DOB ${instrument} ${side(s.direction)} · OB2-Retest ${formatBerlinTime(s.phaseSince)}`,sourceLine(s),...obLines(s),
      `Entry-Zone: OB2 ${zone(s.chart.secondOrderBlock)} · Entry nach der OB2-Reaktion (Route a/b), SL laut Indikator, TP 2R`,
      dobChartUrl(id,instrument,s.phaseSince)].join('\n')});
   }
   if(ENTERED.has(s.phase)&&s.entryTime>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){
    const id=`dob:entry:${instrument}:${s.direction}:${s.entryTime}:${s.entryPrice}:${s.stopPrice}`;
-   if(!events.has(id))events.set(id,{id,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,
-    text:[`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
+   const warn=guardrail==='blockedEntryHour'&&blockedEntryAlarm==='warn';
+   if(!events.has(id))events.set(id,{id,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
+    text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · Entry in Sperrzeit ${formatBerlinTime(s.entryTime)}, kein Trade`
+     :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
      `Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)} · TP 2R ${price(s.targetPrice)}`,sourceLine(s),...obLines(s),
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
   }

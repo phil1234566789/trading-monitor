@@ -1,7 +1,8 @@
 import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
-import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed,sourceMaxDistanceAtr} from './dobSourceOfStrength.js';
+import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed,sourceMaxDistanceAtr,dobSourceZoneAgeSeconds} from './dobSourceOfStrength.js';
+import {dobZoneAgeBlocked,dobEntryTimeBlocked} from './dobGuardrails.js';
 
 // v2 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ k H1-ATR von OB1, k je Instrument, vor OB1 retestet; dobSourceOfStrength.js)
 // + DOB + TP 2R. Den Retest verlangt Philip fachlich (Q17), auch wenn er die Winrate nicht hebt; sourceOptions.requireRetest=false
@@ -39,7 +40,8 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 // vorberechneter sourceContext (Statistik: einmal über die ganze Historie). Ausgang und 2R kommen aus evaluateDoubleOrderBlockOutcome.
 // sourceOptions: {requireRetest} (Standard true). trendGate (optional, v3-Experiment): Funktion setup → {trend, verdict, rejectReason}
 // aus createDobM5TrendGate; wird vom Aufrufer hereingereicht, damit der Trend-Algo nicht im Watcher-Bundle landet.
-// setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
+// guardrails (optional, dobGuardrailsFromRow): Zonenalter und Entry-Stunde → rejected 'blockedZoneAge'/'blockedEntryHour'; den Monat
+// prüft der Watcher vorab. setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 export function checkDobTradeSetup(input){
  const dob=detectDoubleOrderBlocks({...input,options:{...input.options,retests:true}});
  const context=input.sourceContext??(input.htfCandles?dobSourceContext({htfCandles:input.htfCandles,m5Candles:input.m5Candles,instrument:input.instrument}):null);
@@ -57,15 +59,24 @@ export function checkDobTradeSetup(input){
   ...dob.pairs.filter(live).flatMap(pair=>Object.entries(pair.entries)
    .filter(([,entry])=>entry.status==='ready'||entry.status==='pending').map(([route,entry])=>[pair,setupOf(pair,route,entry)]))];
  const setups=[],rejected=[];
+ const guardrails=input.guardrails;
  for(const [pair,setup] of candidates){
   const sourceOfStrength=sourceOf(pair);
-  if(sourceOfStrengthPassed(sourceOfStrength,maxAtr)){
-   // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
-   const m5Trend=input.trendGate?.({...setup,sourceOfStrength});
-   if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});
-   else setups.push({...setup,sourceOfStrength,...(m5Trend?{m5Trend}:{})});
+  if(!sourceOfStrengthPassed(sourceOfStrength,maxAtr)){
+   rejected.push({...setup,sourceOfStrength,reason:maxAtr==null?'noSourceOfStrengthConfig':context?'noSourceOfStrength':'missingHtfCandles'});
+   continue;
   }
-  else rejected.push({...setup,sourceOfStrength,reason:maxAtr==null?'noSourceOfStrengthConfig':context?'noSourceOfStrength':'missingHtfCandles'});
+  // Zonenalter sperrt schon den Retest (kein Alarm); die Entry-Stunde erst den Entry, der Retest-Alarm ist da schon raus (Q23).
+  if(guardrails&&dobZoneAgeBlocked(guardrails,dobSourceZoneAgeSeconds(sourceOfStrength,pair.firstOrderBlock.startTime))){
+   rejected.push({...setup,sourceOfStrength,reason:'blockedZoneAge'});continue;
+  }
+  if(guardrails&&setup.entryTime!=null&&dobEntryTimeBlocked(guardrails,setup.entryTime)){
+   rejected.push({...setup,sourceOfStrength,reason:'blockedEntryHour'});continue;
+  }
+  // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
+  const m5Trend=input.trendGate?.({...setup,sourceOfStrength});
+  if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});
+  else setups.push({...setup,sourceOfStrength,...(m5Trend?{m5Trend}:{})});
  }
  return {version:DOB_TRADE_SETUP_VERSION,dobVersion:dob.version,status:dob.status,evaluatedAt:input.evaluatedAt,setups,rejected,stats:dob.stats};
 }

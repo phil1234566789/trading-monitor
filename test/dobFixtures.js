@@ -11,6 +11,6 @@ export const load=day=>JSON.parse(readFileSync(new URL(`${day}.json`,directory),
 const htf=load('htf-xau-2026'),offset=sec=>berlinOffsetMinutes(sec*1000);
 export const sourceContext=dobSourceContext({instrument:'XAUUSD',htfCandles:Object.fromEntries(Object.entries(htf.candles).map(([bar,rows])=>
  [bar,htfObCandles(markIgnoredCandles(rows.map(([time,open,high,low,close])=>({time,open,high,low,close})),htf.sessions,offset),htf.sessions,offset)]))});
-export const run=(fixture,evaluatedAt=fixture.provenance.query.to,withSource=true,sourceOptions)=>checkDobTradeSetup({instrument:'XAUUSD',
+export const run=(fixture,evaluatedAt=fixture.provenance.query.to,withSource=true,sourceOptions,extra={})=>checkDobTradeSetup({...extra,instrument:'XAUUSD',
  m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,evaluatedAt,...(withSource?{sourceContext}:{}),sourceOptions});
 export const berlin=(day,hhmm)=>{const utc=Date.parse(`${day}T${hhmm}:00Z`)/1000;return utc-berlinOffsetMinutes(utc*1000)*60;};

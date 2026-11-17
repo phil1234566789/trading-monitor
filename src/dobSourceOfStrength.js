@@ -116,3 +116,7 @@ export function nearestHtfSource(context,args,{requireRetest=false}={}){
 }
 
 export const sourceOfStrengthPassed=(source,maxAtr)=>maxAtr!=null&&source?.distanceAtr!=null&&source.distanceAtr<=maxAtr;
+
+// Alter der Kraftquelle-Zone bis zum Retest: Entstehung der H1/H4-Zone bis Start der letzten Touch-Episode vor OB1. Ohne Retest null.
+export const dobSourceZoneAgeSeconds=(source,firstOrderBlockStart)=>
+ source?.retestAgeSeconds==null?null:firstOrderBlockStart-source.retestAgeSeconds-source.zoneStartTime;

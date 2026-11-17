@@ -31,7 +31,7 @@ try {
   const load = p => server.ssrLoadModule(p);
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
-    { dobSourceContext }, { dobMaxR }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobSourceContext, dobSourceZoneAgeSeconds }, { dobMaxR }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobSourceOfStrength.js', '/src/dobMaxR.js'].map(load));
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
@@ -69,9 +69,7 @@ try {
       source_atr: t.sourceOfStrength.atr, source_distance_atr: t.sourceOfStrength.distanceAtr,
       source_gap_seconds: t.chart.firstOrderBlockStart - t.sourceOfStrength.zoneRecognizedAt,
       source_retest_kind: t.sourceOfStrength.retestKind, source_retest_age_seconds: t.sourceOfStrength.retestAgeSeconds,
-      // Zonenalter bis zum Retest: Entstehung der H1/H4-Zone bis Start der letzten Touch-Episode vor OB1 (OB1-Start − retestAgeSeconds).
-      source_zone_age_seconds: t.sourceOfStrength.retestAgeSeconds == null ? null
-        : t.chart.firstOrderBlockStart - t.sourceOfStrength.retestAgeSeconds - t.sourceOfStrength.zoneStartTime }) }));
+      source_zone_age_seconds: dobSourceZoneAgeSeconds(t.sourceOfStrength, t.chart.firstOrderBlockStart) }) }));
 
   const total = aggregateDobByMonth(unique.map(t => ({ recognizedAt: t.recognizedAt, entries: { [t.route]: { status: 'ready', outcome: t.outcome } } })),
     p => berlinDateStrFor(p.recognizedAt).slice(0, 7)).total;

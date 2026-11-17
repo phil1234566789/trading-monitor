@@ -35,3 +35,34 @@ describe('DOB-Alarme',()=>{
   expect(dobStaleAlarm({lastM1Time:berlin('2026-11-12','22:59'),evaluatedAt:pause})).toBeNull();
  });
 });
+
+describe('DOB-Sperren (dob_guardrails) im Alarm',()=>{
+ const fixture=load('2026-11-12');
+ const done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
+ const withGuardrails=(at,config)=>run(fixture,at,true,undefined,{guardrails:{blockedEntryWindows:[],blockedMonths:[],minZoneAgeSeconds:null,...config}});
+ // Entry 14:10 Berlin liegt im gesperrten Fenster 14:00–15:00.
+ const hour={blockedEntryWindows:[[840,900]]};
+ it('Entry-Stunde: Retest-Alarm geht normal raus, der Entry wird als Sperrzeit gemeldet',()=>{
+  const retestAt=done.chart.secondRetestTime+60;
+  expect(dobAlarmEvents(withGuardrails(retestAt,hour),retestAt).find(e=>e.phase==='ob2Retest')).toMatchObject({guardrail:null,suppressed:false});
+  const at=done.entryTime+60,result=withGuardrails(at,hour);
+  expect(result.setups.some(s=>s.entryTime===done.entryTime)).toBe(false);
+  expect(result.rejected.find(s=>s.entryTime===done.entryTime)).toMatchObject({reason:'blockedEntryHour'});
+  const entry=dobAlarmEvents(result,at).find(e=>e.phase==='entry');
+  expect(entry).toMatchObject({id:`dob:entry:XAUUSD:short:${done.entryTime}:${done.entryPrice}:${done.stopPrice}`,guardrail:'blockedEntryHour',suppressed:false});
+  expect(entry.text).toContain('Entry in Sperrzeit 14:10, kein Trade');
+ });
+ it('Entry-Stunde mit blockedEntryAlarm none: nur Protokoll',()=>{
+  const at=done.entryTime+60;
+  expect(dobAlarmEvents(withGuardrails(at,hour),at,{blockedEntryAlarm:'none'}).find(e=>e.phase==='entry')).toMatchObject({guardrail:'blockedEntryHour',suppressed:true});
+ });
+ it('Zonenalter: schon der Retest ist gesperrt (nur Protokoll)',()=>{
+  const at=done.chart.secondRetestTime+60,result=withGuardrails(at,{minZoneAgeSeconds:10*365*86400});
+  expect(result.setups.filter(s=>s.phase==='ob2Retest')).toEqual([]);
+  expect(dobAlarmEvents(result,at).find(e=>e.phase==='ob2Retest')).toMatchObject({guardrail:'blockedZoneAge',suppressed:true});
+ });
+ it('ohne Sperre unverändert',()=>{
+  const at=done.entryTime+60;
+  expect(dobAlarmEvents(withGuardrails(at,{}),at)).toEqual(dobAlarmEvents(run(fixture,at),at));
+ });
+});

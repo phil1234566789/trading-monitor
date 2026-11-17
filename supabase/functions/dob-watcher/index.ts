@@ -5,6 +5,7 @@ import {markIgnoredCandles,htfObCandles} from '../../../src/sessionOccurrences.j
 import {berlinOffsetMinutes,berlinDateStrFor,formatBerlinTime} from '../../../src/berlinTime.js';
 import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
 import {dobAlarmEvents,dobStaleAlarm} from '../../../src/dobAlarm.js';
+import {dobGuardrailsFromRow,dobMonthBlocked} from '../../../src/dobGuardrails.js';
 import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
@@ -40,11 +41,11 @@ async function closedCandles(client:any,bar:string,evaluatedAt:number){
     .filter(c=>c.time+BAR_SECONDS[bar]<=evaluatedAt);
 }
 
-// Gesperrt (Schalter aus oder außerhalb des Fensters): ins Protokoll als suppressed mit Grund, nie nachsenden
-// (der Dedup-Schlüssel ist damit verbraucht).
+// Gesperrt (Schalter aus, außerhalb des Fensters oder Sperre aus dob_guardrails): ins Protokoll als suppressed mit Grund,
+// nie nachsenden (der Dedup-Schlüssel ist damit verbraucht). guardrail hält die Sperre auch bei gesendeten Warn-Alarmen fest.
 async function deliver(client:any,event:any,blockedReason:string|null=null){
   const inserted=checked(await client.from('dob_alarm_events').upsert({id:event.id,instrument:event.instrument,phase:event.phase,setup_id:event.setupId??null,
-    direction:event.direction??null,signal_at:new Date(event.signalAt*1000).toISOString(),text:event.text,
+    direction:event.direction??null,signal_at:new Date(event.signalAt*1000).toISOString(),text:event.text,guardrail:event.guardrail??null,
     ...(blockedReason?{status:'suppressed',error:blockedReason}:{})},{onConflict:'id',ignoreDuplicates:true}).select('id')) as any[];
   if(!inserted.length)return null;
   if(blockedReason)return {id:event.id,status:'suppressed',reason:blockedReason};
@@ -68,22 +69,28 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60;
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
+  // Sperr-Konfig jede Minute frisch (Statistikseite speichert direkt); im gesperrten Monat wird gar nicht gerechnet.
+  const guardrails=dobGuardrailsFromRow(checked(await client.from('dob_guardrails').select('blocked_entry_windows,blocked_months,min_zone_age_seconds')
+    .eq('instrument',SYMBOL).maybeSingle()));
+  const monthBlocked=dobMonthBlocked(guardrails,evaluatedAt);
+  if(!dry&&monthBlocked){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}
   const sessions=(checked(await client.from('sessions').select('label,from_minutes,to_minutes,days,ignore_liquidity').eq('instrument',SYMBOL).limit(200)) as any[])
     .map(r=>({label:r.label,fromMinutes:r.from_minutes,toMinutes:r.to_minutes,days:r.days,ignoreLiquidity:r.ignore_liquidity??false}));
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
-  const input=dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:mark(m1),m5Candles:mark(m5),
-    htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}});
+  const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:mark(m1),m5Candles:mark(m5),
+    htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),guardrails};
   const calcStart=performance.now(),result=checkDobTradeSetup(input),calcMs=Math.round(performance.now()-calcStart);
   const events=dobAlarmEvents(result,evaluatedAt),stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   if(stale)events.push(stale);
   const policy=await alarmPolicy(client),blocked=policy.decide(evaluatedAt);
-  if(dry)return {dry:true,evaluatedAt,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
+  if(dry)return {dry:true,evaluatedAt,guardrails,monthBlocked,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
     alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,setups:result.setups.length,rejected:result.rejected.length,
-    events:events.map(e=>({id:e.id,phase:e.phase}))};
+    rejectedReasons:result.rejected.reduce((n:any,r:any)=>({...n,[r.reason]:(n[r.reason]??0)+1}),{}),
+    events:events.map(e=>({id:e.id,phase:e.phase,guardrail:e.guardrail??null,suppressed:!!e.suppressed}))};
   const delivered=[];
-  for(const event of events){const d=await deliver(client,event,blocked);if(d)delivered.push(d);}
+  for(const event of events){const d=await deliver(client,event,event.suppressed?event.guardrail:blocked);if(d)delivered.push(d);}
   await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
     runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:result.setups.length,rejected:result.rejected.length,skipped:null,error:null});
   return {evaluatedAt,calcMs,setups:result.setups.length,events:events.length,delivered};
