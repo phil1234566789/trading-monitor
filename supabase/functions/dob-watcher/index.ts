@@ -12,8 +12,6 @@ import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
 
 const SYMBOL='XAUUSD';
-// v3-Gate, Modus aus DOB_COUNTER_DOB_MODES (src/dobCounterDob.js); Philip: block_all.
-const DOB_COUNTER_DOB_MODE='block_all';
 // M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte Quell-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
@@ -73,7 +71,7 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
   // Sperr-Konfig jede Minute frisch (Statistikseite speichert direkt); im gesperrten Monat wird gar nicht gerechnet.
-  const guardrails=dobGuardrailsFromRow(checked(await client.from('dob_guardrails').select('entry_windows,default_tp_r,blocked_months,min_zone_age_seconds')
+  const guardrails=dobGuardrailsFromRow(checked(await client.from('dob_guardrails').select('entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode')
     .eq('instrument',SYMBOL).maybeSingle()));
   const monthBlocked=dobMonthBlocked(guardrails,evaluatedAt);
   if(!dry&&monthBlocked){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}
@@ -84,7 +82,7 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   const m1Marked=mark(m1),m5Marked=mark(m5);
   const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
     htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),guardrails,
-    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL},{mode:DOB_COUNTER_DOB_MODE})};
+    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL})};
   const calcStart=performance.now(),result=checkDobTradeSetup(input),calcMs=Math.round(performance.now()-calcStart);
   const events=dobAlarmEvents(result,evaluatedAt),stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   if(stale)events.push(stale);

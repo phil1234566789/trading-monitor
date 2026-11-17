@@ -9,7 +9,7 @@ import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobAccountTile from '../components/DobAccountTile.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
-import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailReason,dobConfigTpR,dobGuardrailsSummary} from '../dobGuardrails.js';
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobRowGuardrailReason,dobRowConfigTpR,dobGuardrailsSummary} from '../dobGuardrails.js';
 import {fetchDobTradePins,addDobTradePin,removePinEntry,updatePinNote} from '../pinContext.js';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinFlag from '../components/SimulationPinFlag.vue';
@@ -116,11 +116,11 @@ const guardrails=ref(DOB_GUARDRAILS_DEFAULT),guardrailDraft=ref(DOB_GUARDRAILS_D
 const guardrailsOpen=useLocalStorageRef('dobStatsGuardrailsOpen',false),applyGuardrails=useLocalStorageRef('dobStatsApplyGuardrails',true);
 watch(guardrails,g=>{guardrailDraft.value=g;});
 const draftUnsaved=computed(()=>JSON.stringify(guardrailDraft.value)!==JSON.stringify(guardrails.value));
-const blockedOf=r=>dobGuardrailReason(guardrailDraft.value,{entryTime:r.entry_time,zoneAgeSeconds:r.source_zone_age_seconds});
+const blockedOf=r=>dobRowGuardrailReason(guardrailDraft.value,r);
 const inYear=computed(()=>applyGuardrails.value?yearRows.value.filter(r=>!blockedOf(r)):yearRows.value);
 // „Nach Konfig“: jeder Trade mit dem TP seines Entry-Fensters (sonst Default-TP). Vergleich gegen alle Trades ohne Sperren mit dem
 // Default-TP, also gegen „gar keine Konfig“ bei derselben Grund-TP.
-const configTp=r=>dobConfigTpR(guardrailDraft.value,r.entry_time);
+const configTp=r=>dobRowConfigTpR(guardrailDraft.value,r);
 // Simulationskonto in R ganz oben: „Standard“ = alle Trades des Jahres mit TP 2R, ohne Sperren und Regeln, Route a+b zusammen;
 // „Mit Konfig“ = Entwurf, wenn „Sperren anwenden“ an ist, sonst die gespeicherte Konfig. Gleiche Rechnung wie überall (dobRouteStats).
 const accountConfig=computed(()=>applyGuardrails.value?guardrailDraft.value:guardrails.value);
@@ -129,8 +129,8 @@ const accountColumns=(list,k)=>[...DOB_HALVES.map(h=>({label:h,stats:dobTotalSta
 const accountStandard=computed(()=>accountColumns(yearRows.value,2));
 const accountWithConfig=computed(()=>{
  const cfg=accountConfig.value;
- const list=yearRows.value.filter(r=>!dobGuardrailReason(cfg,{entryTime:r.entry_time,zoneAgeSeconds:r.source_zone_age_seconds}));
- return accountColumns(list,r=>dobConfigTpR(cfg,r.entry_time)).map((c,i)=>{const base=accountStandard.value[i].stats;
+ const list=yearRows.value.filter(r=>!dobRowGuardrailReason(cfg,r));
+ return accountColumns(list,r=>dobRowConfigTpR(cfg,r)).map((c,i)=>{const base=accountStandard.value[i].stats;
   return {...c,delta:{sumR:c.stats.sumR-base.sumR,winratePp:c.stats.winrate==null||base.winrate==null?null:(c.stats.winrate-base.winrate)*100}};});
 });
 const accountConfigLabel=computed(()=>dobGuardrailsSummary(accountConfig.value)+(applyGuardrails.value&&draftUnsaved.value?' · Entwurf':'')

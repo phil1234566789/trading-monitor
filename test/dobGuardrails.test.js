@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {readFileSync} from 'node:fs';
-import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailsToRow,dobGuardrailReason,dobEntryTimeBlocked,dobMonthBlocked,dobEntryRule,dobGuardrailsSummary}
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailsToRow,dobGuardrailReason,dobEntryTimeBlocked,dobMonthBlocked,dobEntryRule,dobGuardrailsSummary,dobRowGuardrailReason,dobRowConfigTpR}
  from '../src/dobGuardrails.js';
 
 // Berlin-Zeit: Januar = CET (UTC+1), August = CEST (UTC+2).
@@ -58,6 +58,17 @@ describe('dobGuardrails',()=>{
   expect(off).toMatchObject({minZoneAgeSeconds:null,minZoneAgeSavedSeconds:86400});
   expect(dobGuardrailReason(off,{entryTime:berlin(2026,8,3,15,0,2),zoneAgeSeconds:60})).toBe(null);
   expect(dobGuardrailsToRow('XAUUSD',off)).toMatchObject({min_zone_age_seconds:null,min_zone_age_saved_seconds:86400});
+ });
+ it('Gegen-DOB-Modus: block_all sperrt tot und lebend, Kombi sperrt lebend und gibt tot TP 5R, off ignoriert',()=>{
+  const at=Date.parse('2026-11-10T13:00:00Z')/1000,row=status=>({entry_time:at,source_zone_age_seconds:null,counter_dob_status:status});
+  const c=counterDobMode=>({...DOB_GUARDRAILS_DEFAULT,counterDobMode});
+  expect(['none','dead','live',null].map(s=>dobRowGuardrailReason(c('block_all'),row(s)))).toEqual([null,'counterDob','counterDob',null]);
+  expect(['none','dead','live'].map(s=>dobRowGuardrailReason(c('live_block_dead_5r'),row(s)))).toEqual([null,null,'counterDob']);
+  expect(['none','dead','live'].map(s=>dobRowGuardrailReason(c('off'),row(s)))).toEqual([null,null,null]);
+  expect(['none','dead'].map(s=>dobRowConfigTpR(c('live_block_dead_5r'),row(s)))).toEqual([2,5]);
+  expect(dobRowConfigTpR(c('block_all'),row('dead'))).toBe(2);
+  expect(dobGuardrailsFromRow(dobGuardrailsToRow('XAUUSD',c('off'))).counterDobMode).toBe('off');
+  expect(dobGuardrailsFromRow({counter_dob_mode:'quatsch'}).counterDobMode).toBe('block_all');
  });
  it('Kurzbeschreibung der Konfig',()=>{
   const rules=dobGuardrailsFromRow({entry_windows:[{from:630,to:660,action:'block'},{from:1260,to:1320,action:'block'},{from:540,to:600,action:'tp',tpR:2},

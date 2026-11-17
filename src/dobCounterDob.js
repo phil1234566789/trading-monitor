@@ -26,14 +26,12 @@ export function dobCounterDobs(dob,direction,fromTime,entryTime,m1Candles=null){
 export const dobSourceRetestTime=setup=>setup.sourceOfStrength?.retestAgeSeconds==null?null
  :setup.chart.firstOrderBlockStart-setup.sourceOfStrength.retestAgeSeconds;
 
-// Modus (Philip): block_all = jeder Gegen-DOB sperrt (Standard); live_only = nur lebende sperren (ΣR ≈ ohne Gate, nur Schalter);
-// live_block_dead_5r = lebende sperren, bei nur toten TP fest 5R (Messung counter-dob-gate-xau-2026.json, trägt in beiden Halbjahren).
-export const DOB_COUNTER_DOB_MODES=['block_all','live_only','live_block_dead_5r'];
-export const DOB_COUNTER_DOB_DEAD_TP_R=5;
+// Status je Setup: none = kein Gegen-DOB, dead = nur tote, live = mind. ein lebender. Was daraus folgt (sperren, TP 5R, nichts),
+// entscheidet die Konfig (dob_guardrails.counter_dob_mode, dobCounterDobBlocked/dobCounterDobTpR in src/dobGuardrails.js).
+export const dobCounterDobStatus=c=>!c.count?'none':c.liveCount?'live':'dead';
 // Gate für checkDobTradeSetup (input.counterDobGate): erkennt Gegen-DOBs auf eigenen 2 Tagen bis zum Entry, weil der
 // Quellen-Retest vor dem Live-Fenster liegen kann. m5/m1 session-markiert und bis mindestens zum Entry. Je Entry gecacht.
-export function createDobCounterDobGate({m5Candles,m1Candles,instrument='XAUUSD'},{mode='block_all'}={}){
- if(!DOB_COUNTER_DOB_MODES.includes(mode))throw new Error(`Unbekannter Gegen-DOB-Modus ${mode}`);
+export function createDobCounterDobGate({m5Candles,m1Candles,instrument='XAUUSD'}){
  const cache=new Map();
  const dobAt=entryTime=>{
   if(!cache.has(entryTime)){
@@ -46,9 +44,6 @@ export function createDobCounterDobGate({m5Candles,m1Candles,instrument='XAUUSD'
   const from=dobSourceRetestTime(setup);
   if(setup.entryTime==null||from==null)return null;
   const counter=dobCounterDobs(dobAt(setup.entryTime),setup.direction,from,setup.entryTime,m1Candles);
-  const blocked=mode==='block_all'?counter.count>0:counter.liveCount>0;
-  // tpR: nur tote Gegen-DOBs im Kombi-Modus → checkDobTradeSetup rechnet Ziel und Ausgang zu diesem R.
-  return {...counter,mode,rejectReason:blocked?'counterDob':null,
-   ...(!blocked&&mode==='live_block_dead_5r'&&counter.count>0?{tpR:DOB_COUNTER_DOB_DEAD_TP_R}:{})};
+  return {...counter,status:dobCounterDobStatus(counter)};
  };
 }

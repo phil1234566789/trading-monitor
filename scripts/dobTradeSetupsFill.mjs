@@ -19,8 +19,9 @@ const RUNS = {
     sort: 1, version: 'dob-setup-v1', pick: r => r.setups, sourceOptions: { requireRetest: false } },
   'dob-setup-v2': { label: 'v2 · Quelle der Kraft mit Retest', description: 'wie v1, die H1/H4-Zone muss vor OB1 retestet sein',
     sort: 2, version: 'dob-setup-v2', pick: r => r.setups, sourceOptions: { requireRetest: true } },
-  'dob-setup-v3': { label: 'v3 · ohne Gegen-DOB', description: 'wie v2, kein Trade bei Gegen-DOB seit dem Retest der Kraftquelle',
-    sort: 3, version: 'dob-setup-v3', pick: r => r.setups, sourceOptions: { requireRetest: true }, counterDob: { mode: 'block_all' } },
+  // v3: alle v2-Trades mit Gegen-DOB-Status (none/dead/live); was gesperrt oder mit 5R gehandelt wird, entscheidet die Konfig.
+  'dob-setup-v3': { label: 'v3 · Gegen-DOB', description: 'wie v2 mit Gegen-DOB-Status seit dem Retest der Kraftquelle; Sperre bzw. TP über „Sperren und Regeln“',
+    sort: 3, version: 'dob-setup-v3', pick: r => r.setups, sourceOptions: { requireRetest: true }, counterDob: true },
 };
 const RUN_ID = flag('--run') ?? 'dob-setup-v0';
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
@@ -53,13 +54,16 @@ try {
 
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
   // Der Lauf entscheidet, welche Setups zählen; die Quelle der Kraft kommt aus dem einmal vorberechneten Kontext.
-  const counterDobGate = RUNS[RUN_ID].counterDob && createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: SYMBOL }, RUNS[RUN_ID].counterDob);
+  const counterDobGate = RUNS[RUN_ID].counterDob ? createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: SYMBOL }) : undefined;
   const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, sourceContext, sourceOptions: RUNS[RUN_ID].sourceOptions, counterDobGate })) });
   const trades = dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup: runSetups, dobLiveWindowInput }).setups,
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   const carrying = new Map();
   for (const t of trades) carrying.set(dobTradeKey(t), (carrying.get(dobTradeKey(t)) ?? 0) + 1);
   const unique = uniqueDobTrades(trades);
+  // Gegen-DOB-Status je Trade über alle tragenden Paare, bester gewinnt (none > dead > live): wie die Dedup „bleibt, sobald ein Paar passiert“.
+  const RANK = { none: 0, dead: 1, live: 2 }, counterStatus = new Map();
+  for (const t of trades) { const s = t.counterDob?.status, k = dobTradeKey(t); if (s && (!counterStatus.has(k) || RANK[s] < RANK[counterStatus.get(k)])) counterStatus.set(k, s); }
 
   const rows = unique.map(t => ({ id: `${RUN_ID}:${t.id}`, run_id: RUN_ID, instrument: SYMBOL,
     direction: t.direction, route: t.route, setup_id: t.id, carrying_setups: carrying.get(dobTradeKey(t)), recognized_at: t.recognizedAt,
@@ -70,6 +74,7 @@ try {
     // Weite SL-Variante (ferne OB2-Kante) nur, wo der SL am Retest-Extrem liegt; sonst null (eng = weit).
     ...(wide => ({ wide_max_r: wide?.maxR ?? null, wide_sl_hit: wide?.slHit ?? null, wide_ambiguous_r: wide?.ambiguousR ?? null,
       wide_risk_usd: wide?.riskUsd ?? null }))(dobWideVariant(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
+    counter_dob_status: counterStatus.get(dobTradeKey(t)) ?? null,
     first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
     ...(RUN_ID === 'dob-setup-v0' ? {} : { source_kind: `ob_${t.sourceOfStrength.timeframe.toLowerCase()}`, source_distance_usd: t.sourceOfStrength.distanceUsd,
       source_atr: t.sourceOfStrength.atr, source_distance_atr: t.sourceOfStrength.distanceAtr,

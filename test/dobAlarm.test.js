@@ -83,12 +83,14 @@ describe('DOB-Sperren (dob_guardrails) im Alarm',()=>{
 describe('DOB v3: Gegen-DOB im Alarm',()=>{
  const fixture=load('2026-11-12');
  const done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
- // Gate-Stub: das echte Gate testet dobLabFeatures.test.js an Philips Pins.
- const counterDobGate=s=>s.entryTime==null?null:{count:1,liveCount:1,rejectReason:'counterDob'};
+ // Gate-Stub (Status), das echte Gate testet dobLabFeatures.test.js an Philips Pins; Sperre/TP kommen aus der Konfig.
+ const gateWith=status=>s=>s.entryTime==null?null:{count:status==='none'?0:1,liveCount:status==='live'?1:0,status};
+ const counterDobGate=gateWith('live');
+ const cfg=counterDobMode=>({guardrails:{...DOB_GUARDRAILS_DEFAULT,counterDobMode}});
  it('Retest-Alarm bleibt, der Entry kommt als „Gegen-DOB seit Retest, kein Trade“',()=>{
   const retestAt=done.chart.secondRetestTime+60;
-  expect(dobAlarmEvents(run(fixture,retestAt,true,undefined,{counterDobGate}),retestAt).find(e=>e.phase==='ob2Retest')).toMatchObject({guardrail:null,suppressed:false});
-  const at=done.entryTime+60,result=run(fixture,at,true,undefined,{counterDobGate});
+  expect(dobAlarmEvents(run(fixture,retestAt,true,undefined,{counterDobGate,...cfg('block_all')}),retestAt).find(e=>e.phase==='ob2Retest')).toMatchObject({guardrail:null,suppressed:false});
+  const at=done.entryTime+60,result=run(fixture,at,true,undefined,{counterDobGate,...cfg('block_all')});
   expect(result.version).toBe('dob-setup-v3');
   expect(result.rejected.find(s=>s.entryTime===done.entryTime)).toMatchObject({reason:'counterDob'});
   const entry=dobAlarmEvents(result,at).find(e=>e.phase==='entry');
@@ -96,10 +98,15 @@ describe('DOB v3: Gegen-DOB im Alarm',()=>{
   expect(entry.text).toContain('Gegen-DOB seit Retest, Entry 14:10, kein Trade');
   expect(dobAlarmEvents(result,at,{counterDobAlarm:'none'}).find(e=>e.phase==='entry')).toMatchObject({suppressed:true});
  });
- it('Kombi-Modus: nur tote Gegen-DOBs → Entry-Alarm mit TP 5R',()=>{
-  const at=done.entryTime+60,gate=s=>s.entryTime==null?null:{count:1,liveCount:0,rejectReason:null,tpR:5};
-  const result=run(fixture,at,true,undefined,{counterDobGate:gate});
-  expect(result.setups.find(s=>s.entryTime===done.entryTime)).toMatchObject({tpRule:{tpR:5,source:'deadCounterDob'}});
-  expect(dobAlarmEvents(result,at).find(e=>e.phase==='entry').text).toContain('TP 5R (nur tote Gegen-DOBs)');
+ it('Modus aus der Konfig: tot sperrt bei block_all, gibt TP 5R bei live_block_dead_5r; off und ohne Konfig sperren nie',()=>{
+  const at=done.entryTime+60,dead=gateWith('dead'),entryOf=r=>r.setups.find(s=>s.entryTime===done.entryTime);
+  expect(run(fixture,at,true,undefined,{counterDobGate:dead,...cfg('block_all')}).rejected.find(s=>s.entryTime===done.entryTime)).toMatchObject({reason:'counterDob'});
+  const combo=run(fixture,at,true,undefined,{counterDobGate:dead,...cfg('live_block_dead_5r')});
+  expect(entryOf(combo)).toMatchObject({tpRule:{tpR:5,source:'deadCounterDob'},counterDob:{status:'dead'}});
+  expect(dobAlarmEvents(combo,at).find(e=>e.phase==='entry').text).toContain('TP 5R (nur tote Gegen-DOBs)');
+  expect(run(fixture,at,true,undefined,{counterDobGate:gateWith('live'),...cfg('live_block_dead_5r')}).rejected.find(s=>s.entryTime===done.entryTime)).toMatchObject({reason:'counterDob'});
+  expect(entryOf(run(fixture,at,true,undefined,{counterDobGate,...cfg('off')}))).toBeTruthy();
+  // Statistik ohne Konfig: Status nur vermerkt, nichts gesperrt.
+  expect(entryOf(run(fixture,at,true,undefined,{counterDobGate}))).toMatchObject({counterDob:{status:'live'}});
  });
 });

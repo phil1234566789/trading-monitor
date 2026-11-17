@@ -29,19 +29,13 @@ describe('DOB-Merkmal-Labor: Gegen-DOB an Philips Pins',()=>{
   const dob=detectDoubleOrderBlocks({instrument:'XAUUSD',evaluatedAt:c.entryTime,m5Candles:candles(c.m5),m1Candles:candles(c.m1),options:{retests:false}});
   expect(dobCounterDobs(dob,c.direction,c.sourceRetestAt,c.entryTime).count).toBe(COUNTS[c.pin]);
  });
- // v3-Gate auf denselben Kerzen: gleiche Zählung, Sperre je nach Modus.
+ // v3-Gate auf denselben Kerzen: gleiche Zählung; 522 hat nur tote Gegen-DOBs (Kombi-Modus: TP 5R), 526 einen lebenden.
+ const STATUS={521:'none',522:'dead',526:'live'};
  it.each(cases)('Pin $pin: Gate wie die Labor-Zählung',c=>{
   const m5=candles(c.m5),m1=candles(c.m1),setup={direction:c.direction,entryTime:c.entryTime,
    chart:{firstOrderBlockStart:c.sourceRetestAt+3600},sourceOfStrength:{retestAgeSeconds:3600}};
-  const all=createDobCounterDobGate({m5Candles:m5,m1Candles:m1})(setup);
-  expect(all).toMatchObject({count:COUNTS[c.pin],rejectReason:COUNTS[c.pin]?'counterDob':null});
-  const live=createDobCounterDobGate({m5Candles:m5,m1Candles:m1},{mode:'live_only'})(setup);
-  expect(live.liveCount).toBeLessThanOrEqual(all.count);
-  expect(live.rejectReason).toBe(live.liveCount?'counterDob':null);
-  expect(createDobCounterDobGate({m5Candles:m5,m1Candles:m1})({...setup,entryTime:null})).toBeNull();
-  // Kombi: lebende sperren, nur tote → TP 5R (Pin 522: 6 Gegen-DOBs, alle tot).
-  const combo=createDobCounterDobGate({m5Candles:m5,m1Candles:m1},{mode:'live_block_dead_5r'})(setup);
-  expect(combo).toMatchObject(live.liveCount?{rejectReason:'counterDob'}:all.count?{rejectReason:null,tpR:5}:{rejectReason:null});
-  if(!all.count)expect(combo.tpR).toBeUndefined();
+  const gate=createDobCounterDobGate({m5Candles:m5,m1Candles:m1}),r=gate(setup);
+  expect(r).toMatchObject({count:COUNTS[c.pin],status:STATUS[c.pin]});
+  expect(gate({...setup,entryTime:null})).toBeNull();
  });
 });

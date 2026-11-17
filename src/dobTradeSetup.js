@@ -2,7 +2,7 @@ import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed,sourceMaxDistanceAtr,dobSourceZoneAgeSeconds} from './dobSourceOfStrength.js';
-import {dobZoneAgeBlocked,dobEntryRule,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
+import {dobZoneAgeBlocked,dobEntryRule,dobCounterDobBlocked,dobCounterDobTpR,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 
 // v2 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ k H1-ATR von OB1, k je Instrument, vor OB1 retestet; dobSourceOfStrength.js)
@@ -44,7 +44,9 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 // sourceOptions: {requireRetest} (Standard true). trendGate (optional, v3-Experiment): Funktion setup → {trend, verdict, rejectReason}
 // aus createDobM5TrendGate; wird vom Aufrufer hereingereicht, damit der Trend-Algo nicht im Watcher-Bundle landet.
 // guardrails (optional, dobGuardrailsFromRow): Zonenalter und Entry-Stunde → rejected 'blockedZoneAge'/'blockedEntryHour'; den Monat
-// prüft der Watcher vorab. counterDobGate (optional, v3): setup → {count, liveCount, rejectReason} aus createDobCounterDobGate. Ein Entry außerhalb der Sperre bekommt tpRule {tpR, window} und Ziel/Ausgang zu diesem R. setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
+// prüft der Watcher vorab. Ein Entry außerhalb der Sperre bekommt tpRule {tpR, window} und Ziel/Ausgang zu diesem R.
+// counterDobGate (optional, v3): setup → {count, liveCount, status} aus createDobCounterDobGate; ohne guardrails nur am Setup
+// vermerkt (Statistik speichert alle Status), mit guardrails entscheidet counterDobMode über Sperre bzw. TP 5R. setups = mit Quelle der Kraft; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 // Der Indikator rechnet Ziel und Ausgang mit 2R; ein anderes R aus der Fensterregel rechnet dieselbe Ausgangslogik nach.
 function withTarget(pair,setup,rule,{m1Candles,evaluatedAt}){
  const tpRule={tpR:rule.tpR,window:rule.window,...(rule.source?{source:rule.source}:{})};
@@ -85,11 +87,11 @@ export function checkDobTradeSetup(input){
   }
   const rule=guardrails&&setup.entryTime!=null?dobEntryRule(guardrails,setup.entryTime):null;
   if(rule?.action==='block'){rejected.push({...setup,sourceOfStrength,reason:'blockedEntryHour'});continue;}
-  if(rule)Object.assign(setup,withTarget(pair,setup,rule,input));
-  // v3: Gegen-DOB seit Quellen-Retest (createDobCounterDobGate), nur für Setups mit Entry; Retest-Alarm bleibt.
-  const counterDob=input.counterDobGate?.({...setup,sourceOfStrength});
-  if(counterDob?.rejectReason){rejected.push({...setup,sourceOfStrength,counterDob,reason:counterDob.rejectReason});continue;}
-  if(counterDob?.tpR)Object.assign(setup,withTarget(pair,setup,{tpR:counterDob.tpR,window:null,source:'deadCounterDob'},input),{counterDob});
+  const counterDob=input.counterDobGate?.({...setup,sourceOfStrength})??null;
+  if(counterDob)setup.counterDob=counterDob;
+  if(guardrails&&counterDob&&dobCounterDobBlocked(guardrails,counterDob.status)){rejected.push({...setup,sourceOfStrength,reason:'counterDob'});continue;}
+  const deadTpR=guardrails&&counterDob?dobCounterDobTpR(guardrails,counterDob.status):null;
+  if(rule)Object.assign(setup,withTarget(pair,setup,deadTpR?{tpR:deadTpR,window:null,source:'deadCounterDob'}:rule,input));
   // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
   const m5Trend=input.trendGate?.({...setup,sourceOfStrength});
   if(m5Trend?.rejectReason)rejected.push({...setup,sourceOfStrength,m5Trend,reason:m5Trend.rejectReason});

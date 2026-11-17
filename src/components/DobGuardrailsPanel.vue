@@ -1,7 +1,7 @@
 <script setup>
 import {computed,ref,watch} from 'vue';
 import {supabase} from '../supabaseClient.js';
-import {dobGuardrailsToRow,dobGuardrailsFromRow,dobGuardrailReason,dobConfigTpR,dobRuleActive,dobGuardrailsSummary} from '../dobGuardrails.js';
+import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRowConfigTpR,dobRuleActive,dobGuardrailsSummary,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS} from '../dobGuardrails.js';
 import {dobSignedR} from '../dobTradeStatistics.js';
 import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf} from '../dobTradeStatistics.js';
 import {DOB_MAX_R_STEPS} from '../dobMaxR.js';
@@ -40,20 +40,22 @@ async function save(){
  emit('saved',clone(draft.value));
 }
 
-const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit'};
-const configTp=row=>dobConfigTpR(draft.value,row.entry_time);
+const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit',counterDob:'gesperrt: Gegen-DOB'};
+const configTp=row=>dobRowConfigTpR(draft.value,row);
 // Erlaubt und je Sperrgrund getrennt, jeweils Jan–Jun / Jul–Dez, alle Routen, feste Ziele und TP nach Konfig.
 const robustness=computed(()=>{
  const groups=new Map([['allowed',[]],...Object.keys(REASONS).map(r=>[r,[]])]);
- for(const row of props.rows)groups.get(dobGuardrailReason(draft.value,{entryTime:row.entry_time,zoneAgeSeconds:row.source_zone_age_seconds})??'allowed').push(row);
+ for(const row of props.rows)groups.get(dobRowGuardrailReason(draft.value,row)??'allowed').push(row);
  return [...groups].filter(([key,list])=>key==='allowed'||list.length).map(([key,list])=>({key,label:REASONS[key]??'erlaubt',
   halves:DOB_HALVES.map(h=>{const part=list.filter(r=>dobTradeHalf(r)===h);
    return {n:part.length,config:dobTotalStats(part,configTp),targets:props.targets.map(t=>({...t,s:dobTotalStats(part,t.k)}))};})}));
 });
 // Was eine Regel allein bringt: ΣR nach Konfig (erlaubte Trades, TP je Fenster) mit gegen ohne diese Regel; bei abgeschalteten Regeln
 // „mit eingeschaltet“ gegen den aktuellen Stand. Alle Routen, alle Trades des Jahres.
-const configSumR=cfg=>dobTotalStats(props.rows.filter(r=>!dobGuardrailReason(cfg,{entryTime:r.entry_time,zoneAgeSeconds:r.source_zone_age_seconds})),
- r=>dobConfigTpR(cfg,r.entry_time)).sumR;
+const configSumR=cfg=>dobTotalStats(props.rows.filter(r=>!dobRowGuardrailReason(cfg,r)),r=>dobRowConfigTpR(cfg,r)).sumR;
+// Gegen-DOB-Status gibt es nur im v3-Lauf; in älteren Läufen bleibt der Schalter ohne Wirkung und wird ausgeblendet.
+const hasCounterDob=computed(()=>props.rows.some(r=>r.counter_dob_status!=null));
+const modeImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_DOB_MODES.map(m=>[m,configSumR({...draft.value,counterDobMode:m})])));
 const ruleImpacts=computed(()=>{
  const current=configSumR(draft.value);
  return draft.value.entryWindows.map((w,i)=>{
@@ -90,6 +92,10 @@ const ruleImpacts=computed(()=>{
         <label><input type="checkbox" :checked="zoneAgeOn" @change="setZoneAgeOn($event.target.checked)"> Mindestalter</label>
         <select :value="draft.minZoneAgeSavedSeconds??AGE_OPTIONS[0][0]" :disabled="!zoneAgeOn" aria-label="Mindestalter" @change="setZoneAge(Number($event.target.value))"><option v-for="[value,label] in AGE_OPTIONS" :key="label" :value="value">{{ label }}</option></select>
         <p class="note">Trades ohne bekanntes Zonenalter (v0, ohne Retest) sperrt das nicht.</p>
+      </fieldset>
+      <fieldset v-if="hasCounterDob"><legend>Gegen-DOB seit Quellen-Retest</legend>
+        <label v-for="m in DOB_COUNTER_DOB_MODES" :key="m"><input type="radio" name="counterDobMode" :value="m" v-model="draft.counterDobMode"> {{ DOB_COUNTER_DOB_MODE_LABELS[m] }}
+          <span class="impact" title="ΣR nach Konfig mit diesem Modus">{{ dobSignedR(modeImpacts[m]) }} R</span></label>
       </fieldset>
       <div class="actions">
         <button type="button" :disabled="!dirty||saving" @click="save">{{ saving?'Speichert…':'Speichern' }}</button>
