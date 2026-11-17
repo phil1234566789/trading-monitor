@@ -36,7 +36,7 @@ export function dobGroups(rows,keysOf){
 }
 
 // Sprung ins Dashboard: XAU-Chart mit DOB-Ebene, Replay am Ausgang (offen: am Entry), damit Paar, Entry und Ausgang sichtbar sind.
-export const dobChartLink=row=>({path:'/',query:{dob:row.id,instrument:row.instrument,bar:'1m',replay:String(row.exit_time??row.entry_time+300)}});
+export const dobChartLink=row=>({path:'/',query:{dob:row.id,instrument:row.instrument,bar:'5m',replay:String(row.exit_time??row.entry_time+300)}});
 // Laufunabhängige Trade-Identität für Pins (wie uniqueDobTrades, plus Instrument): ein Pin aus v1 erscheint in jedem Lauf mit demselben Trade.
 // Gilt für Tabellenzeilen und den eingefrorenen Pin-Kontext gleichermaßen (gleiche Feldnamen).
 export const dobTradePinKey=t=>`${t.instrument}:${t.direction}:${t.entry_time}:${t.entry_price}:${t.stop_price}`;

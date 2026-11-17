@@ -20,7 +20,7 @@ describe('dobTradeStatistics',()=>{
  });
  it('Monat nach Berliner Erkennung, Chart-Link am Ausgang',()=>{
   expect(dobTradeMonth({recognized_at:Date.UTC(2026,0,31,23,30)/1000})).toBe('2026-02');
-  expect(dobChartLink(row('a','success',{exit_time:at+600})).query).toEqual({dob:'run:x:a',instrument:'XAUUSD',bar:'1m',replay:String(at+600)});
+  expect(dobChartLink(row('a','success',{exit_time:at+600})).query).toEqual({dob:'run:x:a',instrument:'XAUUSD',bar:'5m',replay:String(at+600)});
   expect(dobChartLink(row('a','open')).query.replay).toBe(String(at+300));
  });
  it('Kraftquelle aus den v1-Feldern, v0 ohne',()=>{
