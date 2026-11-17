@@ -787,7 +787,7 @@ function refreshTradeSetupLinksInternal() {
   // ZUSÄTZLICH gepinnt ist, keine doppelte Box bekommt.
   //
   // Bewusst NICHT an tradesVisible() gekoppelt (Bug-Report Philip 2026-09-23: gepinntes Short-Setup
-  // wurde beim Hovern erst hervorgehoben, wenn zusätzlich "Trades > Trades" an war): die live
+  // wurde beim Hovern erst hervorgehoben, wenn zusätzlich "Trades > Trade-Journal" an war): die live
   // erkannte Setup-Box (usePriceChartTradeSetupDrawing.js) kennt Pins gar nicht, das Highlight
   // kommt allein von hier. Ein Pin ist eine explizite "zeig mir das"-Anweisung und damit
   // toggle-unabhängig — dieselbe Regel wie bei pinnedLiquidityLevels (pinnedOnly-Pfad in
