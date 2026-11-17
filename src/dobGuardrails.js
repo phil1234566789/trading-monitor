@@ -5,11 +5,14 @@ import {berlinOffsetMinutes,berlinDateStrFor} from './berlinTime.js';
 // Default: nichts gesperrt, TP 2R wie das Setup, damit ohne Konfig nichts still wegfällt oder sich ändert.
 // entryWindows: Regeln je Entry-Zeitfenster {from, to, action:'block'|'tp', tpR?} in Berlin-Minuten [von, bis), über Mitternacht
 // erlaubt (bis < von), Wochentage egal; das erste passende Fenster gilt. Weitere Felder je Fenster können ohne Umbau dazukommen.
+// enabled:false schaltet eine Regel ab, ohne ihre Werte zu verlieren (fehlt = an); abgeschaltete Regeln wirken nirgends.
+// minZoneAgeSeconds ist der wirksame Wert (null = aus), minZoneAgeSavedSeconds der gemerkte Wert für das Wiedereinschalten.
 export const DOB_DEFAULT_TP_R=2;
 export const DOB_GUARDRAILS_DEFAULT=Object.freeze({entryWindows:[],defaultTpR:DOB_DEFAULT_TP_R,blockedMonths:[],minZoneAgeSeconds:null,
- blockedEntryWindows:[]});
+ minZoneAgeSavedSeconds:null,blockedEntryWindows:[]});
 
-const blockedOf=windows=>windows.filter(w=>w.action==='block').map(w=>[w.from,w.to]);
+export const dobRuleActive=w=>w.enabled!==false;
+const blockedOf=windows=>windows.filter(w=>dobRuleActive(w)&&w.action==='block').map(w=>[w.from,w.to]);
 // Konfig aus der DB-Zeile. Ohne entry_windows (alte Zeile oder Leser, der die Spalte nicht abfragt) gelten die Sperren aus
 // blocked_entry_windows. blockedEntryWindows bleibt als abgeleitete Liste für ältere Aufrufer erhalten.
 export function dobGuardrailsFromRow(row){
@@ -18,11 +21,14 @@ export function dobGuardrailsFromRow(row){
   :(Array.isArray(row.blocked_entry_windows)?row.blocked_entry_windows:[]).map(([from,to])=>({from,to,action:'block'}));
  return {entryWindows,defaultTpR:Number.isFinite(row.default_tp_r)?row.default_tp_r:DOB_DEFAULT_TP_R,
   blockedMonths:Array.isArray(row.blocked_months)?row.blocked_months:[],
-  minZoneAgeSeconds:Number.isFinite(row.min_zone_age_seconds)?row.min_zone_age_seconds:null,blockedEntryWindows:blockedOf(entryWindows)};
+  minZoneAgeSeconds:Number.isFinite(row.min_zone_age_seconds)?row.min_zone_age_seconds:null,
+  minZoneAgeSavedSeconds:Number.isFinite(row.min_zone_age_saved_seconds)?row.min_zone_age_saved_seconds
+   :Number.isFinite(row.min_zone_age_seconds)?row.min_zone_age_seconds:null,blockedEntryWindows:blockedOf(entryWindows)};
 }
 // blocked_entry_windows wird mitgeschrieben, solange der Watcher noch diese Spalte liest (Übergang, siehe Migration).
 export const dobGuardrailsToRow=(instrument,config)=>({instrument,entry_windows:config.entryWindows,default_tp_r:config.defaultTpR,
- blocked_entry_windows:blockedOf(config.entryWindows),blocked_months:config.blockedMonths,min_zone_age_seconds:config.minZoneAgeSeconds});
+ blocked_entry_windows:blockedOf(config.entryWindows),blocked_months:config.blockedMonths,min_zone_age_seconds:config.minZoneAgeSeconds,
+ min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds});
 
 // Monat in Berlin (1–12). Der Watcher prüft ihn als Erstes und rechnet in gesperrten Monaten gar nicht.
 export const dobMonthBlocked=(config,atSec)=>config.blockedMonths.includes(Number(berlinDateStrFor(atSec).slice(5,7)));
@@ -33,7 +39,7 @@ const inWindow=(minute,{from,to})=>from<=to?minute>=from&&minute<to:minute>=from
 export function dobEntryRule(config,entryTimeSec){
  const minute=berlinMinute(entryTimeSec);
  const windows=config.entryWindows??config.blockedEntryWindows.map(([from,to])=>({from,to,action:'block'}));
- const window=windows.find(w=>inWindow(minute,w))??null;
+ const window=windows.find(w=>dobRuleActive(w)&&inWindow(minute,w))??null;
  if(window?.action==='block')return {action:'block',tpR:null,window};
  const tpR=window?.action==='tp'&&Number.isFinite(window.tpR)?window.tpR:config.defaultTpR??DOB_DEFAULT_TP_R;
  return {action:'tp',tpR,window};
