@@ -1,0 +1,3184 @@
+{
+  "measurement": "dob-lab-weekday-v1",
+  "git": "01a0a3d0",
+  "methodology": [
+    "Buckets nach Berliner Entry-Wochentag/-Stunde (Montag ab 02:00, davor kein Entry); Grenzen 12 (Mo) und 14 (Fr) mit 10/14 bzw. 12/16 gegengeprüft.",
+    "Ohne Konfig: alle Trades des Laufs, feste Ziele 3R/5R. Mit Konfig: erlaubte Trades nach der gespeicherten Konfig, ΣR mit Konfig-TP (inkl. Teilprofit).",
+    "LQ-Sweep: nur Trades mit gleicher Kante (Regel); Konfig-Variante mit poiMatchMode = edge.",
+    "SL < 30 min: Trade mit Loss im 2R-Ausgang des Laufs und Ausstieg höchstens 30 min nach Entry.",
+    "Sperre lohnt: Winrate 3R ohne den Bucket in beiden Halbjahren höher als mit, und ΣR (Konfig-TP; ohne Konfig 3R) fällt höchstens 10 %."
+  ],
+  "carriers": {
+    "XAU HTF-OB v3": {
+      "trades": 524,
+      "allowedByConfig": 217,
+      "config": "Sperren 19:00–22:00, 10:30–12:00 · Jan · 07:00–09:00 TP 5R · 14:00–19:00 TP 4R · 02:00–07:00 TP 4R · sonst 2R · 3 von 3 Gegenkerzen sperrt · Teilprofit 50 % bei 3R → SL auf Entry",
+      "variants": {
+        "Mo 12 / Fr 14": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 524,
+              "wr3": 27.8,
+              "sum3": 59,
+              "sum5": 93,
+              "slUnder30": 160,
+              "shareOfTrades": 30.5,
+              "shareOfLosses": 47.9,
+              "Jan–Jun": {
+                "trades": 304,
+                "wr3": 24.4,
+                "sum3": -7,
+                "sum5": 28
+              },
+              "Jul–Dez": {
+                "trades": 220,
+                "wr3": 32.6,
+                "sum3": 66,
+                "sum5": 65
+              }
+            },
+            "buckets": {
+              "Mo 02–12": {
+                "trades": 39,
+                "wr3": 25.6,
+                "sum3": 1,
+                "sum5": -15,
+                "slUnder30": 9,
+                "shareOfTrades": 23.1,
+                "shareOfLosses": 37.5,
+                "Jan–Jun": {
+                  "trades": 21,
+                  "wr3": 33.3,
+                  "sum3": 7,
+                  "sum5": 3
+                },
+                "Jul–Dez": {
+                  "trades": 18,
+                  "wr3": 16.7,
+                  "sum3": -6,
+                  "sum5": -18
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 58,
+                  "sumDropPct": 1.7,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 12": {
+                "trades": 65,
+                "wr3": 31.3,
+                "sum3": 16,
+                "sum5": 3,
+                "slUnder30": 18,
+                "shareOfTrades": 27.7,
+                "shareOfLosses": 48.6,
+                "Jan–Jun": {
+                  "trades": 28,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": 2
+                },
+                "Jul–Dez": {
+                  "trades": 37,
+                  "wr3": 36.1,
+                  "sum3": 16,
+                  "sum5": 1
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 43,
+                  "sumDropPct": 27.1,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 325,
+                "wr3": 27.7,
+                "sum3": 35,
+                "sum5": 95,
+                "slUnder30": 100,
+                "shareOfTrades": 30.8,
+                "shareOfLosses": 47.4,
+                "Jan–Jun": {
+                  "trades": 197,
+                  "wr3": 19.8,
+                  "sum3": -41,
+                  "sum5": -5
+                },
+                "Jul–Dez": {
+                  "trades": 128,
+                  "wr3": 39.8,
+                  "sum3": 76,
+                  "sum5": 100
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 24,
+                  "sumDropPct": 59.3,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 14": {
+                "trades": 49,
+                "wr3": 22.4,
+                "sum3": -5,
+                "sum5": -12,
+                "slUnder30": 19,
+                "shareOfTrades": 38.8,
+                "shareOfLosses": 55.9,
+                "Jan–Jun": {
+                  "trades": 35,
+                  "wr3": 31.4,
+                  "sum3": 9,
+                  "sum5": 2
+                },
+                "Jul–Dez": {
+                  "trades": 14,
+                  "wr3": 0,
+                  "sum3": -14,
+                  "sum5": -14
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 64,
+                  "sumDropPct": -8.5,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 14": {
+                "trades": 46,
+                "wr3": 31.8,
+                "sum3": 12,
+                "sum5": 22,
+                "slUnder30": 14,
+                "shareOfTrades": 30.4,
+                "shareOfLosses": 50,
+                "Jan–Jun": {
+                  "trades": 23,
+                  "wr3": 45.5,
+                  "sum3": 18,
+                  "sum5": 26
+                },
+                "Jul–Dez": {
+                  "trades": 23,
+                  "wr3": 18.2,
+                  "sum3": -6,
+                  "sum5": -4
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 47,
+                  "sumDropPct": 20.3,
+                  "blockWorth": false
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 217,
+              "wr3": 32.4,
+              "sum3": 64,
+              "sum5": 91,
+              "slUnder30": 55,
+              "shareOfTrades": 25.3,
+              "shareOfLosses": 41.7,
+              "Jan–Jun": {
+                "trades": 115,
+                "wr3": 26.3,
+                "sum3": 6,
+                "sum5": 13,
+                "sumConfig": 21
+              },
+              "Jul–Dez": {
+                "trades": 102,
+                "wr3": 39.2,
+                "sum3": 58,
+                "sum5": 78,
+                "sumConfig": 68
+              },
+              "sumConfig": 89
+            },
+            "buckets": {
+              "Mo 02–12": {
+                "trades": 25,
+                "wr3": 28,
+                "sum3": 3,
+                "sum5": -7,
+                "slUnder30": 5,
+                "shareOfTrades": 20,
+                "shareOfLosses": 35.7,
+                "Jan–Jun": {
+                  "trades": 13,
+                  "wr3": 38.5,
+                  "sum3": 7,
+                  "sum5": 5,
+                  "sumConfig": 4.5
+                },
+                "Jul–Dez": {
+                  "trades": 12,
+                  "wr3": 16.7,
+                  "sum3": -4,
+                  "sum5": -12,
+                  "sumConfig": -5
+                },
+                "sumConfig": -0.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 89.5,
+                  "sumDropPct": -0.6,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 12": {
+                "trades": 30,
+                "wr3": 40,
+                "sum3": 18,
+                "sum5": 18,
+                "slUnder30": 4,
+                "shareOfTrades": 13.3,
+                "shareOfLosses": 26.7,
+                "Jan–Jun": {
+                  "trades": 10,
+                  "wr3": 30,
+                  "sum3": 2,
+                  "sum5": 2,
+                  "sumConfig": 2.5
+                },
+                "Jul–Dez": {
+                  "trades": 20,
+                  "wr3": 45,
+                  "sum3": 16,
+                  "sum5": 16,
+                  "sumConfig": 12
+                },
+                "sumConfig": 14.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 74.5,
+                  "sumDropPct": 16.3,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 134,
+                "wr3": 32.8,
+                "sum3": 42,
+                "sum5": 82,
+                "slUnder30": 35,
+                "shareOfTrades": 26.1,
+                "shareOfLosses": 41.7,
+                "Jan–Jun": {
+                  "trades": 77,
+                  "wr3": 22.1,
+                  "sum3": -9,
+                  "sum5": 7,
+                  "sumConfig": 5.5
+                },
+                "Jul–Dez": {
+                  "trades": 57,
+                  "wr3": 47.4,
+                  "sum3": 51,
+                  "sum5": 75,
+                  "sumConfig": 64.5
+                },
+                "sumConfig": 70,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 19,
+                  "sumDropPct": 78.7,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 14": {
+                "trades": 19,
+                "wr3": 26.3,
+                "sum3": 1,
+                "sum5": -6,
+                "slUnder30": 7,
+                "shareOfTrades": 36.8,
+                "shareOfLosses": 53.8,
+                "Jan–Jun": {
+                  "trades": 13,
+                  "wr3": 38.5,
+                  "sum3": 7,
+                  "sum5": 0,
+                  "sumConfig": 9.5
+                },
+                "Jul–Dez": {
+                  "trades": 6,
+                  "wr3": 0,
+                  "sum3": -6,
+                  "sum5": -6,
+                  "sumConfig": -6
+                },
+                "sumConfig": 3.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 85.5,
+                  "sumDropPct": 3.9,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 14": {
+                "trades": 9,
+                "wr3": 25,
+                "sum3": 0,
+                "sum5": 4,
+                "slUnder30": 4,
+                "shareOfTrades": 44.4,
+                "shareOfLosses": 66.7,
+                "Jan–Jun": {
+                  "trades": 2,
+                  "wr3": 0,
+                  "sum3": -1,
+                  "sum5": -1,
+                  "sumConfig": -1
+                },
+                "Jul–Dez": {
+                  "trades": 7,
+                  "wr3": 28.6,
+                  "sum3": 1,
+                  "sum5": 5,
+                  "sumConfig": 2.5
+                },
+                "sumConfig": 1.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 89,
+                  "sumAfter": 87.5,
+                  "sumDropPct": 1.7,
+                  "blockWorth": true
+                }
+              }
+            }
+          }
+        },
+        "Mo 10 / Fr 12": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 524,
+              "wr3": 27.8,
+              "sum3": 59,
+              "sum5": 93,
+              "slUnder30": 160,
+              "shareOfTrades": 30.5,
+              "shareOfLosses": 47.9,
+              "Jan–Jun": {
+                "trades": 304,
+                "wr3": 24.4,
+                "sum3": -7,
+                "sum5": 28
+              },
+              "Jul–Dez": {
+                "trades": 220,
+                "wr3": 32.6,
+                "sum3": 66,
+                "sum5": 65
+              }
+            },
+            "buckets": {
+              "Mo 02–10": {
+                "trades": 30,
+                "wr3": 26.7,
+                "sum3": 2,
+                "sum5": -12,
+                "slUnder30": 8,
+                "shareOfTrades": 26.7,
+                "shareOfLosses": 42.1,
+                "Jan–Jun": {
+                  "trades": 16,
+                  "wr3": 37.5,
+                  "sum3": 8,
+                  "sum5": 2
+                },
+                "Jul–Dez": {
+                  "trades": 14,
+                  "wr3": 14.3,
+                  "sum3": -6,
+                  "sum5": -14
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 57,
+                  "sumDropPct": 3.4,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 10": {
+                "trades": 74,
+                "wr3": 30.1,
+                "sum3": 15,
+                "sum5": 0,
+                "slUnder30": 19,
+                "shareOfTrades": 25.7,
+                "shareOfLosses": 45.2,
+                "Jan–Jun": {
+                  "trades": 33,
+                  "wr3": 24.2,
+                  "sum3": -1,
+                  "sum5": 3
+                },
+                "Jul–Dez": {
+                  "trades": 41,
+                  "wr3": 35,
+                  "sum3": 16,
+                  "sum5": -3
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 44,
+                  "sumDropPct": 25.4,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 325,
+                "wr3": 27.7,
+                "sum3": 35,
+                "sum5": 95,
+                "slUnder30": 100,
+                "shareOfTrades": 30.8,
+                "shareOfLosses": 47.4,
+                "Jan–Jun": {
+                  "trades": 197,
+                  "wr3": 19.8,
+                  "sum3": -41,
+                  "sum5": -5
+                },
+                "Jul–Dez": {
+                  "trades": 128,
+                  "wr3": 39.8,
+                  "sum3": 76,
+                  "sum5": 100
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 24,
+                  "sumDropPct": 59.3,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 12": {
+                "trades": 35,
+                "wr3": 20,
+                "sum3": -7,
+                "sum5": -5,
+                "slUnder30": 15,
+                "shareOfTrades": 42.9,
+                "shareOfLosses": 57.7,
+                "Jan–Jun": {
+                  "trades": 22,
+                  "wr3": 31.8,
+                  "sum3": 6,
+                  "sum5": 8
+                },
+                "Jul–Dez": {
+                  "trades": 13,
+                  "wr3": 0,
+                  "sum3": -13,
+                  "sum5": -13
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 66,
+                  "sumDropPct": -11.9,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 12": {
+                "trades": 60,
+                "wr3": 31,
+                "sum3": 14,
+                "sum5": 15,
+                "slUnder30": 18,
+                "shareOfTrades": 30,
+                "shareOfLosses": 50,
+                "Jan–Jun": {
+                  "trades": 36,
+                  "wr3": 40,
+                  "sum3": 21,
+                  "sum5": 20
+                },
+                "Jul–Dez": {
+                  "trades": 24,
+                  "wr3": 17.4,
+                  "sum3": -7,
+                  "sum5": -5
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 45,
+                  "sumDropPct": 23.7,
+                  "blockWorth": false
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 217,
+              "wr3": 32.4,
+              "sum3": 64,
+              "sum5": 91,
+              "slUnder30": 55,
+              "shareOfTrades": 25.3,
+              "shareOfLosses": 41.7,
+              "Jan–Jun": {
+                "trades": 115,
+                "wr3": 26.3,
+                "sum3": 6,
+                "sum5": 13,
+                "sumConfig": 21
+              },
+              "Jul–Dez": {
+                "trades": 102,
+                "wr3": 39.2,
+                "sum3": 58,
+                "sum5": 78,
+                "sumConfig": 68
+              },
+              "sumConfig": 89
+            },
+            "buckets": {
+              "Mo 02–10": {
+                "trades": 24,
+                "wr3": 29.2,
+                "sum3": 4,
+                "sum5": -6,
+                "slUnder30": 5,
+                "shareOfTrades": 20.8,
+                "shareOfLosses": 35.7,
+                "Jan–Jun": {
+                  "trades": 12,
+                  "wr3": 41.7,
+                  "sum3": 8,
+                  "sum5": 6,
+                  "sumConfig": 2.5
+                },
+                "Jul–Dez": {
+                  "trades": 12,
+                  "wr3": 16.7,
+                  "sum3": -4,
+                  "sum5": -12,
+                  "sumConfig": -5
+                },
+                "sumConfig": -2.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 91.5,
+                  "sumDropPct": -2.8,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 10": {
+                "trades": 31,
+                "wr3": 38.7,
+                "sum3": 17,
+                "sum5": 17,
+                "slUnder30": 4,
+                "shareOfTrades": 12.9,
+                "shareOfLosses": 26.7,
+                "Jan–Jun": {
+                  "trades": 11,
+                  "wr3": 27.3,
+                  "sum3": 1,
+                  "sum5": 1,
+                  "sumConfig": 4.5
+                },
+                "Jul–Dez": {
+                  "trades": 20,
+                  "wr3": 45,
+                  "sum3": 16,
+                  "sum5": 16,
+                  "sumConfig": 12
+                },
+                "sumConfig": 16.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 72.5,
+                  "sumDropPct": 18.5,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 134,
+                "wr3": 32.8,
+                "sum3": 42,
+                "sum5": 82,
+                "slUnder30": 35,
+                "shareOfTrades": 26.1,
+                "shareOfLosses": 41.7,
+                "Jan–Jun": {
+                  "trades": 77,
+                  "wr3": 22.1,
+                  "sum3": -9,
+                  "sum5": 7,
+                  "sumConfig": 5.5
+                },
+                "Jul–Dez": {
+                  "trades": 57,
+                  "wr3": 47.4,
+                  "sum3": 51,
+                  "sum5": 75,
+                  "sumConfig": 64.5
+                },
+                "sumConfig": 70,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 19,
+                  "sumDropPct": 78.7,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 12": {
+                "trades": 14,
+                "wr3": 28.6,
+                "sum3": 2,
+                "sum5": -2,
+                "slUnder30": 6,
+                "shareOfTrades": 42.9,
+                "shareOfLosses": 60,
+                "Jan–Jun": {
+                  "trades": 9,
+                  "wr3": 44.4,
+                  "sum3": 7,
+                  "sum5": 3,
+                  "sumConfig": 7.5
+                },
+                "Jul–Dez": {
+                  "trades": 5,
+                  "wr3": 0,
+                  "sum3": -5,
+                  "sum5": -5,
+                  "sumConfig": -5
+                },
+                "sumConfig": 2.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 86.5,
+                  "sumDropPct": 2.8,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 12": {
+                "trades": 14,
+                "wr3": 23.1,
+                "sum3": -1,
+                "sum5": 0,
+                "slUnder30": 5,
+                "shareOfTrades": 35.7,
+                "shareOfLosses": 55.6,
+                "Jan–Jun": {
+                  "trades": 6,
+                  "wr3": 20,
+                  "sum3": -1,
+                  "sum5": -4,
+                  "sumConfig": 1
+                },
+                "Jul–Dez": {
+                  "trades": 8,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": 4,
+                  "sumConfig": 1.5
+                },
+                "sumConfig": 2.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 89,
+                  "sumAfter": 86.5,
+                  "sumDropPct": 2.8,
+                  "blockWorth": true
+                }
+              }
+            }
+          }
+        },
+        "Mo 14 / Fr 16": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 524,
+              "wr3": 27.8,
+              "sum3": 59,
+              "sum5": 93,
+              "slUnder30": 160,
+              "shareOfTrades": 30.5,
+              "shareOfLosses": 47.9,
+              "Jan–Jun": {
+                "trades": 304,
+                "wr3": 24.4,
+                "sum3": -7,
+                "sum5": 28
+              },
+              "Jul–Dez": {
+                "trades": 220,
+                "wr3": 32.6,
+                "sum3": 66,
+                "sum5": 65
+              }
+            },
+            "buckets": {
+              "Mo 02–14": {
+                "trades": 52,
+                "wr3": 30.8,
+                "sum3": 12,
+                "sum5": -4,
+                "slUnder30": 12,
+                "shareOfTrades": 23.1,
+                "shareOfLosses": 40,
+                "Jan–Jun": {
+                  "trades": 27,
+                  "wr3": 33.3,
+                  "sum3": 9,
+                  "sum5": 3
+                },
+                "Jul–Dez": {
+                  "trades": 25,
+                  "wr3": 28,
+                  "sum3": 3,
+                  "sum5": -7
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 47,
+                  "sumDropPct": 20.3,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 14": {
+                "trades": 52,
+                "wr3": 27.5,
+                "sum3": 5,
+                "sum5": -8,
+                "slUnder30": 15,
+                "shareOfTrades": 28.8,
+                "shareOfLosses": 48.4,
+                "Jan–Jun": {
+                  "trades": 22,
+                  "wr3": 22.7,
+                  "sum3": -2,
+                  "sum5": 2
+                },
+                "Jul–Dez": {
+                  "trades": 30,
+                  "wr3": 31,
+                  "sum3": 7,
+                  "sum5": -10
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 59,
+                  "sumAfter": 54,
+                  "sumDropPct": 8.5,
+                  "blockWorth": true
+                }
+              },
+              "Di–Do": {
+                "trades": 325,
+                "wr3": 27.7,
+                "sum3": 35,
+                "sum5": 95,
+                "slUnder30": 100,
+                "shareOfTrades": 30.8,
+                "shareOfLosses": 47.4,
+                "Jan–Jun": {
+                  "trades": 197,
+                  "wr3": 19.8,
+                  "sum3": -41,
+                  "sum5": -5
+                },
+                "Jul–Dez": {
+                  "trades": 128,
+                  "wr3": 39.8,
+                  "sum3": 76,
+                  "sum5": 100
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 24,
+                  "sumDropPct": 59.3,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 16": {
+                "trades": 62,
+                "wr3": 21.7,
+                "sum3": -8,
+                "sum5": -11,
+                "slUnder30": 25,
+                "shareOfTrades": 40.3,
+                "shareOfLosses": 59.5,
+                "Jan–Jun": {
+                  "trades": 39,
+                  "wr3": 31.6,
+                  "sum3": 10,
+                  "sum5": 5
+                },
+                "Jul–Dez": {
+                  "trades": 23,
+                  "wr3": 4.5,
+                  "sum3": -18,
+                  "sum5": -16
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 67,
+                  "sumDropPct": -13.6,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 16": {
+                "trades": 33,
+                "wr3": 36.4,
+                "sum3": 15,
+                "sum5": 21,
+                "slUnder30": 8,
+                "shareOfTrades": 24.2,
+                "shareOfLosses": 40,
+                "Jan–Jun": {
+                  "trades": 19,
+                  "wr3": 47.4,
+                  "sum3": 17,
+                  "sum5": 23
+                },
+                "Jul–Dez": {
+                  "trades": 14,
+                  "wr3": 21.4,
+                  "sum3": -2,
+                  "sum5": -2
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 59,
+                  "sumAfter": 44,
+                  "sumDropPct": 25.4,
+                  "blockWorth": false
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 217,
+              "wr3": 32.4,
+              "sum3": 64,
+              "sum5": 91,
+              "slUnder30": 55,
+              "shareOfTrades": 25.3,
+              "shareOfLosses": 41.7,
+              "Jan–Jun": {
+                "trades": 115,
+                "wr3": 26.3,
+                "sum3": 6,
+                "sum5": 13,
+                "sumConfig": 21
+              },
+              "Jul–Dez": {
+                "trades": 102,
+                "wr3": 39.2,
+                "sum3": 58,
+                "sum5": 78,
+                "sumConfig": 68
+              },
+              "sumConfig": 89
+            },
+            "buckets": {
+              "Mo 02–14": {
+                "trades": 34,
+                "wr3": 35.3,
+                "sum3": 14,
+                "sum5": 2,
+                "slUnder30": 7,
+                "shareOfTrades": 20.6,
+                "shareOfLosses": 38.9,
+                "Jan–Jun": {
+                  "trades": 15,
+                  "wr3": 40,
+                  "sum3": 9,
+                  "sum5": 3,
+                  "sumConfig": 5.5
+                },
+                "Jul–Dez": {
+                  "trades": 19,
+                  "wr3": 31.6,
+                  "sum3": 5,
+                  "sum5": -1,
+                  "sumConfig": 1.5
+                },
+                "sumConfig": 7,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 82,
+                  "sumDropPct": 7.9,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 14": {
+                "trades": 21,
+                "wr3": 33.3,
+                "sum3": 7,
+                "sum5": 9,
+                "slUnder30": 2,
+                "shareOfTrades": 9.5,
+                "shareOfLosses": 18.2,
+                "Jan–Jun": {
+                  "trades": 8,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": 4,
+                  "sumConfig": 1.5
+                },
+                "Jul–Dez": {
+                  "trades": 13,
+                  "wr3": 38.5,
+                  "sum3": 7,
+                  "sum5": 5,
+                  "sumConfig": 5.5
+                },
+                "sumConfig": 7,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 89,
+                  "sumAfter": 82,
+                  "sumDropPct": 7.9,
+                  "blockWorth": true
+                }
+              },
+              "Di–Do": {
+                "trades": 134,
+                "wr3": 32.8,
+                "sum3": 42,
+                "sum5": 82,
+                "slUnder30": 35,
+                "shareOfTrades": 26.1,
+                "shareOfLosses": 41.7,
+                "Jan–Jun": {
+                  "trades": 77,
+                  "wr3": 22.1,
+                  "sum3": -9,
+                  "sum5": 7,
+                  "sumConfig": 5.5
+                },
+                "Jul–Dez": {
+                  "trades": 57,
+                  "wr3": 47.4,
+                  "sum3": 51,
+                  "sum5": 75,
+                  "sumConfig": 64.5
+                },
+                "sumConfig": 70,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 19,
+                  "sumDropPct": 78.7,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 16": {
+                "trades": 25,
+                "wr3": 25,
+                "sum3": 0,
+                "sum5": -5,
+                "slUnder30": 10,
+                "shareOfTrades": 40,
+                "shareOfLosses": 58.8,
+                "Jan–Jun": {
+                  "trades": 14,
+                  "wr3": 38.5,
+                  "sum3": 7,
+                  "sum5": 0,
+                  "sumConfig": 9.5
+                },
+                "Jul–Dez": {
+                  "trades": 11,
+                  "wr3": 9.1,
+                  "sum3": -7,
+                  "sum5": -5,
+                  "sumConfig": -6.5
+                },
+                "sumConfig": 3,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 86,
+                  "sumDropPct": 3.4,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 16": {
+                "trades": 3,
+                "wr3": 33.3,
+                "sum3": 1,
+                "sum5": 3,
+                "slUnder30": 1,
+                "shareOfTrades": 33.3,
+                "shareOfLosses": 50,
+                "Jan–Jun": {
+                  "trades": 1,
+                  "wr3": 0,
+                  "sum3": -1,
+                  "sum5": -1,
+                  "sumConfig": -1
+                },
+                "Jul–Dez": {
+                  "trades": 2,
+                  "wr3": 50,
+                  "sum3": 2,
+                  "sum5": 4,
+                  "sumConfig": 3
+                },
+                "sumConfig": 2,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 89,
+                  "sumAfter": 87,
+                  "sumDropPct": 2.2,
+                  "blockWorth": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "XAU LQ-Sweep v0 (gleiche Kante)": {
+      "trades": 510,
+      "allowedByConfig": 314,
+      "config": "Sperren 10:30–12:00, 15:00–16:00, 18:00–23:00, 05:00–06:00 · 09:00–10:30 TP 2R · 02:00–03:00 TP 2R · 07:00–09:00 TP 5R · sonst 3R · Gegen-DOB aus · Teilprofit 50 % bei 3R → SL auf Entry",
+      "variants": {
+        "Mo 12 / Fr 14": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 510,
+              "wr3": 29,
+              "sum3": 81,
+              "sum5": 111,
+              "slUnder30": 152,
+              "shareOfTrades": 29.8,
+              "shareOfLosses": 48.1,
+              "Jan–Jun": {
+                "trades": 301,
+                "wr3": 29.1,
+                "sum3": 49,
+                "sum5": 91
+              },
+              "Jul–Dez": {
+                "trades": 209,
+                "wr3": 28.8,
+                "sum3": 32,
+                "sum5": 20
+              }
+            },
+            "buckets": {
+              "Mo 02–12": {
+                "trades": 32,
+                "wr3": 28.1,
+                "sum3": 4,
+                "sum5": 10,
+                "slUnder30": 9,
+                "shareOfTrades": 28.1,
+                "shareOfLosses": 42.9,
+                "Jan–Jun": {
+                  "trades": 16,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": 2
+                },
+                "Jul–Dez": {
+                  "trades": 16,
+                  "wr3": 31.3,
+                  "sum3": 4,
+                  "sum5": 8
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 77,
+                  "sumDropPct": 4.9,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 12": {
+                "trades": 45,
+                "wr3": 25.6,
+                "sum3": 1,
+                "sum5": -7,
+                "slUnder30": 12,
+                "shareOfTrades": 26.7,
+                "shareOfLosses": 41.4,
+                "Jan–Jun": {
+                  "trades": 24,
+                  "wr3": 21.7,
+                  "sum3": -3,
+                  "sum5": 7
+                },
+                "Jul–Dez": {
+                  "trades": 21,
+                  "wr3": 30,
+                  "sum3": 4,
+                  "sum5": -14
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 80,
+                  "sumDropPct": 1.2,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 326,
+                "wr3": 30.8,
+                "sum3": 75,
+                "sum5": 95,
+                "slUnder30": 100,
+                "shareOfTrades": 30.7,
+                "shareOfLosses": 50.8,
+                "Jan–Jun": {
+                  "trades": 199,
+                  "wr3": 30.8,
+                  "sum3": 46,
+                  "sum5": 66
+                },
+                "Jul–Dez": {
+                  "trades": 127,
+                  "wr3": 30.7,
+                  "sum3": 29,
+                  "sum5": 29
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 6,
+                  "sumDropPct": 92.6,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 14": {
+                "trades": 60,
+                "wr3": 21.7,
+                "sum3": -8,
+                "sum5": -12,
+                "slUnder30": 18,
+                "shareOfTrades": 30,
+                "shareOfLosses": 45,
+                "Jan–Jun": {
+                  "trades": 39,
+                  "wr3": 20.5,
+                  "sum3": -7,
+                  "sum5": -15
+                },
+                "Jul–Dez": {
+                  "trades": 21,
+                  "wr3": 23.8,
+                  "sum3": -1,
+                  "sum5": 3
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 81,
+                  "sumAfter": 89,
+                  "sumDropPct": -9.9,
+                  "blockWorth": true
+                }
+              },
+              "Fr ab 14": {
+                "trades": 47,
+                "wr3": 29.8,
+                "sum3": 9,
+                "sum5": 25,
+                "slUnder30": 13,
+                "shareOfTrades": 27.7,
+                "shareOfLosses": 44.8,
+                "Jan–Jun": {
+                  "trades": 23,
+                  "wr3": 39.1,
+                  "sum3": 13,
+                  "sum5": 31
+                },
+                "Jul–Dez": {
+                  "trades": 24,
+                  "wr3": 20.8,
+                  "sum3": -4,
+                  "sum5": -6
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 72,
+                  "sumDropPct": 11.1,
+                  "blockWorth": false
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 314,
+              "wr3": 30.9,
+              "sum3": 73,
+              "sum5": 97,
+              "slUnder30": 90,
+              "shareOfTrades": 28.7,
+              "shareOfLosses": 47.6,
+              "Jan–Jun": {
+                "trades": 193,
+                "wr3": 29.8,
+                "sum3": 37,
+                "sum5": 61,
+                "sumConfig": 46
+              },
+              "Jul–Dez": {
+                "trades": 121,
+                "wr3": 32.5,
+                "sum3": 36,
+                "sum5": 36,
+                "sumConfig": 41.5
+              },
+              "sumConfig": 87.5
+            },
+            "buckets": {
+              "Mo 02–12": {
+                "trades": 25,
+                "wr3": 32,
+                "sum3": 7,
+                "sum5": 11,
+                "slUnder30": 5,
+                "shareOfTrades": 20,
+                "shareOfLosses": 33.3,
+                "Jan–Jun": {
+                  "trades": 13,
+                  "wr3": 23.1,
+                  "sum3": -1,
+                  "sum5": -1,
+                  "sumConfig": 1.5
+                },
+                "Jul–Dez": {
+                  "trades": 12,
+                  "wr3": 41.7,
+                  "sum3": 8,
+                  "sum5": 12,
+                  "sumConfig": 10.5
+                },
+                "sumConfig": 12,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 75.5,
+                  "sumDropPct": 13.7,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 12": {
+                "trades": 23,
+                "wr3": 33.3,
+                "sum3": 7,
+                "sum5": 9,
+                "slUnder30": 4,
+                "shareOfTrades": 17.4,
+                "shareOfLosses": 33.3,
+                "Jan–Jun": {
+                  "trades": 12,
+                  "wr3": 36.4,
+                  "sum3": 5,
+                  "sum5": 13,
+                  "sumConfig": 5
+                },
+                "Jul–Dez": {
+                  "trades": 11,
+                  "wr3": 30,
+                  "sum3": 2,
+                  "sum5": -4,
+                  "sumConfig": 2
+                },
+                "sumConfig": 7,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 80.5,
+                  "sumDropPct": 8,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 209,
+                "wr3": 32.2,
+                "sum3": 60,
+                "sum5": 80,
+                "slUnder30": 62,
+                "shareOfTrades": 29.7,
+                "shareOfLosses": 49.2,
+                "Jan–Jun": {
+                  "trades": 134,
+                  "wr3": 31.6,
+                  "sum3": 35,
+                  "sum5": 53,
+                  "sumConfig": 43
+                },
+                "Jul–Dez": {
+                  "trades": 75,
+                  "wr3": 33.3,
+                  "sum3": 25,
+                  "sum5": 27,
+                  "sumConfig": 26
+                },
+                "sumConfig": 69,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 18.5,
+                  "sumDropPct": 78.9,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 14": {
+                "trades": 44,
+                "wr3": 22.7,
+                "sum3": -4,
+                "sum5": -8,
+                "slUnder30": 13,
+                "shareOfTrades": 29.5,
+                "shareOfLosses": 46.4,
+                "Jan–Jun": {
+                  "trades": 29,
+                  "wr3": 20.7,
+                  "sum3": -5,
+                  "sum5": -11,
+                  "sumConfig": -6.5
+                },
+                "Jul–Dez": {
+                  "trades": 15,
+                  "wr3": 26.7,
+                  "sum3": 1,
+                  "sum5": 3,
+                  "sumConfig": 3
+                },
+                "sumConfig": -3.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 87.5,
+                  "sumAfter": 91,
+                  "sumDropPct": -4,
+                  "blockWorth": true
+                }
+              },
+              "Fr ab 14": {
+                "trades": 13,
+                "wr3": 30.8,
+                "sum3": 3,
+                "sum5": 5,
+                "slUnder30": 6,
+                "shareOfTrades": 46.2,
+                "shareOfLosses": 75,
+                "Jan–Jun": {
+                  "trades": 5,
+                  "wr3": 40,
+                  "sum3": 3,
+                  "sum5": 7,
+                  "sumConfig": 3
+                },
+                "Jul–Dez": {
+                  "trades": 8,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": -2,
+                  "sumConfig": 0
+                },
+                "sumConfig": 3,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 84.5,
+                  "sumDropPct": 3.4,
+                  "blockWorth": false
+                }
+              }
+            }
+          }
+        },
+        "Mo 10 / Fr 12": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 510,
+              "wr3": 29,
+              "sum3": 81,
+              "sum5": 111,
+              "slUnder30": 152,
+              "shareOfTrades": 29.8,
+              "shareOfLosses": 48.1,
+              "Jan–Jun": {
+                "trades": 301,
+                "wr3": 29.1,
+                "sum3": 49,
+                "sum5": 91
+              },
+              "Jul–Dez": {
+                "trades": 209,
+                "wr3": 28.8,
+                "sum3": 32,
+                "sum5": 20
+              }
+            },
+            "buckets": {
+              "Mo 02–10": {
+                "trades": 24,
+                "wr3": 33.3,
+                "sum3": 8,
+                "sum5": 12,
+                "slUnder30": 5,
+                "shareOfTrades": 20.8,
+                "shareOfLosses": 35.7,
+                "Jan–Jun": {
+                  "trades": 13,
+                  "wr3": 23.1,
+                  "sum3": -1,
+                  "sum5": -1
+                },
+                "Jul–Dez": {
+                  "trades": 11,
+                  "wr3": 45.5,
+                  "sum3": 9,
+                  "sum5": 13
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 73,
+                  "sumDropPct": 9.9,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 10": {
+                "trades": 53,
+                "wr3": 23.5,
+                "sum3": -3,
+                "sum5": -9,
+                "slUnder30": 16,
+                "shareOfTrades": 30.2,
+                "shareOfLosses": 44.4,
+                "Jan–Jun": {
+                  "trades": 27,
+                  "wr3": 23.1,
+                  "sum3": -2,
+                  "sum5": 10
+                },
+                "Jul–Dez": {
+                  "trades": 26,
+                  "wr3": 24,
+                  "sum3": -1,
+                  "sum5": -19
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 81,
+                  "sumAfter": 84,
+                  "sumDropPct": -3.7,
+                  "blockWorth": true
+                }
+              },
+              "Di–Do": {
+                "trades": 326,
+                "wr3": 30.8,
+                "sum3": 75,
+                "sum5": 95,
+                "slUnder30": 100,
+                "shareOfTrades": 30.7,
+                "shareOfLosses": 50.8,
+                "Jan–Jun": {
+                  "trades": 199,
+                  "wr3": 30.8,
+                  "sum3": 46,
+                  "sum5": 66
+                },
+                "Jul–Dez": {
+                  "trades": 127,
+                  "wr3": 30.7,
+                  "sum3": 29,
+                  "sum5": 29
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 6,
+                  "sumDropPct": 92.6,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 12": {
+                "trades": 50,
+                "wr3": 18,
+                "sum3": -14,
+                "sum5": -26,
+                "slUnder30": 16,
+                "shareOfTrades": 32,
+                "shareOfLosses": 44.4,
+                "Jan–Jun": {
+                  "trades": 31,
+                  "wr3": 16.1,
+                  "sum3": -11,
+                  "sum5": -25
+                },
+                "Jul–Dez": {
+                  "trades": 19,
+                  "wr3": 21.1,
+                  "sum3": -3,
+                  "sum5": -1
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 81,
+                  "sumAfter": 95,
+                  "sumDropPct": -17.3,
+                  "blockWorth": true
+                }
+              },
+              "Fr ab 12": {
+                "trades": 57,
+                "wr3": 31.6,
+                "sum3": 15,
+                "sum5": 39,
+                "slUnder30": 15,
+                "shareOfTrades": 26.3,
+                "shareOfLosses": 45.5,
+                "Jan–Jun": {
+                  "trades": 31,
+                  "wr3": 38.7,
+                  "sum3": 17,
+                  "sum5": 41
+                },
+                "Jul–Dez": {
+                  "trades": 26,
+                  "wr3": 23.1,
+                  "sum3": -2,
+                  "sum5": -2
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 66,
+                  "sumDropPct": 18.5,
+                  "blockWorth": false
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 314,
+              "wr3": 30.9,
+              "sum3": 73,
+              "sum5": 97,
+              "slUnder30": 90,
+              "shareOfTrades": 28.7,
+              "shareOfLosses": 47.6,
+              "Jan–Jun": {
+                "trades": 193,
+                "wr3": 29.8,
+                "sum3": 37,
+                "sum5": 61,
+                "sumConfig": 46
+              },
+              "Jul–Dez": {
+                "trades": 121,
+                "wr3": 32.5,
+                "sum3": 36,
+                "sum5": 36,
+                "sumConfig": 41.5
+              },
+              "sumConfig": 87.5
+            },
+            "buckets": {
+              "Mo 02–10": {
+                "trades": 24,
+                "wr3": 33.3,
+                "sum3": 8,
+                "sum5": 12,
+                "slUnder30": 5,
+                "shareOfTrades": 20.8,
+                "shareOfLosses": 35.7,
+                "Jan–Jun": {
+                  "trades": 13,
+                  "wr3": 23.1,
+                  "sum3": -1,
+                  "sum5": -1,
+                  "sumConfig": 1.5
+                },
+                "Jul–Dez": {
+                  "trades": 11,
+                  "wr3": 45.5,
+                  "sum3": 9,
+                  "sum5": 13,
+                  "sumConfig": 11.5
+                },
+                "sumConfig": 13,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 74.5,
+                  "sumDropPct": 14.9,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 10": {
+                "trades": 24,
+                "wr3": 31.8,
+                "sum3": 6,
+                "sum5": 8,
+                "slUnder30": 4,
+                "shareOfTrades": 16.7,
+                "shareOfLosses": 30.8,
+                "Jan–Jun": {
+                  "trades": 12,
+                  "wr3": 36.4,
+                  "sum3": 5,
+                  "sum5": 13,
+                  "sumConfig": 5
+                },
+                "Jul–Dez": {
+                  "trades": 12,
+                  "wr3": 27.3,
+                  "sum3": 1,
+                  "sum5": -5,
+                  "sumConfig": 1
+                },
+                "sumConfig": 6,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 81.5,
+                  "sumDropPct": 6.9,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 209,
+                "wr3": 32.2,
+                "sum3": 60,
+                "sum5": 80,
+                "slUnder30": 62,
+                "shareOfTrades": 29.7,
+                "shareOfLosses": 49.2,
+                "Jan–Jun": {
+                  "trades": 134,
+                  "wr3": 31.6,
+                  "sum3": 35,
+                  "sum5": 53,
+                  "sumConfig": 43
+                },
+                "Jul–Dez": {
+                  "trades": 75,
+                  "wr3": 33.3,
+                  "sum3": 25,
+                  "sum5": 27,
+                  "sumConfig": 26
+                },
+                "sumConfig": 69,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 18.5,
+                  "sumDropPct": 78.9,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 12": {
+                "trades": 34,
+                "wr3": 17.6,
+                "sum3": -10,
+                "sum5": -22,
+                "slUnder30": 11,
+                "shareOfTrades": 32.4,
+                "shareOfLosses": 45.8,
+                "Jan–Jun": {
+                  "trades": 21,
+                  "wr3": 14.3,
+                  "sum3": -9,
+                  "sum5": -21,
+                  "sumConfig": -10.5
+                },
+                "Jul–Dez": {
+                  "trades": 13,
+                  "wr3": 23.1,
+                  "sum3": -1,
+                  "sum5": -1,
+                  "sumConfig": 1
+                },
+                "sumConfig": -9.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 87.5,
+                  "sumAfter": 97,
+                  "sumDropPct": -10.9,
+                  "blockWorth": true
+                }
+              },
+              "Fr ab 12": {
+                "trades": 23,
+                "wr3": 34.8,
+                "sum3": 9,
+                "sum5": 19,
+                "slUnder30": 8,
+                "shareOfTrades": 34.8,
+                "shareOfLosses": 66.7,
+                "Jan–Jun": {
+                  "trades": 13,
+                  "wr3": 38.5,
+                  "sum3": 7,
+                  "sum5": 17,
+                  "sumConfig": 7
+                },
+                "Jul–Dez": {
+                  "trades": 10,
+                  "wr3": 30,
+                  "sum3": 2,
+                  "sum5": 2,
+                  "sumConfig": 2
+                },
+                "sumConfig": 9,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 78.5,
+                  "sumDropPct": 10.3,
+                  "blockWorth": false
+                }
+              }
+            }
+          }
+        },
+        "Mo 14 / Fr 16": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 510,
+              "wr3": 29,
+              "sum3": 81,
+              "sum5": 111,
+              "slUnder30": 152,
+              "shareOfTrades": 29.8,
+              "shareOfLosses": 48.1,
+              "Jan–Jun": {
+                "trades": 301,
+                "wr3": 29.1,
+                "sum3": 49,
+                "sum5": 91
+              },
+              "Jul–Dez": {
+                "trades": 209,
+                "wr3": 28.8,
+                "sum3": 32,
+                "sum5": 20
+              }
+            },
+            "buckets": {
+              "Mo 02–14": {
+                "trades": 39,
+                "wr3": 30.8,
+                "sum3": 9,
+                "sum5": 15,
+                "slUnder30": 10,
+                "shareOfTrades": 25.6,
+                "shareOfLosses": 40,
+                "Jan–Jun": {
+                  "trades": 19,
+                  "wr3": 26.3,
+                  "sum3": 1,
+                  "sum5": 5
+                },
+                "Jul–Dez": {
+                  "trades": 20,
+                  "wr3": 35,
+                  "sum3": 8,
+                  "sum5": 10
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 72,
+                  "sumDropPct": 11.1,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 14": {
+                "trades": 38,
+                "wr3": 22.2,
+                "sum3": -4,
+                "sum5": -12,
+                "slUnder30": 11,
+                "shareOfTrades": 28.9,
+                "shareOfLosses": 44,
+                "Jan–Jun": {
+                  "trades": 21,
+                  "wr3": 20,
+                  "sum3": -4,
+                  "sum5": 4
+                },
+                "Jul–Dez": {
+                  "trades": 17,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": -16
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 81,
+                  "sumAfter": 85,
+                  "sumDropPct": -4.9,
+                  "blockWorth": true
+                }
+              },
+              "Di–Do": {
+                "trades": 326,
+                "wr3": 30.8,
+                "sum3": 75,
+                "sum5": 95,
+                "slUnder30": 100,
+                "shareOfTrades": 30.7,
+                "shareOfLosses": 50.8,
+                "Jan–Jun": {
+                  "trades": 199,
+                  "wr3": 30.8,
+                  "sum3": 46,
+                  "sum5": 66
+                },
+                "Jul–Dez": {
+                  "trades": 127,
+                  "wr3": 30.7,
+                  "sum3": 29,
+                  "sum5": 29
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 6,
+                  "sumDropPct": 92.6,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 16": {
+                "trades": 69,
+                "wr3": 21.7,
+                "sum3": -9,
+                "sum5": -9,
+                "slUnder30": 23,
+                "shareOfTrades": 33.3,
+                "shareOfLosses": 50,
+                "Jan–Jun": {
+                  "trades": 42,
+                  "wr3": 21.4,
+                  "sum3": -6,
+                  "sum5": -12
+                },
+                "Jul–Dez": {
+                  "trades": 27,
+                  "wr3": 22.2,
+                  "sum3": -3,
+                  "sum5": 3
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 81,
+                  "sumAfter": 90,
+                  "sumDropPct": -11.1,
+                  "blockWorth": true
+                }
+              },
+              "Fr ab 16": {
+                "trades": 38,
+                "wr3": 31.6,
+                "sum3": 10,
+                "sum5": 22,
+                "slUnder30": 8,
+                "shareOfTrades": 21.1,
+                "shareOfLosses": 34.8,
+                "Jan–Jun": {
+                  "trades": 20,
+                  "wr3": 40,
+                  "sum3": 12,
+                  "sum5": 28
+                },
+                "Jul–Dez": {
+                  "trades": 18,
+                  "wr3": 22.2,
+                  "sum3": -2,
+                  "sum5": -6
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 81,
+                  "sumAfter": 71,
+                  "sumDropPct": 12.3,
+                  "blockWorth": false
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 314,
+              "wr3": 30.9,
+              "sum3": 73,
+              "sum5": 97,
+              "slUnder30": 90,
+              "shareOfTrades": 28.7,
+              "shareOfLosses": 47.6,
+              "Jan–Jun": {
+                "trades": 193,
+                "wr3": 29.8,
+                "sum3": 37,
+                "sum5": 61,
+                "sumConfig": 46
+              },
+              "Jul–Dez": {
+                "trades": 121,
+                "wr3": 32.5,
+                "sum3": 36,
+                "sum5": 36,
+                "sumConfig": 41.5
+              },
+              "sumConfig": 87.5
+            },
+            "buckets": {
+              "Mo 02–14": {
+                "trades": 32,
+                "wr3": 34.4,
+                "sum3": 12,
+                "sum5": 16,
+                "slUnder30": 6,
+                "shareOfTrades": 18.8,
+                "shareOfLosses": 31.6,
+                "Jan–Jun": {
+                  "trades": 16,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": 2,
+                  "sumConfig": 2.5
+                },
+                "Jul–Dez": {
+                  "trades": 16,
+                  "wr3": 43.8,
+                  "sum3": 12,
+                  "sum5": 14,
+                  "sumConfig": 14.5
+                },
+                "sumConfig": 17,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 70.5,
+                  "sumDropPct": 19.4,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 14": {
+                "trades": 16,
+                "wr3": 28.6,
+                "sum3": 2,
+                "sum5": 4,
+                "slUnder30": 3,
+                "shareOfTrades": 18.8,
+                "shareOfLosses": 37.5,
+                "Jan–Jun": {
+                  "trades": 9,
+                  "wr3": 37.5,
+                  "sum3": 4,
+                  "sum5": 10,
+                  "sumConfig": 4
+                },
+                "Jul–Dez": {
+                  "trades": 7,
+                  "wr3": 16.7,
+                  "sum3": -2,
+                  "sum5": -6,
+                  "sumConfig": -2
+                },
+                "sumConfig": 2,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 85.5,
+                  "sumDropPct": 2.3,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 209,
+                "wr3": 32.2,
+                "sum3": 60,
+                "sum5": 80,
+                "slUnder30": 62,
+                "shareOfTrades": 29.7,
+                "shareOfLosses": 49.2,
+                "Jan–Jun": {
+                  "trades": 134,
+                  "wr3": 31.6,
+                  "sum3": 35,
+                  "sum5": 53,
+                  "sumConfig": 43
+                },
+                "Jul–Dez": {
+                  "trades": 75,
+                  "wr3": 33.3,
+                  "sum3": 25,
+                  "sum5": 27,
+                  "sumConfig": 26
+                },
+                "sumConfig": 69,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 87.5,
+                  "sumAfter": 18.5,
+                  "sumDropPct": 78.9,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 16": {
+                "trades": 49,
+                "wr3": 24.5,
+                "sum3": -1,
+                "sum5": -1,
+                "slUnder30": 16,
+                "shareOfTrades": 32.7,
+                "shareOfLosses": 51.6,
+                "Jan–Jun": {
+                  "trades": 30,
+                  "wr3": 23.3,
+                  "sum3": -2,
+                  "sum5": -6,
+                  "sumConfig": -3.5
+                },
+                "Jul–Dez": {
+                  "trades": 19,
+                  "wr3": 26.3,
+                  "sum3": 1,
+                  "sum5": 5,
+                  "sumConfig": 3
+                },
+                "sumConfig": -0.5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 87.5,
+                  "sumAfter": 88,
+                  "sumDropPct": -0.6,
+                  "blockWorth": true
+                }
+              },
+              "Fr ab 16": {
+                "trades": 8,
+                "wr3": 25,
+                "sum3": 0,
+                "sum5": -2,
+                "slUnder30": 3,
+                "shareOfTrades": 37.5,
+                "shareOfLosses": 60,
+                "Jan–Jun": {
+                  "trades": 4,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": 2,
+                  "sumConfig": 0
+                },
+                "Jul–Dez": {
+                  "trades": 4,
+                  "wr3": 25,
+                  "sum3": 0,
+                  "sum5": -4,
+                  "sumConfig": 0
+                },
+                "sumConfig": 0,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 87.5,
+                  "sumAfter": 87.5,
+                  "sumDropPct": 0,
+                  "blockWorth": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "GBPUSD HTF-OB v3": {
+      "trades": 368,
+      "allowedByConfig": 171,
+      "config": "Sperren 07:00–10:30, 19:00–23:00 · TP 2R",
+      "variants": {
+        "Mo 12 / Fr 14": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 368,
+              "wr3": 24.3,
+              "sum3": -10,
+              "sum5": -2,
+              "slUnder30": 133,
+              "shareOfTrades": 36.1,
+              "shareOfLosses": 53.6,
+              "Jan–Jun": {
+                "trades": 239,
+                "wr3": 21.2,
+                "sum3": -36,
+                "sum5": -28
+              },
+              "Jul–Dez": {
+                "trades": 129,
+                "wr3": 30.2,
+                "sum3": 26,
+                "sum5": 26
+              }
+            },
+            "buckets": {
+              "Mo 02–12": {
+                "trades": 35,
+                "wr3": 22.9,
+                "sum3": -3,
+                "sum5": -5,
+                "slUnder30": 9,
+                "shareOfTrades": 25.7,
+                "shareOfLosses": 37.5,
+                "Jan–Jun": {
+                  "trades": 29,
+                  "wr3": 24.1,
+                  "sum3": -1,
+                  "sum5": -5
+                },
+                "Jul–Dez": {
+                  "trades": 6,
+                  "wr3": 16.7,
+                  "sum3": -2,
+                  "sum5": 0
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -7,
+                  "sumDropPct": -30,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 12": {
+                "trades": 61,
+                "wr3": 32.2,
+                "sum3": 17,
+                "sum5": 7,
+                "slUnder30": 20,
+                "shareOfTrades": 32.8,
+                "shareOfLosses": 55.6,
+                "Jan–Jun": {
+                  "trades": 34,
+                  "wr3": 18.8,
+                  "sum3": -8,
+                  "sum5": -2
+                },
+                "Jul–Dez": {
+                  "trades": 27,
+                  "wr3": 48.1,
+                  "sum3": 25,
+                  "sum5": 9
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -27,
+                  "sumDropPct": 170,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 213,
+                "wr3": 23.8,
+                "sum3": -10,
+                "sum5": 6,
+                "slUnder30": 80,
+                "shareOfTrades": 37.6,
+                "shareOfLosses": 54.8,
+                "Jan–Jun": {
+                  "trades": 150,
+                  "wr3": 20.8,
+                  "sum3": -25,
+                  "sum5": -25
+                },
+                "Jul–Dez": {
+                  "trades": 63,
+                  "wr3": 31.1,
+                  "sum3": 15,
+                  "sum5": 31
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": 0,
+                  "sumDropPct": -100,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 14": {
+                "trades": 34,
+                "wr3": 26.5,
+                "sum3": 2,
+                "sum5": 2,
+                "slUnder30": 13,
+                "shareOfTrades": 38.2,
+                "shareOfLosses": 54.2,
+                "Jan–Jun": {
+                  "trades": 19,
+                  "wr3": 31.6,
+                  "sum3": 5,
+                  "sum5": 11
+                },
+                "Jul–Dez": {
+                  "trades": 15,
+                  "wr3": 20,
+                  "sum3": -3,
+                  "sum5": -9
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -12,
+                  "sumDropPct": 20,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 14": {
+                "trades": 25,
+                "wr3": 8.3,
+                "sum3": -16,
+                "sum5": -12,
+                "slUnder30": 11,
+                "shareOfTrades": 44,
+                "shareOfLosses": 61.1,
+                "Jan–Jun": {
+                  "trades": 7,
+                  "wr3": 0,
+                  "sum3": -7,
+                  "sum5": -7
+                },
+                "Jul–Dez": {
+                  "trades": 18,
+                  "wr3": 11.8,
+                  "sum3": -9,
+                  "sum5": -5
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": -10,
+                  "sumAfter": 6,
+                  "sumDropPct": -160,
+                  "blockWorth": true
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 171,
+              "wr3": 28.1,
+              "sum3": 21,
+              "sum5": 28,
+              "slUnder30": 51,
+              "shareOfTrades": 29.8,
+              "shareOfLosses": 46.8,
+              "Jan–Jun": {
+                "trades": 112,
+                "wr3": 22.7,
+                "sum3": -10,
+                "sum5": 0,
+                "sumConfig": -15
+              },
+              "Jul–Dez": {
+                "trades": 59,
+                "wr3": 38.6,
+                "sum3": 31,
+                "sum5": 28,
+                "sumConfig": 24
+              },
+              "sumConfig": 9
+            },
+            "buckets": {
+              "Mo 02–12": {
+                "trades": 13,
+                "wr3": 23.1,
+                "sum3": -1,
+                "sum5": -1,
+                "slUnder30": 2,
+                "shareOfTrades": 15.4,
+                "shareOfLosses": 20,
+                "Jan–Jun": {
+                  "trades": 9,
+                  "wr3": 33.3,
+                  "sum3": 3,
+                  "sum5": 3,
+                  "sumConfig": -3
+                },
+                "Jul–Dez": {
+                  "trades": 4,
+                  "wr3": 0,
+                  "sum3": -4,
+                  "sum5": -4,
+                  "sumConfig": -4
+                },
+                "sumConfig": -7,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 16,
+                  "sumDropPct": -77.8,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 12": {
+                "trades": 37,
+                "wr3": 36.1,
+                "sum3": 16,
+                "sum5": 6,
+                "slUnder30": 11,
+                "shareOfTrades": 29.7,
+                "shareOfLosses": 50,
+                "Jan–Jun": {
+                  "trades": 18,
+                  "wr3": 11.8,
+                  "sum3": -9,
+                  "sum5": -5,
+                  "sumConfig": -5
+                },
+                "Jul–Dez": {
+                  "trades": 19,
+                  "wr3": 57.9,
+                  "sum3": 25,
+                  "sum5": 11,
+                  "sumConfig": 17
+                },
+                "sumConfig": 12,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": -3,
+                  "sumDropPct": 133.3,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 95,
+                "wr3": 28,
+                "sum3": 11,
+                "sum5": 24,
+                "slUnder30": 28,
+                "shareOfTrades": 29.5,
+                "shareOfLosses": 47.5,
+                "Jan–Jun": {
+                  "trades": 70,
+                  "wr3": 21.7,
+                  "sum3": -9,
+                  "sum5": -7,
+                  "sumConfig": -13
+                },
+                "Jul–Dez": {
+                  "trades": 25,
+                  "wr3": 45.8,
+                  "sum3": 20,
+                  "sum5": 31,
+                  "sumConfig": 21
+                },
+                "sumConfig": 8,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 1,
+                  "sumDropPct": 88.9,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 14": {
+                "trades": 12,
+                "wr3": 41.7,
+                "sum3": 8,
+                "sum5": 12,
+                "slUnder30": 3,
+                "shareOfTrades": 25,
+                "shareOfLosses": 50,
+                "Jan–Jun": {
+                  "trades": 11,
+                  "wr3": 45.5,
+                  "sum3": 9,
+                  "sum5": 13,
+                  "sumConfig": 7
+                },
+                "Jul–Dez": {
+                  "trades": 1,
+                  "wr3": 0,
+                  "sum3": -1,
+                  "sum5": -1,
+                  "sumConfig": -1
+                },
+                "sumConfig": 6,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 3,
+                  "sumDropPct": 66.7,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 14": {
+                "trades": 14,
+                "wr3": 0,
+                "sum3": -13,
+                "sum5": -13,
+                "slUnder30": 7,
+                "shareOfTrades": 50,
+                "shareOfLosses": 58.3,
+                "Jan–Jun": {
+                  "trades": 4,
+                  "wr3": 0,
+                  "sum3": -4,
+                  "sum5": -4,
+                  "sumConfig": -1
+                },
+                "Jul–Dez": {
+                  "trades": 10,
+                  "wr3": 0,
+                  "sum3": -9,
+                  "sum5": -9,
+                  "sumConfig": -9
+                },
+                "sumConfig": -10,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 9,
+                  "sumAfter": 19,
+                  "sumDropPct": -111.1,
+                  "blockWorth": true
+                }
+              }
+            }
+          }
+        },
+        "Mo 10 / Fr 12": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 368,
+              "wr3": 24.3,
+              "sum3": -10,
+              "sum5": -2,
+              "slUnder30": 133,
+              "shareOfTrades": 36.1,
+              "shareOfLosses": 53.6,
+              "Jan–Jun": {
+                "trades": 239,
+                "wr3": 21.2,
+                "sum3": -36,
+                "sum5": -28
+              },
+              "Jul–Dez": {
+                "trades": 129,
+                "wr3": 30.2,
+                "sum3": 26,
+                "sum5": 26
+              }
+            },
+            "buckets": {
+              "Mo 02–10": {
+                "trades": 25,
+                "wr3": 20,
+                "sum3": -5,
+                "sum5": -1,
+                "slUnder30": 6,
+                "shareOfTrades": 24,
+                "shareOfLosses": 35.3,
+                "Jan–Jun": {
+                  "trades": 23,
+                  "wr3": 21.7,
+                  "sum3": -3,
+                  "sum5": 1
+                },
+                "Jul–Dez": {
+                  "trades": 2,
+                  "wr3": 0,
+                  "sum3": -2,
+                  "sum5": -2
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -5,
+                  "sumDropPct": -50,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 10": {
+                "trades": 71,
+                "wr3": 31.9,
+                "sum3": 19,
+                "sum5": 3,
+                "slUnder30": 23,
+                "shareOfTrades": 32.4,
+                "shareOfLosses": 53.5,
+                "Jan–Jun": {
+                  "trades": 40,
+                  "wr3": 21.1,
+                  "sum3": -6,
+                  "sum5": -8
+                },
+                "Jul–Dez": {
+                  "trades": 31,
+                  "wr3": 45.2,
+                  "sum3": 25,
+                  "sum5": 11
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -29,
+                  "sumDropPct": 190,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 213,
+                "wr3": 23.8,
+                "sum3": -10,
+                "sum5": 6,
+                "slUnder30": 80,
+                "shareOfTrades": 37.6,
+                "shareOfLosses": 54.8,
+                "Jan–Jun": {
+                  "trades": 150,
+                  "wr3": 20.8,
+                  "sum3": -25,
+                  "sum5": -25
+                },
+                "Jul–Dez": {
+                  "trades": 63,
+                  "wr3": 31.1,
+                  "sum3": 15,
+                  "sum5": 31
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": 0,
+                  "sumDropPct": -100,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 12": {
+                "trades": 25,
+                "wr3": 20,
+                "sum3": -5,
+                "sum5": -13,
+                "slUnder30": 10,
+                "shareOfTrades": 40,
+                "shareOfLosses": 52.6,
+                "Jan–Jun": {
+                  "trades": 14,
+                  "wr3": 14.3,
+                  "sum3": -6,
+                  "sum5": -8
+                },
+                "Jul–Dez": {
+                  "trades": 11,
+                  "wr3": 27.3,
+                  "sum3": 1,
+                  "sum5": -5
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": -10,
+                  "sumAfter": -5,
+                  "sumDropPct": -50,
+                  "blockWorth": true
+                }
+              },
+              "Fr ab 12": {
+                "trades": 34,
+                "wr3": 18.2,
+                "sum3": -9,
+                "sum5": 3,
+                "slUnder30": 14,
+                "shareOfTrades": 41.2,
+                "shareOfLosses": 60.9,
+                "Jan–Jun": {
+                  "trades": 12,
+                  "wr3": 33.3,
+                  "sum3": 4,
+                  "sum5": 12
+                },
+                "Jul–Dez": {
+                  "trades": 22,
+                  "wr3": 9.5,
+                  "sum3": -13,
+                  "sum5": -9
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -1,
+                  "sumDropPct": -90,
+                  "blockWorth": false
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 171,
+              "wr3": 28.1,
+              "sum3": 21,
+              "sum5": 28,
+              "slUnder30": 51,
+              "shareOfTrades": 29.8,
+              "shareOfLosses": 46.8,
+              "Jan–Jun": {
+                "trades": 112,
+                "wr3": 22.7,
+                "sum3": -10,
+                "sum5": 0,
+                "sumConfig": -15
+              },
+              "Jul–Dez": {
+                "trades": 59,
+                "wr3": 38.6,
+                "sum3": 31,
+                "sum5": 28,
+                "sumConfig": 24
+              },
+              "sumConfig": 9
+            },
+            "buckets": {
+              "Mo 02–10": {
+                "trades": 7,
+                "wr3": 28.6,
+                "sum3": 1,
+                "sum5": 5,
+                "slUnder30": 0,
+                "shareOfTrades": 0,
+                "shareOfLosses": 0,
+                "Jan–Jun": {
+                  "trades": 6,
+                  "wr3": 33.3,
+                  "sum3": 2,
+                  "sum5": 6,
+                  "sumConfig": 0
+                },
+                "Jul–Dez": {
+                  "trades": 1,
+                  "wr3": 0,
+                  "sum3": -1,
+                  "sum5": -1,
+                  "sumConfig": -1
+                },
+                "sumConfig": -1,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 10,
+                  "sumDropPct": -11.1,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 10": {
+                "trades": 43,
+                "wr3": 33.3,
+                "sum3": 14,
+                "sum5": 0,
+                "slUnder30": 13,
+                "shareOfTrades": 30.2,
+                "shareOfLosses": 48.1,
+                "Jan–Jun": {
+                  "trades": 21,
+                  "wr3": 15,
+                  "sum3": -8,
+                  "sum5": -8,
+                  "sumConfig": -8
+                },
+                "Jul–Dez": {
+                  "trades": 22,
+                  "wr3": 50,
+                  "sum3": 22,
+                  "sum5": 8,
+                  "sumConfig": 14
+                },
+                "sumConfig": 6,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 3,
+                  "sumDropPct": 66.7,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 95,
+                "wr3": 28,
+                "sum3": 11,
+                "sum5": 24,
+                "slUnder30": 28,
+                "shareOfTrades": 29.5,
+                "shareOfLosses": 47.5,
+                "Jan–Jun": {
+                  "trades": 70,
+                  "wr3": 21.7,
+                  "sum3": -9,
+                  "sum5": -7,
+                  "sumConfig": -13
+                },
+                "Jul–Dez": {
+                  "trades": 25,
+                  "wr3": 45.8,
+                  "sum3": 20,
+                  "sum5": 31,
+                  "sumConfig": 21
+                },
+                "sumConfig": 8,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 1,
+                  "sumDropPct": 88.9,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 12": {
+                "trades": 8,
+                "wr3": 25,
+                "sum3": 0,
+                "sum5": -2,
+                "slUnder30": 2,
+                "shareOfTrades": 25,
+                "shareOfLosses": 40,
+                "Jan–Jun": {
+                  "trades": 7,
+                  "wr3": 28.6,
+                  "sum3": 1,
+                  "sum5": -1,
+                  "sumConfig": 2
+                },
+                "Jul–Dez": {
+                  "trades": 1,
+                  "wr3": 0,
+                  "sum3": -1,
+                  "sum5": -1,
+                  "sumConfig": -1
+                },
+                "sumConfig": 1,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 8,
+                  "sumDropPct": 11.1,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 12": {
+                "trades": 18,
+                "wr3": 17.6,
+                "sum3": -5,
+                "sum5": 1,
+                "slUnder30": 8,
+                "shareOfTrades": 44.4,
+                "shareOfLosses": 61.5,
+                "Jan–Jun": {
+                  "trades": 8,
+                  "wr3": 37.5,
+                  "sum3": 4,
+                  "sum5": 10,
+                  "sumConfig": 4
+                },
+                "Jul–Dez": {
+                  "trades": 10,
+                  "wr3": 0,
+                  "sum3": -9,
+                  "sum5": -9,
+                  "sumConfig": -9
+                },
+                "sumConfig": -5,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 14,
+                  "sumDropPct": -55.6,
+                  "blockWorth": false
+                }
+              }
+            }
+          }
+        },
+        "Mo 14 / Fr 16": {
+          "ohneKonfig": {
+            "total": {
+              "trades": 368,
+              "wr3": 24.3,
+              "sum3": -10,
+              "sum5": -2,
+              "slUnder30": 133,
+              "shareOfTrades": 36.1,
+              "shareOfLosses": 53.6,
+              "Jan–Jun": {
+                "trades": 239,
+                "wr3": 21.2,
+                "sum3": -36,
+                "sum5": -28
+              },
+              "Jul–Dez": {
+                "trades": 129,
+                "wr3": 30.2,
+                "sum3": 26,
+                "sum5": 26
+              }
+            },
+            "buckets": {
+              "Mo 02–14": {
+                "trades": 51,
+                "wr3": 26,
+                "sum3": 2,
+                "sum5": -2,
+                "slUnder30": 14,
+                "shareOfTrades": 27.5,
+                "shareOfLosses": 41.2,
+                "Jan–Jun": {
+                  "trades": 38,
+                  "wr3": 21.6,
+                  "sum3": -5,
+                  "sum5": -7
+                },
+                "Jul–Dez": {
+                  "trades": 13,
+                  "wr3": 38.5,
+                  "sum3": 7,
+                  "sum5": 5
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -12,
+                  "sumDropPct": 20,
+                  "blockWorth": false
+                }
+              },
+              "Mo ab 14": {
+                "trades": 45,
+                "wr3": 31.8,
+                "sum3": 12,
+                "sum5": 4,
+                "slUnder30": 15,
+                "shareOfTrades": 33.3,
+                "shareOfLosses": 57.7,
+                "Jan–Jun": {
+                  "trades": 25,
+                  "wr3": 20.8,
+                  "sum3": -4,
+                  "sum5": 0
+                },
+                "Jul–Dez": {
+                  "trades": 20,
+                  "wr3": 45,
+                  "sum3": 16,
+                  "sum5": 4
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -22,
+                  "sumDropPct": 120,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 213,
+                "wr3": 23.8,
+                "sum3": -10,
+                "sum5": 6,
+                "slUnder30": 80,
+                "shareOfTrades": 37.6,
+                "shareOfLosses": 54.8,
+                "Jan–Jun": {
+                  "trades": 150,
+                  "wr3": 20.8,
+                  "sum3": -25,
+                  "sum5": -25
+                },
+                "Jul–Dez": {
+                  "trades": 63,
+                  "wr3": 31.1,
+                  "sum3": 15,
+                  "sum5": 31
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": 0,
+                  "sumDropPct": -100,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 16": {
+                "trades": 43,
+                "wr3": 23.8,
+                "sum3": -2,
+                "sum5": 0,
+                "slUnder30": 18,
+                "shareOfTrades": 41.9,
+                "shareOfLosses": 60,
+                "Jan–Jun": {
+                  "trades": 23,
+                  "wr3": 26.1,
+                  "sum3": 1,
+                  "sum5": 7
+                },
+                "Jul–Dez": {
+                  "trades": 20,
+                  "wr3": 21.1,
+                  "sum3": -3,
+                  "sum5": -7
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": -10,
+                  "sumAfter": -8,
+                  "sumDropPct": -20,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 16": {
+                "trades": 16,
+                "wr3": 6.3,
+                "sum3": -12,
+                "sum5": -10,
+                "slUnder30": 6,
+                "shareOfTrades": 37.5,
+                "shareOfLosses": 50,
+                "Jan–Jun": {
+                  "trades": 3,
+                  "wr3": 0,
+                  "sum3": -3,
+                  "sum5": -3
+                },
+                "Jul–Dez": {
+                  "trades": 13,
+                  "wr3": 7.7,
+                  "sum3": -9,
+                  "sum5": -7
+                },
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": -10,
+                  "sumAfter": 2,
+                  "sumDropPct": -120,
+                  "blockWorth": true
+                }
+              }
+            }
+          },
+          "mitKonfig": {
+            "total": {
+              "trades": 171,
+              "wr3": 28.1,
+              "sum3": 21,
+              "sum5": 28,
+              "slUnder30": 51,
+              "shareOfTrades": 29.8,
+              "shareOfLosses": 46.8,
+              "Jan–Jun": {
+                "trades": 112,
+                "wr3": 22.7,
+                "sum3": -10,
+                "sum5": 0,
+                "sumConfig": -15
+              },
+              "Jul–Dez": {
+                "trades": 59,
+                "wr3": 38.6,
+                "sum3": 31,
+                "sum5": 28,
+                "sumConfig": 24
+              },
+              "sumConfig": 9
+            },
+            "buckets": {
+              "Mo 02–14": {
+                "trades": 25,
+                "wr3": 25,
+                "sum3": 0,
+                "sum5": -6,
+                "slUnder30": 6,
+                "shareOfTrades": 24,
+                "shareOfLosses": 33.3,
+                "Jan–Jun": {
+                  "trades": 15,
+                  "wr3": 21.4,
+                  "sum3": -2,
+                  "sum5": -2,
+                  "sumConfig": -8
+                },
+                "Jul–Dez": {
+                  "trades": 10,
+                  "wr3": 30,
+                  "sum3": 2,
+                  "sum5": -4,
+                  "sumConfig": 2
+                },
+                "sumConfig": -6,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 9,
+                  "sumAfter": 15,
+                  "sumDropPct": -66.7,
+                  "blockWorth": true
+                }
+              },
+              "Mo ab 14": {
+                "trades": 25,
+                "wr3": 40,
+                "sum3": 15,
+                "sum5": 11,
+                "slUnder30": 7,
+                "shareOfTrades": 28,
+                "shareOfLosses": 50,
+                "Jan–Jun": {
+                  "trades": 12,
+                  "wr3": 16.7,
+                  "sum3": -4,
+                  "sum5": 0,
+                  "sumConfig": 0
+                },
+                "Jul–Dez": {
+                  "trades": 13,
+                  "wr3": 61.5,
+                  "sum3": 19,
+                  "sum5": 11,
+                  "sumConfig": 11
+                },
+                "sumConfig": 11,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": -2,
+                  "sumDropPct": 122.2,
+                  "blockWorth": false
+                }
+              },
+              "Di–Do": {
+                "trades": 95,
+                "wr3": 28,
+                "sum3": 11,
+                "sum5": 24,
+                "slUnder30": 28,
+                "shareOfTrades": 29.5,
+                "shareOfLosses": 47.5,
+                "Jan–Jun": {
+                  "trades": 70,
+                  "wr3": 21.7,
+                  "sum3": -9,
+                  "sum5": -7,
+                  "sumConfig": -13
+                },
+                "Jul–Dez": {
+                  "trades": 25,
+                  "wr3": 45.8,
+                  "sum3": 20,
+                  "sum5": 31,
+                  "sumConfig": 21
+                },
+                "sumConfig": 8,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 1,
+                  "sumDropPct": 88.9,
+                  "blockWorth": false
+                }
+              },
+              "Fr bis 16": {
+                "trades": 16,
+                "wr3": 33.3,
+                "sum3": 5,
+                "sum5": 9,
+                "slUnder30": 5,
+                "shareOfTrades": 31.3,
+                "shareOfLosses": 55.6,
+                "Jan–Jun": {
+                  "trades": 13,
+                  "wr3": 38.5,
+                  "sum3": 7,
+                  "sum5": 11,
+                  "sumConfig": 5
+                },
+                "Jul–Dez": {
+                  "trades": 3,
+                  "wr3": 0,
+                  "sum3": -2,
+                  "sum5": -2,
+                  "sumConfig": -2
+                },
+                "sumConfig": 3,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": false,
+                  "sumBefore": 9,
+                  "sumAfter": 6,
+                  "sumDropPct": 33.3,
+                  "blockWorth": false
+                }
+              },
+              "Fr ab 16": {
+                "trades": 10,
+                "wr3": 0,
+                "sum3": -10,
+                "sum5": -10,
+                "slUnder30": 5,
+                "shareOfTrades": 50,
+                "shareOfLosses": 55.6,
+                "Jan–Jun": {
+                  "trades": 2,
+                  "wr3": 0,
+                  "sum3": -2,
+                  "sum5": -2,
+                  "sumConfig": 1
+                },
+                "Jul–Dez": {
+                  "trades": 8,
+                  "wr3": 0,
+                  "sum3": -8,
+                  "sum5": -8,
+                  "sumConfig": -8
+                },
+                "sumConfig": -7,
+                "ifBlocked": {
+                  "winrate3UpBothHalves": true,
+                  "sumBefore": 9,
+                  "sumAfter": 16,
+                  "sumDropPct": -77.8,
+                  "blockWorth": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
