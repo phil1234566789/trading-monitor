@@ -10434,9 +10434,9 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/lab-features-xau-2026.json": {
-    "mtime": 1794913690.6589499,
-    "seen": 1794913746.4647563,
-    "ast_hash": "ea8c2d3ba4e17492892ca6204c160ec4",
+    "mtime": 1794915023.6715178,
+    "seen": 1794915122.475258,
+    "ast_hash": "656a3b579f431b082b7131a00a385853",
     "semantic_hash": ""
   },
   "scripts/dobLab.mjs": {
