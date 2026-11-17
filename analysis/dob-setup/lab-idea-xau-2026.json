@@ -1,0 +1,318 @@
+{
+  "measurement": "dob-lab-idea-v1",
+  "git": "ae53ae2d-dirty",
+  "symbol": "XAUUSD",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "methodology": [
+    "Trades: v2 mit Gegen-DOB-Status wie der v3-Fill (bester über die tragenden Paare), Modus Kombi; (a) nur TP-Fenster/Default, (b) Philips gespeicherte Konfig mit Sperren.",
+    "Idee = gleiche Richtung + gleiche Kraft-Zone (TF, Start, Kanten) + gleiche Retest-Episode der Zone (Start der letzten Touch-Episode vor OB1).",
+    "Ausgang je Trade: evaluateDoubleOrderBlockOutcome zum TP nach Konfig (inkl. nur tote Gegen-DOBs → 5R). Offen = Ausgang nach dem Entry des nächsten Trades bzw. noch offen/unbekannt.",
+    "(2) und (4) kausal in Entry-Reihenfolge über die zugelassenen Trades; (4) sperrt erst ab dem Ausstieg des Losses.",
+    "n = Win + Loss, ΣR = R·Win − Loss; Halbjahre nach Berliner Entry-Monat."
+  ],
+  "carriers": {
+    "(a) Kombi ohne Sperren": {
+      "trades": 385,
+      "ideas": 217,
+      "distribution": {
+        "1": 126,
+        "2": 41,
+        "3+": 50,
+        "max": 6
+      },
+      "ideasWith3PlusAllLoss": 23,
+      "ideasWith3PlusAnyWin": 27,
+      "byPosition": {
+        "1.": {
+          "trades": 217,
+          "n": 217,
+          "winrate": 26.3,
+          "sumR": 61,
+          "Jan–Jun": {
+            "n": 126,
+            "winrate": 26.2,
+            "sumR": 31
+          },
+          "Jul–Nov": {
+            "n": 91,
+            "winrate": 26.4,
+            "sumR": 30
+          }
+        },
+        "2.": {
+          "trades": 91,
+          "n": 90,
+          "winrate": 32.2,
+          "sumR": 59,
+          "Jan–Jun": {
+            "n": 49,
+            "winrate": 30.6,
+            "sumR": 26
+          },
+          "Jul–Nov": {
+            "n": 41,
+            "winrate": 34.1,
+            "sumR": 33
+          }
+        },
+        "3.+": {
+          "trades": 77,
+          "n": 77,
+          "winrate": 23.4,
+          "sumR": 16,
+          "Jan–Jun": {
+            "n": 43,
+            "winrate": 18.6,
+            "sumR": -1
+          },
+          "Jul–Nov": {
+            "n": 34,
+            "winrate": 29.4,
+            "sumR": 17
+          }
+        }
+      },
+      "rules": {
+        "Konfig (alle Entries)": {
+          "trades": 385,
+          "n": 384,
+          "winrate": 27.1,
+          "sumR": 136,
+          "Jan–Jun": {
+            "n": 218,
+            "winrate": 25.7,
+            "sumR": 56
+          },
+          "Jul–Nov": {
+            "n": 166,
+            "winrate": 28.9,
+            "sumR": 80
+          }
+        },
+        "(1) nur erster Entry je Idee": {
+          "trades": 217,
+          "n": 217,
+          "winrate": 26.3,
+          "sumR": 61,
+          "Jan–Jun": {
+            "n": 126,
+            "winrate": 26.2,
+            "sumR": 31
+          },
+          "Jul–Nov": {
+            "n": 91,
+            "winrate": 26.4,
+            "sumR": 30
+          }
+        },
+        "(2) kein Entry, solange einer derselben Idee offen ist": {
+          "trades": 281,
+          "n": 281,
+          "winrate": 26.3,
+          "sumR": 85,
+          "Jan–Jun": {
+            "n": 164,
+            "winrate": 26.8,
+            "sumR": 50
+          },
+          "Jul–Nov": {
+            "n": 117,
+            "winrate": 25.6,
+            "sumR": 35
+          }
+        },
+        "(3) höchstens 2 Entries je Idee": {
+          "trades": 308,
+          "n": 307,
+          "winrate": 28,
+          "sumR": 120,
+          "Jan–Jun": {
+            "n": 175,
+            "winrate": 27.4,
+            "sumR": 57
+          },
+          "Jul–Nov": {
+            "n": 132,
+            "winrate": 28.8,
+            "sumR": 63
+          }
+        },
+        "(4) nach einem Loss derselben Idee keine weiteren": {
+          "trades": 308,
+          "n": 307,
+          "winrate": 27.7,
+          "sumR": 114,
+          "Jan–Jun": {
+            "n": 173,
+            "winrate": 26,
+            "sumR": 42
+          },
+          "Jul–Nov": {
+            "n": 134,
+            "winrate": 29.9,
+            "sumR": 72
+          }
+        }
+      },
+      "example2808": [
+        [
+          "short 2026-08-28 14:34 loss",
+          "short 2026-08-28 15:11 loss",
+          "short 2026-08-28 15:38 loss"
+        ]
+      ]
+    },
+    "(b) Kombi mit Philips Sperren": {
+      "trades": 328,
+      "ideas": 196,
+      "distribution": {
+        "1": 119,
+        "2": 39,
+        "3+": 38,
+        "max": 6
+      },
+      "ideasWith3PlusAllLoss": 16,
+      "ideasWith3PlusAnyWin": 22,
+      "byPosition": {
+        "1.": {
+          "trades": 196,
+          "n": 196,
+          "winrate": 28.1,
+          "sumR": 76,
+          "Jan–Jun": {
+            "n": 112,
+            "winrate": 27.7,
+            "sumR": 39
+          },
+          "Jul–Nov": {
+            "n": 84,
+            "winrate": 28.6,
+            "sumR": 37
+          }
+        },
+        "2.": {
+          "trades": 77,
+          "n": 76,
+          "winrate": 35.5,
+          "sumR": 64,
+          "Jan–Jun": {
+            "n": 41,
+            "winrate": 34.1,
+            "sumR": 31
+          },
+          "Jul–Nov": {
+            "n": 35,
+            "winrate": 37.1,
+            "sumR": 33
+          }
+        },
+        "3.+": {
+          "trades": 55,
+          "n": 55,
+          "winrate": 23.6,
+          "sumR": 11,
+          "Jan–Jun": {
+            "n": 31,
+            "winrate": 16.1,
+            "sumR": -4
+          },
+          "Jul–Nov": {
+            "n": 24,
+            "winrate": 33.3,
+            "sumR": 15
+          }
+        }
+      },
+      "rules": {
+        "Konfig (alle Entries)": {
+          "trades": 328,
+          "n": 327,
+          "winrate": 29.1,
+          "sumR": 151,
+          "Jan–Jun": {
+            "n": 184,
+            "winrate": 27.2,
+            "sumR": 66
+          },
+          "Jul–Nov": {
+            "n": 143,
+            "winrate": 31.5,
+            "sumR": 85
+          }
+        },
+        "(1) nur erster Entry je Idee": {
+          "trades": 196,
+          "n": 196,
+          "winrate": 28.1,
+          "sumR": 76,
+          "Jan–Jun": {
+            "n": 112,
+            "winrate": 27.7,
+            "sumR": 39
+          },
+          "Jul–Nov": {
+            "n": 84,
+            "winrate": 28.6,
+            "sumR": 37
+          }
+        },
+        "(2) kein Entry, solange einer derselben Idee offen ist": {
+          "trades": 243,
+          "n": 243,
+          "winrate": 28.4,
+          "sumR": 99,
+          "Jan–Jun": {
+            "n": 141,
+            "winrate": 29.1,
+            "sumR": 61
+          },
+          "Jul–Nov": {
+            "n": 102,
+            "winrate": 27.5,
+            "sumR": 38
+          }
+        },
+        "(3) höchstens 2 Entries je Idee": {
+          "trades": 273,
+          "n": 272,
+          "winrate": 30.1,
+          "sumR": 140,
+          "Jan–Jun": {
+            "n": 153,
+            "winrate": 29.4,
+            "sumR": 70
+          },
+          "Jul–Nov": {
+            "n": 119,
+            "winrate": 31.1,
+            "sumR": 70
+          }
+        },
+        "(4) nach einem Loss derselben Idee keine weiteren": {
+          "trades": 274,
+          "n": 273,
+          "winrate": 30,
+          "sumR": 139,
+          "Jan–Jun": {
+            "n": 152,
+            "winrate": 27.6,
+            "sumR": 54
+          },
+          "Jul–Nov": {
+            "n": 121,
+            "winrate": 33.1,
+            "sumR": 85
+          }
+        }
+      },
+      "example2808": [
+        [
+          "short 2026-08-28 14:34 loss",
+          "short 2026-08-28 15:11 loss",
+          "short 2026-08-28 15:38 loss"
+        ]
+      ]
+    }
+  }
+}
