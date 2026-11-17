@@ -29,7 +29,8 @@ const row=computed(()=>rows.value.get(tradeId.value)??null),current=computed(()=
 const {pinTarget,pinSaving,pinError,pinOf,openPin,savePin,removePin}=useDobTradePins(ref('XAUUSD'),computed(()=>[...rows.value.values()]));
 // Kommentar ohne Modal (das Modal verdeckte den Chart, Philip liest beim Schreiben Preise/Zeiten ab): openPin hält das Ziel
 // des aktuellen Falls offen; nach Speichern/Entfernen setzt useDobTradePins es zurück, die Pins laden neu und es öffnet sich wieder.
-const note=ref(''),pinType=ref(null),noteEl=ref(null);
+const note=ref(''),pinType=ref(null),noteEl=ref(null),inserted=ref('');
+let insertedTimer=null;
 watch(()=>row.value&&[row.value,pinOf(row.value)],v=>{if(v)openPin(v[0]);});
 watch(pinTarget,t=>{if(t){note.value=t.note;pinType.value=t.pinType;}});
 const saveNote=()=>{if(pinTarget.value&&!pinSaving.value)savePin(note.value,pinType.value);};
@@ -43,6 +44,8 @@ function insertChartPoint(param){
  const a=el.selectionStart??note.value.length,b=el.selectionEnd??a;
  note.value=note.value.slice(0,a)+text+note.value.slice(b);
  nextTick(()=>{el.focus();el.setSelectionRange(a+text.length,a+text.length);});
+ // Rückmeldung, weil der Klick sonst unbemerkt bleibt: Textfeld kurz hervorheben plus Hinweis mit dem eingefügten Text.
+ inserted.value=text;clearTimeout(insertedTimer);insertedTimer=setTimeout(()=>{inserted.value='';},1600);
 }
 const pinMark=c=>{const r=rows.value.get(c.id);return r&&pinOf(r)?' 📌':'';};
 const chartEl=ref(null);
@@ -100,7 +103,7 @@ onMounted(async()=>{
  chart.subscribeClick(insertChartPoint);
  try{await loadRows();}catch(e){error.value=e.message;}
 });
-onBeforeUnmount(()=>{chart?.unsubscribeClick(insertChartPoint);chart?.remove();chart=series=null;});
+onBeforeUnmount(()=>{clearTimeout(insertedTimer);chart?.unsubscribeClick(insertChartPoint);chart?.remove();chart=series=null;});
 const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.label)??[]);
 </script>
 
@@ -123,13 +126,13 @@ const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.la
   <div ref="chartEl" class="chart"></div>
   <div v-if="row" class="comment">
    <PinTypeChips v-model="pinType" :disabled="pinSaving||!pinTarget" />
-   <textarea ref="noteEl" v-model="note" rows="3" :disabled="pinSaving||!pinTarget" aria-label="Kommentar zum Trade"
+   <textarea ref="noteEl" v-model="note" rows="3" :class="{flash:inserted}" :disabled="pinSaving||!pinTarget" aria-label="Kommentar zum Trade"
     placeholder="Kommentar · Klick in den Chart fügt „HH:MM @ Preis“ ein · Ctrl+Enter speichert" @keydown.ctrl.enter.prevent="saveNote"></textarea>
    <div class="comment-actions">
     <button type="button" :disabled="pinSaving||!pinTarget" @click="saveNote">{{ pinOf(row) ? 'Pin aktualisieren' : 'Pin speichern' }}</button>
     <button v-if="pinTarget?.existingId" type="button" :disabled="pinSaving" @click="removePin">Pin entfernen</button>
     <RouterLink :to="{path:'/dob-statistik',query:{run:DOB_ENTRY_M1_RUN}}">Alle Pins</RouterLink>
-    <span v-if="pinSaving" role="status">Speichert …</span><span v-if="pinError" class="err" role="alert">{{ pinError }}</span>
+    <span v-if="inserted" class="inserted" role="status">„{{ inserted }}“ eingefügt</span><span v-if="pinSaving" role="status">Speichert …</span><span v-if="pinError" class="err" role="alert">{{ pinError }}</span>
    </div>
   </div>
  </div>
@@ -139,9 +142,13 @@ const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.la
 .dob-entry-m1{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px}
 .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .info{font-variant-numeric:tabular-nums}
-.chart{flex:1;min-height:300px}
+.chart{flex:1;min-height:300px;cursor:crosshair}
+/* lightweight-charts setzt den Cursor auf seinen eigenen Elementen; der Klick fügt Zeit/Preis ein, daher hier erzwingen. */
+.chart :deep(*){cursor:crosshair !important}
 .err{color:#ef5350}
 .comment{display:flex;flex-direction:column;gap:6px}
 .comment textarea{width:100%;box-sizing:border-box;background:#131722;color:#d1d4dc;border:1px solid #626b7f;padding:8px;font:inherit;resize:vertical}
+.comment textarea.flash{border-color:#91b8ff;box-shadow:0 0 0 2px rgba(145,184,255,.45);transition:box-shadow .2s}
+.inserted{color:#91b8ff}
 .comment-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 </style>
