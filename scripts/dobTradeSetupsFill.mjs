@@ -27,7 +27,7 @@ const RUNS = Object.fromEntries([
   ['v2', { label: 'v2 · POI mit Retest', description: 'wie v1, die H1/H4-Zone muss vor OB1 retestet sein',
     sort: 2, pick: r => r.setups, poiOptions: { requireRetest: true } }],
   // v3: alle v2-Trades mit Gegen-DOB-Status (none/dead/live); was gesperrt oder mit 5R gehandelt wird, entscheidet die Konfig.
-  ['v3', { label: 'v3 · Gegen-DOB', description: 'wie v2 mit Gegen-DOB-Status seit dem Retest des POI; Sperre bzw. TP über „Sperren und Regeln“',
+  ['v3', { label: 'v3 · Gegen-DOB', description: 'wie v2 mit Gegen-DOB-Status seit dem Retest des POI; Sperre bzw. TP über die Setup-Konfiguration',
     sort: 3, pick: r => r.setups, poiOptions: { requireRetest: true }, counterDob: true }],
 ].map(([v, run]) => [runId(v), { ...run, version: `dob-setup-${v}`, poiType: 'htf_ob' }]));
 // LQ-Sweep v0: POI = TS1.1-Setup mit gleicher Kante an OB1/OB2 (Philip). Der Lauf nimmt auch Überlappung und ≤ 1 USD daneben

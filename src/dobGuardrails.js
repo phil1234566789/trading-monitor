@@ -57,6 +57,19 @@ export const dobMonthBlocked=(config,atSec)=>config.blockedMonths.includes(Numbe
 
 const berlinMinute=sec=>Math.floor((((sec+berlinOffsetMinutes(sec*1000)*60)%86400)+86400)%86400/60);
 const inWindow=(minute,{from,to})=>from<=to?minute>=from&&minute<to:minute>=from||minute<to;
+
+// Überlappende Entry-Fenster (an oder aus, Fenster über Mitternacht in zwei Stücken): je Index die Indizes der überlappenden Fenster.
+// Bei Überlappung entscheidet die Reihenfolge („erstes passendes gilt“), deshalb sortiert die Konfig dann nicht um.
+const segments=({from,to})=>from<=to?[[from,to]]:[[from,1440],[0,to]];
+export function dobEntryWindowOverlaps(windows){
+ const hits=windows.map(()=>[]);
+ windows.forEach((a,i)=>windows.forEach((b,j)=>{
+  if(j>i&&segments(a).some(([a0,a1])=>segments(b).some(([b0,b1])=>a0<b1&&b0<a1))){hits[i].push(j);hits[j].push(i);}
+ }));
+ return hits;
+}
+// Nach Startzeit sortiert, solange sich nichts überlappt (dann ändert die Reihenfolge nichts am Ergebnis); sonst unverändert.
+export const dobSortEntryWindows=windows=>dobEntryWindowOverlaps(windows).some(h=>h.length)?windows:[...windows].sort((a,b)=>a.from-b.from);
 // Regel für einen Entry: erstes passendes Fenster, sonst Default-TP. {action:'block'|'tp', tpR, window}.
 export function dobEntryRule(config,entryTimeSec){
  const minute=berlinMinute(entryTimeSec);

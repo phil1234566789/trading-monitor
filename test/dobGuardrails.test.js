@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {readFileSync} from 'node:fs';
-import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailsToRow,dobGuardrailReason,dobEntryTimeBlocked,dobMonthBlocked,dobEntryRule,dobGuardrailsSummary,dobRowGuardrailReason,dobRowConfigTpR}
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailsToRow,dobGuardrailReason,dobEntryTimeBlocked,dobMonthBlocked,dobEntryRule,dobGuardrailsSummary,dobRowGuardrailReason,dobRowConfigTpR,dobEntryWindowOverlaps,dobSortEntryWindows}
  from '../src/dobGuardrails.js';
 
 // Berlin-Zeit: Januar = CET (UTC+1), August = CEST (UTC+2).
@@ -77,5 +77,18 @@ describe('dobGuardrails',()=>{
    {from:480,to:540,action:'block',enabled:false}],default_tp_r:2.5,blocked_months:[1],min_zone_age_seconds:86400});
   expect(dobGuardrailsSummary(rules)).toBe('Sperren 10:30–11:00, 21:00–22:00 · Jan · 09:00–10:00 TP 2R · sonst 2,5R · Zone ≥ 1 Tag · 1 Regel aus');
   expect(dobGuardrailsSummary(DOB_GUARDRAILS_DEFAULT)).toBe('TP 2R');
+ });
+});
+
+describe('Entry-Fenster sortieren',()=>{
+ it('ohne Überlappung nach Startzeit, angrenzend zählt nicht als Überlappung',()=>{
+  const w=[{from:840,to:1140},{from:120,to:420},{from:420,to:540}];
+  expect(dobSortEntryWindows(w).map(x=>x.from)).toEqual([120,420,840]);
+  expect(dobEntryWindowOverlaps(w)).toEqual([[],[],[]]);
+ });
+ it('mit Überlappung (auch über Mitternacht) bleibt die Reihenfolge, beide Seiten markiert',()=>{
+  const w=[{from:600,to:720},{from:1380,to:120},{from:660,to:700,enabled:false},{from:60,to:90}];
+  expect(dobEntryWindowOverlaps(w)).toEqual([[2],[3],[0],[1]]);
+  expect(dobSortEntryWindows(w)).toBe(w);
  });
 });

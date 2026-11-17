@@ -8,7 +8,7 @@ import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobP
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobAccountTile from '../components/DobAccountTile.vue';
-import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
+import DobSetupConfigPanel from '../components/DobSetupConfigPanel.vue';
 import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobRowGuardrailReason,dobGuardrailsSummary,dobGuardrailsQuery} from '../dobGuardrails.js';
 import {DOB_POI_TYPES,DOB_DEFAULT_POI_TYPE} from '../dobPoiType.js';
 import {dobRowConfigScore} from '../dobPartialProfit.js';
@@ -107,7 +107,8 @@ const yearRows=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(yea
 // Ansicht: der Entwurf aus dem Panel wirkt sofort (Vorschau), gespeichert und damit im Watcher ist nur `guardrails`.
 // „Sperren anwenden“ schaltet nur die Ansicht und bleibt im Browser gemerkt.
 const guardrails=ref(DOB_GUARDRAILS_DEFAULT),guardrailDraft=ref(DOB_GUARDRAILS_DEFAULT);
-const guardrailsOpen=useLocalStorageRef('dobStatsGuardrailsOpen',false),applyGuardrails=useLocalStorageRef('dobStatsApplyGuardrails',true);
+// Storage-Key bleibt der alte, damit der gemerkte Klappzustand erhalten bleibt.
+const setupConfigOpen=useLocalStorageRef('dobStatsGuardrailsOpen',false),applyGuardrails=useLocalStorageRef('dobStatsApplyGuardrails',true);
 watch(guardrails,g=>{guardrailDraft.value=g;});
 const draftUnsaved=computed(()=>JSON.stringify(guardrailDraft.value)!==JSON.stringify(guardrails.value));
 const blockedOf=r=>dobRowGuardrailReason(guardrailDraft.value,r);
@@ -116,7 +117,7 @@ const inYear=computed(()=>applyGuardrails.value?yearRows.value.filter(r=>!blocke
 // Default-TP, also gegen „gar keine Konfig“ bei derselben Grund-TP.
 // Ergebnis je Trade inkl. Teilprofit (dobRowConfigScore), dobRouteStats zählt dessen r.
 const configTp=r=>dobRowConfigScore(guardrailDraft.value,r);
-// Simulationskonto in R ganz oben: „Standard“ = alle Trades des Jahres mit TP 2R, ohne Sperren und Regeln, Route a+b zusammen;
+// Simulationskonto in R ganz oben: „Standard“ = alle Trades des Jahres mit TP 2R, ohne Setup-Konfiguration, Route a+b zusammen;
 // „Mit Konfig“ = Entwurf, wenn „Sperren anwenden“ an ist, sonst die gespeicherte Konfig. Gleiche Rechnung wie überall (dobRouteStats).
 const accountConfig=computed(()=>applyGuardrails.value?guardrailDraft.value:guardrails.value);
 const accountColumn=(label,list,k)=>({label,stats:dobTotalStats(list,k),perWeek:dobTradesPerWeek(list)});
@@ -225,8 +226,8 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
       <DobAccountTile title="Standard" :subtitle="`TP 2R · keine Sperren · Route a + b · ${year}`" :columns="accountStandard" />
       <DobAccountTile title="Mit Konfig" :subtitle="accountConfigLabel" :columns="accountWithConfig" />
     </section>
-    <DobGuardrailsPanel v-if="!loading&&!error&&yearRows.length" :instrument="instrument" :poi-type="poiType" :config="guardrails" :rows="yearRows" :targets="targets"
-      :open="guardrailsOpen" @toggle="v=>{guardrailsOpen=v;}" @saved="c=>{guardrails=c;}" v-model:apply="applyGuardrails" @update:draft="d=>{guardrailDraft=d;}" />
+    <DobSetupConfigPanel v-if="!loading&&!error&&yearRows.length" :instrument="instrument" :poi-type="poiType" :config="guardrails" :rows="yearRows" :targets="targets"
+      :open="setupConfigOpen" @toggle="v=>{setupConfigOpen=v;}" @saved="c=>{guardrails=c;}" v-model:apply="applyGuardrails" @update:draft="d=>{guardrailDraft=d;}" />
     <p v-if="!loading&&!error&&yearRows.length>inYear.length" class="note" role="status">{{ yearRows.length-inYear.length }} von {{ yearRows.length }} Trades durch die Sperren{{ draftUnsaved?' (Entwurf, nicht gespeichert)':'' }} ausgeblendet; alle Kennzahlen, Tabellen und die Tradeliste zeigen nur erlaubte Trades.</p>
     <p v-if="error" role="alert" class="error">{{ error }} <button @click="refresh">Erneut versuchen</button></p>
     <p v-else-if="loading" role="status" class="note">Trades werden geladen…</p>
