@@ -80,6 +80,23 @@ describe('DOB-Sperren (dob_guardrails) im Alarm',()=>{
  });
 });
 
+describe('DOB: Gegenkerzen vor Entry im Alarm',()=>{
+ const fixture=load('2026-11-12');
+ const at=berlin('2026-11-12','14:11'),result=run(fixture,at),done=result.setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
+ it('Setup trägt die Merkmale; im Fixture nur 0 von 3 Gegenkerzen, also auch mit 3of3 kein Sperrgrund',()=>{
+  expect(done.features).toEqual({counter_candles_3:0,counter_candles_5:2});
+  const gated=run(fixture,at,true,undefined,{guardrails:{...DOB_GUARDRAILS_DEFAULT,counterCandlesMode:'3of3'}});
+  expect(gated.setups.some(s=>s.entryTime===done.entryTime)).toBe(true);
+ });
+ it('gesperrter Entry: Warnung „3 Gegenkerzen vor Entry, kein Trade“, umschaltbar auf nur Protokoll',()=>{
+  const blocked={setups:[],rejected:[{...done,reason:'counterCandles'}]};
+  const entry=dobAlarmEvents(blocked,at).find(e=>e.phase==='entry');
+  expect(entry).toMatchObject({guardrail:'counterCandles',suppressed:false});
+  expect(entry.text).toContain('3 Gegenkerzen vor Entry 14:10, kein Trade');
+  expect(dobAlarmEvents(blocked,at,{counterCandlesAlarm:'none'}).find(e=>e.phase==='entry')).toMatchObject({suppressed:true});
+ });
+});
+
 describe('DOB v3: Gegen-DOB im Alarm',()=>{
  const fixture=load('2026-11-12');
  const done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));

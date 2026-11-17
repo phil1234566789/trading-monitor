@@ -1,4 +1,5 @@
 import {berlinOffsetMinutes,berlinDateStrFor} from './berlinTime.js';
+import {dobFeaturesOf,dobFeature} from './dobTradeFeatures.js';
 
 // Sperr- und Regel-Konfiguration des DOB-Setups je Instrument (Tabelle dob_guardrails). Eine Quelle für Statistikseite und
 // dob-watcher, deshalb rein und nur mit Deno-tauglichen Importen (Dateiendung, siehe test/dobWatcherImports.test.js).
@@ -13,8 +14,11 @@ export const DOB_DEFAULT_TP_R=2;
 export const DOB_COUNTER_DOB_MODES=['block_all','live_block_dead_5r','off'];
 export const DOB_COUNTER_DOB_DEAD_TP_R=5;
 export const DOB_COUNTER_DOB_DEFAULT_MODE='live_block_dead_5r';
+// counterCandlesMode (DOB-PA, Neubewertung): 3of3 = alle 3 letzten geschlossenen M5 vor dem Entry gegen den Trade → sperren,
+// 3of5 = mind. 3 der letzten 5; off = aus (Default, damit ohne Konfig nichts wegfällt).
+export const DOB_COUNTER_CANDLES_MODES=['off','3of3','3of5'];
 export const DOB_GUARDRAILS_DEFAULT=Object.freeze({entryWindows:[],defaultTpR:DOB_DEFAULT_TP_R,blockedMonths:[],minZoneAgeSeconds:null,
- minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE});
+ minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE,counterCandlesMode:'off'});
 
 export const dobRuleActive=w=>w.enabled!==false;
 export function dobGuardrailsFromRow(row){
@@ -25,11 +29,13 @@ export function dobGuardrailsFromRow(row){
   minZoneAgeSeconds:Number.isFinite(row.min_zone_age_seconds)?row.min_zone_age_seconds:null,
   minZoneAgeSavedSeconds:Number.isFinite(row.min_zone_age_saved_seconds)?row.min_zone_age_saved_seconds
    :Number.isFinite(row.min_zone_age_seconds)?row.min_zone_age_seconds:null,
-  counterDobMode:DOB_COUNTER_DOB_MODES.includes(row.counter_dob_mode)?row.counter_dob_mode:DOB_COUNTER_DOB_DEFAULT_MODE};
+  counterDobMode:DOB_COUNTER_DOB_MODES.includes(row.counter_dob_mode)?row.counter_dob_mode:DOB_COUNTER_DOB_DEFAULT_MODE,
+  counterCandlesMode:DOB_COUNTER_CANDLES_MODES.includes(row.counter_candles_mode)?row.counter_candles_mode:'off'};
 }
 export const dobGuardrailsToRow=(instrument,config)=>({instrument,entry_windows:config.entryWindows,default_tp_r:config.defaultTpR,
  blocked_months:config.blockedMonths,min_zone_age_seconds:config.minZoneAgeSeconds,
- min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds,counter_dob_mode:config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE});
+ min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds,counter_dob_mode:config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE,
+ counter_candles_mode:config.counterCandlesMode??'off'});
 
 // Monat in Berlin (1–12). Der Watcher prüft ihn als Erstes und rechnet in gesperrten Monaten gar nicht.
 export const dobMonthBlocked=(config,atSec)=>config.blockedMonths.includes(Number(berlinDateStrFor(atSec).slice(5,7)));
@@ -48,6 +54,11 @@ export function dobEntryRule(config,entryTimeSec){
 export const dobCounterDobBlocked=(config,status)=>{const mode=config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE;
  return mode!=='off'&&(status==='live'||(status==='dead'&&mode==='block_all'));};
 export const dobCounterDobTpR=(config,status)=>(config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE)==='live_block_dead_5r'&&status==='dead'?DOB_COUNTER_DOB_DEAD_TP_R:null;
+// Gegenkerzen nach Modus; fehlendes Merkmal (ältere Läufe) sperrt nicht.
+export function dobCounterCandlesBlocked(config,features){
+ const mode=config.counterCandlesMode??'off',n=mode==='3of3'?dobFeature(features,'counterCandles3'):mode==='3of5'?dobFeature(features,'counterCandles5'):null;
+ return n!=null&&n>=3;
+}
 // TP für einen Entry nach Konfig; gesperrte Fenster bekommen den Default (Statistik rechnet auch gesperrte Trades zur Gegenprobe).
 // Nur tote Gegen-DOBs im Modus live_block_dead_5r gewinnen vor der Fensterregel.
 export const dobConfigTpR=(config,entryTimeSec,counterDobStatus=null)=>{
@@ -60,17 +71,18 @@ export const dobZoneAgeBlocked=(config,zoneAgeSeconds)=>
  config.minZoneAgeSeconds!=null&&Number.isFinite(zoneAgeSeconds)&&zoneAgeSeconds<config.minZoneAgeSeconds;
 
 // Gesamturteil für einen Trade: null = erlaubt, sonst der erste greifende Grund in der Reihenfolge des Watchers.
-export function dobGuardrailReason(config,{entryTime,zoneAgeSeconds,counterDobStatus=null}){
+export function dobGuardrailReason(config,{entryTime,zoneAgeSeconds,counterDobStatus=null,features={}}){
  if(dobMonthBlocked(config,entryTime))return 'blockedMonth';
  if(dobZoneAgeBlocked(config,zoneAgeSeconds))return 'blockedZoneAge';
  if(dobEntryTimeBlocked(config,entryTime))return 'blockedEntryHour';
  if(dobCounterDobBlocked(config,counterDobStatus))return 'counterDob';
+ if(dobCounterCandlesBlocked(config,features))return 'counterCandles';
  return null;
 }
 // Dieselben Urteile für eine Zeile aus dob_trade_setups (Statistikseite), damit die Feldzuordnung an einer Stelle steht.
 // Künftige Merkmale kommen aus der jsonb-Spalte features (Philip), gelesen über eine gemeinsame Funktion, nicht als neue Spalten.
 export const dobRowGuardrailReason=(config,row)=>dobGuardrailReason(config,{entryTime:row.entry_time,zoneAgeSeconds:row.source_zone_age_seconds,
- counterDobStatus:row.counter_dob_status??null});
+ counterDobStatus:row.counter_dob_status??null,features:dobFeaturesOf(row)});
 export const dobRowConfigTpR=(config,row)=>dobConfigTpR(config,row.entry_time,row.counter_dob_status??null);
 
 // Kurzbeschreibung einer Konfig für Panel-Kopf und Konto-Kachel, z.B. „Sperren 10:30–11:00, 21:00–22:00 · Jan · 09:00–10:00 TP 2R ·
@@ -80,6 +92,7 @@ const clock=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).pa
 const rText=r=>`${r.toLocaleString('de-DE')}R`;
 const ageText=sec=>sec%(7*86400)===0?`${sec/(7*86400)} Wo`:sec%86400===0?`${sec/86400} ${sec===86400?'Tag':'Tage'}`:`${Math.round(sec/3600)} h`;
 export const DOB_COUNTER_DOB_MODE_LABELS={block_all:'Gegen-DOB sperrt',live_block_dead_5r:'lebender Gegen-DOB sperrt, nur tote TP 5R',off:'Gegen-DOB aus'};
+export const DOB_COUNTER_CANDLES_MODE_LABELS={off:'Gegenkerzen aus','3of3':'3 von 3 Gegenkerzen sperrt','3of5':'3 von 5 Gegenkerzen sperrt'};
 export function dobGuardrailsSummary(config){
  const active=config.entryWindows.filter(dobRuleActive),span=w=>`${clock(w.from)}–${clock(w.to)}`;
  const blocks=active.filter(w=>w.action==='block').map(span);
@@ -90,6 +103,7 @@ export function dobGuardrailsSummary(config){
   config.minZoneAgeSeconds!=null?`Zone ≥ ${ageText(config.minZoneAgeSeconds)}`:null,
   // Der Default-Modus bleibt still (gilt nur im v3-Lauf, das Panel zeigt den Schalter dort); Abweichungen stehen im Kopf.
   (config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE)!==DOB_COUNTER_DOB_DEFAULT_MODE?DOB_COUNTER_DOB_MODE_LABELS[config.counterDobMode]:null,
+  (config.counterCandlesMode??'off')!=='off'?DOB_COUNTER_CANDLES_MODE_LABELS[config.counterCandlesMode]:null,
   config.entryWindows.length>active.length?`${config.entryWindows.length-active.length} Regel${config.entryWindows.length-active.length>1?'n':''} aus`:null];
  return parts.filter(Boolean).join(' · ');
 }

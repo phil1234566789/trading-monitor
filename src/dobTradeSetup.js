@@ -2,7 +2,8 @@ import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobSourceContext,nearestHtfSource,sourceOfStrengthPassed,sourceMaxDistanceAtr,dobSourceZoneAgeSeconds} from './dobSourceOfStrength.js';
-import {dobZoneAgeBlocked,dobEntryRule,dobCounterDobBlocked,dobCounterDobTpR,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
+import {dobZoneAgeBlocked,dobEntryRule,dobCounterDobBlocked,dobCounterDobTpR,dobCounterCandlesBlocked,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
+import {dobTradeFeatures} from './dobTradeFeatures.js';
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 
 // v2 = Quelle der Kraft (aktive H1/H4-OB-Zone ≤ k H1-ATR von OB1, k je Instrument, vor OB1 retestet; dobSourceOfStrength.js)
@@ -90,6 +91,9 @@ export function checkDobTradeSetup(input){
   const counterDob=input.counterDobGate?.({...setup,sourceOfStrength})??null;
   if(counterDob)setup.counterDob=counterDob;
   if(guardrails&&counterDob&&dobCounterDobBlocked(guardrails,counterDob.status)){rejected.push({...setup,sourceOfStrength,reason:'counterDob'});continue;}
+  // Konfig-Merkmale am Entry (src/dobTradeFeatures.js), die letzten M5 vor dem Entry liegen im Live-Fenster (Vorlauf 12 M5).
+  if(setup.entryTime!=null)setup.features=dobTradeFeatures({m5Candles:input.m5Candles,entryTime:setup.entryTime,direction:setup.direction});
+  if(guardrails&&setup.features&&dobCounterCandlesBlocked(guardrails,setup.features)){rejected.push({...setup,sourceOfStrength,reason:'counterCandles'});continue;}
   const deadTpR=guardrails&&counterDob?dobCounterDobTpR(guardrails,counterDob.status):null;
   if(rule)Object.assign(setup,withTarget(pair,setup,deadTpR?{tpR:deadTpR,window:null,source:'deadCounterDob'}:rule,input));
   // Anti-Gate erst nach der Quelle: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.

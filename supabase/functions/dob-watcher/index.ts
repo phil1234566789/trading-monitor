@@ -71,7 +71,7 @@ async function tick(client:any,dry=false,probes:number[]=[]){
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
   // Sperr-Konfig jede Minute frisch (Statistikseite speichert direkt); im gesperrten Monat wird gar nicht gerechnet.
-  const guardrails=dobGuardrailsFromRow(checked(await client.from('dob_guardrails').select('entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode')
+  const guardrails=dobGuardrailsFromRow(checked(await client.from('dob_guardrails').select('entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode')
     .eq('instrument',SYMBOL).maybeSingle()));
   const monthBlocked=dobMonthBlocked(guardrails,evaluatedAt);
   if(!dry&&monthBlocked){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}

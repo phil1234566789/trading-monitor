@@ -11,12 +11,13 @@ export const DOB_ALARM_FRESH_SECONDS=15*60;
 export const DOB_STALE_SECONDS=5*60;
 const ENTERED=new Set(['entry','win','loss','ambiguous','unknown']);
 // Sperren aus dob_guardrails: gesperrte Fälle kommen ins Protokoll (dob_alarm_events.guardrail), aber nicht als normaler Alarm.
-const GUARDRAILS=new Set(['blockedZoneAge','blockedEntryHour','counterDob']);
+const GUARDRAILS=new Set(['blockedZoneAge','blockedEntryHour','counterDob','counterCandles']);
 // Q23 (Philip offen): Entry in gesperrter Stunde → 'warn' = Entry-Alarm mit Hinweis „kein Trade“, 'none' = nur Protokoll.
 export const DOB_BLOCKED_ENTRY_ALARM='warn';
 // v3: Entry trotz Gegen-DOB seit Quellen-Retest → 'warn' = „⛔ Gegen-DOB seit Retest, kein Trade“, 'none' = nur Protokoll.
 export const DOB_COUNTER_DOB_ALARM='warn';
-const WARN_TEXT={blockedEntryHour:'Entry in Sperrzeit',counterDob:'Gegen-DOB seit Retest, Entry'};
+export const DOB_COUNTER_CANDLES_ALARM='warn';
+const WARN_TEXT={blockedEntryHour:'Entry in Sperrzeit',counterDob:'Gegen-DOB seit Retest, Entry',counterCandles:'3 Gegenkerzen vor Entry'};
 
 const price=v=>Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}):'–';
 const zone=z=>`${price(z.bottom)}–${price(z.top)}`;
@@ -38,7 +39,7 @@ const obLines=({chart})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} �
 // Dedup: mehrere OB1-Partner tragen oft dasselbe OB2 bzw. denselben Trade, deshalb Schlüssel über OB2 bzw. Entry/SL statt Setup-ID.
 // Erlaubte Setups zuerst: trägt irgendein Paar den Alarm ungesperrt, gewinnt es den Schlüssel (wie die Statistik-Dedup).
 // suppressed = nur Protokoll, nicht senden.
-export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED_ENTRY_ALARM,counterDobAlarm=DOB_COUNTER_DOB_ALARM}={}){
+export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED_ENTRY_ALARM,counterDobAlarm=DOB_COUNTER_DOB_ALARM,counterCandlesAlarm=DOB_COUNTER_CANDLES_ALARM}={}){
  const events=new Map();
  for(const s of [...result.setups,...result.rejected.filter(r=>GUARDRAILS.has(r.reason))]){
   const instrument=s.instrument??'XAUUSD',guardrail=s.reason??null;
@@ -51,7 +52,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
   }
   if(ENTERED.has(s.phase)&&s.entryTime>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){
    const id=`dob:entry:${instrument}:${s.direction}:${s.entryTime}:${s.entryPrice}:${s.stopPrice}`;
-   const warn=({blockedEntryHour:blockedEntryAlarm,counterDob:counterDobAlarm})[guardrail]==='warn';
+   const warn=({blockedEntryHour:blockedEntryAlarm,counterDob:counterDobAlarm,counterCandles:counterCandlesAlarm})[guardrail]==='warn';
    if(!events.has(id))events.set(id,{id,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
     text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${WARN_TEXT[guardrail]} ${formatBerlinTime(s.entryTime)}, kein Trade`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,

@@ -1,7 +1,8 @@
 <script setup>
 import {computed,ref,watch} from 'vue';
 import {supabase} from '../supabaseClient.js';
-import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRowConfigTpR,dobRuleActive,dobGuardrailsSummary,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS} from '../dobGuardrails.js';
+import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRowConfigTpR,dobRuleActive,dobGuardrailsSummary,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS,DOB_COUNTER_CANDLES_MODES,DOB_COUNTER_CANDLES_MODE_LABELS} from '../dobGuardrails.js';
+import {dobFeaturesOf,dobFeature} from '../dobTradeFeatures.js';
 import {dobSignedR} from '../dobTradeStatistics.js';
 import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf} from '../dobTradeStatistics.js';
 import {DOB_MAX_R_STEPS} from '../dobMaxR.js';
@@ -40,7 +41,7 @@ async function save(){
  emit('saved',clone(draft.value));
 }
 
-const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit',counterDob:'gesperrt: Gegen-DOB'};
+const REASONS={blockedMonth:'gesperrt: Monat',blockedZoneAge:'gesperrt: Zonenalter',blockedEntryHour:'gesperrt: Uhrzeit',counterDob:'gesperrt: Gegen-DOB',counterCandles:'gesperrt: Gegenkerzen'};
 const configTp=row=>dobRowConfigTpR(draft.value,row);
 // Erlaubt und je Sperrgrund getrennt, jeweils Jan–Jun / Jul–Dez, alle Routen, feste Ziele und TP nach Konfig.
 const robustness=computed(()=>{
@@ -56,6 +57,9 @@ const configSumR=cfg=>dobTotalStats(props.rows.filter(r=>!dobRowGuardrailReason(
 // Gegen-DOB-Status gibt es nur im v3-Lauf; in älteren Läufen bleibt der Schalter ohne Wirkung und wird ausgeblendet.
 const hasCounterDob=computed(()=>props.rows.some(r=>r.counter_dob_status!=null));
 const modeImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_DOB_MODES.map(m=>[m,configSumR({...draft.value,counterDobMode:m})])));
+// Gegenkerzen-Merkmal (features) gibt es erst ab dem v3-Fill mit features; ältere Läufe blenden den Schalter aus.
+const hasCounterCandles=computed(()=>props.rows.some(r=>dobFeature(dobFeaturesOf(r),'counterCandles3')!=null));
+const candleImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_CANDLES_MODES.map(m=>[m,configSumR({...draft.value,counterCandlesMode:m})])));
 const ruleImpacts=computed(()=>{
  const current=configSumR(draft.value);
  return draft.value.entryWindows.map((w,i)=>{
@@ -96,6 +100,10 @@ const ruleImpacts=computed(()=>{
       <fieldset v-if="hasCounterDob"><legend>Gegen-DOB seit Quellen-Retest</legend>
         <label v-for="m in DOB_COUNTER_DOB_MODES" :key="m"><input type="radio" name="counterDobMode" :value="m" v-model="draft.counterDobMode"> {{ DOB_COUNTER_DOB_MODE_LABELS[m] }}
           <span class="impact" title="ΣR nach Konfig mit diesem Modus">{{ dobSignedR(modeImpacts[m]) }} R</span></label>
+      </fieldset>
+      <fieldset v-if="hasCounterCandles"><legend>Gegenkerzen vor Entry (letzte geschlossene M5)</legend>
+        <label v-for="m in DOB_COUNTER_CANDLES_MODES" :key="m"><input type="radio" name="counterCandlesMode" :value="m" v-model="draft.counterCandlesMode"> {{ DOB_COUNTER_CANDLES_MODE_LABELS[m] }}
+          <span class="impact" title="ΣR nach Konfig mit dieser Stellung">{{ dobSignedR(candleImpacts[m]) }} R</span></label>
       </fieldset>
       <div class="actions">
         <button type="button" :disabled="!dirty||saving" @click="save">{{ saving?'Speichert…':'Speichern' }}</button>
