@@ -114,9 +114,9 @@
     "semantic_hash": ""
   },
   "src/chartColors.js": {
-    "mtime": 1794859886.939342,
-    "seen": 1794905042.0873804,
-    "ast_hash": "2313f82901ab2c5a6cc0fa91981ce003",
+    "mtime": 1794907528.8219278,
+    "seen": 1794908001.8837059,
+    "ast_hash": "795e11fdc7fe3db14b631e798ef61807",
     "semantic_hash": ""
   },
   "src/chartIconLabel.js": {
@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1794863431.6485662,
-    "seen": 1794905042.0873804,
-    "ast_hash": "f09d073d572cb5fcbbf1780374bb1b77",
+    "mtime": 1794907790.5699832,
+    "seen": 1794908001.8987029,
+    "ast_hash": "f69a52924a3afc1076c962a111578719",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -222,9 +222,9 @@
     "semantic_hash": ""
   },
   "src/components/StyleModal.vue": {
-    "mtime": 1794859886.9818096,
-    "seen": 1794905042.0873804,
-    "ast_hash": "6ee5694d920987d6d5eb9b4fb610cca3",
+    "mtime": 1794907528.8229318,
+    "seen": 1794908001.9037054,
+    "ast_hash": "071cf42f721bbadfa93fad9b911ec3eb",
     "semantic_hash": ""
   },
   "src/components/TargetPickerModal.vue": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "src/orderBlocks.js": {
-    "mtime": 1794859887.0896356,
-    "seen": 1794905042.0873804,
-    "ast_hash": "96cbfbd6baacff7755198f907be30ae9",
+    "mtime": 1794907875.2706542,
+    "seen": 1794908001.9522126,
+    "ast_hash": "7e91eaec179223d1bdcc1831057951d3",
     "semantic_hash": ""
   },
   "src/pinContext.js": {
@@ -10200,9 +10200,9 @@
     "semantic_hash": ""
   },
   "scripts/dobTradeSetupsFill.mjs": {
-    "mtime": 1794904935.867262,
-    "seen": 1794905042.0873804,
-    "ast_hash": "2872e7a67a41b848f744e9399c4b2a18",
+    "mtime": 1794907528.8229318,
+    "seen": 1794908001.8597062,
+    "ast_hash": "c3c8e0257252978b5c5fb8d5569437fb",
     "semantic_hash": ""
   },
   "src/composables/useDobChartRoute.js": {
@@ -10254,9 +10254,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeRendering.js": {
-    "mtime": 1794863469.8107932,
-    "seen": 1794905042.0873804,
-    "ast_hash": "eee689f7f7218479f32960f8c28ff56e",
+    "mtime": 1794907875.2716527,
+    "seen": 1794908001.9267027,
+    "ast_hash": "6d5015649fab2e044207fbc5cc839a9f",
     "semantic_hash": ""
   },
   "src/dobAlarm.js": {
