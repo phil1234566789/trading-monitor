@@ -4,7 +4,10 @@ import {checkDobTradeSetup,dobLiveWindowInput} from '../../../src/dobTradeSetup.
 import {markIgnoredCandles,htfObCandles} from '../../../src/sessionOccurrences.js';
 import {berlinOffsetMinutes,berlinDateStrFor,formatBerlinTime} from '../../../src/berlinTime.js';
 import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
-import {dobPoiTypeAlarmRuns,dobActivePoiTypes,dobStaleAlarm} from '../../../src/dobAlarm.js';
+import {dobPoiTypeAlarmRuns,dobStaleAlarm} from '../../../src/dobAlarm.js';
+import {dobBlockStats} from '../../../src/dobBlockStats.js';
+import {dobCanonicalRunId} from '../../../src/dobPoiType.js';
+import {fetchAllRows} from '../_shared/fetchAllRows.ts';
 import {dobGuardrailsFromRow,dobEntryRule} from '../../../src/dobGuardrails.js';
 import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
@@ -65,6 +68,19 @@ async function deliver(client:any,event:any,blockedReason:string|null=null){
   return {id:event.id,status};
 }
 
+// Statistik der Sperren (⛔-Text) aus dem Referenzlauf: nur neu, wenn die Konfig seit der letzten Rechnung gespeichert wurde oder die
+// Zahl einen Tag alt ist (Läufe werden neu gefüllt), sonst die gespeicherte. updated_at bleibt unberührt.
+async function blockStatsFor(client:any,instrument:string,row:any,guardrails:any){
+  const at=row.blocked_stats_at?Date.parse(row.blocked_stats_at):0;
+  if(row.blocked_stats&&at>=Date.parse(row.updated_at)&&Date.now()-at<86400e3)return row.blocked_stats;
+  const runId=dobCanonicalRunId(instrument,row.poi_type);
+  const rows=await fetchAllRows((from:number,to:number)=>client.from('dob_trade_setups').select('entry_time,outcome,max_r,sl_hit,ambiguous_r,counter_dob_status,poi_zone_age_seconds,features')
+    .eq('instrument',instrument).eq('run_id',runId).order('entry_time').order('id').range(from,to));
+  const stats={...dobBlockStats(guardrails,rows),runId};
+  checked(await client.from('dob_guardrails').update({blocked_stats:stats,blocked_stats_at:new Date().toISOString()}).eq('instrument',instrument).eq('poi_type',row.poi_type));
+  return stats;
+}
+
 async function writeState(client:any,instrument:string,state:Record<string,unknown>){
   checked(await client.from('dob_watcher_state').upsert({instrument,last_run_at:new Date().toISOString(),updated_at:new Date().toISOString(),...state}));
 }
@@ -74,12 +90,12 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const started=performance.now();
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
-  // Sperr-Konfig je POI-Art jede Minute frisch (Statistikseite speichert direkt); gerechnet wird nur für POI-Arten ohne
-  // gesperrten Monat, sind alle gesperrt, gar nicht.
-  const poiTypes=(checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be,poi_match_mode,alarm_enabled')
-    .eq('instrument',instrument).order('poi_type').limit(10)) as any[]).map(row=>({poiType:row.poi_type,guardrails:dobGuardrailsFromRow(row)}));
+  // Sperr-Konfig je POI-Art jede Minute frisch (Statistikseite speichert direkt). Auch ein gesperrter Monat rechnet und meldet ⛔ (Q23).
+  const configRows=checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be,poi_match_mode,alarm_enabled,updated_at,blocked_stats,blocked_stats_at')
+    .eq('instrument',instrument).order('poi_type').limit(10)) as any[];
+  const poiTypes=await Promise.all(configRows.map(async row=>{const guardrails=dobGuardrailsFromRow(row);
+    return {poiType:row.poi_type,guardrails,blockStats:dry?row.blocked_stats:await blockStatsFor(client,instrument,row,guardrails)};}));
   if(!poiTypes.length){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'noConfig',error:null});return {skipped:'noConfig'};}
-  if(!dry&&!dobActivePoiTypes(poiTypes,evaluatedAt).length){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}
   const sessions=(checked(await client.from('sessions').select('label,from_minutes,to_minutes,days,ignore_liquidity').eq('instrument',instrument).limit(200)) as any[])
     .map(r=>({label:r.label,fromMinutes:r.from_minutes,toMinutes:r.to_minutes,days:r.days,ignoreLiquidity:r.ignore_liquidity??false}));
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,instrument,bar,evaluatedAt)));
@@ -102,7 +118,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
     alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,
     poiTypes:Object.fromEntries(poiTypes.map(({poiType,guardrails})=>{const r=runs.find(x=>x.poiType===poiType);
-      return [poiType,{guardrails,monthBlocked:!r,entryRuleNow:dobEntryRule(guardrails,evaluatedAt),setups:r?.result.setups.length??null,rejected:r?.result.rejected.length??null,
+      return [poiType,{guardrails,entryRuleNow:dobEntryRule(guardrails,evaluatedAt),setups:r?.result.setups.length??null,rejected:r?.result.rejected.length??null,
         rejectedReasons:r?.result.rejected.reduce((n:any,x:any)=>({...n,[x.reason]:(n[x.reason]??0)+1}),{})??null}];})),
     events:events.map(({event:e})=>({id:e.id,poiType:e.poiType??null,phase:e.phase,guardrail:e.guardrail??null,suppressed:!!e.suppressed}))};
   const delivered=[];

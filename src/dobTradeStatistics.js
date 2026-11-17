@@ -4,14 +4,9 @@ import {berlinDateStrFor,berlinOffsetMinutes} from './berlinTime.js';
 import {narrowByEntryPrice} from './simulationPinMatching.js';
 
 // Gleiche Zählung wie die Messung (dobWinrateAggregate): je Route Win/Loss/offen, Winrate nur aus Win+Loss, R = 2·Win − Loss.
-// R-Ziel k aus max_r/sl_hit: Win, wenn k vor dem SL erreicht wurde; Loss, wenn der SL vorher kam; sonst offen bzw. unbekannt. Ohne max_r (Lauf noch nicht neu befüllt) gilt nur der gespeicherte 2R-Ausgang.
-export function dobTargetOutcome(row,k=2){
- if(row.max_r==null)return k===2?row.outcome:'unknown';
- if(row.max_r>=k)return 'success';
- if(k<=(row.ambiguous_r??-1))return 'ambiguous';
- // Fehlende Kerzen (Ausgang unknown) bleiben unbekannt statt offen.
- return row.sl_hit?'loss':row.outcome==='unknown'?'unknown':'open';
-}
+// R-Ziel k aus max_r/sl_hit: src/dobTargetOutcome.js (eigene Datei, damit der dob-watcher es ohne die Statistik-Abhängigkeiten bündelt).
+export {dobTargetOutcome} from './dobTargetOutcome.js';
+import {dobTargetOutcome} from './dobTargetOutcome.js';
 // k: festes Ziel für alle Trades oder Funktion je Trade (Konfig: TP aus der Regel seines Entry-Fensters); ΣR je Trade mit seinem k.
 // Liefert die Funktion ein Ergebnis {target, outcome, r} (dobRowConfigScore, Teilprofit), zählt dessen r.
 export function dobRouteStats(rows,k=2){

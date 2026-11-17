@@ -24,10 +24,13 @@ it('rechnet jede Familie mit ihrer Konfig und eigenen Alarm-IDs',()=>{
  expect(lq.text.split('\n')[1]).toBe('POI: LQ-Sweep');
 });
 
-it('gesperrter Monat einer Familie lässt die andere laufen',()=>{
- const month=new Date(at*1000).getUTCMonth()+1;
- const runs=dobPoiTypeAlarmRuns({poiTypes:[{...poiTypes[0],guardrails:{...poiTypes[0].guardrails,blockedMonths:[month]}},poiTypes[1]],input:{},evaluatedAt:at,check});
- expect(runs.map(r=>r.poiType)).toEqual(['lq_sweep']);
+// Q23: ein gesperrter Monat lässt seine POI-Art weiterrechnen (⛔ statt Schweigen); die andere POI-Art läuft unberührt.
+it('gesperrter Monat einer POI-Art: beide rechnen, jede mit ihrer Konfig',()=>{
+ const month=new Date(at*1000).getUTCMonth()+1,seen=[];
+ const runs=dobPoiTypeAlarmRuns({poiTypes:[{...poiTypes[0],guardrails:{...poiTypes[0].guardrails,blockedMonths:[month]}},poiTypes[1]],input:{},evaluatedAt:at,
+  check:i=>(seen.push([i.poiType,i.guardrails.blockedMonths]),check(i))});
+ expect(runs.map(r=>r.poiType)).toEqual(['htf_ob','lq_sweep']);
+ expect(seen).toEqual([['htf_ob',[month]],['lq_sweep',[]]]);
 });
 
 it('LQ-Sweep nennt das tragende TS1.1-Setup in der POI-Zeile, auch im Entry-Alarm',()=>{
@@ -53,5 +56,27 @@ describe('Entry-Alarm: TP nach Konfig',()=>{
   expect(textOf(entry(),{...DOB_GUARDRAILS_DEFAULT},'blockedEntryHour').some(l=>l.startsWith('TP'))).toBe(false);
   const fx=entry({instrument:'GBPUSD',entryPrice:1.315,stopPrice:1.316});
   expect(textOf(fx,{...DOB_GUARDRAILS_DEFAULT})).toContain('TP 2R @ 1,31300');
+ });
+});
+
+describe('⛔ bei jeder Konfig-Sperre mit Statistik der Sperre (Q23)',()=>{
+ const blocked=(reason,extra={})=>({...retest,id:'dob:XAUUSD:-1:1000:2000:a',route:'a',phase:'entry',entryTime:at,entryPrice:3900,stopPrice:3910,reason,...extra});
+ const minute=new Date((at+3600)*1000).getUTCHours()*60;
+ const cfg={...DOB_GUARDRAILS_DEFAULT,blockedMonths:[new Date(at*1000).getUTCMonth()+1],minZoneAgeSeconds:86400,
+  entryWindows:[{from:minute-60,to:minute+60,action:'block'}]};
+ const head=(reason,blockStats)=>dobAlarmEvents({setups:[],rejected:[blocked(reason)]},at,{guardrails:cfg,blockStats}).find(e=>e.phase==='entry');
+ it.each(['blockedMonth','blockedZoneAge','blockedEntryHour','counterDob','counterCandles'])('%s kommt als ⛔ und wird gesendet',reason=>{
+  const e=head(reason);
+  expect(e.suppressed).toBe(false);
+  expect(e.text).toMatch(/^⛔ DOB XAUUSD Short · .* kein Trade/);
+ });
+ it('Sperrzeit nennt das Fenster und die Zahl der Sperre',()=>{
+  const key=`window:${minute-60}-${minute+60}`,stats={years:'2026',byKey:{[key]:{n:33,wr3:18,sum3:-12}}};
+  const clock=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+  expect(head('blockedEntryHour',stats).text.split('\n')[0]).toContain(`Entry in Sperrzeit ${clock(minute-60)}–${clock(minute+60)}, Entry`);
+  expect(head('blockedEntryHour',stats).text.split('\n')[0]).toMatch(/kein Trade · dort WR3 18 %, −12R \(2026\)$/);
+ });
+ it('ohne Zahl für den Grund bleibt nur der Grund',()=>{
+  expect(head('counterCandles',{years:'2026',byKey:{}}).text.split('\n')[0]).toMatch(/kein Trade$/);
  });
 });

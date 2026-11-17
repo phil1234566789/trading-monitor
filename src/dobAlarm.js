@@ -1,7 +1,8 @@
 import {formatBerlinTime,berlinDateStrFor} from './berlinTime.js';
 import {dobPoiLabel,dobRetestLabel,dobTs11Label} from './dobPoiLabel.js';
 import {m1GapCovered} from './goldWeekendGap.js';
-import {dobMonthBlocked,dobConfigTpR,dobPartialPlan} from './dobGuardrails.js';
+import {dobConfigTpR,dobPartialPlan,dobEntryRule} from './dobGuardrails.js';
+import {dobBlockKey,dobBlockStatsText} from './dobBlockStats.js';
 import {instrumentConfig} from './instrumentConfig.js';
 import {DOB_DEFAULT_POI_TYPE,dobPoiTypeLabel} from './dobPoiType.js';
 
@@ -14,13 +15,19 @@ export const DOB_ALARM_FRESH_SECONDS=15*60;
 export const DOB_STALE_SECONDS=5*60;
 const ENTERED=new Set(['entry','win','loss','ambiguous','unknown']);
 // Sperren aus dob_guardrails: gesperrte Fälle kommen ins Protokoll (dob_alarm_events.guardrail), aber nicht als normaler Alarm.
-const GUARDRAILS=new Set(['blockedZoneAge','blockedEntryHour','counterDob','counterCandles']);
-// Q23 (Philip offen): Entry in gesperrter Stunde → 'warn' = Entry-Alarm mit Hinweis „kein Trade“, 'none' = nur Protokoll.
+const GUARDRAILS=new Set(['blockedMonth','blockedZoneAge','blockedEntryHour','counterDob','counterCandles']);
+// Q23 (Philip): jede Konfig-Sperre beim Entry als ⛔ mit Grund und Statistik der Sperre, damit er dort nicht von Hand tradet.
+// 'warn' = ⛔-Alarm „kein Trade“, 'none' = nur Protokoll.
 export const DOB_BLOCKED_ENTRY_ALARM='warn';
 // v3: Entry trotz Gegen-DOB seit POI-Retest → 'warn' = „⛔ Gegen-DOB seit Retest, kein Trade“, 'none' = nur Protokoll.
 export const DOB_COUNTER_DOB_ALARM='warn';
 export const DOB_COUNTER_CANDLES_ALARM='warn';
-const WARN_TEXT={blockedEntryHour:'Entry in Sperrzeit',counterDob:'Gegen-DOB seit Retest, Entry',counterCandles:'3 Gegenkerzen vor Entry'};
+const WARN_TEXT={blockedEntryHour:'Entry in Sperrzeit',counterDob:'Gegen-DOB seit Retest, Entry',counterCandles:'3 Gegenkerzen vor Entry',
+ blockedMonth:'Monat gesperrt, Entry',blockedZoneAge:'POI-Zone jünger als das Mindestalter, Entry'};
+const clock=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+// Sperrzeit mit Fenster („Entry in Sperrzeit 10:30–12:00“), sonst der feste Text.
+const warnText=(guardrail,guardrails,entryTime)=>{const w=guardrail==='blockedEntryHour'&&guardrails?dobEntryRule(guardrails,entryTime).window:null;
+ return w?`${WARN_TEXT[guardrail]} ${clock(w.from)}–${clock(w.to)}, Entry`:WARN_TEXT[guardrail];};
 
 // Preise mit der Nachkommazahl des Instruments (XAU 2, Forex 5).
 const price=(v,instrument='XAUUSD')=>{const d=instrumentConfig(instrument).precision;return Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';};
@@ -51,7 +58,7 @@ const obLines=({chart,instrument})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlo
 // Dedup: mehrere OB1-Partner tragen oft dasselbe OB2 bzw. denselben Trade, deshalb Schlüssel über OB2 bzw. Entry/SL statt Setup-ID.
 // Erlaubte Setups zuerst: trägt irgendein Paar den Alarm ungesperrt, gewinnt es den Schlüssel (wie die Statistik-Dedup).
 // suppressed = nur Protokoll, nicht senden.
-export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED_ENTRY_ALARM,counterDobAlarm=DOB_COUNTER_DOB_ALARM,counterCandlesAlarm=DOB_COUNTER_CANDLES_ALARM,poiType=DOB_DEFAULT_POI_TYPE,guardrails=null}={}){
+export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED_ENTRY_ALARM,counterDobAlarm=DOB_COUNTER_DOB_ALARM,counterCandlesAlarm=DOB_COUNTER_CANDLES_ALARM,poiType=DOB_DEFAULT_POI_TYPE,guardrails=null,blockStats=null}={}){
  const events=new Map();
  // HTF-OB behält die bisherigen IDs (Dedup gegen die Alarm-Historie), jede andere POI-Art bekommt ihren Schlüssel davor.
  const key=rest=>poiType===DOB_DEFAULT_POI_TYPE?`dob:${rest}`:`dob:${poiType}:${rest}`;
@@ -66,9 +73,9 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
   }
   if(ENTERED.has(s.phase)&&s.entryTime>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){
    const id=key(`entry:${instrument}:${s.direction}:${s.entryTime}:${s.entryPrice}:${s.stopPrice}`);
-   const warn=({blockedEntryHour:blockedEntryAlarm,counterDob:counterDobAlarm,counterCandles:counterCandlesAlarm})[guardrail]==='warn';
+   const warn=({blockedEntryHour:blockedEntryAlarm,blockedMonth:blockedEntryAlarm,blockedZoneAge:blockedEntryAlarm,counterDob:counterDobAlarm,counterCandles:counterCandlesAlarm})[guardrail]==='warn';
    if(!events.has(id))events.set(id,{id,poiType,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
-    text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${WARN_TEXT[guardrail]} ${formatBerlinTime(s.entryTime)}, kein Trade`
+    text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${warnText(guardrail,guardrails,s.entryTime)} ${formatBerlinTime(s.entryTime)}, kein Trade${guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,guardrail,s.entryTime)):''}`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
      // Die POI-Zeile zeigt auch hier die Art (Philip); OB-Zonen stehen im Retest-Alarm. TP nach Konfig nur beim echten Entry, nie bei ⛔.
      poiLine(s,poiType),`Entry ${price(s.entryPrice,instrument)} · SL ${price(s.stopPrice,instrument)}`,...(warn?[]:[tpLine({...s,instrument},guardrails)].filter(Boolean)),
@@ -78,13 +85,13 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
  return [...events.values()];
 }
 
-// Watcher je POI-Art: jede mit eigener Konfig (gesperrter Monat nur für sie) und eigenen Alarm-IDs. check = checkDobTradeSetup,
-// hereingereicht, damit dieses Modul die Erkennung nicht bündeln muss. poiTypes: [{poiType, guardrails}].
-export const dobActivePoiTypes=(poiTypes,evaluatedAt)=>poiTypes.filter(f=>!dobMonthBlocked(f.guardrails,evaluatedAt));
+// Watcher je POI-Art: jede mit eigener Konfig und eigenen Alarm-IDs; ein gesperrter Monat rechnet trotzdem und meldet ⛔ (Q23).
+// check = checkDobTradeSetup, hereingereicht, damit dieses Modul die Erkennung nicht bündeln muss.
+// poiTypes: [{poiType, guardrails, blockStats}] (blockStats: src/dobBlockStats.js, für die Zahl im ⛔-Text).
 export function dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt,check}){
- return dobActivePoiTypes(poiTypes,evaluatedAt).map(({poiType,guardrails})=>{
+ return poiTypes.map(({poiType,guardrails,blockStats=null})=>{
   const result=check({...input,poiType,guardrails});
-  return {poiType,guardrails,result,events:dobAlarmEvents(result,evaluatedAt,{poiType,guardrails})};
+  return {poiType,guardrails,result,events:dobAlarmEvents(result,evaluatedAt,{poiType,guardrails,blockStats})};
  });
 }
 

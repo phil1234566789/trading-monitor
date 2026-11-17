@@ -2,7 +2,7 @@ import {detectDoubleOrderBlocks} from './doubleOrderBlocks.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobPoiContext,nearestHtfPoi,poiPassed,poiMaxDistanceAtr,dobPoiZoneAgeSeconds} from './dobHtfObPoi.js';
-import {dobZoneAgeBlocked,dobEntryRule,dobCounterDobBlocked,dobCounterDobTpR,dobCounterCandlesBlocked,dobPartialPlan,DOB_DEFAULT_TP_R} from './dobGuardrails.js';
+import {dobZoneAgeBlocked,dobEntryRule,dobCounterDobBlocked,dobCounterDobTpR,dobCounterCandlesBlocked,dobPartialPlan,DOB_DEFAULT_TP_R,dobMonthBlocked} from './dobGuardrails.js';
 import {dobTradeFeatures,dobPoiFeatures} from './dobTradeFeatures.js';
 import {evaluateDoubleOrderBlockOutcome} from './doubleOrderBlockOutcome.js';
 import {dobPoiTypeOf} from './dobPoiType.js';
@@ -90,6 +90,8 @@ export function checkDobTradeSetup(input){
  for(const [pair,setup] of candidates){
   const {poi,reason:poiReason}=poiOf(pair);
   if(poiReason){rejected.push({...setup,poi,reason:poiReason});continue;}
+  // Gesperrter Monat (Konfig): gerechnet, aber verworfen, damit der Watcher ⛔ meldet statt zu schweigen (Q23).
+  if(guardrails&&dobMonthBlocked(guardrails,setup.entryTime??setup.phaseSince)){rejected.push({...setup,poi,reason:'blockedMonth'});continue;}
   // Zonenalter sperrt schon den Retest (kein Alarm); die Entry-Stunde erst den Entry, der Retest-Alarm ist da schon raus (Q23).
   if(guardrails&&dobZoneAgeBlocked(guardrails,dobPoiZoneAgeSeconds(poi,pair.firstOrderBlock.startTime))){
    rejected.push({...setup,poi,reason:'blockedZoneAge'});continue;
