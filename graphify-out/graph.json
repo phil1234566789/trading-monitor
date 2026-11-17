@@ -39296,7 +39296,7 @@
       "file_type": "code",
       "norm_label": "drawstructure()",
       "source_file": "src/components/DobEntryM1Section.vue",
-      "source_location": "L90"
+      "source_location": "L93"
     },
     {
       "id": "src_composables_usepricechartdrawings_usepricechartdrawings",
@@ -51570,7 +51570,7 @@
       "file_type": "code",
       "norm_label": "missingzones",
       "source_file": "src/components/DobEntryM1Section.vue",
-      "source_location": "L107"
+      "source_location": "L110"
     },
     {
       "id": "src_components_dobentrym1section_note",
@@ -105836,7 +105836,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/DobEntryM1Section.vue",
-      "source_location": "L93",
+      "source_location": "L96",
       "weight": 1.0
     },
     {
@@ -105848,7 +105848,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/DobEntryM1Section.vue",
-      "source_location": "L94",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -105860,7 +105860,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/DobEntryM1Section.vue",
-      "source_location": "L95",
+      "source_location": "L98",
       "weight": 1.0
     },
     {
@@ -276967,7 +276967,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/DobEntryM1Section.vue",
-      "source_location": "L107",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
@@ -337086,7 +337086,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/components/DobEntryM1Section.vue",
-      "source_location": "L97",
+      "source_location": "L100",
       "weight": 1.0
     },
     {
@@ -337098,7 +337098,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/components/DobEntryM1Section.vue",
-      "source_location": "L98",
+      "source_location": "L101",
       "weight": 1.0
     },
     {
@@ -345168,5 +345168,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "21cd4288145e92165eb01585790f01efe54e500d"
+  "built_at_commit": "0d41cc3e952b38bad449c7a96495953deb308a7d"
 }
