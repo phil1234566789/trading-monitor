@@ -106,9 +106,22 @@ watch([instrument,year,run],([i,y,r])=>{shown.value=PAGE;router.replace({query:{
 const years=computed(()=>[...new Set([year.value,...rows.value.map(r=>dobTradeMonth(r).slice(0,4))])].sort().reverse());
 const yearRows=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(year.value)));
 // Sperr-Konfig (dob_guardrails, gleiche Funktion wie der Watcher): gesperrte Trades fallen aus Liste, Kacheln und Tabellen.
-const guardrails=ref(DOB_GUARDRAILS_DEFAULT),guardrailsOpen=useLocalStorageRef('dobStatsGuardrailsOpen',false);
-const blockedOf=r=>dobGuardrailReason(guardrails.value,{entryTime:r.entry_time,zoneAgeSeconds:r.source_zone_age_seconds});
-const inYear=computed(()=>yearRows.value.filter(r=>!blockedOf(r)));
+// Ansicht: der Entwurf aus dem Panel wirkt sofort (Vorschau), gespeichert und damit im Watcher ist nur `guardrails`.
+// „Sperren anwenden“ schaltet nur die Ansicht und bleibt im Browser gemerkt.
+const guardrails=ref(DOB_GUARDRAILS_DEFAULT),guardrailDraft=ref(DOB_GUARDRAILS_DEFAULT);
+const guardrailsOpen=useLocalStorageRef('dobStatsGuardrailsOpen',false),applyGuardrails=useLocalStorageRef('dobStatsApplyGuardrails',true);
+watch(guardrails,g=>{guardrailDraft.value=g;});
+const draftUnsaved=computed(()=>JSON.stringify(guardrailDraft.value)!==JSON.stringify(guardrails.value));
+const blockedOf=r=>dobGuardrailReason(guardrailDraft.value,{entryTime:r.entry_time,zoneAgeSeconds:r.source_zone_age_seconds});
+const inYear=computed(()=>applyGuardrails.value?yearRows.value.filter(r=>!blockedOf(r)):yearRows.value);
+// Delta der gefilterten zur ungefilterten Ansicht je Route und Ziel (Winrate in Prozentpunkten, ΣR), nur bei aktiven Sperren.
+const unfiltered=computed(()=>Object.fromEntries(targets.value.map(t=>[t.name,dobRouteStats(yearRows.value,t.k)])));
+const showDelta=computed(()=>applyGuardrails.value&&inYear.value.length<yearRows.value.length);
+function deltaText(name,r){
+ const now=totals.value[name][r],all=unfiltered.value[name][r];
+ const pp=now.winrate==null||all.winrate==null?null:(now.winrate-all.winrate)*100;
+ return `${pp==null?'–':`${pp>0?'+':pp<0?'−':'±'}${Math.abs(pp).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})} Pkt`} · ${dobSignedR(now.sumR-all.sumR)} R`;
+}
 // Max-R-Filter (genaue Stufen, ODER) und Sortierung; ohne gespeichertes max_r (älterer Lauf-Stand) bleibt beides aus.
 const maxRFilter=ref([]),maxRSort=ref(''),retestFilter=ref([]);
 const hasRetest=computed(()=>inYear.value.some(r=>r.source_retest_kind));
@@ -168,8 +181,8 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
       </div>
     </header>
     <DobGuardrailsPanel v-if="!loading&&!error&&yearRows.length" :instrument="instrument" :config="guardrails" :rows="yearRows" :targets="targets"
-      :open="guardrailsOpen" @toggle="v=>{guardrailsOpen=v;}" @saved="c=>{guardrails=c;}" />
-    <p v-if="!loading&&!error&&yearRows.length>inYear.length" class="note" role="status">{{ yearRows.length-inYear.length }} von {{ yearRows.length }} Trades durch die Sperren ausgeblendet; alle Kennzahlen, Tabellen und die Tradeliste zeigen nur erlaubte Trades.</p>
+      :open="guardrailsOpen" @toggle="v=>{guardrailsOpen=v;}" @saved="c=>{guardrails=c;}" v-model:apply="applyGuardrails" @update:draft="d=>{guardrailDraft=d;}" />
+    <p v-if="!loading&&!error&&yearRows.length>inYear.length" class="note" role="status">{{ yearRows.length-inYear.length }} von {{ yearRows.length }} Trades durch die Sperren{{ draftUnsaved?' (Entwurf, nicht gespeichert)':'' }} ausgeblendet; alle Kennzahlen, Tabellen und die Tradeliste zeigen nur erlaubte Trades.</p>
     <p v-if="error" role="alert" class="error">{{ error }} <button @click="refresh">Erneut versuchen</button></p>
     <p v-else-if="loading" role="status" class="note">Trades werden geladen…</p>
     <p v-else-if="!runs.length" role="status" class="note">Noch keine berechneten DOB-Läufe.</p>
@@ -183,6 +196,7 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
             <p class="big" :class="winTone(totals[t.name][r].winrate,t.k)">{{ pct(totals[t.name][r].winrate) }}</p>
             <p>{{ totals[t.name][r].success }} W / {{ totals[t.name][r].loss }} L · <span :class="pnlClass(totals[t.name][r].sumR)">{{ dobSignedR(totals[t.name][r].sumR) }} R</span></p>
             <p class="note" title="offen: bis Datenende weder Ziel noch SL · unklar: SL und Ziel in derselben Kerze oder fehlende Kerzen">offen {{ totals[t.name][r].open }} · unklar {{ totals[t.name][r].ambiguous+totals[t.name][r].unknown }}</p>
+            <p v-if="showDelta" class="delta" title="Unterschied zur Ansicht ohne Sperren">{{ deltaText(t.name,r) }}</p>
           </div></div>
         </article>
         <article v-if="retestTiles.length" class="tile">
@@ -239,5 +253,5 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
   </main>
 </template>
 <style scoped>
-.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.targets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.targets .big{font-size:22px!important}.tiles .tile:has(.targets){grid-column:span 2}@media(max-width:900px){.tiles .tile:has(.targets){grid-column:auto}.targets{grid-template-columns:1fr 1fr}}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}tr.last-opened{background:rgba(145,184,255,.24);box-shadow:inset 4px 0 0 #91b8ff;font-weight:600}.retest{margin-top:6px}.retest-target{margin-right:12px}.max-r-filter{border:1px solid #2a2e39;border-radius:4px;margin:8px 0;padding:6px 10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.max-r-filter legend{color:#b1b7c5;padding:0 4px}button.sort{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600}td.max-r{text-align:left}.bar{display:inline-block;vertical-align:middle;width:70px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,#2a2e39 0 6px,#1e222d 6px 7px);position:relative;overflow:hidden}.bar::after{content:'';position:absolute;left:40%;top:0;bottom:0;width:1px;background:#b1b7c5}.bar i{display:block;height:100%;background:var(--negative)}.bar i.hit{background:var(--positive)}button.chart{padding:2px 10px;border-color:#91b8ff;color:#91b8ff}button.chart.seen{border-color:#434651;color:#7f8696}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
+.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.targets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.targets .big{font-size:22px!important}.tiles .tile:has(.targets){grid-column:span 2}@media(max-width:900px){.tiles .tile:has(.targets){grid-column:auto}.targets{grid-template-columns:1fr 1fr}}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}tr.last-opened{background:rgba(145,184,255,.24);box-shadow:inset 4px 0 0 #91b8ff;font-weight:600}.retest{margin-top:6px}.delta{font-size:12px!important;color:#91b8ff}.retest-target{margin-right:12px}.max-r-filter{border:1px solid #2a2e39;border-radius:4px;margin:8px 0;padding:6px 10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.max-r-filter legend{color:#b1b7c5;padding:0 4px}button.sort{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600}td.max-r{text-align:left}.bar{display:inline-block;vertical-align:middle;width:70px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,#2a2e39 0 6px,#1e222d 6px 7px);position:relative;overflow:hidden}.bar::after{content:'';position:absolute;left:40%;top:0;bottom:0;width:1px;background:#b1b7c5}.bar i{display:block;height:100%;background:var(--negative)}.bar i.hit{background:var(--positive)}button.chart{padding:2px 10px;border-color:#91b8ff;color:#91b8ff}button.chart.seen{border-color:#434651;color:#7f8696}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
 </style>

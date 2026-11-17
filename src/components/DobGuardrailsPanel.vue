@@ -7,17 +7,19 @@ import {minutesToTimeInput,timeInputToMinutes} from '../chartTimeUtils.js';
 import {berlinDateStrFor} from '../berlinTime.js';
 import DobStatCell from './DobStatCell.vue';
 
-// Sperr-Konfig je Instrument bearbeiten (Tabelle dob_guardrails). Erst „Speichern“ macht den Entwurf aktiv, damit Seite und Watcher
-// dieselbe Konfig sehen. Darunter die Halbjahre je Sperrgruppe: Sperren aus denselben Daten schönen die Winrate, ein Effekt, der
-// nur in einem Halbjahr trägt, ist eher Zufall.
-const props=defineProps({instrument:String,config:Object,rows:Array,targets:Array,open:Boolean});
-const emit=defineEmits(['saved','toggle']);
+// Sperr-Konfig je Instrument bearbeiten (Tabelle dob_guardrails). Der Entwurf wirkt sofort als Vorschau auf die Seite (update:draft);
+// nur „Speichern“ schreibt ihn in die DB und damit in den Watcher. „Sperren anwenden“ ist ein reiner Ansichtsschalter.
+// Darunter die Halbjahre je Sperrgruppe: Sperren aus denselben Daten schönen die Winrate, ein Effekt, der nur in einem Halbjahr trägt,
+// ist eher Zufall.
+const props=defineProps({instrument:String,config:Object,rows:Array,targets:Array,open:Boolean,apply:Boolean});
+const emit=defineEmits(['saved','toggle','update:draft','update:apply']);
 const MONTHS=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
 const AGE_OPTIONS=[[null,'kein Mindestalter'],...DOB_ZONE_AGE_BUCKETS.slice(0,-1).map(([label,max])=>[max,`≥ ${label.split('–').at(-1).replace('< ','')}`])];
 const clone=c=>({blockedEntryWindows:c.blockedEntryWindows.map(w=>[...w]),blockedMonths:[...c.blockedMonths],minZoneAgeSeconds:c.minZoneAgeSeconds});
 const draft=ref(clone(props.config));
 watch(()=>props.config,c=>{draft.value=clone(c);});
 const dirty=computed(()=>JSON.stringify(draft.value)!==JSON.stringify(clone(props.config)));
+watch(draft,d=>emit('update:draft',clone(d)),{deep:true,immediate:true});
 const saving=ref(false),error=ref('');
 function setWindow(i,side,value){const minutes=timeInputToMinutes(value);if(Number.isFinite(minutes))draft.value.blockedEntryWindows[i][side]=minutes;}
 function toggleMonth(m){const list=draft.value.blockedMonths;draft.value.blockedMonths=list.includes(m)?list.filter(x=>x!==m):[...list,m].sort((a,b)=>a-b);}
@@ -34,14 +36,17 @@ const half=row=>Number(berlinDateStrFor(row.entry_time).slice(5,7))<=6?'h1':'h2'
 // Erlaubt und je Sperrgrund getrennt, jeweils Jan–Jun / Jul–Dez, alle Routen, beide R-Ziele.
 const robustness=computed(()=>{
  const groups=new Map([['allowed',[]],...Object.keys(REASONS).map(r=>[r,[]])]);
- for(const row of props.rows)groups.get(dobGuardrailReason(props.config,{entryTime:row.entry_time,zoneAgeSeconds:row.source_zone_age_seconds})??'allowed').push(row);
+ for(const row of props.rows)groups.get(dobGuardrailReason(draft.value,{entryTime:row.entry_time,zoneAgeSeconds:row.source_zone_age_seconds})??'allowed').push(row);
  return [...groups].filter(([key,list])=>key==='allowed'||list.length).map(([key,list])=>({key,label:REASONS[key]??'erlaubt',
   halves:['h1','h2'].map(h=>{const part=list.filter(r=>half(r)===h);return {n:part.length,targets:props.targets.map(t=>({...t,s:dobTotalStats(part,t.k)}))};})}));
 });
 </script>
 <template>
   <details class="guardrails" :open="open" @toggle="emit('toggle',$event.target.open)">
-    <summary><h2>Sperren ({{ instrument }})</h2> <span class="note">{{ config.blockedEntryWindows.length }} Zeitfenster · {{ config.blockedMonths.length }} Monate · Zonenalter {{ config.minZoneAgeSeconds==null?'egal':AGE_OPTIONS.find(o=>o[0]===config.minZoneAgeSeconds)?.[1] }}</span></summary>
+    <summary><h2>Sperren ({{ instrument }})</h2>
+      <label class="apply" @click.stop><input type="checkbox" :checked="apply" @change="emit('update:apply',$event.target.checked)"> Sperren anwenden (nur Ansicht)</label>
+      <span class="note">{{ draft.blockedEntryWindows.length }} Zeitfenster · {{ draft.blockedMonths.length }} Monate · Zonenalter {{ draft.minZoneAgeSeconds==null?'egal':AGE_OPTIONS.find(o=>o[0]===draft.minZoneAgeSeconds)?.[1] }}</span>
+      <span v-if="dirty" class="unsaved">nicht gespeichert</span></summary>
     <div class="editor">
       <fieldset><legend>Gesperrte Entry-Zeit (Berlin, bis exklusiv)</legend>
         <div v-for="(w,i) in draft.blockedEntryWindows" :key="i" class="window">
@@ -61,10 +66,10 @@ const robustness=computed(()=>{
       <div class="actions">
         <button type="button" :disabled="!dirty||saving" @click="save">{{ saving?'Speichert…':'Speichern' }}</button>
         <button type="button" :disabled="!dirty||saving" @click="draft=clone(config)">Verwerfen</button>
-        <span v-if="dirty" class="note">Entwurf, noch nicht aktiv.</span><span v-if="error" role="alert" class="error">{{ error }}</span>
+        <span v-if="dirty" class="note">Entwurf wirkt nur als Vorschau auf dieser Seite, der Watcher nutzt den gespeicherten Stand.</span><span v-if="error" role="alert" class="error">{{ error }}</span>
       </div>
     </div>
-    <h3>Halbjahre zur aktiven Konfig</h3>
+    <h3>Halbjahre zur Konfig{{ dirty?' (Entwurf)':'' }}</h3>
     <p class="note">Sperren aus denselben Daten schönen die Winrate. Trägt eine Sperrgruppe nur in einem Halbjahr, ist sie eher Zufall; kleine n sagen wenig.</p>
     <div class="scroll"><table>
       <thead><tr><th scope="col" rowspan="2">Gruppe</th><th v-for="h in ['Jan–Jun','Jul–Dez']" :key="h" scope="colgroup" :colspan="1+targets.length">{{ h }}</th></tr>
@@ -75,5 +80,5 @@ const robustness=computed(()=>{
   </details>
 </template>
 <style scoped>
-.guardrails{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:12px 16px;margin:16px 0}summary{cursor:pointer}summary h2{display:inline;font-size:15px;font-weight:600}h3{font-size:14px;margin:16px 0 4px}.note{font-size:13px;color:#b1b7c5}.editor{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}fieldset{border:1px solid #2a2e39;border-radius:4px;padding:8px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}legend{color:#b1b7c5}.window{display:flex;gap:6px;align-items:center}input[type=time],select,button{background:#131722;color:#d1d4dc;border:1px solid #434651;padding:4px 8px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}.actions{display:flex;gap:8px;align-items:center;width:100%}.error{color:#ff8b91}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child{text-align:left}:is(button,select,input,summary):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}
+.guardrails{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:12px 16px;margin:16px 0}summary{cursor:pointer}summary h2{display:inline;font-size:15px;font-weight:600}h3{font-size:14px;margin:16px 0 4px}.note{font-size:13px;color:#b1b7c5}.editor{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}fieldset{border:1px solid #2a2e39;border-radius:4px;padding:8px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}legend{color:#b1b7c5}.window{display:flex;gap:6px;align-items:center}input[type=time],select,button{background:#131722;color:#d1d4dc;border:1px solid #434651;padding:4px 8px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}.apply{margin:0 12px;font-size:13px;color:#d1d4dc;cursor:pointer}.unsaved{margin-left:8px;padding:2px 8px;border-radius:10px;background:#f5a623;color:#131722;font-size:12px;font-weight:600}.actions{display:flex;gap:8px;align-items:center;width:100%}.error{color:#ff8b91}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child{text-align:left}:is(button,select,input,summary):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}
 </style>
