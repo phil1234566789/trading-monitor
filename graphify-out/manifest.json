@@ -10512,15 +10512,45 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/lab-idea-xau-2026.json": {
-    "mtime": 1794920108.1040497,
-    "seen": 1794920173.073362,
-    "ast_hash": "9ff0c3d252165550c68a860e783a2a60",
+    "mtime": 1794920967.2204614,
+    "seen": 1794921077.0658708,
+    "ast_hash": "a1d17fdffd42c4127f01e4f43d080dd0",
     "semantic_hash": ""
   },
   "scripts/dobLabIdea.mjs": {
-    "mtime": 1794919949.5427022,
-    "seen": 1794920173.0968785,
-    "ast_hash": "bf5d02bf321fa1abf15d20143c799aeb",
+    "mtime": 1794920794.7422702,
+    "seen": 1794921077.0881822,
+    "ast_hash": "ef3527a4cd4427ee28d38d070ba65eb8",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/lab-price-action-xau-2026.json": {
+    "mtime": 1794920769.977222,
+    "seen": 1794921077.0658708,
+    "ast_hash": "325c9c8c514422a5a5ff3e278db2101c",
+    "semantic_hash": ""
+  },
+  "scripts/dobLabPriceAction.mjs": {
+    "mtime": 1794920603.1526184,
+    "seen": 1794921077.0881822,
+    "ast_hash": "78357ac336159af99ab409676cb17cad",
+    "semantic_hash": ""
+  },
+  "scripts/dobV3Carriers.mjs": {
+    "mtime": 1794920602.8587363,
+    "seen": 1794921077.0906973,
+    "ast_hash": "c9df5e6cb089d1fa82016cf729b42195",
+    "semantic_hash": ""
+  },
+  "src/candlePatterns.js": {
+    "mtime": 1794920565.9030435,
+    "seen": 1794921077.1147642,
+    "ast_hash": "68b11f87840c6e7ea3ee94eeabf695fd",
+    "semantic_hash": ""
+  },
+  "test/candlePatterns.test.js": {
+    "mtime": 1794920566.2082884,
+    "seen": 1794921077.264388,
+    "ast_hash": "9b5bf04681ba3fed814b7199db2721c1",
     "semantic_hash": ""
   }
 }
