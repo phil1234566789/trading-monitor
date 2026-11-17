@@ -18,7 +18,7 @@ try {
   const load = p => server.ssrLoadModule(p);
   const [lab, { detectDoubleOrderBlocks }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR }] = await Promise.all(
     ['/src/dobLabFeatures.js', '/src/doubleOrderBlocks.js', '/src/supabaseClient.js', '/src/dobGuardrails.js'].map(load));
-  const { runs, m5Marked, m1Marked, h1All, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobRuns(server, root);
+  const { runs, m5Marked, m1Marked, h1All, h4All, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobRuns(server, root);
   const { data: cfgRow, error: cfgError } = await supabase.from('dob_guardrails').select('*').eq('instrument', SYMBOL).maybeSingle();
   if (cfgError) throw cfgError;
   const config = dobGuardrailsFromRow(cfgRow);
@@ -45,9 +45,11 @@ try {
       m5Confirm: { sinceOb2Retest: lab.dobM5Confirmation(m5Marked, t.entryTime, t.direction, t.chart.secondRetestTime),
         ...(sourceRetestAt != null ? { sinceSourceRetest: lab.dobM5Confirmation(m5Marked, t.entryTime, t.direction, sourceRetestAt) } : {}) },
       counterDobs: { sinceOb2Retest: lab.dobCounterDobs(dob, t.direction, t.chart.secondRetestTime, t.entryTime),
-        ...(sourceRetestAt != null ? { sinceSourceRetest: lab.dobCounterDobs(dob, t.direction, sourceRetestAt, t.entryTime) } : {}) },
+        ...(sourceRetestAt != null ? { sinceSourceRetest: lab.dobCounterDobs(dob, t.direction, sourceRetestAt, t.entryTime, m1Marked) } : {}) },
       obsInZone: lab.dobObsInSourceZone(t.chart, src),
     };
+    // BOS-Pivot-Bruch (1a/1b/1c) auf M5-Schlüssen bis zum Entry, für jede Trendvariante.
+    f.outerClass = Object.fromEntries(Object.entries(f.outer).map(([k, o]) => [k, lab.dobOuterTrendClass(o, t.direction, m5Marked, t.entryTime, 300)]));
     featureCache.set(key, f);
     return f;
   };
@@ -89,6 +91,23 @@ try {
       const known = all.filter(t => flag(featuresOf(t), t) != null), flagged = known.filter(t => flag(featuresOf(t), t));
       out.features[name] = { known: known.length, flagged: flagged.length, flaggedRates: rates(flagged), kept: rates(known.filter(t => !flag(featuresOf(t), t))) };
     }
+    // Ausprägungen statt Flag: äußerer Trend 1a/1b/1c (Close, Docht) und Gegen-DOB abgestuft (nur mit Quellen-Retest).
+    const groupBy = bucketOf => { const g = {}; for (const t of all) { const b = bucketOf(featuresOf(t), t); if (b != null) (g[b] ??= []).push(t); }
+      return Object.fromEntries(Object.entries(g).sort().map(([b, list]) => [b, rates(list)])); };
+    const counter = f => f.counterDobs.sinceSourceRetest;
+    const ageBucket = (c, t) => { const live = c.pairs.filter(p => !p.dead); if (!live.length) return 'keiner lebend';
+      const h = (t.entryTime - Math.max(...live.map(p => p.recognizedAt))) / 3600; return h < 1 ? '< 1 h' : h < 4 ? '1–4 h' : '≥ 4 h'; };
+    const overlaps = (z, ob) => Math.max(0, z.bottom - ob.top, ob.bottom - z.top) === 0;
+    out.groups = {
+      ...Object.fromEntries(Object.keys(featuresOf(all[0]).outer).flatMap(k => [[`äußerer Trend ${k} (Close)`, groupBy(f => f.outerClass[k].cls)],
+        [`äußerer Trend ${k} (Docht)`, groupBy(f => f.outerClass[k].clsWick ?? f.outerClass[k].cls)]])),
+      'Gegen-DOB Anzahl': groupBy(f => counter(f) ? (counter(f).count === 0 ? '0' : counter(f).count === 1 ? '1' : '2+') : null),
+      'Gegen-DOB lebend Anzahl': groupBy(f => counter(f) ? (counter(f).liveCount === 0 ? '0' : counter(f).liveCount === 1 ? '1' : '2+') : null),
+      'Gegen-DOB tot/lebend': groupBy(f => counter(f) ? (!counter(f).count ? 'keiner' : counter(f).liveCount ? 'mind. 1 lebend' : 'nur tote') : null),
+      'Gegen-DOB Abstand jüngster lebender zum Entry': groupBy((f, t) => counter(f) ? ageBucket(counter(f), t) : null),
+      'Gegen-DOB in gleicher Kraftzone': groupBy((f, t) => !counter(f) ? null : !counter(f).count ? 'keiner'
+        : counter(f).pairs.some(p => overlaps(t.sourceOfStrength.zone, p.ob2)) ? 'gleiche Zone' : 'andere Zone'),
+    };
     result.runs[run] = out;
   }
   result.featureRuntimeMsPerTrade = +((performance.now() - t0) / featureCache.size).toFixed(1);
@@ -96,7 +115,11 @@ try {
   for (const pin of pins) {
     const t = byKey.get(pin.dob_trade_key);
     result.pins[pin.id] = { note: pin.note, found: !!t, ...(t ? { r3: status(t, 3), r5: status(t, 5),
-      flags: Object.fromEntries(Object.entries(FLAGS).map(([n, flag]) => [n, flag(featuresOf(t), t)])), features: featuresOf(t) } : {}) };
+      flags: Object.fromEntries(Object.entries(FLAGS).map(([n, flag]) => [n, flag(featuresOf(t), t)])), features: featuresOf(t),
+      // Pin 523 u. a.: welche längere Ebene sähe Philips „Outertrend“? Nur Bericht, kein Merkmal.
+      outerWide: Object.fromEntries([['h1', 3600, h1All], ['h4', 14400, h4All]].flatMap(([tf, bar, rows]) => [14, 21].map(d => {
+        const o = lab.dobOuterTrend(rows, t.chart.secondRetestTime + 60, t.direction, { windowDays: d, barSeconds: bar });
+        return [`${tf}_${d}d`, { trend: o.trend, durationDays: o.durationDays }]; }))) } : {}) };
   }
   await fs.writeFile(path.join(root, 'analysis', 'dob-setup', 'lab-features-xau-2026.json'), JSON.stringify(result, null, 2));
 
@@ -107,7 +130,12 @@ try {
     for (const [name, v] of Object.entries(out.features)) console.log(`${name}`.padEnd(46), `flag ${v.flagged}/${v.known}`.padEnd(14),
       'flag 3R', f(v.flaggedRates.r3), '5R', f(v.flaggedRates.r5), 'Kfg', f(v.flaggedRates.tpKonfig), '|| kept 3R', f(v.kept.r3), '5R', f(v.kept.r5), 'Kfg', f(v.kept.tpKonfig));
   }
-  for (const [id, p] of Object.entries(result.pins)) console.log('Pin', id, p.found ? `${p.r3}/${p.r5}` : 'nicht gefunden', JSON.stringify(p.flags ?? {}));
+  for (const [run, out] of Object.entries(result.runs)) for (const [name, g] of Object.entries(out.groups))
+    console.log(run, name.padEnd(44), Object.entries(g).map(([b, v]) => `${b}: 3R ${f(v.r3)} 5R ${f(v.r5)} Kfg ${f(v.tpKonfig)}`).join(' || '));
+  for (const [id, p] of Object.entries(result.pins)) console.log('Pin', id, p.found ? `${p.r3}/${p.r5}` : 'nicht gefunden',
+    p.found ? JSON.stringify({ cls: Object.fromEntries(Object.entries(p.features.outerClass).map(([k, c]) => [k, `${c.cls}/${c.clsWick ?? c.cls}`])),
+      counter: p.features.counterDobs.sinceSourceRetest && { n: p.features.counterDobs.sinceSourceRetest.count, live: p.features.counterDobs.sinceSourceRetest.liveCount },
+      wide: Object.fromEntries(Object.entries(p.outerWide).map(([k, o]) => [k, `${o.trend}@${o.durationDays}`])) }) : '');
 } finally {
   await server.close();
 }
