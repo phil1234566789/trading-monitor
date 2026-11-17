@@ -10104,9 +10104,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeSetup.js": {
-    "mtime": 1794910917.0768676,
-    "seen": 1794913746.4647563,
-    "ast_hash": "ab5e7d434ac155c7ebe4e00dd313cb2f",
+    "mtime": 1794914773.0078702,
+    "seen": 1794914901.118479,
+    "ast_hash": "1e5ea76e69785158870148784b277099",
     "semantic_hash": ""
   },
   "src/doubleOrderBlockData.js": {
@@ -10200,9 +10200,9 @@
     "semantic_hash": ""
   },
   "scripts/dobTradeSetupsFill.mjs": {
-    "mtime": 1794913690.6079404,
-    "seen": 1794913746.4647563,
-    "ast_hash": "e413a614951fdac7bdbd1c0a83b7e8f3",
+    "mtime": 1794914773.0098686,
+    "seen": 1794914901.050972,
+    "ast_hash": "ae9b1e37c8fd82c403cefca44118273e",
     "semantic_hash": ""
   },
   "src/composables/useDobChartRoute.js": {
@@ -10260,21 +10260,21 @@
     "semantic_hash": ""
   },
   "src/dobAlarm.js": {
-    "mtime": 1794910917.077871,
-    "seen": 1794913746.4647563,
-    "ast_hash": "eded7c2da240349e98c4ce021d4a354a",
+    "mtime": 1794914773.0088687,
+    "seen": 1794914901.1169753,
+    "ast_hash": "a43d482d538117979be8777131728c6b",
     "semantic_hash": ""
   },
   "supabase/functions/dob-watcher/index.ts": {
-    "mtime": 1794911010.2639687,
-    "seen": 1794913746.4657605,
-    "ast_hash": "24a042c2d7f92899f80024e6c98a520a",
+    "mtime": 1794914773.0088687,
+    "seen": 1794914901.190118,
+    "ast_hash": "b840d0c131c42292e7402242cf63e4a4",
     "semantic_hash": ""
   },
   "test/dobAlarm.test.js": {
-    "mtime": 1794910936.3325472,
-    "seen": 1794913746.4657605,
-    "ast_hash": "3d91ea119d8606f5e5be3435aa803998",
+    "mtime": 1794914780.6685774,
+    "seen": 1794914901.2293847,
+    "ast_hash": "6d7ffc10f3895738efb4763a3b3ee7cb",
     "semantic_hash": ""
   },
   "test/dobFixtures.js": {
@@ -10440,9 +10440,9 @@
     "semantic_hash": ""
   },
   "scripts/dobLab.mjs": {
-    "mtime": 1794913690.6609528,
-    "seen": 1794913746.4647563,
-    "ast_hash": "53057fc2393178df574e6b04f00c89a4",
+    "mtime": 1794914471.1474993,
+    "seen": 1794914901.049972,
+    "ast_hash": "e290c3439b5a9827588f4c9a6640ad0d",
     "semantic_hash": ""
   },
   "scripts/dobLabPinFixtures.mjs": {
@@ -10452,21 +10452,39 @@
     "semantic_hash": ""
   },
   "src/dobLabFeatures.js": {
-    "mtime": 1794913690.6639435,
-    "seen": 1794913746.4647563,
-    "ast_hash": "cc7c6f066401f971036197cdb1dc80d9",
+    "mtime": 1794914436.6192863,
+    "seen": 1794914901.1169753,
+    "ast_hash": "93aeefd7f0997d7da461ba809f2d1d2a",
     "semantic_hash": ""
   },
   "test/dobLabFeatures.test.js": {
-    "mtime": 1794913690.666943,
-    "seen": 1794913746.4657605,
-    "ast_hash": "e859cf275b5155447e28ddefc9f0dcde",
+    "mtime": 1794914780.615034,
+    "seen": 1794914901.231391,
+    "ast_hash": "152fe71c148664d8fb5bd1a3bea2ca40",
     "semantic_hash": ""
   },
   "test/fixtures/dob-native/lab-pins.json": {
     "mtime": 1794913690.6704452,
     "seen": 1794913746.4657605,
     "ast_hash": "e7d0a46db1a23fce0fc6a39bf9fdf363",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/counter-dob-gate-xau-2026.json": {
+    "mtime": 1794914746.208332,
+    "seen": 1794914901.0289748,
+    "ast_hash": "176fda376059739700e689dcb2776ba4",
+    "semantic_hash": ""
+  },
+  "scripts/dobCounterDobGate.mjs": {
+    "mtime": 1794914583.7525718,
+    "seen": 1794914901.049972,
+    "ast_hash": "5a4c0c41dfd788fc945be3114078d2ac",
+    "semantic_hash": ""
+  },
+  "src/dobCounterDob.js": {
+    "mtime": 1794914773.0078702,
+    "seen": 1794914901.1169753,
+    "ast_hash": "710e243d01ea6a606160a3c8ed592f1a",
     "semantic_hash": ""
   }
 }
