@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobSourceLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -78,5 +78,15 @@ describe('dobTradeStatistics',()=>{
  });
  it('Zonenalter-Buckets',()=>{
   expect([3600,2*86400,10*86400,40*86400,null].map(v=>dobZoneAgeBucket({source_zone_age_seconds:v}))).toEqual(['< 1 Tag','1–3 Tage','1–4 Wochen','> 4 Wochen',null]);
+ });
+ it('Rückkehr aus dem Chart-Tab: nur nach „Im Chart“, erst verborgen dann sichtbar, genau einmal',()=>{
+  const t=dobReturnTracker();
+  expect(t.visibility(false)).toBe(false); // Tabwechsel ohne „Im Chart“
+  t.arm();
+  expect(t.visibility(false)).toBe(false); // sichtbar ohne vorheriges Verlassen (z.B. Popup blockiert)
+  expect(t.visibility(true)).toBe(false);
+  expect(t.visibility(false)).toBe(true);
+  expect(t.visibility(true)).toBe(false);
+  expect(t.visibility(false)).toBe(false); // zweite Rückkehr scrollt nicht mehr
  });
 });

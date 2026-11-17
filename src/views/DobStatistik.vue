@@ -4,7 +4,7 @@ import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {useRoute,useRouter} from 'vue-router';
 import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
-import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS} from '../dobTradeStatistics.js';
+import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobReturnTracker,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_STAT_TARGETS,dobBreakEven,dobPct,dobWinTone,dobSignedR,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
@@ -79,16 +79,19 @@ const savePin=(note,pinType)=>pinAction(async()=>{const t=pinTarget.value;
 const seen=useLocalStorageRef('dobStatsSeen',[]),lastOpened=useLocalStorageRef('dobStatsLastOpened',null);
 const seenKeys=computed(()=>new Set(seen.value));
 const isLast=t=>dobTradePinKey(t)===lastOpened.value;
+const chartReturn=dobReturnTracker();
 function openChart(t){
  const key=dobTradePinKey(t);
+ chartReturn.arm();
  lastOpened.value=key;
  if(!seenKeys.value.has(key))seen.value=[...seen.value,key];
  window.open(router.resolve(dobChartLink(t)).href,'_blank','noopener');
 }
 function resetSeen(){seen.value=[];lastOpened.value=null;}
-// Beim Zurückkehren in den Tab zur zuletzt geöffneten Zeile, falls sie außer Sicht ist (auch hinter „Weitere anzeigen“).
+// Nur bei der Rückkehr aus dem über „Im Chart“ geöffneten Tab, einmalig, zur zuletzt geöffneten Zeile, falls sie außer Sicht ist
+// (auch hinter „Weitere anzeigen“). Früher hing das auch an `focus` und jedem Tabwechsel und riss die Seite bei Klicks nach unten.
 async function revealLast(){
- if(document.hidden||!lastOpened.value)return;
+ if(!chartReturn.visibility(document.hidden)||!lastOpened.value)return;
  const index=listed.value.findIndex(isLast);
  if(index<0)return;
  if(index>=shown.value)shown.value=index+1;
@@ -96,8 +99,8 @@ async function revealLast(){
  const el=document.querySelector('tr.last-opened'),box=el?.getBoundingClientRect();
  if(box&&(box.top<0||box.bottom>window.innerHeight))el.scrollIntoView({block:'center'});
 }
-onMounted(()=>{document.addEventListener('visibilitychange',revealLast);window.addEventListener('focus',revealLast);});
-onUnmounted(()=>{document.removeEventListener('visibilitychange',revealLast);window.removeEventListener('focus',revealLast);});
+onMounted(()=>document.addEventListener('visibilitychange',revealLast));
+onUnmounted(()=>document.removeEventListener('visibilitychange',revealLast));
 const removePin=()=>pinAction(async()=>{if(!await removePinEntry(pinTarget.value.existingId))throw new Error('Pin konnte nicht entfernt werden.');});
 // Feste R-Ziele 2R/3R/4R/5R nebeneinander statt Auswahl; alte Links mit ?rA=&rB= laden weiter, die Parameter fallen weg.
 const targets=computed(()=>DOB_STAT_TARGETS.map(k=>({name:String(k),k})));

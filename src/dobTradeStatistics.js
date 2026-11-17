@@ -111,6 +111,13 @@ export function dobTimeSlotGroups(rows,sessions,opens=DOB_EXCHANGE_OPENS){
 const DAY=86400;
 export const DOB_ZONE_AGE_BUCKETS=[['< 1 Tag',DAY],['1–3 Tage',3*DAY],['3–7 Tage',7*DAY],['1–4 Wochen',28*DAY],['> 4 Wochen',Infinity]];
 export const dobZoneAgeBucket=row=>Number.isFinite(row.source_zone_age_seconds)?DOB_ZONE_AGE_BUCKETS.find(([,max])=>row.source_zone_age_seconds<max)[0]:null;
+// Rückkehr aus dem Chart-Tab erkennen: nur nach „Im Chart“ (arm) und erst, wenn die Seite danach verborgen war und wieder sichtbar
+// wird, genau einmal true. Fokuswechsel, Klicks, Dropdowns oder ein Tabwechsel ohne vorheriges „Im Chart“ lösen nichts aus.
+export function dobReturnTracker(){
+ let armed=false,left=false;
+ return {arm(){armed=true;left=false;},
+  visibility(hidden){if(!armed)return false;if(hidden){left=true;return false;}if(!left)return false;armed=false;left=false;return true;}};
+}
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
 // Eigenes Modul, damit der DOB-Watcher (Deno) das Label ohne die Pin-Abgleich-Kette dieser Datei importieren kann.
 export {dobSourceLabel} from './dobSourceLabel.js';
