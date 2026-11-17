@@ -1,6 +1,6 @@
 {
   "measurement": "dob-lab-bos-v1",
-  "git": "ebf3d767-dirty",
+  "git": "7a4b63b2-dirty",
   "symbol": "XAUUSD",
   "dataEnd": 1794849660,
   "dataEndBerlin": "2026-11-16",
@@ -1324,6 +1324,140 @@
         "h4_14d": "unknown",
         "h4_21d": "downtrend",
         "h4_30d": "unknown"
+      }
+    }
+  },
+  "konfigRules": {
+    "(a) Kombi ohne Sperren": {
+      "trades": 385,
+      "Konfig": {
+        "n": 384,
+        "winrate": 27.1,
+        "sumR": 136,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 25.7,
+          "sumR": 56
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 28.9,
+          "sumR": 80
+        }
+      },
+      "1a Close ab Quellen-Retest: gebrochen 5R, sonst Konfig": {
+        "gebrochen": 198,
+        "n": 384,
+        "winrate": 24.5,
+        "sumR": 124,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 22.9,
+          "sumR": 44
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 26.5,
+          "sumR": 80
+        }
+      },
+      "1b Docht ab Quellen-Retest: gebrochen 5R, sonst Konfig": {
+        "gebrochen": 201,
+        "n": 384,
+        "winrate": 24.5,
+        "sumR": 125,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 22.9,
+          "sumR": 44
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 26.5,
+          "sumR": 81
+        }
+      },
+      "1c Close ab OB1-Start: gebrochen 5R, sonst Konfig": {
+        "gebrochen": 205,
+        "n": 384,
+        "winrate": 25,
+        "sumR": 135,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 23.9,
+          "sumR": 51
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 26.5,
+          "sumR": 84
+        }
+      }
+    },
+    "(b) Kombi mit Philips Sperren": {
+      "trades": 328,
+      "Konfig": {
+        "n": 327,
+        "winrate": 29.1,
+        "sumR": 151,
+        "Jan–Jun": {
+          "n": 184,
+          "winrate": 27.2,
+          "sumR": 66
+        },
+        "Jul–Nov": {
+          "n": 143,
+          "winrate": 31.5,
+          "sumR": 85
+        }
+      },
+      "1a Close ab Quellen-Retest: gebrochen 5R, sonst Konfig": {
+        "gebrochen": 173,
+        "n": 327,
+        "winrate": 26.3,
+        "sumR": 139,
+        "Jan–Jun": {
+          "n": 184,
+          "winrate": 24.5,
+          "sumR": 54
+        },
+        "Jul–Nov": {
+          "n": 143,
+          "winrate": 28.7,
+          "sumR": 85
+        }
+      },
+      "1b Docht ab Quellen-Retest: gebrochen 5R, sonst Konfig": {
+        "gebrochen": 176,
+        "n": 327,
+        "winrate": 26.3,
+        "sumR": 140,
+        "Jan–Jun": {
+          "n": 184,
+          "winrate": 24.5,
+          "sumR": 54
+        },
+        "Jul–Nov": {
+          "n": 143,
+          "winrate": 28.7,
+          "sumR": 86
+        }
+      },
+      "1c Close ab OB1-Start: gebrochen 5R, sonst Konfig": {
+        "gebrochen": 170,
+        "n": 327,
+        "winrate": 26.9,
+        "sumR": 150,
+        "Jan–Jun": {
+          "n": 184,
+          "winrate": 25.5,
+          "sumR": 61
+        },
+        "Jul–Nov": {
+          "n": 143,
+          "winrate": 28.7,
+          "sumR": 89
+        }
       }
     }
   }

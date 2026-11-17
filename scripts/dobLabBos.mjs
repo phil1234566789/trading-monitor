@@ -80,6 +80,24 @@ try {
       rules: { 'fest 3R': block(v3, () => 3), 'fest 5R': block(v3, () => 5), Konfig: block(v3, cfgR),
         'gebrochen 5R, sonst 3R': block(v3, t => broken(t) ? 5 : 3), 'gebrochen oder keine Gegen-Ebene 5R, sonst 3R': block(v3, t => brokenOrNone(t) ? 5 : 3) } };
   }
+  // M5-BOS als Konfig-Regel (Philip): gebrochen → 5R, sonst TP nach Konfig (inkl. nur tote Gegen-DOBs → 5R im Kombi-Modus).
+  // Träger wie der v3-Fill: bester Gegen-DOB-Status je Trade; (a) Kombi ohne Philips Sperren, (b) mit seiner gespeicherten Konfig.
+  const { dobGuardrailReason, DOB_GUARDRAILS_DEFAULT } = await load('/src/dobGuardrails.js');
+  const RANK = { none: 0, dead: 1, live: 2 }, best = new Map();
+  for (const t of v2Carriers) { const st = statusOf.get(t) ?? 'none', k = dobTradeKey(t); if (!best.has(k) || RANK[st] < RANK[best.get(k).st]) best.set(k, { t, st }); }
+  const comboMode = { counterDobMode: 'live_block_dead_5r' };
+  const plain = { ...DOB_GUARDRAILS_DEFAULT, defaultTpR: config.defaultTpR, entryWindows: config.entryWindows.filter(w => w.action === 'tp'), ...comboMode };
+  const saved = { ...config, ...comboMode };
+  result.konfigRules = {};
+  for (const [cName, cfg] of [['(a) Kombi ohne Sperren', plain], ['(b) Kombi mit Philips Sperren', saved]]) {
+    const list = [...best.values()].filter(({ t, st }) => !dobGuardrailReason(cfg, { entryTime: t.entryTime, zoneAgeSeconds: null, counterDobStatus: st }))
+      .map(({ t, st }) => ({ t, st }));
+    const trades = list.map(x => x.t), stOf = new Map(list.map(x => [x.t, x.st])), kR = t => dobConfigTpR(cfg, t.entryTime, stOf.get(t));
+    // Zonenalter: Philips Konfig hat derzeit keins aktiv; falls doch, fehlt es hier (Träger kennen es, die Messung reicht es nicht durch).
+    result.konfigRules[cName] = { trades: trades.length, Konfig: block(trades, kR),
+      ...Object.fromEntries(Object.entries(VARIANTS).map(([n, v]) => [`${n}: gebrochen 5R, sonst Konfig`,
+        { gebrochen: trades.filter(t => classOf(t, v) === 'gebrochen').length, ...block(trades, t => classOf(t, v) === 'gebrochen' ? 5 : kR(t)) }])) };
+  }
   const byKey = new Map(v2.map(t => [`${SYMBOL}:${dobTradeKey(t)}`, t]));
   for (const pin of pins) {
     const t = byKey.get(pin.dob_trade_key);
@@ -97,6 +115,8 @@ try {
     for (const [g, s] of Object.entries(v.groups)) console.log(g.padEnd(18), '2R', f(s.r2), '| 3R', f(s.r3), '| 4R', f(s.r4), '| 5R', f(s.r5));
     for (const [r, s] of Object.entries(v.rules)) console.log('Regel', r.padEnd(46), f(s));
   }
+  for (const [c, v] of Object.entries(result.konfigRules)) { console.log(`\n== ${c}: ${v.trades} Trades`);
+    for (const [k, s] of Object.entries(v)) if (k !== 'trades') console.log(k.padEnd(52), s.gebrochen != null ? `geb ${s.gebrochen}` : '', f(s)); }
   for (const [id, p] of Object.entries(result.pins)) console.log('Pin', id, p.found ? `${p.inV3 ? 'v3' : 'gesperrt'} ${p.r3}/${p.r5} ${JSON.stringify(p.classes)} up:${Object.entries(p.outer).filter(([, tr]) => tr === 'uptrend').map(([k]) => k).join(',')}` : 'nicht gefunden', '|', p.note.slice(0, 50));
 } finally {
   await server.close();
