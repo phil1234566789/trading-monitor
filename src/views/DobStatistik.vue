@@ -20,7 +20,7 @@ import {fmtR,pnlClass} from '../format.js';
 import {cssColor} from '../chartColors.js';
 
 // Die Seite rechnet nichts nach, sie liest nur die vorberechneten Trades (scripts/dobTradeSetupsFill.mjs) und zählt sie.
-const INSTRUMENTS=['XAUUSD','GBPUSD'],ROUTES=['a','b'],PAGE=200;
+const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'],ROUTES=['a','b'],PAGE=200;
 const route=useRoute(),router=useRouter();
 const instrument=ref(INSTRUMENTS.includes(route.query.instrument)?route.query.instrument:'XAUUSD');
 const year=ref(String(route.query.year??new Date().getFullYear()));
