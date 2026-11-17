@@ -27,12 +27,18 @@ export function dobM5Trend(m5Candles,at,{maxDays=DOB_M5_TREND_MAX_DAYS,periods=D
 }
 
 function trendInWindow(m5Candles,at,windowSeconds,periods){
- const anchor=at-windowSeconds,candles=[];
- for(let i=lowerBound(m5Candles,anchor-LEAD_SECONDS);i<m5Candles.length&&m5Candles[i].time+M5<=at;i++)if(!m5Candles[i].ignored)candles.push(m5Candles[i]);
- if(!candles.length)return {trend:'unknown',reaction:null};
+ const built=structureInWindow(m5Candles,at,windowSeconds,{periods});
+ return built?deriveTrendReaction(built.state):{trend:'unknown',reaction:null};
+}
+
+// Struktur wie der Chart aus den bis at geschlossenen Kerzen, Pivots ab at − windowSeconds (Merkmal-Labor nutzt auch H1 und
+// längere Fenster). Vorlauf in Kerzen statt fester 2 h, damit er für jede Kerzenlänge reicht. null = keine Kerzen.
+export function structureInWindow(candlesAll,at,windowSeconds,{periods=DOB_M5_TREND_PERIODS,barSeconds=M5}={}){
+ const anchor=at-windowSeconds,lead=barSeconds===M5?LEAD_SECONDS:24*barSeconds,candles=[];
+ for(let i=lowerBound(candlesAll,anchor-lead);i<candlesAll.length&&candlesAll[i].time+barSeconds<=at;i++)if(!candlesAll[i].ignored)candles.push(candlesAll[i]);
+ if(!candles.length)return null;
  const outer=computeRangesPivots(candles,periods.outer,anchor,fmtDateTime),inner=computeRangesPivots(candles,periods.inner,anchor,fmtDateTime);
- const {state}=buildStructureWithPhases(outer,inner,periods.outer,periods.inner,candles,M5,{closeEvaluation:true});
- return deriveTrendReaction(state);
+ return buildStructureWithPhases(outer,inner,periods.outer,periods.inner,candles,barSeconds,{closeEvaluation:barSeconds===M5});
 }
 
 // Anti-Gate: Short gegen einen Aufwärtstrend und Long gegen einen Abwärtstrend sind „gegen den Trend“.
