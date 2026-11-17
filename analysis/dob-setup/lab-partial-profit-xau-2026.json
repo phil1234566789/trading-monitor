@@ -1,0 +1,384 @@
+{
+  "measurement": "dob-lab-partial-profit-v1",
+  "git": "c281f4da-dirty",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "methodology": [
+    "Träger scripts/dobV3Carriers.mjs Fall (b) (Philips gespeicherte Konfig, Kombi) plus Gegenkerzen 3 von 3; TP je Trade nach Konfig.",
+    "Teil bei pR, Rest zum Konfig-TP; Konfig-TP ≤ pR: alles beim Konfig-TP. (A) beide Teile mit Original-SL, (B) Rest mit SL auf Entry ab der Kerze nach dem Erreichen von pR.",
+    "Winrate = Anteil geschlossener Trades mit ΣR > 0. Rest-BE = Anteil, dessen Rest auf Entry ausgestoppt wurde.",
+    "ambiguous (SL und Ziel in derselben M1-Kerze, in einem der Teile) und offene Trades: nicht in ΣR, gezählt."
+  ],
+  "schemes": {
+    "ohne Teilprofit": {
+      "trades": 267,
+      "closed": 266,
+      "ambiguous": 0,
+      "open": 1,
+      "sumR": 143,
+      "winrate": 30.8,
+      "restBreakeven": 0,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 148,
+        "ambiguous": 0,
+        "open": 1,
+        "sumR": 59,
+        "winrate": 28.4,
+        "restBreakeven": 0
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 84,
+        "winrate": 33.9,
+        "restBreakeven": 0
+      },
+      "windows": {
+        "02:00–07:00 (4R)": {
+          "trades": 51,
+          "closed": 51,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 44,
+          "winrate": 37.3,
+          "restBreakeven": 0
+        },
+        "07:00–09:00 (5R)": {
+          "trades": 21,
+          "closed": 21,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 21,
+          "winrate": 33.3,
+          "restBreakeven": 0
+        },
+        "14:00–21:00 (4R)": {
+          "trades": 60,
+          "closed": 59,
+          "ambiguous": 0,
+          "open": 1,
+          "sumR": 36,
+          "winrate": 32.2,
+          "restBreakeven": 0
+        },
+        "Standard (2R)": {
+          "trades": 33,
+          "closed": 33,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 12,
+          "winrate": 45.5,
+          "restBreakeven": 0
+        },
+        "tote Gegen-DOBs (5R)": {
+          "trades": 102,
+          "closed": 102,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 30,
+          "winrate": 21.6,
+          "restBreakeven": 0
+        }
+      }
+    },
+    "50 % bei 3R (A) SL bleibt": {
+      "trades": 267,
+      "closed": 266,
+      "ambiguous": 0,
+      "open": 1,
+      "sumR": 115,
+      "winrate": 34.6,
+      "restBreakeven": 0,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 148,
+        "ambiguous": 0,
+        "open": 1,
+        "sumR": 42.5,
+        "winrate": 31.1,
+        "restBreakeven": 0
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 72.5,
+        "winrate": 39,
+        "restBreakeven": 0
+      },
+      "windows": {
+        "02:00–07:00 (4R)": {
+          "trades": 51,
+          "closed": 51,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 38.5,
+          "winrate": 41.2,
+          "restBreakeven": 0
+        },
+        "07:00–09:00 (5R)": {
+          "trades": 21,
+          "closed": 21,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 16,
+          "winrate": 38.1,
+          "restBreakeven": 0
+        },
+        "14:00–21:00 (4R)": {
+          "trades": 60,
+          "closed": 59,
+          "ambiguous": 0,
+          "open": 1,
+          "sumR": 30.5,
+          "winrate": 35.6,
+          "restBreakeven": 0
+        },
+        "Standard (2R)": {
+          "trades": 33,
+          "closed": 33,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 12,
+          "winrate": 45.5,
+          "restBreakeven": 0
+        },
+        "tote Gegen-DOBs (5R)": {
+          "trades": 102,
+          "closed": 102,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 18,
+          "winrate": 26.5,
+          "restBreakeven": 0
+        }
+      }
+    },
+    "50 % bei 3R (B) SL auf Entry": {
+      "trades": 267,
+      "closed": 266,
+      "ambiguous": 0,
+      "open": 1,
+      "sumR": 111.5,
+      "winrate": 34.6,
+      "restBreakeven": 5.3,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 148,
+        "ambiguous": 0,
+        "open": 1,
+        "sumR": 40.5,
+        "winrate": 31.1,
+        "restBreakeven": 4.1
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 71,
+        "winrate": 39,
+        "restBreakeven": 6.8
+      },
+      "windows": {
+        "02:00–07:00 (4R)": {
+          "trades": 51,
+          "closed": 51,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 35.5,
+          "winrate": 41.2,
+          "restBreakeven": 7.8
+        },
+        "07:00–09:00 (5R)": {
+          "trades": 21,
+          "closed": 21,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 16.5,
+          "winrate": 38.1,
+          "restBreakeven": 4.8
+        },
+        "14:00–21:00 (4R)": {
+          "trades": 60,
+          "closed": 59,
+          "ambiguous": 0,
+          "open": 1,
+          "sumR": 29.5,
+          "winrate": 35.6,
+          "restBreakeven": 5.1
+        },
+        "Standard (2R)": {
+          "trades": 33,
+          "closed": 33,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 12,
+          "winrate": 45.5,
+          "restBreakeven": 0
+        },
+        "tote Gegen-DOBs (5R)": {
+          "trades": 102,
+          "closed": 102,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 18,
+          "winrate": 26.5,
+          "restBreakeven": 5.9
+        }
+      }
+    },
+    "33 % bei 2R (A) SL bleibt": {
+      "trades": 267,
+      "closed": 266,
+      "ambiguous": 0,
+      "open": 1,
+      "sumR": 111.7,
+      "winrate": 30.8,
+      "restBreakeven": 0,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 148,
+        "ambiguous": 0,
+        "open": 1,
+        "sumR": 44,
+        "winrate": 28.4,
+        "restBreakeven": 0
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 67.7,
+        "winrate": 33.9,
+        "restBreakeven": 0
+      },
+      "windows": {
+        "02:00–07:00 (4R)": {
+          "trades": 51,
+          "closed": 51,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 35.3,
+          "winrate": 37.3,
+          "restBreakeven": 0
+        },
+        "07:00–09:00 (5R)": {
+          "trades": 21,
+          "closed": 21,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 15,
+          "winrate": 33.3,
+          "restBreakeven": 0
+        },
+        "14:00–21:00 (4R)": {
+          "trades": 60,
+          "closed": 59,
+          "ambiguous": 0,
+          "open": 1,
+          "sumR": 29.3,
+          "winrate": 32.2,
+          "restBreakeven": 0
+        },
+        "Standard (2R)": {
+          "trades": 33,
+          "closed": 33,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 12,
+          "winrate": 45.5,
+          "restBreakeven": 0
+        },
+        "tote Gegen-DOBs (5R)": {
+          "trades": 102,
+          "closed": 102,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 20,
+          "winrate": 21.6,
+          "restBreakeven": 0
+        }
+      }
+    },
+    "33 % bei 2R (B) SL auf Entry": {
+      "trades": 267,
+      "closed": 266,
+      "ambiguous": 0,
+      "open": 1,
+      "sumR": 107.7,
+      "winrate": 39.5,
+      "restBreakeven": 11.3,
+      "Jan–Jun": {
+        "trades": 149,
+        "closed": 148,
+        "ambiguous": 0,
+        "open": 1,
+        "sumR": 44,
+        "winrate": 36.5,
+        "restBreakeven": 10.1
+      },
+      "Jul–Nov": {
+        "trades": 118,
+        "closed": 118,
+        "ambiguous": 0,
+        "open": 0,
+        "sumR": 63.7,
+        "winrate": 43.2,
+        "restBreakeven": 12.7
+      },
+      "windows": {
+        "02:00–07:00 (4R)": {
+          "trades": 51,
+          "closed": 51,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 27.3,
+          "winrate": 45.1,
+          "restBreakeven": 15.7
+        },
+        "07:00–09:00 (5R)": {
+          "trades": 21,
+          "closed": 21,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 15.7,
+          "winrate": 38.1,
+          "restBreakeven": 4.8
+        },
+        "14:00–21:00 (4R)": {
+          "trades": 60,
+          "closed": 59,
+          "ambiguous": 0,
+          "open": 1,
+          "sumR": 28,
+          "winrate": 42.4,
+          "restBreakeven": 13.6
+        },
+        "Standard (2R)": {
+          "trades": 33,
+          "closed": 33,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 12,
+          "winrate": 45.5,
+          "restBreakeven": 0
+        },
+        "tote Gegen-DOBs (5R)": {
+          "trades": 102,
+          "closed": 102,
+          "ambiguous": 0,
+          "open": 0,
+          "sumR": 24.7,
+          "winrate": 33.3,
+          "restBreakeven": 12.7
+        }
+      }
+    }
+  }
+}
