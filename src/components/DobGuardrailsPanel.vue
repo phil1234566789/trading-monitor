@@ -95,7 +95,7 @@ const ruleImpacts=computed(()=>{
           <button type="button" :aria-label="`Fenster ${i+1} entfernen`" @click="draft.entryWindows.splice(i,1)">✕</button>
           <span class="impact" :class="ruleImpacts[i]>0?'positive':ruleImpacts[i]<0?'negative':''" :title="dobRuleActive(w)?'ΣR nach Konfig mit gegen ohne diese Regel':'ΣR, wenn diese Regel eingeschaltet wäre'">{{ dobRuleActive(w)?'bringt':'brächte' }} {{ dobSignedR(ruleImpacts[i]) }} R</span>
         </div>
-        <button type="button" @click="draft.entryWindows.push({from:600,to:660,action:'block'})">+ Zeitfenster</button>
+        <button type="button" @click="draft.entryWindows.push({from:600,to:660,action:'block',enabled:false})">+ Zeitfenster</button>
         <label>sonst TP <select v-model.number="draft.defaultTpR" aria-label="Default-TP"><option v-for="r in TP_OPTIONS" :key="r" :value="r">{{ r.toLocaleString('de-DE') }}R</option></select></label>
       </fieldset>
       <fieldset><legend>Gesperrte Monate (Entry, Berlin)</legend>
