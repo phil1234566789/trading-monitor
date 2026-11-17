@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rQuote, pipQuote, fvgBewertung, FVG_BAND_N } from "../src/drQuoten.js";
+import { rQuote, pipQuote } from "../src/drQuoten.js";
 
 // Bandgrenzen sind exklusiv unten, inklusiv oben (lo < Risiko <= hi) — wie in baenderTabellen.py.
 // Die Grenzwerte selbst gehoeren also noch ins UNTERE Band. riskPips ist das strukturelle Risiko,
@@ -45,43 +45,5 @@ describe("pipQuote", () => {
   it("liefert nichts ausserhalb der Messung: EURUSD und Risiko 0", () => {
     expect(pipQuote("EURUSD", 4, 15)).toBeNull();
     expect(pipQuote("GBPUSD", 0, 15)).toBeNull();
-  });
-});
-
-// Der Bewertungs-Bereich zeigt ALLE Baender (nicht nur das eigene) und markiert das der laufenden
-// Dealing Range — die Markierung ist die einzige Stelle, an der die Bandgrenzen zweimal gelesen
-// werden (einmal fuer die Quote, einmal fuer den Treffer), deshalb hier festgenagelt.
-describe("fvgBewertung", () => {
-  it("markiert genau ein Band, und zwar das der uebergebenen FVG", () => {
-    const t = fvgBewertung("GBPUSD", 4.6);
-    expect(t.baender.filter((b) => b.treffer).map((b) => b.label)).toEqual(["3–5 P"]);
-    expect(t.baender).toHaveLength(6);
-    expect(t.baender[0].quoten).toHaveLength(6);
-  });
-
-  it("legt die Bandgrenze ins OBERE Band (lo <= FVG < hi, wie fvgBaender.py)", () => {
-    expect(fvgBewertung("GBPUSD", 3).baender.find((b) => b.treffer).label).toBe("3–5 P");
-    expect(fvgBewertung("GBPUSD", 2.99).baender.find((b) => b.treffer).label).toBe("2–3 P");
-  });
-
-  it("zeigt die Tabelle ohne Markierung, wenn keine FVG verknuepft ist", () => {
-    const t = fvgBewertung("GBPUSD", null);
-    expect(t.baender.some((b) => b.treffer)).toBe(false);
-    expect(t.referenz).toHaveLength(6);
-  });
-
-  it("liefert fuer ungemessene Instrumente nichts", () => {
-    expect(fvgBewertung("EURUSD", 4.6)).toBeNull();
-  });
-
-  // Die Baender sind von Hand aus ergebnis-fvg.txt uebertragen -- eine ausgelassene Zelle faellt
-  // sonst erst auf, wenn die Anzeige sie braucht.
-  it("hat in jedem Band jede angezeigte Stufe", () => {
-    for (const band of fvgBewertung("GBPUSD", null).baender) {
-      expect(band.quoten.every((q) => q > 0), band.label).toBe(true);
-      expect(band.n).toBeGreaterThan(50);
-    }
-    expect(FVG_BAND_N).toHaveLength(6);
-    expect(FVG_BAND_N.reduce((a, b) => a + b, 0)).toBe(3179);
   });
 });

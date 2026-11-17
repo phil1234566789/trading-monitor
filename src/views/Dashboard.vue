@@ -10,7 +10,6 @@ import DashboardMmt from '../components/DashboardMmt.vue';
 import PriceChart from "../components/PriceChart.vue";
 import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
-import TradeSetupBewertung from "../components/TradeSetupBewertung.vue";
 import TradeSetupChecklist from "../components/TradeSetupChecklist.vue";
 import TradesTable from "../components/TradesTable.vue";
 import TradeStats from "../components/TradeStats.vue";
@@ -35,7 +34,6 @@ import DataRefreshButton from "../components/DataRefreshButton.vue";
 import { syncNewsEvents } from "../newsEvents.js";
 import { selectedTradingAccountId, writableTradingAccountId, ALL_ACCOUNTS_ID } from "../tradingAccounts.js";
 import { TIMEFRAMES, barSecondsForTimeframeCi } from "../timeframes.js";
-import { toPips } from "../pipConfig.js";
 import { fetchTrades } from "../trades.js";
 import { useSetupConfirmations } from "../composables/useSetupConfirmations.js";
 import {useDoubleOrderBlockConfirmations} from '../composables/useDoubleOrderBlockConfirmations.js';
@@ -338,7 +336,6 @@ const visibleAnnotations = computed(() => (drawingsVisible.value ? annotations.v
 // Chat 2026-07-27 eine echte Vue-Komponente mit festem Platz — der frühere "neben der letzten
 // Kerze"-Positionsmodus (und sein Abstands-Regler) ist entfallen, siehe TradeSetupCockpit.vue.
 const showTradeSetupCockpit = useLocalStorageRef("showTradeSetupCockpit", true);
-const showTradeSetupBewertung = useLocalStorageRef("showTradeSetupBewertung", true);
 const savedTradeSetupChecklist = useLocalStorageRef("showTradeSetupChecklist", false);
 const savedTradeSetup2 = useLocalStorageRef("showTradeSetup2", false);
 const tradeSetup2HistoryCount = useLocalStorageRef("tradeSetup2HistoryCount", 5);
@@ -656,20 +653,6 @@ async function onOpenJournalInTsc(trade) {
   showTradeSetupCockpit.value = true;
   // Das Modal bleibt offen: ungespeicherte Positionsfelder dürfen beim DR-Wechsel nicht verloren gehen.
 }
-// FVG-Größe der laufenden Dealing Range für den Bewertungs-Bereich. Sie steckt weder in der Range
-// noch in ihrer OB-Bestätigung (die trägt nur ihre Kanten), sondern nur im erkannten Setup.
-// Gesucht wird über den NATÜRLICHEN Schlüssel Richtung + OB-Startzeit — dieselbe Paarung, mit der
-// auch findMatchingTradeSetupId (tradeIntake.js) und mergeDbTradeSetups (tradeSetups.js) arbeiten.
-// Nicht über dealing_ranges.trade_setup_id: die Spalte wird erst beim Überführen in einen Trade
-// geschrieben (linkTradeToSetup), eine reine TSC-Idee hat dort immer null — genau daran ist die
-// erste Fassung gescheitert (Bug-Report Philip 2026-09-23, GBP-Short vom 09.09.).
-const tscFvgPips = computed(() => {
-  const ob = (tscRange.value?.confirmations ?? []).find((c) => c.kind === "ob" && c.sourceTime != null);
-  if (!ob) return null;
-  const dir = tscRange.value.direction === "short" ? 1 : -1;
-  const setup = (dbTradeSetups.value ?? []).find((s) => s.dir === dir && s.obStartTime === ob.sourceTime);
-  return setup?.obFvg > 0 ? toPips(setup.obFvg, currentSymbol.value) : null;
-});
 function onTscAddConfirmationRequest() {
   if (tscFromJournal.value && tscRangeId.value == null) return;
   if (tscRangeId.value != null) {
@@ -2027,9 +2010,6 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showTradeSetupCockpit }" @click="showTradeSetupCockpit = !showTradeSetupCockpit">
             Trade Setup Cockpit
           </ToggleButton>
-          <ToggleButton variant="menu" :class="{ active: showTradeSetupBewertung }" title="Trade-Setup-Bewertung" @click="showTradeSetupBewertung = !showTradeSetupBewertung">
-            Trade Setup Bewertung
-          </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showTradeSetupChecklist }" :aria-pressed="showTradeSetupChecklist" aria-controls="trade-setup-checklist" @click="showTradeSetupChecklist = !showTradeSetupChecklist">
             Trade Setup Checklist
           </ToggleButton>
@@ -2496,12 +2476,6 @@ watch(selectedTradingAccountId, () => {
       :replay-at="replayUntil ?? Math.floor(Date.now()/1000)"
       @history-jump="replayTime=$event; replayActive=true"
       @close="setup2Detail ? closeTradeSetup2Selection() : (showTradeSetupChecklist = false)"
-    />
-
-    <TradeSetupBewertung
-      v-if="showTradeSetupBewertung && !snapshotView"
-      :instrument="currentSymbol"
-      :fvg-pips="tscFvgPips"
     />
   </div>
 
