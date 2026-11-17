@@ -10452,9 +10452,9 @@
     "semantic_hash": ""
   },
   "src/dobLabFeatures.js": {
-    "mtime": 1794915319.6290083,
-    "seen": 1794915751.3225505,
-    "ast_hash": "995477962a136815ecf7f1f392a6bc01",
+    "mtime": 1794916328.602646,
+    "seen": 1794916640.4086576,
+    "ast_hash": "3b16b4c806c06613e916ba24606736e1",
     "semantic_hash": ""
   },
   "test/dobLabFeatures.test.js": {
@@ -10491,6 +10491,24 @@
     "mtime": 1794915618.2460477,
     "seen": 1794915751.2527757,
     "ast_hash": "79cac42de4b743322c517929c65b278e",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/lab-bos-plateau-xau-2026.json": {
+    "mtime": 1794916550.2478836,
+    "seen": 1794916640.315702,
+    "ast_hash": "cca32fa7f3331844d7ee4123653e88c3",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/lab-bos-xau-2026.json": {
+    "mtime": 1794916152.7522824,
+    "seen": 1794916640.315702,
+    "ast_hash": "4efeff025f34fe2da498f057d1bb2659",
+    "semantic_hash": ""
+  },
+  "scripts/dobLabBosPlateau.mjs": {
+    "mtime": 1794916362.9632246,
+    "seen": 1794916640.3388321,
+    "ast_hash": "6b76355645fc3bf02a5391e0011f5c35",
     "semantic_hash": ""
   }
 }
