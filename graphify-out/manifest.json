@@ -10212,21 +10212,21 @@
     "semantic_hash": ""
   },
   "src/dobTradeStatistics.js": {
-    "mtime": 1794909557.5042574,
-    "seen": 1794909697.8569775,
-    "ast_hash": "64856d66f57a901e02a44cf615c994e0",
+    "mtime": 1794910189.2813983,
+    "seen": 1794910435.954245,
+    "ast_hash": "50efd28d6d25280112f37463cd4194af",
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
-    "mtime": 1794909557.5052567,
-    "seen": 1794909697.9184902,
-    "ast_hash": "774faed6b3dcffc81d758b769c9eff3a",
+    "mtime": 1794910258.461764,
+    "seen": 1794910436.039348,
+    "ast_hash": "2151028c6f7b3e6930f9a1366de15b6c",
     "semantic_hash": ""
   },
   "test/dobTradeStatistics.test.js": {
-    "mtime": 1794909557.5052567,
-    "seen": 1794909697.9684901,
-    "ast_hash": "56192e967d09ba4633c518d288ccc0a1",
+    "mtime": 1794910198.3629436,
+    "seen": 1794910436.1171658,
+    "ast_hash": "efe5e1da4444a6631c12019410344acf",
     "semantic_hash": ""
   },
   "scripts/dobSetupGrid.mjs": {
@@ -10392,27 +10392,27 @@
     "semantic_hash": ""
   },
   "src/components/DobGuardrailsPanel.vue": {
-    "mtime": 1794906918.6663501,
-    "seen": 1794907087.9961731,
-    "ast_hash": "bdb7f1bea4ad9604cf932fda6b1a6fcd",
+    "mtime": 1794910258.4607637,
+    "seen": 1794910435.919245,
+    "ast_hash": "78940d25799720df3b4fd4c2f2b022d4",
     "semantic_hash": ""
   },
   "src/dobGuardrails.js": {
-    "mtime": 1794903536.3755424,
-    "seen": 1794905042.0873804,
-    "ast_hash": "ab993fc18e7a0366b7fa399cef37ca8f",
+    "mtime": 1794910258.4597602,
+    "seen": 1794910435.9532452,
+    "ast_hash": "4ec01c05b2a40e54a03b9313ddbb39b7",
     "semantic_hash": ""
   },
   "test/dobGuardrails.test.js": {
-    "mtime": 1794903536.3775425,
-    "seen": 1794905042.0883803,
-    "ast_hash": "038a98c3ae145f32985b6a82d1ee3958",
+    "mtime": 1794910144.0017245,
+    "seen": 1794910436.1151652,
+    "ast_hash": "061e32a87c165f0ea5530e66a5e23f50",
     "semantic_hash": ""
   },
   "src/components/DobStatCell.vue": {
-    "mtime": 1794904935.916263,
-    "seen": 1794905042.0873804,
-    "ast_hash": "7aa07bc4357197efa634cc2a18d27acb",
+    "mtime": 1794910189.2823954,
+    "seen": 1794910435.919245,
+    "ast_hash": "784febd4e5614afb213fc9c1d53878b8",
     "semantic_hash": ""
   }
 }
