@@ -28,12 +28,15 @@ const CASES=[
 export const DOB_ENTRY_M1_CASES=CASES.map((c,i)=>({...c,code:(c.kind==='loss'?'L':'W')+(CASES.filter((x,j)=>j<=i&&x.kind===c.kind).length)}));
 export const dobEntryM1CaseOf=key=>DOB_ENTRY_M1_CASES.find(c=>c.code===key||c.id===key)??null;
 
-const LEAD_SECONDS=3600,TAIL_SECONDS=15*60,WIN_R=5,WIN_HORIZON_SECONDS=5*24*3600;
-// Sichtfenster 60 min vor Entry bis Ausgang; der Ladebereich beginnt bei OB1, damit beide Zonen erkannt werden können.
+const HOUR=3600,TAIL_SECONDS=15*60,WIN_R=5,WIN_HORIZON_SECONDS=5*24*HOUR;
+// Vorlauf: Default ab OB1 − 1 h, damit beide OBs und die Bewegung heraus (kleine Reaktion oder echte Kraft) voll im Bild sind.
+export const DOB_ENTRY_M1_LEADS=[['ob1','ab OB1 − 1 h'],['3h','3 h vor Entry'],['6h','6 h vor Entry'],['12h','12 h vor Entry'],['24h','24 h vor Entry']];
+export const dobEntryM1LeadOf=v=>DOB_ENTRY_M1_LEADS.some(([k])=>k===v)?v:'ob1';
+const leadStart=(row,lead)=>dobEntryM1LeadOf(lead)==='ob1'?row.first_ob_start-HOUR:row.entry_time-parseInt(lead)*HOUR;
 // Wins laufen bis 5R statt bis zum gespeicherten 2R-Exit; der 5R-Zeitpunkt ist nicht gespeichert, er kann Tage nach Entry liegen, daher Ladebereich bis 5 Tage.
-export function dobEntryM1Window(row,kind){
- const end=kind==='win'?row.entry_time+WIN_HORIZON_SECONDS:row.exit_time??row.entry_time+LEAD_SECONDS;
- const view={from:row.entry_time-LEAD_SECONDS,to:end+TAIL_SECONDS};
+export function dobEntryM1Window(row,kind,lead='ob1'){
+ const end=kind==='win'?row.entry_time+WIN_HORIZON_SECONDS:row.exit_time??row.entry_time+HOUR;
+ const view={from:leadStart(row,lead),to:end+TAIL_SECONDS};
  const loadFrom=Math.min(view.from,row.first_ob_start-2*3600);
  // Zählbasierter Abruf: Wochenend-/Nachtlücken holen nur mehr Vorlauf, nie zu wenig.
  return {view,loadTo:view.to,count:{'1m':Math.ceil((view.to-loadFrom)/60)+30,'5m':Math.ceil((view.to-loadFrom)/300)+30}};

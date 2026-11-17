@@ -11,13 +11,13 @@ import {dobChartLink,dobMaxRLabel} from '../dobTradeStatistics.js';
 import {formatDatedTime} from '../berlinTime.js';
 import {useDobTradePins} from '../composables/useDobTradePins.js';
 import SimulationPinMenu from './SimulationPinMenu.vue';
-import {DOB_ENTRY_M1_RUN,DOB_ENTRY_M1_CASES,dobEntryM1Window,dobEntryM1Zones,dobEntryM1Display,dobEntryM1CaseOf} from '../dobEntryM1Cases.js';
+import {DOB_ENTRY_M1_RUN,DOB_ENTRY_M1_CASES,DOB_ENTRY_M1_LEADS,dobEntryM1Window,dobEntryM1Zones,dobEntryM1Display,dobEntryM1CaseOf,dobEntryM1LeadOf} from '../dobEntryM1Cases.js';
 
 // Nur Ansicht, keine Erkennung: Trade-Zeile aus dob_trade_setups, Kerzen live aus dem Archiv wie im Dashboard.
 const route=useRoute(),router=useRouter();
 const GROUPS=[['Losses',DOB_ENTRY_M1_CASES.filter(c=>c.kind==='loss')],['Wins (max R ≥ 5)',DOB_ENTRY_M1_CASES.filter(c=>c.kind==='win')]];
 const tradeId=ref((dobEntryM1CaseOf(route.query.trade)??DOB_ENTRY_M1_CASES[0]).id);
-const tf=ref(route.query.tf==='m5'?'m5':'m1');
+const tf=ref(route.query.tf==='m5'?'m5':'m1'),lead=ref(dobEntryM1LeadOf(route.query.lead));
 const rows=shallowRef(new Map()),data=shallowRef(null),error=ref('');
 const row=computed(()=>rows.value.get(tradeId.value)??null),current=computed(()=>dobEntryM1CaseOf(tradeId.value)),kind=computed(()=>current.value.kind);
 // Kommentar/Pin wie auf /dob-statistik, laufübergreifend über denselben Pin-Schlüssel.
@@ -31,14 +31,14 @@ async function loadRows(){
  if(e)throw e;
  rows.value=new Map(list.map(r=>[r.id,r]));
 }
-watch([tradeId,tf],([id,t])=>{const code=dobEntryM1CaseOf(id).code;if(route.query.trade!==code||route.query.tf!==t)router.replace({query:{...route.query,trade:code,tf:t}});},{immediate:true});
-watch(row,async r=>{
+watch([tradeId,tf,lead],([id,t,l])=>{const code=dobEntryM1CaseOf(id).code;if(route.query.trade!==code||route.query.tf!==t||route.query.lead!==l)router.replace({query:{...route.query,trade:code,tf:t,lead:l}});},{immediate:true});
+watch([row,lead],async([r,l])=>{
  data.value=null;error.value='';
  if(!r)return;
  try{
-  const w=dobEntryM1Window(r,kind.value),toMs=w.loadTo*1000;
+  const w=dobEntryM1Window(r,kind.value,l),toMs=w.loadTo*1000;
   const [m1,m5]=await Promise.all([fetchInitialCandles(r.instrument,'1m',w.count['1m'],toMs),fetchInitialCandles(r.instrument,'5m',w.count['5m'],toMs)]);
-  if(r!==row.value)return;
+  if(r!==row.value||l!==lead.value)return;
   data.value={...dobEntryM1Display(r,kind.value,m1,w),m1,m5,zones:dobEntryM1Zones(r,m5,m1)};
  }catch(e){error.value=e.message;}
 });
@@ -73,6 +73,7 @@ const missingZones=computed(()=>data.value?.zones.filter(z=>!z.zone).map(z=>z.la
   <div class="bar">
    <select v-model="tradeId" aria-label="Trade"><optgroup v-for="[group,cases] in GROUPS" :key="group" :label="group">
     <option v-for="c in cases" :key="c.id" :value="c.id">{{ c.code }} · {{ c.label }}{{ pinMark(c) }}</option></optgroup></select>
+   <select v-model="lead" title="Vorlauf"><option v-for="[k,t] in DOB_ENTRY_M1_LEADS" :key="k" :value="k">Vorlauf {{ t }}</option></select>
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
    <RouterLink v-if="row" :to="dobChartLink(row)">Im Chart öffnen</RouterLink>
    <button v-if="row" type="button" @click="openPin(row)">{{ pinOf(row) ? '⚑ Pin bearbeiten' : '⚑ Kommentar / Pin' }}</button>
