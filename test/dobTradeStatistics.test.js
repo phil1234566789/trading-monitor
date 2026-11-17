@@ -89,4 +89,8 @@ describe('dobTradeStatistics',()=>{
   expect(t.visibility(true)).toBe(false);
   expect(t.visibility(false)).toBe(false); // zweite Rückkehr scrollt nicht mehr
  });
+ it('Ziel je Trade (Konfig-TP): Win/Loss und ΣR mit dem k des jeweiligen Trades',()=>{
+  const rows=[{route:'a',max_r:2.5,sl_hit:true,tp:2},{route:'a',max_r:2.5,sl_hit:true,tp:3},{route:'a',max_r:5,sl_hit:false,tp:4}];
+  expect(dobRouteStats(rows,r=>r.tp).a).toMatchObject({success:2,loss:1,sumR:2-1+4});
+ });
 });

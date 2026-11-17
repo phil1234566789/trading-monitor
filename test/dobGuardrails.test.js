@@ -1,11 +1,12 @@
 import {describe,expect,it} from 'vitest';
 import {readFileSync} from 'node:fs';
-import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailsToRow,dobGuardrailReason,dobEntryTimeBlocked,dobMonthBlocked}
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailsToRow,dobGuardrailReason,dobEntryTimeBlocked,dobMonthBlocked,dobEntryRule}
  from '../src/dobGuardrails.js';
 
 // Berlin-Zeit: Januar = CET (UTC+1), August = CEST (UTC+2).
 const berlin=(y,mo,d,h,mi,offset)=>Date.UTC(y,mo-1,d,h-offset,mi)/1000;
-const config={blockedEntryWindows:[[630,720],[1320,120]],blockedMonths:[1],minZoneAgeSeconds:86400};
+// Alte Zeile ohne entry_windows: Sperren kommen aus blocked_entry_windows (rückwärtskompatibel).
+const config=dobGuardrailsFromRow({blocked_entry_windows:[[630,720],[1320,120]],blocked_months:[1],min_zone_age_seconds:86400});
 
 describe('dobGuardrails',()=>{
  it('Default sperrt nichts',()=>{
@@ -29,8 +30,20 @@ describe('dobGuardrails',()=>{
   expect(dobGuardrailReason(config,{entryTime:berlin(2026,8,5,10,45,2),zoneAgeSeconds:null})).toBe('blockedEntryHour');
   expect(dobGuardrailReason(config,{entryTime:berlin(2026,8,5,15,0,2),zoneAgeSeconds:2*86400})).toBe(null);
  });
- it('DB-Zeile hin und zurück',()=>{
-  expect(dobGuardrailsFromRow(dobGuardrailsToRow('XAUUSD',config))).toEqual(config);
+ it('DB-Zeile hin und zurück, blocked_entry_windows wird für den alten Watcher mitgeschrieben',()=>{
+  const rules={...config,entryWindows:[{from:480,to:630,action:'tp',tpR:2},{from:630,to:720,action:'block'}],defaultTpR:4};
+  const row=dobGuardrailsToRow('XAUUSD',rules);
+  expect(row.blocked_entry_windows).toEqual([[630,720]]);
+  expect(dobGuardrailsFromRow(row)).toEqual({...rules,blockedEntryWindows:[[630,720]]});
+ });
+ it('Regel je Fenster: Sperre, fester TP, sonst Default-TP; erstes passendes Fenster gilt',()=>{
+  const rules=dobGuardrailsFromRow({entry_windows:[{from:480,to:630,action:'tp',tpR:2},{from:600,to:720,action:'block'}],default_tp_r:4});
+  expect(dobEntryRule(rules,berlin(2026,8,3,8,30,2))).toMatchObject({action:'tp',tpR:2});
+  expect(dobEntryRule(rules,berlin(2026,8,3,10,15,2))).toMatchObject({action:'tp',tpR:2}); // erstes Fenster gewinnt
+  expect(dobEntryRule(rules,berlin(2026,8,3,11,0,2))).toMatchObject({action:'block',tpR:null});
+  expect(dobEntryRule(rules,berlin(2026,8,3,15,0,2))).toEqual({action:'tp',tpR:4,window:null});
+  expect(dobGuardrailReason(rules,{entryTime:berlin(2026,8,3,11,0,2),zoneAgeSeconds:null})).toBe('blockedEntryHour');
+  expect(dobEntryRule(DOB_GUARDRAILS_DEFAULT,berlin(2026,8,3,15,0,2)).tpR).toBe(2);
  });
  it('nur relative Importe mit Dateiendung (Deno-Bundle des Watchers)',()=>{
   const source=readFileSync(new URL('../src/dobGuardrails.js',import.meta.url),'utf8');

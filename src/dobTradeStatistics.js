@@ -12,10 +12,13 @@ export function dobTargetOutcome(row,k=2){
  // Fehlende Kerzen (Ausgang unknown) bleiben unbekannt statt offen.
  return row.sl_hit?'loss':row.outcome==='unknown'?'unknown':'open';
 }
-const asPairs=(rows,k)=>rows.map(r=>({entries:{[r.route]:{status:'ready',outcome:{status:dobTargetOutcome(r,k)}}}}));
+// k: festes Ziel für alle Trades oder Funktion je Trade (Konfig: TP aus der Regel seines Entry-Fensters); ΣR je Trade mit seinem k.
 export function dobRouteStats(rows,k=2){
- const routes=aggregateDobRoutes(asPairs(rows,k)).routes;
- for(const c of Object.values(routes))c.sumR=k*c.success-c.loss;
+ const kOf=typeof k==='function'?k:()=>k;
+ const scored=rows.map(r=>{const target=kOf(r);return {route:r.route,target,outcome:dobTargetOutcome(r,target)};});
+ const routes=aggregateDobRoutes(scored.map(s=>({entries:{[s.route]:{status:'ready',outcome:{status:s.outcome}}}}))).routes;
+ for(const [route,c] of Object.entries(routes))
+  c.sumR=scored.filter(s=>s.route===route).reduce((sum,s)=>sum+(s.outcome==='success'?s.target:s.outcome==='loss'?-1:0),0);
  return routes;
 }
 export const dobBreakEven=k=>1/(1+k);

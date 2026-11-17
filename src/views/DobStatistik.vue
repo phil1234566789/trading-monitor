@@ -8,7 +8,7 @@ import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobT
 import DobStatsTable from '../components/DobStatsTable.vue';
 import DobStatCell from '../components/DobStatCell.vue';
 import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
-import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailReason} from '../dobGuardrails.js';
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailReason,dobConfigTpR} from '../dobGuardrails.js';
 import {fetchDobTradePins,addDobTradePin,removePinEntry,updatePinNote} from '../pinContext.js';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinFlag from '../components/SimulationPinFlag.vue';
@@ -117,11 +117,17 @@ watch(guardrails,g=>{guardrailDraft.value=g;});
 const draftUnsaved=computed(()=>JSON.stringify(guardrailDraft.value)!==JSON.stringify(guardrails.value));
 const blockedOf=r=>dobGuardrailReason(guardrailDraft.value,{entryTime:r.entry_time,zoneAgeSeconds:r.source_zone_age_seconds});
 const inYear=computed(()=>applyGuardrails.value?yearRows.value.filter(r=>!blockedOf(r)):yearRows.value);
+// „Nach Konfig“: jeder Trade mit dem TP seines Entry-Fensters (sonst Default-TP). Vergleich gegen alle Trades ohne Sperren mit dem
+// Default-TP, also gegen „gar keine Konfig“ bei derselben Grund-TP.
+const configTp=r=>dobConfigTpR(guardrailDraft.value,r.entry_time);
+const configTotals=computed(()=>dobRouteStats(inYear.value,configTp));
+const configBaseline=computed(()=>dobRouteStats(yearRows.value,guardrailDraft.value.defaultTpR));
+const configDelta=r=>deltaOf(configTotals.value[r],configBaseline.value[r]);
 // Delta der gefilterten zur ungefilterten Ansicht je Route und Ziel (Winrate in Prozentpunkten, ΣR), nur bei aktiven Sperren.
 const unfiltered=computed(()=>Object.fromEntries(targets.value.map(t=>[t.name,dobRouteStats(yearRows.value,t.k)])));
 const showDelta=computed(()=>applyGuardrails.value&&inYear.value.length<yearRows.value.length);
-function deltaText(name,r){
- const now=totals.value[name][r],all=unfiltered.value[name][r];
+function deltaText(name,r){return deltaOf(totals.value[name][r],unfiltered.value[name][r]);}
+function deltaOf(now,all){
  const pp=now.winrate==null||all.winrate==null?null:(now.winrate-all.winrate)*100;
  return `${pp==null?'–':`${pp>0?'+':pp<0?'−':'±'}${Math.abs(pp).toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})} Pkt`} · ${dobSignedR(now.sumR-all.sumR)} R`;
 }
@@ -202,6 +208,16 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
             <p v-if="showDelta" class="delta" title="Unterschied zur Ansicht ohne Sperren">{{ deltaText(t.name,r) }}</p>
           </div></div>
         </article>
+        <article class="tile config-tile">
+          <h2>Nach Konfig</h2>
+          <p class="note">TP je Entry-Fenster, sonst {{ guardrailDraft.defaultTpR.toLocaleString('de-DE') }}R{{ draftUnsaved?' · Entwurf':'' }}</p>
+          <div class="targets"><div v-for="r in ROUTES" :key="r">
+            <p class="note">Route {{ r }}</p>
+            <p class="big">{{ pct(configTotals[r].winrate) }}</p>
+            <p>{{ configTotals[r].success }} W / {{ configTotals[r].loss }} L · <span :class="pnlClass(configTotals[r].sumR)">{{ dobSignedR(configTotals[r].sumR) }} R</span></p>
+            <p class="delta" title="gegen alle Trades ohne Sperren mit Default-TP">{{ configDelta(r) }}</p>
+          </div></div>
+        </article>
         <article v-if="retestTiles.length" class="tile">
           <h2>Retest der Kraftquelle</h2>
           <div v-for="r in retestTiles" :key="r.kind" class="retest">
@@ -239,11 +255,11 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
         </fieldset>
         <p v-if="pinError&&!pinTarget" role="alert" class="error">{{ pinError }}</p>
         <div class="scroll"><table>
-          <thead><tr><th scope="col">Entry</th><th scope="col">Richtung</th><th scope="col">Route</th><th scope="col">Ausgang</th><th scope="col">R (2R)</th><th scope="col">Session</th><th scope="col">Kraftquelle</th><th scope="col" :aria-sort="maxRSort==='desc'?'descending':maxRSort==='asc'?'ascending':'none'"><button type="button" class="sort" @click="cycleMaxRSort">Max R {{ maxRSort==='desc'?'▼':maxRSort==='asc'?'▲':'↕' }}</button></th><th scope="col">Chart</th><th scope="col">Pin</th></tr></thead>
+          <thead><tr><th scope="col">Entry</th><th scope="col">Richtung</th><th scope="col">Route</th><th scope="col">Ausgang</th><th scope="col">R (Konfig)</th><th scope="col">Session</th><th scope="col">Kraftquelle</th><th scope="col" :aria-sort="maxRSort==='desc'?'descending':maxRSort==='asc'?'ascending':'none'"><button type="button" class="sort" @click="cycleMaxRSort">Max R {{ maxRSort==='desc'?'▼':maxRSort==='asc'?'▲':'↕' }}</button></th><th scope="col">Chart</th><th scope="col">Pin</th></tr></thead>
           <tbody><tr v-for="t in listed.slice(0,shown)" :key="t.id" :class="{'last-opened':isLast(t)}" @contextmenu.prevent="openPin(t)">
             <td><SimulationPinFlag v-if="pinOf(t)" :note="pinOf(t).note||undefined" />{{ formatDatedTime(t.entry_time) }}</td><td>{{ t.direction==='long'?'Long':'Short' }}</td><td>{{ t.route }}</td>
             <td>{{ DOB_OUTCOME_LABELS[t.outcome]??t.outcome }}<template v-if="t.exit_time"> · {{ formatDatedTime(t.exit_time) }}</template></td>
-            <td :class="pnlClass(dobTradeR(t,2))">{{ dobTradeR(t,2)==null?'–':fmtR(dobTradeR(t,2)) }}</td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobSourceLabel(t) }}</td>
+            <td :class="pnlClass(dobTradeR(t,configTp(t)))" :title="`TP nach Konfig ${configTp(t)}R`">{{ dobTradeR(t,configTp(t))==null?'–':fmtR(dobTradeR(t,configTp(t))) }}</td><td>{{ sessionsOf(t).join(', ') }}</td><td>{{ dobSourceLabel(t) }}</td>
             <td class="max-r"><span class="bar" :title="`Max R ${dobMaxRLabel(t.max_r)}`"><i :style="{width:`${Math.min(t.max_r??0,5)/5*100}%`}" :class="{hit:(t.max_r??0)>=2}"></i></span> {{ dobMaxRLabel(t.max_r) }}</td>
             <td><button type="button" class="chart" :class="{seen:seenKeys.has(dobTradePinKey(t))}" :aria-label="`DOB ${formatDatedTime(t.entry_time)} im Chart öffnen${seenKeys.has(dobTradePinKey(t))?' (gesehen)':''}`" @click="openChart(t)">{{ seenKeys.has(dobTradePinKey(t))?'✓ Im Chart':'Im Chart' }}</button></td>
             <td><button type="button" class="pin" :aria-label="`DOB ${formatDatedTime(t.entry_time)} ${pinOf(t)?'Pin bearbeiten':'anpinnen'}`" @click="openPin(t)">{{ pinOf(t)?'⚑ bearbeiten':'⚑' }}</button></td>
@@ -256,5 +272,5 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
   </main>
 </template>
 <style scoped>
-.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.targets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.targets .big{font-size:22px!important}.tiles .tile:has(.targets){grid-column:span 2}@media(max-width:900px){.tiles .tile:has(.targets){grid-column:auto}.targets{grid-template-columns:1fr 1fr}}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}tr.last-opened{background:rgba(145,184,255,.24);box-shadow:inset 4px 0 0 #91b8ff;font-weight:600}.retest{margin-top:6px}.delta{font-size:12px!important;color:#91b8ff}.retest-target{margin-right:12px}.max-r-filter{border:1px solid #2a2e39;border-radius:4px;margin:8px 0;padding:6px 10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.max-r-filter legend{color:#b1b7c5;padding:0 4px}button.sort{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600}td.max-r{text-align:left}.bar{display:inline-block;vertical-align:middle;width:70px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,#2a2e39 0 6px,#1e222d 6px 7px);position:relative;overflow:hidden}.bar::after{content:'';position:absolute;left:40%;top:0;bottom:0;width:1px;background:#b1b7c5}.bar i{display:block;height:100%;background:var(--negative)}.bar i.hit{background:var(--positive)}button.chart{padding:2px 10px;border-color:#91b8ff;color:#91b8ff}button.chart.seen{border-color:#434651;color:#7f8696}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
+.dob-stats{padding:24px;color:#d1d4dc;max-width:1600px;width:100%;box-sizing:border-box;margin:0 auto}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}h1{margin:0;font-size:20px;font-weight:600}h2{font-size:15px;font-weight:600;margin:24px 0 8px}header p,.note{font-size:13px;color:#b1b7c5}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}select,button{background:#1e222d;color:#d1d4dc;border:1px solid #434651;padding:6px 10px;border-radius:4px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.tile{background:#1e222d;border:1px solid #2a2e39;border-radius:4px;padding:16px}.tile h2{margin:0 0 4px}.tile p{margin:4px 0;font-size:13px}.targets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.targets .big{font-size:22px!important}.tiles .tile:has(.targets){grid-column:span 2}@media(max-width:900px){.tiles .tile:has(.targets){grid-column:auto}.targets{grid-template-columns:1fr 1fr}}.big{font-size:28px!important;font-weight:600}.scroll{overflow-x:auto}table{border-collapse:collapse;font-size:13px;min-width:100%}th,td{padding:6px 10px;border-bottom:1px solid #2a2e39;text-align:right;white-space:nowrap}th[scope=row],thead th:first-child,tbody td:first-child{text-align:left}a{color:#91b8ff}.positive{color:var(--positive)}.negative{color:var(--negative)}.error{color:#ff8b91}.more{margin-top:12px}tr.last-opened{background:rgba(145,184,255,.24);box-shadow:inset 4px 0 0 #91b8ff;font-weight:600}.retest{margin-top:6px}.delta{font-size:12px!important;color:#91b8ff}.config-tile .targets{grid-template-columns:1fr 1fr}.retest-target{margin-right:12px}.max-r-filter{border:1px solid #2a2e39;border-radius:4px;margin:8px 0;padding:6px 10px;font-size:13px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.max-r-filter legend{color:#b1b7c5;padding:0 4px}button.sort{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600}td.max-r{text-align:left}.bar{display:inline-block;vertical-align:middle;width:70px;height:8px;border-radius:4px;background:repeating-linear-gradient(90deg,#2a2e39 0 6px,#1e222d 6px 7px);position:relative;overflow:hidden}.bar::after{content:'';position:absolute;left:40%;top:0;bottom:0;width:1px;background:#b1b7c5}.bar i{display:block;height:100%;background:var(--negative)}.bar i.hit{background:var(--positive)}button.chart{padding:2px 10px;border-color:#91b8ff;color:#91b8ff}button.chart.seen{border-color:#434651;color:#7f8696}.pin{padding:2px 8px}:is(button,select,a):focus-visible{outline:2px solid #91b8ff;outline-offset:2px}@media(max-width:600px){.dob-stats{padding:12px}}
 </style>
