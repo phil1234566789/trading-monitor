@@ -173,7 +173,9 @@ const showDobPositions=useLocalStorageRef("showDobPositions",false);
 const dobPositionsRun=useLocalStorageRef("dobPositionsRun","");
 const dobPositionsShowBlocked=useLocalStorageRef("dobPositionsShowBlocked",false);
 const dobPositionsWithConfig=useLocalStorageRef("dobPositionsWithConfig",true);
-const dobRunOptions=useDobRunOptions();
+// Nur Läufe des aktiven Instruments (Läufe ohne Instrument-Spalte sind XAU).
+const dobRunAll=useDobRunOptions();
+const dobRunOptions=computed(()=>dobRunAll.value.filter(r=>(r.instrument??"XAUUSD")===currentSymbol.value));
 watch(dobRunOptions,list=>{if(list.length&&!list.some(r=>r.id===dobPositionsRun.value))dobPositionsRun.value=list.at(-1).id;});
 const dobPositions=computed(()=>({enabled:showDobPositions.value,run:dobPositionsRun.value,showBlocked:dobPositionsShowBlocked.value,withConfig:dobPositionsWithConfig.value}));
 const brokerPositions=ref([]);

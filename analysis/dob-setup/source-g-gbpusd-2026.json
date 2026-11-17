@@ -1,0 +1,4833 @@
+{
+  "measurement": "dob-poi-atr-sweep-v1",
+  "instrument": "GBPUSD",
+  "git": "d05aa441-dirty",
+  "dataEnd": "2026-11-17",
+  "methodology": [
+    "Basis v0: jedes DOB-Setup im Raster (jeder M5-Schluss, Live-Fenster), einmalig nach Richtung/Entry/SL.",
+    "POI: nächste aktive H1/H4-OB-Zone in Trade-Richtung (dobHtfObPoi.js), Abstand in H1-ATR(14) zum OB1-Start.",
+    "Schwelle k: Trade zählt, wenn ein tragendes Paar eine Zone ≤ k ATR hat; mitRetest = Zone vor OB1 retestet (v2).",
+    "Ziele 2R/3R/5R über dobMaxR/dobTargetOutcome (gleiche Rechnung wie /dob-statistik); Halbjahre nach Berliner Entry-Datum."
+  ],
+  "base": {
+    "trades": 2139,
+    "perWeek": 45.5,
+    "2R": {
+      "n": 2096,
+      "win": 675,
+      "loss": 1421,
+      "winrate": 32.2,
+      "sumR": -71,
+      "halves": {
+        "Jan–Jun": {
+          "n": 1210,
+          "win": 388,
+          "loss": 822,
+          "winrate": 32.1,
+          "sumR": -46
+        },
+        "Jul–Dez": {
+          "n": 886,
+          "win": 287,
+          "loss": 599,
+          "winrate": 32.4,
+          "sumR": -25
+        }
+      }
+    },
+    "3R": {
+      "n": 2084,
+      "win": 493,
+      "loss": 1591,
+      "winrate": 23.7,
+      "sumR": -112,
+      "halves": {
+        "Jan–Jun": {
+          "n": 1207,
+          "win": 285,
+          "loss": 922,
+          "winrate": 23.6,
+          "sumR": -67
+        },
+        "Jul–Dez": {
+          "n": 877,
+          "win": 208,
+          "loss": 669,
+          "winrate": 23.7,
+          "sumR": -45
+        }
+      }
+    },
+    "5R": {
+      "n": 2057,
+      "win": 316,
+      "loss": 1741,
+      "winrate": 15.4,
+      "sumR": -161,
+      "halves": {
+        "Jan–Jun": {
+          "n": 1197,
+          "win": 188,
+          "loss": 1009,
+          "winrate": 15.7,
+          "sumR": -69
+        },
+        "Jul–Dez": {
+          "n": 860,
+          "win": 128,
+          "loss": 732,
+          "winrate": 14.9,
+          "sumR": -92
+        }
+      }
+    }
+  },
+  "ohneRetest": {
+    "coarse": [
+      {
+        "k": 0,
+        "trades": 169,
+        "perWeek": 3.8,
+        "2R": {
+          "n": 166,
+          "win": 48,
+          "loss": 118,
+          "winrate": 28.9,
+          "sumR": -22,
+          "halves": {
+            "Jan–Jun": {
+              "n": 97,
+              "win": 24,
+              "loss": 73,
+              "winrate": 24.7,
+              "sumR": -25
+            },
+            "Jul–Dez": {
+              "n": 69,
+              "win": 24,
+              "loss": 45,
+              "winrate": 34.8,
+              "sumR": 3
+            }
+          }
+        },
+        "3R": {
+          "n": 166,
+          "win": 39,
+          "loss": 127,
+          "winrate": 23.5,
+          "sumR": -10,
+          "halves": {
+            "Jan–Jun": {
+              "n": 97,
+              "win": 18,
+              "loss": 79,
+              "winrate": 18.6,
+              "sumR": -25
+            },
+            "Jul–Dez": {
+              "n": 69,
+              "win": 21,
+              "loss": 48,
+              "winrate": 30.4,
+              "sumR": 15
+            }
+          }
+        },
+        "5R": {
+          "n": 165,
+          "win": 29,
+          "loss": 136,
+          "winrate": 17.6,
+          "sumR": 9,
+          "halves": {
+            "Jan–Jun": {
+              "n": 96,
+              "win": 13,
+              "loss": 83,
+              "winrate": 13.5,
+              "sumR": -18
+            },
+            "Jul–Dez": {
+              "n": 69,
+              "win": 16,
+              "loss": 53,
+              "winrate": 23.2,
+              "sumR": 27
+            }
+          }
+        }
+      },
+      {
+        "k": 0.25,
+        "trades": 230,
+        "perWeek": 5,
+        "2R": {
+          "n": 226,
+          "win": 66,
+          "loss": 160,
+          "winrate": 29.2,
+          "sumR": -28,
+          "halves": {
+            "Jan–Jun": {
+              "n": 137,
+              "win": 33,
+              "loss": 104,
+              "winrate": 24.1,
+              "sumR": -38
+            },
+            "Jul–Dez": {
+              "n": 89,
+              "win": 33,
+              "loss": 56,
+              "winrate": 37.1,
+              "sumR": 10
+            }
+          }
+        },
+        "3R": {
+          "n": 226,
+          "win": 52,
+          "loss": 174,
+          "winrate": 23,
+          "sumR": -18,
+          "halves": {
+            "Jan–Jun": {
+              "n": 137,
+              "win": 25,
+              "loss": 112,
+              "winrate": 18.2,
+              "sumR": -37
+            },
+            "Jul–Dez": {
+              "n": 89,
+              "win": 27,
+              "loss": 62,
+              "winrate": 30.3,
+              "sumR": 19
+            }
+          }
+        },
+        "5R": {
+          "n": 222,
+          "win": 35,
+          "loss": 187,
+          "winrate": 15.8,
+          "sumR": -12,
+          "halves": {
+            "Jan–Jun": {
+              "n": 135,
+              "win": 18,
+              "loss": 117,
+              "winrate": 13.3,
+              "sumR": -27
+            },
+            "Jul–Dez": {
+              "n": 87,
+              "win": 17,
+              "loss": 70,
+              "winrate": 19.5,
+              "sumR": 15
+            }
+          }
+        }
+      },
+      {
+        "k": 0.5,
+        "trades": 335,
+        "perWeek": 7.3,
+        "2R": {
+          "n": 330,
+          "win": 96,
+          "loss": 234,
+          "winrate": 29.1,
+          "sumR": -42,
+          "halves": {
+            "Jan–Jun": {
+              "n": 205,
+              "win": 55,
+              "loss": 150,
+              "winrate": 26.8,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 125,
+              "win": 41,
+              "loss": 84,
+              "winrate": 32.8,
+              "sumR": -2
+            }
+          }
+        },
+        "3R": {
+          "n": 330,
+          "win": 77,
+          "loss": 253,
+          "winrate": 23.3,
+          "sumR": -22,
+          "halves": {
+            "Jan–Jun": {
+              "n": 205,
+              "win": 43,
+              "loss": 162,
+              "winrate": 21,
+              "sumR": -33
+            },
+            "Jul–Dez": {
+              "n": 125,
+              "win": 34,
+              "loss": 91,
+              "winrate": 27.2,
+              "sumR": 11
+            }
+          }
+        },
+        "5R": {
+          "n": 325,
+          "win": 53,
+          "loss": 272,
+          "winrate": 16.3,
+          "sumR": -7,
+          "halves": {
+            "Jan–Jun": {
+              "n": 202,
+              "win": 32,
+              "loss": 170,
+              "winrate": 15.8,
+              "sumR": -10
+            },
+            "Jul–Dez": {
+              "n": 123,
+              "win": 21,
+              "loss": 102,
+              "winrate": 17.1,
+              "sumR": 3
+            }
+          }
+        }
+      },
+      {
+        "k": 0.75,
+        "trades": 451,
+        "perWeek": 9.8,
+        "2R": {
+          "n": 446,
+          "win": 138,
+          "loss": 308,
+          "winrate": 30.9,
+          "sumR": -32,
+          "halves": {
+            "Jan–Jun": {
+              "n": 282,
+              "win": 82,
+              "loss": 200,
+              "winrate": 29.1,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 164,
+              "win": 56,
+              "loss": 108,
+              "winrate": 34.1,
+              "sumR": 4
+            }
+          }
+        },
+        "3R": {
+          "n": 445,
+          "win": 108,
+          "loss": 337,
+          "winrate": 24.3,
+          "sumR": -13,
+          "halves": {
+            "Jan–Jun": {
+              "n": 282,
+              "win": 64,
+              "loss": 218,
+              "winrate": 22.7,
+              "sumR": -26
+            },
+            "Jul–Dez": {
+              "n": 163,
+              "win": 44,
+              "loss": 119,
+              "winrate": 27,
+              "sumR": 13
+            }
+          }
+        },
+        "5R": {
+          "n": 437,
+          "win": 71,
+          "loss": 366,
+          "winrate": 16.2,
+          "sumR": -11,
+          "halves": {
+            "Jan–Jun": {
+              "n": 279,
+              "win": 47,
+              "loss": 232,
+              "winrate": 16.8,
+              "sumR": 3
+            },
+            "Jul–Dez": {
+              "n": 158,
+              "win": 24,
+              "loss": 134,
+              "winrate": 15.2,
+              "sumR": -14
+            }
+          }
+        }
+      },
+      {
+        "k": 1,
+        "trades": 562,
+        "perWeek": 12.2,
+        "2R": {
+          "n": 553,
+          "win": 175,
+          "loss": 378,
+          "winrate": 31.6,
+          "sumR": -28,
+          "halves": {
+            "Jan–Jun": {
+              "n": 350,
+              "win": 106,
+              "loss": 244,
+              "winrate": 30.3,
+              "sumR": -32
+            },
+            "Jul–Dez": {
+              "n": 203,
+              "win": 69,
+              "loss": 134,
+              "winrate": 34,
+              "sumR": 4
+            }
+          }
+        },
+        "3R": {
+          "n": 551,
+          "win": 136,
+          "loss": 415,
+          "winrate": 24.7,
+          "sumR": -7,
+          "halves": {
+            "Jan–Jun": {
+              "n": 350,
+              "win": 84,
+              "loss": 266,
+              "winrate": 24,
+              "sumR": -14
+            },
+            "Jul–Dez": {
+              "n": 201,
+              "win": 52,
+              "loss": 149,
+              "winrate": 25.9,
+              "sumR": 7
+            }
+          }
+        },
+        "5R": {
+          "n": 541,
+          "win": 91,
+          "loss": 450,
+          "winrate": 16.8,
+          "sumR": 5,
+          "halves": {
+            "Jan–Jun": {
+              "n": 346,
+              "win": 61,
+              "loss": 285,
+              "winrate": 17.6,
+              "sumR": 20
+            },
+            "Jul–Dez": {
+              "n": 195,
+              "win": 30,
+              "loss": 165,
+              "winrate": 15.4,
+              "sumR": -15
+            }
+          }
+        }
+      },
+      {
+        "k": 1.25,
+        "trades": 671,
+        "perWeek": 14.3,
+        "2R": {
+          "n": 662,
+          "win": 209,
+          "loss": 453,
+          "winrate": 31.6,
+          "sumR": -35,
+          "halves": {
+            "Jan–Jun": {
+              "n": 415,
+              "win": 126,
+              "loss": 289,
+              "winrate": 30.4,
+              "sumR": -37
+            },
+            "Jul–Dez": {
+              "n": 247,
+              "win": 83,
+              "loss": 164,
+              "winrate": 33.6,
+              "sumR": 2
+            }
+          }
+        },
+        "3R": {
+          "n": 660,
+          "win": 159,
+          "loss": 501,
+          "winrate": 24.1,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 415,
+              "win": 97,
+              "loss": 318,
+              "winrate": 23.4,
+              "sumR": -27
+            },
+            "Jul–Dez": {
+              "n": 245,
+              "win": 62,
+              "loss": 183,
+              "winrate": 25.3,
+              "sumR": 3
+            }
+          }
+        },
+        "5R": {
+          "n": 649,
+          "win": 107,
+          "loss": 542,
+          "winrate": 16.5,
+          "sumR": -7,
+          "halves": {
+            "Jan–Jun": {
+              "n": 411,
+              "win": 70,
+              "loss": 341,
+              "winrate": 17,
+              "sumR": 9
+            },
+            "Jul–Dez": {
+              "n": 238,
+              "win": 37,
+              "loss": 201,
+              "winrate": 15.5,
+              "sumR": -16
+            }
+          }
+        }
+      },
+      {
+        "k": 1.5,
+        "trades": 809,
+        "perWeek": 17.2,
+        "2R": {
+          "n": 795,
+          "win": 250,
+          "loss": 545,
+          "winrate": 31.4,
+          "sumR": -45,
+          "halves": {
+            "Jan–Jun": {
+              "n": 515,
+              "win": 153,
+              "loss": 362,
+              "winrate": 29.7,
+              "sumR": -56
+            },
+            "Jul–Dez": {
+              "n": 280,
+              "win": 97,
+              "loss": 183,
+              "winrate": 34.6,
+              "sumR": 11
+            }
+          }
+        },
+        "3R": {
+          "n": 791,
+          "win": 188,
+          "loss": 603,
+          "winrate": 23.8,
+          "sumR": -39,
+          "halves": {
+            "Jan–Jun": {
+              "n": 514,
+              "win": 117,
+              "loss": 397,
+              "winrate": 22.8,
+              "sumR": -46
+            },
+            "Jul–Dez": {
+              "n": 277,
+              "win": 71,
+              "loss": 206,
+              "winrate": 25.6,
+              "sumR": 7
+            }
+          }
+        },
+        "5R": {
+          "n": 779,
+          "win": 123,
+          "loss": 656,
+          "winrate": 15.8,
+          "sumR": -41,
+          "halves": {
+            "Jan–Jun": {
+              "n": 509,
+              "win": 82,
+              "loss": 427,
+              "winrate": 16.1,
+              "sumR": -17
+            },
+            "Jul–Dez": {
+              "n": 270,
+              "win": 41,
+              "loss": 229,
+              "winrate": 15.2,
+              "sumR": -24
+            }
+          }
+        }
+      },
+      {
+        "k": 1.75,
+        "trades": 920,
+        "perWeek": 19.6,
+        "2R": {
+          "n": 903,
+          "win": 291,
+          "loss": 612,
+          "winrate": 32.2,
+          "sumR": -30,
+          "halves": {
+            "Jan–Jun": {
+              "n": 568,
+              "win": 173,
+              "loss": 395,
+              "winrate": 30.5,
+              "sumR": -49
+            },
+            "Jul–Dez": {
+              "n": 335,
+              "win": 118,
+              "loss": 217,
+              "winrate": 35.2,
+              "sumR": 19
+            }
+          }
+        },
+        "3R": {
+          "n": 899,
+          "win": 218,
+          "loss": 681,
+          "winrate": 24.2,
+          "sumR": -27,
+          "halves": {
+            "Jan–Jun": {
+              "n": 567,
+              "win": 128,
+              "loss": 439,
+              "winrate": 22.6,
+              "sumR": -55
+            },
+            "Jul–Dez": {
+              "n": 332,
+              "win": 90,
+              "loss": 242,
+              "winrate": 27.1,
+              "sumR": 28
+            }
+          }
+        },
+        "5R": {
+          "n": 885,
+          "win": 143,
+          "loss": 742,
+          "winrate": 16.2,
+          "sumR": -27,
+          "halves": {
+            "Jan–Jun": {
+              "n": 562,
+              "win": 87,
+              "loss": 475,
+              "winrate": 15.5,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 323,
+              "win": 56,
+              "loss": 267,
+              "winrate": 17.3,
+              "sumR": 13
+            }
+          }
+        }
+      },
+      {
+        "k": 2,
+        "trades": 1025,
+        "perWeek": 21.8,
+        "2R": {
+          "n": 1005,
+          "win": 327,
+          "loss": 678,
+          "winrate": 32.5,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 628,
+              "win": 196,
+              "loss": 432,
+              "winrate": 31.2,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 377,
+              "win": 131,
+              "loss": 246,
+              "winrate": 34.7,
+              "sumR": 16
+            }
+          }
+        },
+        "3R": {
+          "n": 1001,
+          "win": 245,
+          "loss": 756,
+          "winrate": 24.5,
+          "sumR": -21,
+          "halves": {
+            "Jan–Jun": {
+              "n": 627,
+              "win": 145,
+              "loss": 482,
+              "winrate": 23.1,
+              "sumR": -47
+            },
+            "Jul–Dez": {
+              "n": 374,
+              "win": 100,
+              "loss": 274,
+              "winrate": 26.7,
+              "sumR": 26
+            }
+          }
+        },
+        "5R": {
+          "n": 987,
+          "win": 159,
+          "loss": 828,
+          "winrate": 16.1,
+          "sumR": -33,
+          "halves": {
+            "Jan–Jun": {
+              "n": 622,
+              "win": 99,
+              "loss": 523,
+              "winrate": 15.9,
+              "sumR": -28
+            },
+            "Jul–Dez": {
+              "n": 365,
+              "win": 60,
+              "loss": 305,
+              "winrate": 16.4,
+              "sumR": -5
+            }
+          }
+        }
+      },
+      {
+        "k": 2.5,
+        "trades": 1204,
+        "perWeek": 25.6,
+        "2R": {
+          "n": 1183,
+          "win": 400,
+          "loss": 783,
+          "winrate": 33.8,
+          "sumR": 17,
+          "halves": {
+            "Jan–Jun": {
+              "n": 719,
+              "win": 237,
+              "loss": 482,
+              "winrate": 33,
+              "sumR": -8
+            },
+            "Jul–Dez": {
+              "n": 464,
+              "win": 163,
+              "loss": 301,
+              "winrate": 35.1,
+              "sumR": 25
+            }
+          }
+        },
+        "3R": {
+          "n": 1179,
+          "win": 292,
+          "loss": 887,
+          "winrate": 24.8,
+          "sumR": -11,
+          "halves": {
+            "Jan–Jun": {
+              "n": 718,
+              "win": 175,
+              "loss": 543,
+              "winrate": 24.4,
+              "sumR": -18
+            },
+            "Jul–Dez": {
+              "n": 461,
+              "win": 117,
+              "loss": 344,
+              "winrate": 25.4,
+              "sumR": 7
+            }
+          }
+        },
+        "5R": {
+          "n": 1163,
+          "win": 185,
+          "loss": 978,
+          "winrate": 15.9,
+          "sumR": -53,
+          "halves": {
+            "Jan–Jun": {
+              "n": 713,
+              "win": 115,
+              "loss": 598,
+              "winrate": 16.1,
+              "sumR": -23
+            },
+            "Jul–Dez": {
+              "n": 450,
+              "win": 70,
+              "loss": 380,
+              "winrate": 15.6,
+              "sumR": -30
+            }
+          }
+        }
+      },
+      {
+        "k": 3,
+        "trades": 1425,
+        "perWeek": 30.3,
+        "2R": {
+          "n": 1400,
+          "win": 475,
+          "loss": 925,
+          "winrate": 33.9,
+          "sumR": 25,
+          "halves": {
+            "Jan–Jun": {
+              "n": 849,
+              "win": 283,
+              "loss": 566,
+              "winrate": 33.3,
+              "sumR": 0
+            },
+            "Jul–Dez": {
+              "n": 551,
+              "win": 192,
+              "loss": 359,
+              "winrate": 34.8,
+              "sumR": 25
+            }
+          }
+        },
+        "3R": {
+          "n": 1393,
+          "win": 348,
+          "loss": 1045,
+          "winrate": 25,
+          "sumR": -1,
+          "halves": {
+            "Jan–Jun": {
+              "n": 847,
+              "win": 210,
+              "loss": 637,
+              "winrate": 24.8,
+              "sumR": -7
+            },
+            "Jul–Dez": {
+              "n": 546,
+              "win": 138,
+              "loss": 408,
+              "winrate": 25.3,
+              "sumR": 6
+            }
+          }
+        },
+        "5R": {
+          "n": 1374,
+          "win": 225,
+          "loss": 1149,
+          "winrate": 16.4,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 841,
+              "win": 139,
+              "loss": 702,
+              "winrate": 16.5,
+              "sumR": -7
+            },
+            "Jul–Dez": {
+              "n": 533,
+              "win": 86,
+              "loss": 447,
+              "winrate": 16.1,
+              "sumR": -17
+            }
+          }
+        }
+      }
+    ],
+    "fine": [
+      {
+        "k": 0.5,
+        "trades": 335,
+        "perWeek": 7.3,
+        "2R": {
+          "n": 330,
+          "win": 96,
+          "loss": 234,
+          "winrate": 29.1,
+          "sumR": -42,
+          "halves": {
+            "Jan–Jun": {
+              "n": 205,
+              "win": 55,
+              "loss": 150,
+              "winrate": 26.8,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 125,
+              "win": 41,
+              "loss": 84,
+              "winrate": 32.8,
+              "sumR": -2
+            }
+          }
+        },
+        "3R": {
+          "n": 330,
+          "win": 77,
+          "loss": 253,
+          "winrate": 23.3,
+          "sumR": -22,
+          "halves": {
+            "Jan–Jun": {
+              "n": 205,
+              "win": 43,
+              "loss": 162,
+              "winrate": 21,
+              "sumR": -33
+            },
+            "Jul–Dez": {
+              "n": 125,
+              "win": 34,
+              "loss": 91,
+              "winrate": 27.2,
+              "sumR": 11
+            }
+          }
+        },
+        "5R": {
+          "n": 325,
+          "win": 53,
+          "loss": 272,
+          "winrate": 16.3,
+          "sumR": -7,
+          "halves": {
+            "Jan–Jun": {
+              "n": 202,
+              "win": 32,
+              "loss": 170,
+              "winrate": 15.8,
+              "sumR": -10
+            },
+            "Jul–Dez": {
+              "n": 123,
+              "win": 21,
+              "loss": 102,
+              "winrate": 17.1,
+              "sumR": 3
+            }
+          }
+        }
+      },
+      {
+        "k": 0.6,
+        "trades": 371,
+        "perWeek": 8.1,
+        "2R": {
+          "n": 366,
+          "win": 106,
+          "loss": 260,
+          "winrate": 29,
+          "sumR": -48,
+          "halves": {
+            "Jan–Jun": {
+              "n": 229,
+              "win": 62,
+              "loss": 167,
+              "winrate": 27.1,
+              "sumR": -43
+            },
+            "Jul–Dez": {
+              "n": 137,
+              "win": 44,
+              "loss": 93,
+              "winrate": 32.1,
+              "sumR": -5
+            }
+          }
+        },
+        "3R": {
+          "n": 366,
+          "win": 85,
+          "loss": 281,
+          "winrate": 23.2,
+          "sumR": -26,
+          "halves": {
+            "Jan–Jun": {
+              "n": 229,
+              "win": 48,
+              "loss": 181,
+              "winrate": 21,
+              "sumR": -37
+            },
+            "Jul–Dez": {
+              "n": 137,
+              "win": 37,
+              "loss": 100,
+              "winrate": 27,
+              "sumR": 11
+            }
+          }
+        },
+        "5R": {
+          "n": 358,
+          "win": 55,
+          "loss": 303,
+          "winrate": 15.4,
+          "sumR": -28,
+          "halves": {
+            "Jan–Jun": {
+              "n": 226,
+              "win": 34,
+              "loss": 192,
+              "winrate": 15,
+              "sumR": -22
+            },
+            "Jul–Dez": {
+              "n": 132,
+              "win": 21,
+              "loss": 111,
+              "winrate": 15.9,
+              "sumR": -6
+            }
+          }
+        }
+      },
+      {
+        "k": 0.7,
+        "trades": 427,
+        "perWeek": 9.3,
+        "2R": {
+          "n": 422,
+          "win": 130,
+          "loss": 292,
+          "winrate": 30.8,
+          "sumR": -32,
+          "halves": {
+            "Jan–Jun": {
+              "n": 268,
+              "win": 76,
+              "loss": 192,
+              "winrate": 28.4,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 154,
+              "win": 54,
+              "loss": 100,
+              "winrate": 35.1,
+              "sumR": 8
+            }
+          }
+        },
+        "3R": {
+          "n": 421,
+          "win": 101,
+          "loss": 320,
+          "winrate": 24,
+          "sumR": -17,
+          "halves": {
+            "Jan–Jun": {
+              "n": 268,
+              "win": 58,
+              "loss": 210,
+              "winrate": 21.6,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 153,
+              "win": 43,
+              "loss": 110,
+              "winrate": 28.1,
+              "sumR": 19
+            }
+          }
+        },
+        "5R": {
+          "n": 413,
+          "win": 66,
+          "loss": 347,
+          "winrate": 16,
+          "sumR": -17,
+          "halves": {
+            "Jan–Jun": {
+              "n": 265,
+              "win": 42,
+              "loss": 223,
+              "winrate": 15.8,
+              "sumR": -13
+            },
+            "Jul–Dez": {
+              "n": 148,
+              "win": 24,
+              "loss": 124,
+              "winrate": 16.2,
+              "sumR": -4
+            }
+          }
+        }
+      },
+      {
+        "k": 0.8,
+        "trades": 482,
+        "perWeek": 10.5,
+        "2R": {
+          "n": 477,
+          "win": 146,
+          "loss": 331,
+          "winrate": 30.6,
+          "sumR": -39,
+          "halves": {
+            "Jan–Jun": {
+              "n": 309,
+              "win": 90,
+              "loss": 219,
+              "winrate": 29.1,
+              "sumR": -39
+            },
+            "Jul–Dez": {
+              "n": 168,
+              "win": 56,
+              "loss": 112,
+              "winrate": 33.3,
+              "sumR": 0
+            }
+          }
+        },
+        "3R": {
+          "n": 476,
+          "win": 115,
+          "loss": 361,
+          "winrate": 24.2,
+          "sumR": -16,
+          "halves": {
+            "Jan–Jun": {
+              "n": 309,
+              "win": 71,
+              "loss": 238,
+              "winrate": 23,
+              "sumR": -25
+            },
+            "Jul–Dez": {
+              "n": 167,
+              "win": 44,
+              "loss": 123,
+              "winrate": 26.3,
+              "sumR": 9
+            }
+          }
+        },
+        "5R": {
+          "n": 467,
+          "win": 77,
+          "loss": 390,
+          "winrate": 16.5,
+          "sumR": -5,
+          "halves": {
+            "Jan–Jun": {
+              "n": 305,
+              "win": 53,
+              "loss": 252,
+              "winrate": 17.4,
+              "sumR": 13
+            },
+            "Jul–Dez": {
+              "n": 162,
+              "win": 24,
+              "loss": 138,
+              "winrate": 14.8,
+              "sumR": -18
+            }
+          }
+        }
+      },
+      {
+        "k": 0.9,
+        "trades": 522,
+        "perWeek": 11.3,
+        "2R": {
+          "n": 517,
+          "win": 160,
+          "loss": 357,
+          "winrate": 30.9,
+          "sumR": -37,
+          "halves": {
+            "Jan–Jun": {
+              "n": 333,
+              "win": 99,
+              "loss": 234,
+              "winrate": 29.7,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 184,
+              "win": 61,
+              "loss": 123,
+              "winrate": 33.2,
+              "sumR": -1
+            }
+          }
+        },
+        "3R": {
+          "n": 516,
+          "win": 124,
+          "loss": 392,
+          "winrate": 24,
+          "sumR": -20,
+          "halves": {
+            "Jan–Jun": {
+              "n": 333,
+              "win": 78,
+              "loss": 255,
+              "winrate": 23.4,
+              "sumR": -21
+            },
+            "Jul–Dez": {
+              "n": 183,
+              "win": 46,
+              "loss": 137,
+              "winrate": 25.1,
+              "sumR": 1
+            }
+          }
+        },
+        "5R": {
+          "n": 507,
+          "win": 81,
+          "loss": 426,
+          "winrate": 16,
+          "sumR": -21,
+          "halves": {
+            "Jan–Jun": {
+              "n": 329,
+              "win": 56,
+              "loss": 273,
+              "winrate": 17,
+              "sumR": 7
+            },
+            "Jul–Dez": {
+              "n": 178,
+              "win": 25,
+              "loss": 153,
+              "winrate": 14,
+              "sumR": -28
+            }
+          }
+        }
+      },
+      {
+        "k": 1,
+        "trades": 562,
+        "perWeek": 12.2,
+        "2R": {
+          "n": 553,
+          "win": 175,
+          "loss": 378,
+          "winrate": 31.6,
+          "sumR": -28,
+          "halves": {
+            "Jan–Jun": {
+              "n": 350,
+              "win": 106,
+              "loss": 244,
+              "winrate": 30.3,
+              "sumR": -32
+            },
+            "Jul–Dez": {
+              "n": 203,
+              "win": 69,
+              "loss": 134,
+              "winrate": 34,
+              "sumR": 4
+            }
+          }
+        },
+        "3R": {
+          "n": 551,
+          "win": 136,
+          "loss": 415,
+          "winrate": 24.7,
+          "sumR": -7,
+          "halves": {
+            "Jan–Jun": {
+              "n": 350,
+              "win": 84,
+              "loss": 266,
+              "winrate": 24,
+              "sumR": -14
+            },
+            "Jul–Dez": {
+              "n": 201,
+              "win": 52,
+              "loss": 149,
+              "winrate": 25.9,
+              "sumR": 7
+            }
+          }
+        },
+        "5R": {
+          "n": 541,
+          "win": 91,
+          "loss": 450,
+          "winrate": 16.8,
+          "sumR": 5,
+          "halves": {
+            "Jan–Jun": {
+              "n": 346,
+              "win": 61,
+              "loss": 285,
+              "winrate": 17.6,
+              "sumR": 20
+            },
+            "Jul–Dez": {
+              "n": 195,
+              "win": 30,
+              "loss": 165,
+              "winrate": 15.4,
+              "sumR": -15
+            }
+          }
+        }
+      },
+      {
+        "k": 1.1,
+        "trades": 608,
+        "perWeek": 13.2,
+        "2R": {
+          "n": 599,
+          "win": 187,
+          "loss": 412,
+          "winrate": 31.2,
+          "sumR": -38,
+          "halves": {
+            "Jan–Jun": {
+              "n": 382,
+              "win": 114,
+              "loss": 268,
+              "winrate": 29.8,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 217,
+              "win": 73,
+              "loss": 144,
+              "winrate": 33.6,
+              "sumR": 2
+            }
+          }
+        },
+        "3R": {
+          "n": 597,
+          "win": 144,
+          "loss": 453,
+          "winrate": 24.1,
+          "sumR": -21,
+          "halves": {
+            "Jan–Jun": {
+              "n": 382,
+              "win": 89,
+              "loss": 293,
+              "winrate": 23.3,
+              "sumR": -26
+            },
+            "Jul–Dez": {
+              "n": 215,
+              "win": 55,
+              "loss": 160,
+              "winrate": 25.6,
+              "sumR": 5
+            }
+          }
+        },
+        "5R": {
+          "n": 586,
+          "win": 94,
+          "loss": 492,
+          "winrate": 16,
+          "sumR": -22,
+          "halves": {
+            "Jan–Jun": {
+              "n": 378,
+              "win": 63,
+              "loss": 315,
+              "winrate": 16.7,
+              "sumR": 0
+            },
+            "Jul–Dez": {
+              "n": 208,
+              "win": 31,
+              "loss": 177,
+              "winrate": 14.9,
+              "sumR": -22
+            }
+          }
+        }
+      },
+      {
+        "k": 1.2,
+        "trades": 653,
+        "perWeek": 13.9,
+        "2R": {
+          "n": 644,
+          "win": 202,
+          "loss": 442,
+          "winrate": 31.4,
+          "sumR": -38,
+          "halves": {
+            "Jan–Jun": {
+              "n": 404,
+              "win": 121,
+              "loss": 283,
+              "winrate": 30,
+              "sumR": -41
+            },
+            "Jul–Dez": {
+              "n": 240,
+              "win": 81,
+              "loss": 159,
+              "winrate": 33.8,
+              "sumR": 3
+            }
+          }
+        },
+        "3R": {
+          "n": 642,
+          "win": 153,
+          "loss": 489,
+          "winrate": 23.8,
+          "sumR": -30,
+          "halves": {
+            "Jan–Jun": {
+              "n": 404,
+              "win": 93,
+              "loss": 311,
+              "winrate": 23,
+              "sumR": -32
+            },
+            "Jul–Dez": {
+              "n": 238,
+              "win": 60,
+              "loss": 178,
+              "winrate": 25.2,
+              "sumR": 2
+            }
+          }
+        },
+        "5R": {
+          "n": 631,
+          "win": 102,
+          "loss": 529,
+          "winrate": 16.2,
+          "sumR": -19,
+          "halves": {
+            "Jan–Jun": {
+              "n": 400,
+              "win": 67,
+              "loss": 333,
+              "winrate": 16.8,
+              "sumR": 2
+            },
+            "Jul–Dez": {
+              "n": 231,
+              "win": 35,
+              "loss": 196,
+              "winrate": 15.2,
+              "sumR": -21
+            }
+          }
+        }
+      },
+      {
+        "k": 1.3,
+        "trades": 711,
+        "perWeek": 15.1,
+        "2R": {
+          "n": 702,
+          "win": 221,
+          "loss": 481,
+          "winrate": 31.5,
+          "sumR": -39,
+          "halves": {
+            "Jan–Jun": {
+              "n": 446,
+              "win": 134,
+              "loss": 312,
+              "winrate": 30,
+              "sumR": -44
+            },
+            "Jul–Dez": {
+              "n": 256,
+              "win": 87,
+              "loss": 169,
+              "winrate": 34,
+              "sumR": 5
+            }
+          }
+        },
+        "3R": {
+          "n": 699,
+          "win": 166,
+          "loss": 533,
+          "winrate": 23.7,
+          "sumR": -35,
+          "halves": {
+            "Jan–Jun": {
+              "n": 446,
+              "win": 103,
+              "loss": 343,
+              "winrate": 23.1,
+              "sumR": -34
+            },
+            "Jul–Dez": {
+              "n": 253,
+              "win": 63,
+              "loss": 190,
+              "winrate": 24.9,
+              "sumR": -1
+            }
+          }
+        },
+        "5R": {
+          "n": 688,
+          "win": 111,
+          "loss": 577,
+          "winrate": 16.1,
+          "sumR": -22,
+          "halves": {
+            "Jan–Jun": {
+              "n": 442,
+              "win": 73,
+              "loss": 369,
+              "winrate": 16.5,
+              "sumR": -4
+            },
+            "Jul–Dez": {
+              "n": 246,
+              "win": 38,
+              "loss": 208,
+              "winrate": 15.4,
+              "sumR": -18
+            }
+          }
+        }
+      },
+      {
+        "k": 1.4,
+        "trades": 762,
+        "perWeek": 16.2,
+        "2R": {
+          "n": 749,
+          "win": 235,
+          "loss": 514,
+          "winrate": 31.4,
+          "sumR": -44,
+          "halves": {
+            "Jan–Jun": {
+              "n": 480,
+              "win": 143,
+              "loss": 337,
+              "winrate": 29.8,
+              "sumR": -51
+            },
+            "Jul–Dez": {
+              "n": 269,
+              "win": 92,
+              "loss": 177,
+              "winrate": 34.2,
+              "sumR": 7
+            }
+          }
+        },
+        "3R": {
+          "n": 745,
+          "win": 175,
+          "loss": 570,
+          "winrate": 23.5,
+          "sumR": -45,
+          "halves": {
+            "Jan–Jun": {
+              "n": 479,
+              "win": 108,
+              "loss": 371,
+              "winrate": 22.5,
+              "sumR": -47
+            },
+            "Jul–Dez": {
+              "n": 266,
+              "win": 67,
+              "loss": 199,
+              "winrate": 25.2,
+              "sumR": 2
+            }
+          }
+        },
+        "5R": {
+          "n": 734,
+          "win": 115,
+          "loss": 619,
+          "winrate": 15.7,
+          "sumR": -44,
+          "halves": {
+            "Jan–Jun": {
+              "n": 475,
+              "win": 76,
+              "loss": 399,
+              "winrate": 16,
+              "sumR": -19
+            },
+            "Jul–Dez": {
+              "n": 259,
+              "win": 39,
+              "loss": 220,
+              "winrate": 15.1,
+              "sumR": -25
+            }
+          }
+        }
+      },
+      {
+        "k": 1.5,
+        "trades": 809,
+        "perWeek": 17.2,
+        "2R": {
+          "n": 795,
+          "win": 250,
+          "loss": 545,
+          "winrate": 31.4,
+          "sumR": -45,
+          "halves": {
+            "Jan–Jun": {
+              "n": 515,
+              "win": 153,
+              "loss": 362,
+              "winrate": 29.7,
+              "sumR": -56
+            },
+            "Jul–Dez": {
+              "n": 280,
+              "win": 97,
+              "loss": 183,
+              "winrate": 34.6,
+              "sumR": 11
+            }
+          }
+        },
+        "3R": {
+          "n": 791,
+          "win": 188,
+          "loss": 603,
+          "winrate": 23.8,
+          "sumR": -39,
+          "halves": {
+            "Jan–Jun": {
+              "n": 514,
+              "win": 117,
+              "loss": 397,
+              "winrate": 22.8,
+              "sumR": -46
+            },
+            "Jul–Dez": {
+              "n": 277,
+              "win": 71,
+              "loss": 206,
+              "winrate": 25.6,
+              "sumR": 7
+            }
+          }
+        },
+        "5R": {
+          "n": 779,
+          "win": 123,
+          "loss": 656,
+          "winrate": 15.8,
+          "sumR": -41,
+          "halves": {
+            "Jan–Jun": {
+              "n": 509,
+              "win": 82,
+              "loss": 427,
+              "winrate": 16.1,
+              "sumR": -17
+            },
+            "Jul–Dez": {
+              "n": 270,
+              "win": 41,
+              "loss": 229,
+              "winrate": 15.2,
+              "sumR": -24
+            }
+          }
+        }
+      },
+      {
+        "k": 1.6,
+        "trades": 857,
+        "perWeek": 18.2,
+        "2R": {
+          "n": 841,
+          "win": 265,
+          "loss": 576,
+          "winrate": 31.5,
+          "sumR": -46,
+          "halves": {
+            "Jan–Jun": {
+              "n": 542,
+              "win": 164,
+              "loss": 378,
+              "winrate": 30.3,
+              "sumR": -50
+            },
+            "Jul–Dez": {
+              "n": 299,
+              "win": 101,
+              "loss": 198,
+              "winrate": 33.8,
+              "sumR": 4
+            }
+          }
+        },
+        "3R": {
+          "n": 837,
+          "win": 197,
+          "loss": 640,
+          "winrate": 23.5,
+          "sumR": -49,
+          "halves": {
+            "Jan–Jun": {
+              "n": 541,
+              "win": 124,
+              "loss": 417,
+              "winrate": 22.9,
+              "sumR": -45
+            },
+            "Jul–Dez": {
+              "n": 296,
+              "win": 73,
+              "loss": 223,
+              "winrate": 24.7,
+              "sumR": -4
+            }
+          }
+        },
+        "5R": {
+          "n": 825,
+          "win": 127,
+          "loss": 698,
+          "winrate": 15.4,
+          "sumR": -63,
+          "halves": {
+            "Jan–Jun": {
+              "n": 536,
+              "win": 85,
+              "loss": 451,
+              "winrate": 15.9,
+              "sumR": -26
+            },
+            "Jul–Dez": {
+              "n": 289,
+              "win": 42,
+              "loss": 247,
+              "winrate": 14.5,
+              "sumR": -37
+            }
+          }
+        }
+      },
+      {
+        "k": 1.7,
+        "trades": 900,
+        "perWeek": 19.1,
+        "2R": {
+          "n": 883,
+          "win": 287,
+          "loss": 596,
+          "winrate": 32.5,
+          "sumR": -22,
+          "halves": {
+            "Jan–Jun": {
+              "n": 557,
+              "win": 172,
+              "loss": 385,
+              "winrate": 30.9,
+              "sumR": -41
+            },
+            "Jul–Dez": {
+              "n": 326,
+              "win": 115,
+              "loss": 211,
+              "winrate": 35.3,
+              "sumR": 19
+            }
+          }
+        },
+        "3R": {
+          "n": 879,
+          "win": 214,
+          "loss": 665,
+          "winrate": 24.3,
+          "sumR": -23,
+          "halves": {
+            "Jan–Jun": {
+              "n": 556,
+              "win": 127,
+              "loss": 429,
+              "winrate": 22.8,
+              "sumR": -48
+            },
+            "Jul–Dez": {
+              "n": 323,
+              "win": 87,
+              "loss": 236,
+              "winrate": 26.9,
+              "sumR": 25
+            }
+          }
+        },
+        "5R": {
+          "n": 866,
+          "win": 140,
+          "loss": 726,
+          "winrate": 16.2,
+          "sumR": -26,
+          "halves": {
+            "Jan–Jun": {
+              "n": 551,
+              "win": 86,
+              "loss": 465,
+              "winrate": 15.6,
+              "sumR": -35
+            },
+            "Jul–Dez": {
+              "n": 315,
+              "win": 54,
+              "loss": 261,
+              "winrate": 17.1,
+              "sumR": 9
+            }
+          }
+        }
+      },
+      {
+        "k": 1.8,
+        "trades": 948,
+        "perWeek": 20.2,
+        "2R": {
+          "n": 931,
+          "win": 297,
+          "loss": 634,
+          "winrate": 31.9,
+          "sumR": -40,
+          "halves": {
+            "Jan–Jun": {
+              "n": 586,
+              "win": 178,
+              "loss": 408,
+              "winrate": 30.4,
+              "sumR": -52
+            },
+            "Jul–Dez": {
+              "n": 345,
+              "win": 119,
+              "loss": 226,
+              "winrate": 34.5,
+              "sumR": 12
+            }
+          }
+        },
+        "3R": {
+          "n": 927,
+          "win": 223,
+          "loss": 704,
+          "winrate": 24.1,
+          "sumR": -35,
+          "halves": {
+            "Jan–Jun": {
+              "n": 585,
+              "win": 132,
+              "loss": 453,
+              "winrate": 22.6,
+              "sumR": -57
+            },
+            "Jul–Dez": {
+              "n": 342,
+              "win": 91,
+              "loss": 251,
+              "winrate": 26.6,
+              "sumR": 22
+            }
+          }
+        },
+        "5R": {
+          "n": 913,
+          "win": 147,
+          "loss": 766,
+          "winrate": 16.1,
+          "sumR": -31,
+          "halves": {
+            "Jan–Jun": {
+              "n": 580,
+              "win": 91,
+              "loss": 489,
+              "winrate": 15.7,
+              "sumR": -34
+            },
+            "Jul–Dez": {
+              "n": 333,
+              "win": 56,
+              "loss": 277,
+              "winrate": 16.8,
+              "sumR": 3
+            }
+          }
+        }
+      },
+      {
+        "k": 1.9,
+        "trades": 977,
+        "perWeek": 20.8,
+        "2R": {
+          "n": 959,
+          "win": 308,
+          "loss": 651,
+          "winrate": 32.1,
+          "sumR": -35,
+          "halves": {
+            "Jan–Jun": {
+              "n": 600,
+              "win": 183,
+              "loss": 417,
+              "winrate": 30.5,
+              "sumR": -51
+            },
+            "Jul–Dez": {
+              "n": 359,
+              "win": 125,
+              "loss": 234,
+              "winrate": 34.8,
+              "sumR": 16
+            }
+          }
+        },
+        "3R": {
+          "n": 955,
+          "win": 231,
+          "loss": 724,
+          "winrate": 24.2,
+          "sumR": -31,
+          "halves": {
+            "Jan–Jun": {
+              "n": 599,
+              "win": 136,
+              "loss": 463,
+              "winrate": 22.7,
+              "sumR": -55
+            },
+            "Jul–Dez": {
+              "n": 356,
+              "win": 95,
+              "loss": 261,
+              "winrate": 26.7,
+              "sumR": 24
+            }
+          }
+        },
+        "5R": {
+          "n": 941,
+          "win": 151,
+          "loss": 790,
+          "winrate": 16,
+          "sumR": -35,
+          "halves": {
+            "Jan–Jun": {
+              "n": 594,
+              "win": 93,
+              "loss": 501,
+              "winrate": 15.7,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 347,
+              "win": 58,
+              "loss": 289,
+              "winrate": 16.7,
+              "sumR": 1
+            }
+          }
+        }
+      },
+      {
+        "k": 2,
+        "trades": 1025,
+        "perWeek": 21.8,
+        "2R": {
+          "n": 1005,
+          "win": 327,
+          "loss": 678,
+          "winrate": 32.5,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 628,
+              "win": 196,
+              "loss": 432,
+              "winrate": 31.2,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 377,
+              "win": 131,
+              "loss": 246,
+              "winrate": 34.7,
+              "sumR": 16
+            }
+          }
+        },
+        "3R": {
+          "n": 1001,
+          "win": 245,
+          "loss": 756,
+          "winrate": 24.5,
+          "sumR": -21,
+          "halves": {
+            "Jan–Jun": {
+              "n": 627,
+              "win": 145,
+              "loss": 482,
+              "winrate": 23.1,
+              "sumR": -47
+            },
+            "Jul–Dez": {
+              "n": 374,
+              "win": 100,
+              "loss": 274,
+              "winrate": 26.7,
+              "sumR": 26
+            }
+          }
+        },
+        "5R": {
+          "n": 987,
+          "win": 159,
+          "loss": 828,
+          "winrate": 16.1,
+          "sumR": -33,
+          "halves": {
+            "Jan–Jun": {
+              "n": 622,
+              "win": 99,
+              "loss": 523,
+              "winrate": 15.9,
+              "sumR": -28
+            },
+            "Jul–Dez": {
+              "n": 365,
+              "win": 60,
+              "loss": 305,
+              "winrate": 16.4,
+              "sumR": -5
+            }
+          }
+        }
+      },
+      {
+        "k": 2.1,
+        "trades": 1068,
+        "perWeek": 22.7,
+        "2R": {
+          "n": 1047,
+          "win": 347,
+          "loss": 700,
+          "winrate": 33.1,
+          "sumR": -6,
+          "halves": {
+            "Jan–Jun": {
+              "n": 654,
+              "win": 212,
+              "loss": 442,
+              "winrate": 32.4,
+              "sumR": -18
+            },
+            "Jul–Dez": {
+              "n": 393,
+              "win": 135,
+              "loss": 258,
+              "winrate": 34.4,
+              "sumR": 12
+            }
+          }
+        },
+        "3R": {
+          "n": 1043,
+          "win": 258,
+          "loss": 785,
+          "winrate": 24.7,
+          "sumR": -11,
+          "halves": {
+            "Jan–Jun": {
+              "n": 653,
+              "win": 155,
+              "loss": 498,
+              "winrate": 23.7,
+              "sumR": -33
+            },
+            "Jul–Dez": {
+              "n": 390,
+              "win": 103,
+              "loss": 287,
+              "winrate": 26.4,
+              "sumR": 22
+            }
+          }
+        },
+        "5R": {
+          "n": 1028,
+          "win": 167,
+          "loss": 861,
+          "winrate": 16.2,
+          "sumR": -26,
+          "halves": {
+            "Jan–Jun": {
+              "n": 648,
+              "win": 105,
+              "loss": 543,
+              "winrate": 16.2,
+              "sumR": -18
+            },
+            "Jul–Dez": {
+              "n": 380,
+              "win": 62,
+              "loss": 318,
+              "winrate": 16.3,
+              "sumR": -8
+            }
+          }
+        }
+      },
+      {
+        "k": 2.2,
+        "trades": 1107,
+        "perWeek": 23.6,
+        "2R": {
+          "n": 1086,
+          "win": 358,
+          "loss": 728,
+          "winrate": 33,
+          "sumR": -12,
+          "halves": {
+            "Jan–Jun": {
+              "n": 673,
+              "win": 217,
+              "loss": 456,
+              "winrate": 32.2,
+              "sumR": -22
+            },
+            "Jul–Dez": {
+              "n": 413,
+              "win": 141,
+              "loss": 272,
+              "winrate": 34.1,
+              "sumR": 10
+            }
+          }
+        },
+        "3R": {
+          "n": 1082,
+          "win": 264,
+          "loss": 818,
+          "winrate": 24.4,
+          "sumR": -26,
+          "halves": {
+            "Jan–Jun": {
+              "n": 672,
+              "win": 158,
+              "loss": 514,
+              "winrate": 23.5,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 410,
+              "win": 106,
+              "loss": 304,
+              "winrate": 25.9,
+              "sumR": 14
+            }
+          }
+        },
+        "5R": {
+          "n": 1066,
+          "win": 169,
+          "loss": 897,
+          "winrate": 15.9,
+          "sumR": -52,
+          "halves": {
+            "Jan–Jun": {
+              "n": 667,
+              "win": 106,
+              "loss": 561,
+              "winrate": 15.9,
+              "sumR": -31
+            },
+            "Jul–Dez": {
+              "n": 399,
+              "win": 63,
+              "loss": 336,
+              "winrate": 15.8,
+              "sumR": -21
+            }
+          }
+        }
+      },
+      {
+        "k": 2.3,
+        "trades": 1142,
+        "perWeek": 24.3,
+        "2R": {
+          "n": 1121,
+          "win": 373,
+          "loss": 748,
+          "winrate": 33.3,
+          "sumR": -2,
+          "halves": {
+            "Jan–Jun": {
+              "n": 689,
+              "win": 225,
+              "loss": 464,
+              "winrate": 32.7,
+              "sumR": -14
+            },
+            "Jul–Dez": {
+              "n": 432,
+              "win": 148,
+              "loss": 284,
+              "winrate": 34.3,
+              "sumR": 12
+            }
+          }
+        },
+        "3R": {
+          "n": 1117,
+          "win": 277,
+          "loss": 840,
+          "winrate": 24.8,
+          "sumR": -9,
+          "halves": {
+            "Jan–Jun": {
+              "n": 688,
+              "win": 166,
+              "loss": 522,
+              "winrate": 24.1,
+              "sumR": -24
+            },
+            "Jul–Dez": {
+              "n": 429,
+              "win": 111,
+              "loss": 318,
+              "winrate": 25.9,
+              "sumR": 15
+            }
+          }
+        },
+        "5R": {
+          "n": 1101,
+          "win": 180,
+          "loss": 921,
+          "winrate": 16.3,
+          "sumR": -21,
+          "halves": {
+            "Jan–Jun": {
+              "n": 683,
+              "win": 113,
+              "loss": 570,
+              "winrate": 16.5,
+              "sumR": -5
+            },
+            "Jul–Dez": {
+              "n": 418,
+              "win": 67,
+              "loss": 351,
+              "winrate": 16,
+              "sumR": -16
+            }
+          }
+        }
+      },
+      {
+        "k": 2.4,
+        "trades": 1171,
+        "perWeek": 24.9,
+        "2R": {
+          "n": 1150,
+          "win": 384,
+          "loss": 766,
+          "winrate": 33.4,
+          "sumR": 2,
+          "halves": {
+            "Jan–Jun": {
+              "n": 703,
+              "win": 231,
+              "loss": 472,
+              "winrate": 32.9,
+              "sumR": -10
+            },
+            "Jul–Dez": {
+              "n": 447,
+              "win": 153,
+              "loss": 294,
+              "winrate": 34.2,
+              "sumR": 12
+            }
+          }
+        },
+        "3R": {
+          "n": 1146,
+          "win": 284,
+          "loss": 862,
+          "winrate": 24.8,
+          "sumR": -10,
+          "halves": {
+            "Jan–Jun": {
+              "n": 702,
+              "win": 170,
+              "loss": 532,
+              "winrate": 24.2,
+              "sumR": -22
+            },
+            "Jul–Dez": {
+              "n": 444,
+              "win": 114,
+              "loss": 330,
+              "winrate": 25.7,
+              "sumR": 12
+            }
+          }
+        },
+        "5R": {
+          "n": 1130,
+          "win": 182,
+          "loss": 948,
+          "winrate": 16.1,
+          "sumR": -38,
+          "halves": {
+            "Jan–Jun": {
+              "n": 697,
+              "win": 113,
+              "loss": 584,
+              "winrate": 16.2,
+              "sumR": -19
+            },
+            "Jul–Dez": {
+              "n": 433,
+              "win": 69,
+              "loss": 364,
+              "winrate": 15.9,
+              "sumR": -19
+            }
+          }
+        }
+      },
+      {
+        "k": 2.5,
+        "trades": 1204,
+        "perWeek": 25.6,
+        "2R": {
+          "n": 1183,
+          "win": 400,
+          "loss": 783,
+          "winrate": 33.8,
+          "sumR": 17,
+          "halves": {
+            "Jan–Jun": {
+              "n": 719,
+              "win": 237,
+              "loss": 482,
+              "winrate": 33,
+              "sumR": -8
+            },
+            "Jul–Dez": {
+              "n": 464,
+              "win": 163,
+              "loss": 301,
+              "winrate": 35.1,
+              "sumR": 25
+            }
+          }
+        },
+        "3R": {
+          "n": 1179,
+          "win": 292,
+          "loss": 887,
+          "winrate": 24.8,
+          "sumR": -11,
+          "halves": {
+            "Jan–Jun": {
+              "n": 718,
+              "win": 175,
+              "loss": 543,
+              "winrate": 24.4,
+              "sumR": -18
+            },
+            "Jul–Dez": {
+              "n": 461,
+              "win": 117,
+              "loss": 344,
+              "winrate": 25.4,
+              "sumR": 7
+            }
+          }
+        },
+        "5R": {
+          "n": 1163,
+          "win": 185,
+          "loss": 978,
+          "winrate": 15.9,
+          "sumR": -53,
+          "halves": {
+            "Jan–Jun": {
+              "n": 713,
+              "win": 115,
+              "loss": 598,
+              "winrate": 16.1,
+              "sumR": -23
+            },
+            "Jul–Dez": {
+              "n": 450,
+              "win": 70,
+              "loss": 380,
+              "winrate": 15.6,
+              "sumR": -30
+            }
+          }
+        }
+      }
+    ]
+  },
+  "mitRetest": {
+    "coarse": [
+      {
+        "k": 0,
+        "trades": 169,
+        "perWeek": 3.8,
+        "2R": {
+          "n": 166,
+          "win": 48,
+          "loss": 118,
+          "winrate": 28.9,
+          "sumR": -22,
+          "halves": {
+            "Jan–Jun": {
+              "n": 97,
+              "win": 24,
+              "loss": 73,
+              "winrate": 24.7,
+              "sumR": -25
+            },
+            "Jul–Dez": {
+              "n": 69,
+              "win": 24,
+              "loss": 45,
+              "winrate": 34.8,
+              "sumR": 3
+            }
+          }
+        },
+        "3R": {
+          "n": 166,
+          "win": 39,
+          "loss": 127,
+          "winrate": 23.5,
+          "sumR": -10,
+          "halves": {
+            "Jan–Jun": {
+              "n": 97,
+              "win": 18,
+              "loss": 79,
+              "winrate": 18.6,
+              "sumR": -25
+            },
+            "Jul–Dez": {
+              "n": 69,
+              "win": 21,
+              "loss": 48,
+              "winrate": 30.4,
+              "sumR": 15
+            }
+          }
+        },
+        "5R": {
+          "n": 165,
+          "win": 29,
+          "loss": 136,
+          "winrate": 17.6,
+          "sumR": 9,
+          "halves": {
+            "Jan–Jun": {
+              "n": 96,
+              "win": 13,
+              "loss": 83,
+              "winrate": 13.5,
+              "sumR": -18
+            },
+            "Jul–Dez": {
+              "n": 69,
+              "win": 16,
+              "loss": 53,
+              "winrate": 23.2,
+              "sumR": 27
+            }
+          }
+        }
+      },
+      {
+        "k": 0.25,
+        "trades": 199,
+        "perWeek": 4.3,
+        "2R": {
+          "n": 195,
+          "win": 58,
+          "loss": 137,
+          "winrate": 29.7,
+          "sumR": -21,
+          "halves": {
+            "Jan–Jun": {
+              "n": 121,
+              "win": 30,
+              "loss": 91,
+              "winrate": 24.8,
+              "sumR": -31
+            },
+            "Jul–Dez": {
+              "n": 74,
+              "win": 28,
+              "loss": 46,
+              "winrate": 37.8,
+              "sumR": 10
+            }
+          }
+        },
+        "3R": {
+          "n": 195,
+          "win": 46,
+          "loss": 149,
+          "winrate": 23.6,
+          "sumR": -11,
+          "halves": {
+            "Jan–Jun": {
+              "n": 121,
+              "win": 22,
+              "loss": 99,
+              "winrate": 18.2,
+              "sumR": -33
+            },
+            "Jul–Dez": {
+              "n": 74,
+              "win": 24,
+              "loss": 50,
+              "winrate": 32.4,
+              "sumR": 22
+            }
+          }
+        },
+        "5R": {
+          "n": 192,
+          "win": 31,
+          "loss": 161,
+          "winrate": 16.1,
+          "sumR": -6,
+          "halves": {
+            "Jan–Jun": {
+              "n": 119,
+              "win": 15,
+              "loss": 104,
+              "winrate": 12.6,
+              "sumR": -29
+            },
+            "Jul–Dez": {
+              "n": 73,
+              "win": 16,
+              "loss": 57,
+              "winrate": 21.9,
+              "sumR": 23
+            }
+          }
+        }
+      },
+      {
+        "k": 0.5,
+        "trades": 264,
+        "perWeek": 5.7,
+        "2R": {
+          "n": 259,
+          "win": 76,
+          "loss": 183,
+          "winrate": 29.3,
+          "sumR": -31,
+          "halves": {
+            "Jan–Jun": {
+              "n": 168,
+              "win": 44,
+              "loss": 124,
+              "winrate": 26.2,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 91,
+              "win": 32,
+              "loss": 59,
+              "winrate": 35.2,
+              "sumR": 5
+            }
+          }
+        },
+        "3R": {
+          "n": 259,
+          "win": 60,
+          "loss": 199,
+          "winrate": 23.2,
+          "sumR": -19,
+          "halves": {
+            "Jan–Jun": {
+              "n": 168,
+              "win": 32,
+              "loss": 136,
+              "winrate": 19,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 91,
+              "win": 28,
+              "loss": 63,
+              "winrate": 30.8,
+              "sumR": 21
+            }
+          }
+        },
+        "5R": {
+          "n": 255,
+          "win": 41,
+          "loss": 214,
+          "winrate": 16.1,
+          "sumR": -9,
+          "halves": {
+            "Jan–Jun": {
+              "n": 165,
+              "win": 22,
+              "loss": 143,
+              "winrate": 13.3,
+              "sumR": -33
+            },
+            "Jul–Dez": {
+              "n": 90,
+              "win": 19,
+              "loss": 71,
+              "winrate": 21.1,
+              "sumR": 24
+            }
+          }
+        }
+      },
+      {
+        "k": 0.75,
+        "trades": 323,
+        "perWeek": 7,
+        "2R": {
+          "n": 318,
+          "win": 96,
+          "loss": 222,
+          "winrate": 30.2,
+          "sumR": -30,
+          "halves": {
+            "Jan–Jun": {
+              "n": 206,
+              "win": 56,
+              "loss": 150,
+              "winrate": 27.2,
+              "sumR": -38
+            },
+            "Jul–Dez": {
+              "n": 112,
+              "win": 40,
+              "loss": 72,
+              "winrate": 35.7,
+              "sumR": 8
+            }
+          }
+        },
+        "3R": {
+          "n": 317,
+          "win": 75,
+          "loss": 242,
+          "winrate": 23.7,
+          "sumR": -17,
+          "halves": {
+            "Jan–Jun": {
+              "n": 206,
+              "win": 42,
+              "loss": 164,
+              "winrate": 20.4,
+              "sumR": -38
+            },
+            "Jul–Dez": {
+              "n": 111,
+              "win": 33,
+              "loss": 78,
+              "winrate": 29.7,
+              "sumR": 21
+            }
+          }
+        },
+        "5R": {
+          "n": 312,
+          "win": 48,
+          "loss": 264,
+          "winrate": 15.4,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 203,
+              "win": 27,
+              "loss": 176,
+              "winrate": 13.3,
+              "sumR": -41
+            },
+            "Jul–Dez": {
+              "n": 109,
+              "win": 21,
+              "loss": 88,
+              "winrate": 19.3,
+              "sumR": 17
+            }
+          }
+        }
+      },
+      {
+        "k": 1,
+        "trades": 368,
+        "perWeek": 8,
+        "2R": {
+          "n": 363,
+          "win": 115,
+          "loss": 248,
+          "winrate": 31.7,
+          "sumR": -18,
+          "halves": {
+            "Jan–Jun": {
+              "n": 236,
+              "win": 67,
+              "loss": 169,
+              "winrate": 28.4,
+              "sumR": -35
+            },
+            "Jul–Dez": {
+              "n": 127,
+              "win": 48,
+              "loss": 79,
+              "winrate": 37.8,
+              "sumR": 17
+            }
+          }
+        },
+        "3R": {
+          "n": 362,
+          "win": 88,
+          "loss": 274,
+          "winrate": 24.3,
+          "sumR": -10,
+          "halves": {
+            "Jan–Jun": {
+              "n": 236,
+              "win": 50,
+              "loss": 186,
+              "winrate": 21.2,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 126,
+              "win": 38,
+              "loss": 88,
+              "winrate": 30.2,
+              "sumR": 26
+            }
+          }
+        },
+        "5R": {
+          "n": 356,
+          "win": 59,
+          "loss": 297,
+          "winrate": 16.6,
+          "sumR": -2,
+          "halves": {
+            "Jan–Jun": {
+              "n": 232,
+              "win": 34,
+              "loss": 198,
+              "winrate": 14.7,
+              "sumR": -28
+            },
+            "Jul–Dez": {
+              "n": 124,
+              "win": 25,
+              "loss": 99,
+              "winrate": 20.2,
+              "sumR": 26
+            }
+          }
+        }
+      },
+      {
+        "k": 1.25,
+        "trades": 406,
+        "perWeek": 8.6,
+        "2R": {
+          "n": 401,
+          "win": 126,
+          "loss": 275,
+          "winrate": 31.4,
+          "sumR": -23,
+          "halves": {
+            "Jan–Jun": {
+              "n": 263,
+              "win": 74,
+              "loss": 189,
+              "winrate": 28.1,
+              "sumR": -41
+            },
+            "Jul–Dez": {
+              "n": 138,
+              "win": 52,
+              "loss": 86,
+              "winrate": 37.7,
+              "sumR": 18
+            }
+          }
+        },
+        "3R": {
+          "n": 400,
+          "win": 96,
+          "loss": 304,
+          "winrate": 24,
+          "sumR": -16,
+          "halves": {
+            "Jan–Jun": {
+              "n": 263,
+              "win": 54,
+              "loss": 209,
+              "winrate": 20.5,
+              "sumR": -47
+            },
+            "Jul–Dez": {
+              "n": 137,
+              "win": 42,
+              "loss": 95,
+              "winrate": 30.7,
+              "sumR": 31
+            }
+          }
+        },
+        "5R": {
+          "n": 393,
+          "win": 63,
+          "loss": 330,
+          "winrate": 16,
+          "sumR": -15,
+          "halves": {
+            "Jan–Jun": {
+              "n": 259,
+              "win": 36,
+              "loss": 223,
+              "winrate": 13.9,
+              "sumR": -43
+            },
+            "Jul–Dez": {
+              "n": 134,
+              "win": 27,
+              "loss": 107,
+              "winrate": 20.1,
+              "sumR": 28
+            }
+          }
+        }
+      },
+      {
+        "k": 1.5,
+        "trades": 460,
+        "perWeek": 9.8,
+        "2R": {
+          "n": 455,
+          "win": 137,
+          "loss": 318,
+          "winrate": 30.1,
+          "sumR": -44,
+          "halves": {
+            "Jan–Jun": {
+              "n": 305,
+              "win": 80,
+              "loss": 225,
+              "winrate": 26.2,
+              "sumR": -65
+            },
+            "Jul–Dez": {
+              "n": 150,
+              "win": 57,
+              "loss": 93,
+              "winrate": 38,
+              "sumR": 21
+            }
+          }
+        },
+        "3R": {
+          "n": 454,
+          "win": 104,
+          "loss": 350,
+          "winrate": 22.9,
+          "sumR": -38,
+          "halves": {
+            "Jan–Jun": {
+              "n": 305,
+              "win": 59,
+              "loss": 246,
+              "winrate": 19.3,
+              "sumR": -69
+            },
+            "Jul–Dez": {
+              "n": 149,
+              "win": 45,
+              "loss": 104,
+              "winrate": 30.2,
+              "sumR": 31
+            }
+          }
+        },
+        "5R": {
+          "n": 446,
+          "win": 67,
+          "loss": 379,
+          "winrate": 15,
+          "sumR": -44,
+          "halves": {
+            "Jan–Jun": {
+              "n": 300,
+              "win": 38,
+              "loss": 262,
+              "winrate": 12.7,
+              "sumR": -72
+            },
+            "Jul–Dez": {
+              "n": 146,
+              "win": 29,
+              "loss": 117,
+              "winrate": 19.9,
+              "sumR": 28
+            }
+          }
+        }
+      },
+      {
+        "k": 1.75,
+        "trades": 490,
+        "perWeek": 10.4,
+        "2R": {
+          "n": 485,
+          "win": 147,
+          "loss": 338,
+          "winrate": 30.3,
+          "sumR": -44,
+          "halves": {
+            "Jan–Jun": {
+              "n": 320,
+              "win": 85,
+              "loss": 235,
+              "winrate": 26.6,
+              "sumR": -65
+            },
+            "Jul–Dez": {
+              "n": 165,
+              "win": 62,
+              "loss": 103,
+              "winrate": 37.6,
+              "sumR": 21
+            }
+          }
+        },
+        "3R": {
+          "n": 484,
+          "win": 111,
+          "loss": 373,
+          "winrate": 22.9,
+          "sumR": -40,
+          "halves": {
+            "Jan–Jun": {
+              "n": 320,
+              "win": 62,
+              "loss": 258,
+              "winrate": 19.4,
+              "sumR": -72
+            },
+            "Jul–Dez": {
+              "n": 164,
+              "win": 49,
+              "loss": 115,
+              "winrate": 29.9,
+              "sumR": 32
+            }
+          }
+        },
+        "5R": {
+          "n": 476,
+          "win": 71,
+          "loss": 405,
+          "winrate": 14.9,
+          "sumR": -50,
+          "halves": {
+            "Jan–Jun": {
+              "n": 315,
+              "win": 39,
+              "loss": 276,
+              "winrate": 12.4,
+              "sumR": -81
+            },
+            "Jul–Dez": {
+              "n": 161,
+              "win": 32,
+              "loss": 129,
+              "winrate": 19.9,
+              "sumR": 31
+            }
+          }
+        }
+      },
+      {
+        "k": 2,
+        "trades": 524,
+        "perWeek": 11.1,
+        "2R": {
+          "n": 518,
+          "win": 160,
+          "loss": 358,
+          "winrate": 30.9,
+          "sumR": -38,
+          "halves": {
+            "Jan–Jun": {
+              "n": 340,
+              "win": 95,
+              "loss": 245,
+              "winrate": 27.9,
+              "sumR": -55
+            },
+            "Jul–Dez": {
+              "n": 178,
+              "win": 65,
+              "loss": 113,
+              "winrate": 36.5,
+              "sumR": 17
+            }
+          }
+        },
+        "3R": {
+          "n": 517,
+          "win": 122,
+          "loss": 395,
+          "winrate": 23.6,
+          "sumR": -29,
+          "halves": {
+            "Jan–Jun": {
+              "n": 340,
+              "win": 70,
+              "loss": 270,
+              "winrate": 20.6,
+              "sumR": -60
+            },
+            "Jul–Dez": {
+              "n": 177,
+              "win": 52,
+              "loss": 125,
+              "winrate": 29.4,
+              "sumR": 31
+            }
+          }
+        },
+        "5R": {
+          "n": 509,
+          "win": 78,
+          "loss": 431,
+          "winrate": 15.3,
+          "sumR": -41,
+          "halves": {
+            "Jan–Jun": {
+              "n": 335,
+              "win": 46,
+              "loss": 289,
+              "winrate": 13.7,
+              "sumR": -59
+            },
+            "Jul–Dez": {
+              "n": 174,
+              "win": 32,
+              "loss": 142,
+              "winrate": 18.4,
+              "sumR": 18
+            }
+          }
+        }
+      },
+      {
+        "k": 2.5,
+        "trades": 582,
+        "perWeek": 12.4,
+        "2R": {
+          "n": 576,
+          "win": 184,
+          "loss": 392,
+          "winrate": 31.9,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 375,
+              "win": 109,
+              "loss": 266,
+              "winrate": 29.1,
+              "sumR": -48
+            },
+            "Jul–Dez": {
+              "n": 201,
+              "win": 75,
+              "loss": 126,
+              "winrate": 37.3,
+              "sumR": 24
+            }
+          }
+        },
+        "3R": {
+          "n": 575,
+          "win": 140,
+          "loss": 435,
+          "winrate": 24.3,
+          "sumR": -15,
+          "halves": {
+            "Jan–Jun": {
+              "n": 375,
+              "win": 82,
+              "loss": 293,
+              "winrate": 21.9,
+              "sumR": -47
+            },
+            "Jul–Dez": {
+              "n": 200,
+              "win": 58,
+              "loss": 142,
+              "winrate": 29,
+              "sumR": 32
+            }
+          }
+        },
+        "5R": {
+          "n": 567,
+          "win": 89,
+          "loss": 478,
+          "winrate": 15.7,
+          "sumR": -33,
+          "halves": {
+            "Jan–Jun": {
+              "n": 370,
+              "win": 53,
+              "loss": 317,
+              "winrate": 14.3,
+              "sumR": -52
+            },
+            "Jul–Dez": {
+              "n": 197,
+              "win": 36,
+              "loss": 161,
+              "winrate": 18.3,
+              "sumR": 19
+            }
+          }
+        }
+      },
+      {
+        "k": 3,
+        "trades": 650,
+        "perWeek": 13.8,
+        "2R": {
+          "n": 643,
+          "win": 202,
+          "loss": 441,
+          "winrate": 31.4,
+          "sumR": -37,
+          "halves": {
+            "Jan–Jun": {
+              "n": 426,
+              "win": 123,
+              "loss": 303,
+              "winrate": 28.9,
+              "sumR": -57
+            },
+            "Jul–Dez": {
+              "n": 217,
+              "win": 79,
+              "loss": 138,
+              "winrate": 36.4,
+              "sumR": 20
+            }
+          }
+        },
+        "3R": {
+          "n": 642,
+          "win": 153,
+          "loss": 489,
+          "winrate": 23.8,
+          "sumR": -30,
+          "halves": {
+            "Jan–Jun": {
+              "n": 426,
+              "win": 93,
+              "loss": 333,
+              "winrate": 21.8,
+              "sumR": -54
+            },
+            "Jul–Dez": {
+              "n": 216,
+              "win": 60,
+              "loss": 156,
+              "winrate": 27.8,
+              "sumR": 24
+            }
+          }
+        },
+        "5R": {
+          "n": 633,
+          "win": 96,
+          "loss": 537,
+          "winrate": 15.2,
+          "sumR": -57,
+          "halves": {
+            "Jan–Jun": {
+              "n": 420,
+              "win": 58,
+              "loss": 362,
+              "winrate": 13.8,
+              "sumR": -72
+            },
+            "Jul–Dez": {
+              "n": 213,
+              "win": 38,
+              "loss": 175,
+              "winrate": 17.8,
+              "sumR": 15
+            }
+          }
+        }
+      }
+    ],
+    "fine": [
+      {
+        "k": 0.5,
+        "trades": 264,
+        "perWeek": 5.7,
+        "2R": {
+          "n": 259,
+          "win": 76,
+          "loss": 183,
+          "winrate": 29.3,
+          "sumR": -31,
+          "halves": {
+            "Jan–Jun": {
+              "n": 168,
+              "win": 44,
+              "loss": 124,
+              "winrate": 26.2,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 91,
+              "win": 32,
+              "loss": 59,
+              "winrate": 35.2,
+              "sumR": 5
+            }
+          }
+        },
+        "3R": {
+          "n": 259,
+          "win": 60,
+          "loss": 199,
+          "winrate": 23.2,
+          "sumR": -19,
+          "halves": {
+            "Jan–Jun": {
+              "n": 168,
+              "win": 32,
+              "loss": 136,
+              "winrate": 19,
+              "sumR": -40
+            },
+            "Jul–Dez": {
+              "n": 91,
+              "win": 28,
+              "loss": 63,
+              "winrate": 30.8,
+              "sumR": 21
+            }
+          }
+        },
+        "5R": {
+          "n": 255,
+          "win": 41,
+          "loss": 214,
+          "winrate": 16.1,
+          "sumR": -9,
+          "halves": {
+            "Jan–Jun": {
+              "n": 165,
+              "win": 22,
+              "loss": 143,
+              "winrate": 13.3,
+              "sumR": -33
+            },
+            "Jul–Dez": {
+              "n": 90,
+              "win": 19,
+              "loss": 71,
+              "winrate": 21.1,
+              "sumR": 24
+            }
+          }
+        }
+      },
+      {
+        "k": 0.6,
+        "trades": 280,
+        "perWeek": 6.1,
+        "2R": {
+          "n": 275,
+          "win": 82,
+          "loss": 193,
+          "winrate": 29.8,
+          "sumR": -29,
+          "halves": {
+            "Jan–Jun": {
+              "n": 181,
+              "win": 49,
+              "loss": 132,
+              "winrate": 27.1,
+              "sumR": -34
+            },
+            "Jul–Dez": {
+              "n": 94,
+              "win": 33,
+              "loss": 61,
+              "winrate": 35.1,
+              "sumR": 5
+            }
+          }
+        },
+        "3R": {
+          "n": 275,
+          "win": 64,
+          "loss": 211,
+          "winrate": 23.3,
+          "sumR": -19,
+          "halves": {
+            "Jan–Jun": {
+              "n": 181,
+              "win": 35,
+              "loss": 146,
+              "winrate": 19.3,
+              "sumR": -41
+            },
+            "Jul–Dez": {
+              "n": 94,
+              "win": 29,
+              "loss": 65,
+              "winrate": 30.9,
+              "sumR": 22
+            }
+          }
+        },
+        "5R": {
+          "n": 270,
+          "win": 41,
+          "loss": 229,
+          "winrate": 15.2,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 178,
+              "win": 22,
+              "loss": 156,
+              "winrate": 12.4,
+              "sumR": -46
+            },
+            "Jul–Dez": {
+              "n": 92,
+              "win": 19,
+              "loss": 73,
+              "winrate": 20.7,
+              "sumR": 22
+            }
+          }
+        }
+      },
+      {
+        "k": 0.7,
+        "trades": 306,
+        "perWeek": 6.7,
+        "2R": {
+          "n": 301,
+          "win": 90,
+          "loss": 211,
+          "winrate": 29.9,
+          "sumR": -31,
+          "halves": {
+            "Jan–Jun": {
+              "n": 195,
+              "win": 51,
+              "loss": 144,
+              "winrate": 26.2,
+              "sumR": -42
+            },
+            "Jul–Dez": {
+              "n": 106,
+              "win": 39,
+              "loss": 67,
+              "winrate": 36.8,
+              "sumR": 11
+            }
+          }
+        },
+        "3R": {
+          "n": 300,
+          "win": 69,
+          "loss": 231,
+          "winrate": 23,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 195,
+              "win": 37,
+              "loss": 158,
+              "winrate": 19,
+              "sumR": -47
+            },
+            "Jul–Dez": {
+              "n": 105,
+              "win": 32,
+              "loss": 73,
+              "winrate": 30.5,
+              "sumR": 23
+            }
+          }
+        },
+        "5R": {
+          "n": 295,
+          "win": 44,
+          "loss": 251,
+          "winrate": 14.9,
+          "sumR": -31,
+          "halves": {
+            "Jan–Jun": {
+              "n": 192,
+              "win": 23,
+              "loss": 169,
+              "winrate": 12,
+              "sumR": -54
+            },
+            "Jul–Dez": {
+              "n": 103,
+              "win": 21,
+              "loss": 82,
+              "winrate": 20.4,
+              "sumR": 23
+            }
+          }
+        }
+      },
+      {
+        "k": 0.8,
+        "trades": 342,
+        "perWeek": 7.4,
+        "2R": {
+          "n": 337,
+          "win": 103,
+          "loss": 234,
+          "winrate": 30.6,
+          "sumR": -28,
+          "halves": {
+            "Jan–Jun": {
+              "n": 225,
+              "win": 63,
+              "loss": 162,
+              "winrate": 28,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 112,
+              "win": 40,
+              "loss": 72,
+              "winrate": 35.7,
+              "sumR": 8
+            }
+          }
+        },
+        "3R": {
+          "n": 336,
+          "win": 81,
+          "loss": 255,
+          "winrate": 24.1,
+          "sumR": -12,
+          "halves": {
+            "Jan–Jun": {
+              "n": 225,
+              "win": 48,
+              "loss": 177,
+              "winrate": 21.3,
+              "sumR": -33
+            },
+            "Jul–Dez": {
+              "n": 111,
+              "win": 33,
+              "loss": 78,
+              "winrate": 29.7,
+              "sumR": 21
+            }
+          }
+        },
+        "5R": {
+          "n": 330,
+          "win": 53,
+          "loss": 277,
+          "winrate": 16.1,
+          "sumR": -12,
+          "halves": {
+            "Jan–Jun": {
+              "n": 221,
+              "win": 32,
+              "loss": 189,
+              "winrate": 14.5,
+              "sumR": -29
+            },
+            "Jul–Dez": {
+              "n": 109,
+              "win": 21,
+              "loss": 88,
+              "winrate": 19.3,
+              "sumR": 17
+            }
+          }
+        }
+      },
+      {
+        "k": 0.9,
+        "trades": 361,
+        "perWeek": 7.8,
+        "2R": {
+          "n": 356,
+          "win": 109,
+          "loss": 247,
+          "winrate": 30.6,
+          "sumR": -29,
+          "halves": {
+            "Jan–Jun": {
+              "n": 233,
+              "win": 64,
+              "loss": 169,
+              "winrate": 27.5,
+              "sumR": -41
+            },
+            "Jul–Dez": {
+              "n": 123,
+              "win": 45,
+              "loss": 78,
+              "winrate": 36.6,
+              "sumR": 12
+            }
+          }
+        },
+        "3R": {
+          "n": 355,
+          "win": 83,
+          "loss": 272,
+          "winrate": 23.4,
+          "sumR": -23,
+          "halves": {
+            "Jan–Jun": {
+              "n": 233,
+              "win": 48,
+              "loss": 185,
+              "winrate": 20.6,
+              "sumR": -41
+            },
+            "Jul–Dez": {
+              "n": 122,
+              "win": 35,
+              "loss": 87,
+              "winrate": 28.7,
+              "sumR": 18
+            }
+          }
+        },
+        "5R": {
+          "n": 349,
+          "win": 54,
+          "loss": 295,
+          "winrate": 15.5,
+          "sumR": -25,
+          "halves": {
+            "Jan–Jun": {
+              "n": 229,
+              "win": 32,
+              "loss": 197,
+              "winrate": 14,
+              "sumR": -37
+            },
+            "Jul–Dez": {
+              "n": 120,
+              "win": 22,
+              "loss": 98,
+              "winrate": 18.3,
+              "sumR": 12
+            }
+          }
+        }
+      },
+      {
+        "k": 1,
+        "trades": 368,
+        "perWeek": 8,
+        "2R": {
+          "n": 363,
+          "win": 115,
+          "loss": 248,
+          "winrate": 31.7,
+          "sumR": -18,
+          "halves": {
+            "Jan–Jun": {
+              "n": 236,
+              "win": 67,
+              "loss": 169,
+              "winrate": 28.4,
+              "sumR": -35
+            },
+            "Jul–Dez": {
+              "n": 127,
+              "win": 48,
+              "loss": 79,
+              "winrate": 37.8,
+              "sumR": 17
+            }
+          }
+        },
+        "3R": {
+          "n": 362,
+          "win": 88,
+          "loss": 274,
+          "winrate": 24.3,
+          "sumR": -10,
+          "halves": {
+            "Jan–Jun": {
+              "n": 236,
+              "win": 50,
+              "loss": 186,
+              "winrate": 21.2,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 126,
+              "win": 38,
+              "loss": 88,
+              "winrate": 30.2,
+              "sumR": 26
+            }
+          }
+        },
+        "5R": {
+          "n": 356,
+          "win": 59,
+          "loss": 297,
+          "winrate": 16.6,
+          "sumR": -2,
+          "halves": {
+            "Jan–Jun": {
+              "n": 232,
+              "win": 34,
+              "loss": 198,
+              "winrate": 14.7,
+              "sumR": -28
+            },
+            "Jul–Dez": {
+              "n": 124,
+              "win": 25,
+              "loss": 99,
+              "winrate": 20.2,
+              "sumR": 26
+            }
+          }
+        }
+      },
+      {
+        "k": 1.1,
+        "trades": 386,
+        "perWeek": 8.4,
+        "2R": {
+          "n": 381,
+          "win": 122,
+          "loss": 259,
+          "winrate": 32,
+          "sumR": -15,
+          "halves": {
+            "Jan–Jun": {
+              "n": 248,
+              "win": 72,
+              "loss": 176,
+              "winrate": 29,
+              "sumR": -32
+            },
+            "Jul–Dez": {
+              "n": 133,
+              "win": 50,
+              "loss": 83,
+              "winrate": 37.6,
+              "sumR": 17
+            }
+          }
+        },
+        "3R": {
+          "n": 380,
+          "win": 93,
+          "loss": 287,
+          "winrate": 24.5,
+          "sumR": -8,
+          "halves": {
+            "Jan–Jun": {
+              "n": 248,
+              "win": 53,
+              "loss": 195,
+              "winrate": 21.4,
+              "sumR": -36
+            },
+            "Jul–Dez": {
+              "n": 132,
+              "win": 40,
+              "loss": 92,
+              "winrate": 30.3,
+              "sumR": 28
+            }
+          }
+        },
+        "5R": {
+          "n": 373,
+          "win": 60,
+          "loss": 313,
+          "winrate": 16.1,
+          "sumR": -13,
+          "halves": {
+            "Jan–Jun": {
+              "n": 244,
+              "win": 35,
+              "loss": 209,
+              "winrate": 14.3,
+              "sumR": -34
+            },
+            "Jul–Dez": {
+              "n": 129,
+              "win": 25,
+              "loss": 104,
+              "winrate": 19.4,
+              "sumR": 21
+            }
+          }
+        }
+      },
+      {
+        "k": 1.2,
+        "trades": 400,
+        "perWeek": 8.5,
+        "2R": {
+          "n": 395,
+          "win": 123,
+          "loss": 272,
+          "winrate": 31.1,
+          "sumR": -26,
+          "halves": {
+            "Jan–Jun": {
+              "n": 260,
+              "win": 73,
+              "loss": 187,
+              "winrate": 28.1,
+              "sumR": -41
+            },
+            "Jul–Dez": {
+              "n": 135,
+              "win": 50,
+              "loss": 85,
+              "winrate": 37,
+              "sumR": 15
+            }
+          }
+        },
+        "3R": {
+          "n": 394,
+          "win": 93,
+          "loss": 301,
+          "winrate": 23.6,
+          "sumR": -22,
+          "halves": {
+            "Jan–Jun": {
+              "n": 260,
+              "win": 53,
+              "loss": 207,
+              "winrate": 20.4,
+              "sumR": -48
+            },
+            "Jul–Dez": {
+              "n": 134,
+              "win": 40,
+              "loss": 94,
+              "winrate": 29.9,
+              "sumR": 26
+            }
+          }
+        },
+        "5R": {
+          "n": 387,
+          "win": 60,
+          "loss": 327,
+          "winrate": 15.5,
+          "sumR": -27,
+          "halves": {
+            "Jan–Jun": {
+              "n": 256,
+              "win": 35,
+              "loss": 221,
+              "winrate": 13.7,
+              "sumR": -46
+            },
+            "Jul–Dez": {
+              "n": 131,
+              "win": 25,
+              "loss": 106,
+              "winrate": 19.1,
+              "sumR": 19
+            }
+          }
+        }
+      },
+      {
+        "k": 1.3,
+        "trades": 427,
+        "perWeek": 9.1,
+        "2R": {
+          "n": 422,
+          "win": 130,
+          "loss": 292,
+          "winrate": 30.8,
+          "sumR": -32,
+          "halves": {
+            "Jan–Jun": {
+              "n": 282,
+              "win": 76,
+              "loss": 206,
+              "winrate": 27,
+              "sumR": -54
+            },
+            "Jul–Dez": {
+              "n": 140,
+              "win": 54,
+              "loss": 86,
+              "winrate": 38.6,
+              "sumR": 22
+            }
+          }
+        },
+        "3R": {
+          "n": 421,
+          "win": 98,
+          "loss": 323,
+          "winrate": 23.3,
+          "sumR": -29,
+          "halves": {
+            "Jan–Jun": {
+              "n": 282,
+              "win": 55,
+              "loss": 227,
+              "winrate": 19.5,
+              "sumR": -62
+            },
+            "Jul–Dez": {
+              "n": 139,
+              "win": 43,
+              "loss": 96,
+              "winrate": 30.9,
+              "sumR": 33
+            }
+          }
+        },
+        "5R": {
+          "n": 414,
+          "win": 64,
+          "loss": 350,
+          "winrate": 15.5,
+          "sumR": -30,
+          "halves": {
+            "Jan–Jun": {
+              "n": 278,
+              "win": 36,
+              "loss": 242,
+              "winrate": 12.9,
+              "sumR": -62
+            },
+            "Jul–Dez": {
+              "n": 136,
+              "win": 28,
+              "loss": 108,
+              "winrate": 20.6,
+              "sumR": 32
+            }
+          }
+        }
+      },
+      {
+        "k": 1.4,
+        "trades": 441,
+        "perWeek": 9.4,
+        "2R": {
+          "n": 436,
+          "win": 131,
+          "loss": 305,
+          "winrate": 30,
+          "sumR": -43,
+          "halves": {
+            "Jan–Jun": {
+              "n": 293,
+              "win": 77,
+              "loss": 216,
+              "winrate": 26.3,
+              "sumR": -62
+            },
+            "Jul–Dez": {
+              "n": 143,
+              "win": 54,
+              "loss": 89,
+              "winrate": 37.8,
+              "sumR": 19
+            }
+          }
+        },
+        "3R": {
+          "n": 435,
+          "win": 99,
+          "loss": 336,
+          "winrate": 22.8,
+          "sumR": -39,
+          "halves": {
+            "Jan–Jun": {
+              "n": 293,
+              "win": 56,
+              "loss": 237,
+              "winrate": 19.1,
+              "sumR": -69
+            },
+            "Jul–Dez": {
+              "n": 142,
+              "win": 43,
+              "loss": 99,
+              "winrate": 30.3,
+              "sumR": 30
+            }
+          }
+        },
+        "5R": {
+          "n": 428,
+          "win": 65,
+          "loss": 363,
+          "winrate": 15.2,
+          "sumR": -38,
+          "halves": {
+            "Jan–Jun": {
+              "n": 289,
+              "win": 37,
+              "loss": 252,
+              "winrate": 12.8,
+              "sumR": -67
+            },
+            "Jul–Dez": {
+              "n": 139,
+              "win": 28,
+              "loss": 111,
+              "winrate": 20.1,
+              "sumR": 29
+            }
+          }
+        }
+      },
+      {
+        "k": 1.5,
+        "trades": 460,
+        "perWeek": 9.8,
+        "2R": {
+          "n": 455,
+          "win": 137,
+          "loss": 318,
+          "winrate": 30.1,
+          "sumR": -44,
+          "halves": {
+            "Jan–Jun": {
+              "n": 305,
+              "win": 80,
+              "loss": 225,
+              "winrate": 26.2,
+              "sumR": -65
+            },
+            "Jul–Dez": {
+              "n": 150,
+              "win": 57,
+              "loss": 93,
+              "winrate": 38,
+              "sumR": 21
+            }
+          }
+        },
+        "3R": {
+          "n": 454,
+          "win": 104,
+          "loss": 350,
+          "winrate": 22.9,
+          "sumR": -38,
+          "halves": {
+            "Jan–Jun": {
+              "n": 305,
+              "win": 59,
+              "loss": 246,
+              "winrate": 19.3,
+              "sumR": -69
+            },
+            "Jul–Dez": {
+              "n": 149,
+              "win": 45,
+              "loss": 104,
+              "winrate": 30.2,
+              "sumR": 31
+            }
+          }
+        },
+        "5R": {
+          "n": 446,
+          "win": 67,
+          "loss": 379,
+          "winrate": 15,
+          "sumR": -44,
+          "halves": {
+            "Jan–Jun": {
+              "n": 300,
+              "win": 38,
+              "loss": 262,
+              "winrate": 12.7,
+              "sumR": -72
+            },
+            "Jul–Dez": {
+              "n": 146,
+              "win": 29,
+              "loss": 117,
+              "winrate": 19.9,
+              "sumR": 28
+            }
+          }
+        }
+      },
+      {
+        "k": 1.6,
+        "trades": 472,
+        "perWeek": 10,
+        "2R": {
+          "n": 467,
+          "win": 140,
+          "loss": 327,
+          "winrate": 30,
+          "sumR": -47,
+          "halves": {
+            "Jan–Jun": {
+              "n": 310,
+              "win": 81,
+              "loss": 229,
+              "winrate": 26.1,
+              "sumR": -67
+            },
+            "Jul–Dez": {
+              "n": 157,
+              "win": 59,
+              "loss": 98,
+              "winrate": 37.6,
+              "sumR": 20
+            }
+          }
+        },
+        "3R": {
+          "n": 466,
+          "win": 105,
+          "loss": 361,
+          "winrate": 22.5,
+          "sumR": -46,
+          "halves": {
+            "Jan–Jun": {
+              "n": 310,
+              "win": 59,
+              "loss": 251,
+              "winrate": 19,
+              "sumR": -74
+            },
+            "Jul–Dez": {
+              "n": 156,
+              "win": 46,
+              "loss": 110,
+              "winrate": 29.5,
+              "sumR": 28
+            }
+          }
+        },
+        "5R": {
+          "n": 458,
+          "win": 67,
+          "loss": 391,
+          "winrate": 14.6,
+          "sumR": -56,
+          "halves": {
+            "Jan–Jun": {
+              "n": 305,
+              "win": 38,
+              "loss": 267,
+              "winrate": 12.5,
+              "sumR": -77
+            },
+            "Jul–Dez": {
+              "n": 153,
+              "win": 29,
+              "loss": 124,
+              "winrate": 19,
+              "sumR": 21
+            }
+          }
+        }
+      },
+      {
+        "k": 1.7,
+        "trades": 482,
+        "perWeek": 10.3,
+        "2R": {
+          "n": 477,
+          "win": 145,
+          "loss": 332,
+          "winrate": 30.4,
+          "sumR": -42,
+          "halves": {
+            "Jan–Jun": {
+              "n": 316,
+              "win": 85,
+              "loss": 231,
+              "winrate": 26.9,
+              "sumR": -61
+            },
+            "Jul–Dez": {
+              "n": 161,
+              "win": 60,
+              "loss": 101,
+              "winrate": 37.3,
+              "sumR": 19
+            }
+          }
+        },
+        "3R": {
+          "n": 476,
+          "win": 109,
+          "loss": 367,
+          "winrate": 22.9,
+          "sumR": -40,
+          "halves": {
+            "Jan–Jun": {
+              "n": 316,
+              "win": 62,
+              "loss": 254,
+              "winrate": 19.6,
+              "sumR": -68
+            },
+            "Jul–Dez": {
+              "n": 160,
+              "win": 47,
+              "loss": 113,
+              "winrate": 29.4,
+              "sumR": 28
+            }
+          }
+        },
+        "5R": {
+          "n": 468,
+          "win": 69,
+          "loss": 399,
+          "winrate": 14.7,
+          "sumR": -54,
+          "halves": {
+            "Jan–Jun": {
+              "n": 311,
+              "win": 39,
+              "loss": 272,
+              "winrate": 12.5,
+              "sumR": -77
+            },
+            "Jul–Dez": {
+              "n": 157,
+              "win": 30,
+              "loss": 127,
+              "winrate": 19.1,
+              "sumR": 23
+            }
+          }
+        }
+      },
+      {
+        "k": 1.8,
+        "trades": 498,
+        "perWeek": 10.6,
+        "2R": {
+          "n": 493,
+          "win": 150,
+          "loss": 343,
+          "winrate": 30.4,
+          "sumR": -43,
+          "halves": {
+            "Jan–Jun": {
+              "n": 324,
+              "win": 87,
+              "loss": 237,
+              "winrate": 26.9,
+              "sumR": -63
+            },
+            "Jul–Dez": {
+              "n": 169,
+              "win": 63,
+              "loss": 106,
+              "winrate": 37.3,
+              "sumR": 20
+            }
+          }
+        },
+        "3R": {
+          "n": 492,
+          "win": 114,
+          "loss": 378,
+          "winrate": 23.2,
+          "sumR": -36,
+          "halves": {
+            "Jan–Jun": {
+              "n": 324,
+              "win": 64,
+              "loss": 260,
+              "winrate": 19.8,
+              "sumR": -68
+            },
+            "Jul–Dez": {
+              "n": 168,
+              "win": 50,
+              "loss": 118,
+              "winrate": 29.8,
+              "sumR": 32
+            }
+          }
+        },
+        "5R": {
+          "n": 484,
+          "win": 73,
+          "loss": 411,
+          "winrate": 15.1,
+          "sumR": -46,
+          "halves": {
+            "Jan–Jun": {
+              "n": 319,
+              "win": 41,
+              "loss": 278,
+              "winrate": 12.9,
+              "sumR": -73
+            },
+            "Jul–Dez": {
+              "n": 165,
+              "win": 32,
+              "loss": 133,
+              "winrate": 19.4,
+              "sumR": 27
+            }
+          }
+        }
+      },
+      {
+        "k": 1.9,
+        "trades": 510,
+        "perWeek": 10.9,
+        "2R": {
+          "n": 504,
+          "win": 155,
+          "loss": 349,
+          "winrate": 30.8,
+          "sumR": -39,
+          "halves": {
+            "Jan–Jun": {
+              "n": 331,
+              "win": 91,
+              "loss": 240,
+              "winrate": 27.5,
+              "sumR": -58
+            },
+            "Jul–Dez": {
+              "n": 173,
+              "win": 64,
+              "loss": 109,
+              "winrate": 37,
+              "sumR": 19
+            }
+          }
+        },
+        "3R": {
+          "n": 503,
+          "win": 119,
+          "loss": 384,
+          "winrate": 23.7,
+          "sumR": -27,
+          "halves": {
+            "Jan–Jun": {
+              "n": 331,
+              "win": 68,
+              "loss": 263,
+              "winrate": 20.5,
+              "sumR": -59
+            },
+            "Jul–Dez": {
+              "n": 172,
+              "win": 51,
+              "loss": 121,
+              "winrate": 29.7,
+              "sumR": 32
+            }
+          }
+        },
+        "5R": {
+          "n": 495,
+          "win": 76,
+          "loss": 419,
+          "winrate": 15.4,
+          "sumR": -39,
+          "halves": {
+            "Jan–Jun": {
+              "n": 326,
+              "win": 44,
+              "loss": 282,
+              "winrate": 13.5,
+              "sumR": -62
+            },
+            "Jul–Dez": {
+              "n": 169,
+              "win": 32,
+              "loss": 137,
+              "winrate": 18.9,
+              "sumR": 23
+            }
+          }
+        }
+      },
+      {
+        "k": 2,
+        "trades": 524,
+        "perWeek": 11.1,
+        "2R": {
+          "n": 518,
+          "win": 160,
+          "loss": 358,
+          "winrate": 30.9,
+          "sumR": -38,
+          "halves": {
+            "Jan–Jun": {
+              "n": 340,
+              "win": 95,
+              "loss": 245,
+              "winrate": 27.9,
+              "sumR": -55
+            },
+            "Jul–Dez": {
+              "n": 178,
+              "win": 65,
+              "loss": 113,
+              "winrate": 36.5,
+              "sumR": 17
+            }
+          }
+        },
+        "3R": {
+          "n": 517,
+          "win": 122,
+          "loss": 395,
+          "winrate": 23.6,
+          "sumR": -29,
+          "halves": {
+            "Jan–Jun": {
+              "n": 340,
+              "win": 70,
+              "loss": 270,
+              "winrate": 20.6,
+              "sumR": -60
+            },
+            "Jul–Dez": {
+              "n": 177,
+              "win": 52,
+              "loss": 125,
+              "winrate": 29.4,
+              "sumR": 31
+            }
+          }
+        },
+        "5R": {
+          "n": 509,
+          "win": 78,
+          "loss": 431,
+          "winrate": 15.3,
+          "sumR": -41,
+          "halves": {
+            "Jan–Jun": {
+              "n": 335,
+              "win": 46,
+              "loss": 289,
+              "winrate": 13.7,
+              "sumR": -59
+            },
+            "Jul–Dez": {
+              "n": 174,
+              "win": 32,
+              "loss": 142,
+              "winrate": 18.4,
+              "sumR": 18
+            }
+          }
+        }
+      },
+      {
+        "k": 2.1,
+        "trades": 542,
+        "perWeek": 11.5,
+        "2R": {
+          "n": 536,
+          "win": 168,
+          "loss": 368,
+          "winrate": 31.3,
+          "sumR": -32,
+          "halves": {
+            "Jan–Jun": {
+              "n": 349,
+              "win": 100,
+              "loss": 249,
+              "winrate": 28.7,
+              "sumR": -49
+            },
+            "Jul–Dez": {
+              "n": 187,
+              "win": 68,
+              "loss": 119,
+              "winrate": 36.4,
+              "sumR": 17
+            }
+          }
+        },
+        "3R": {
+          "n": 535,
+          "win": 129,
+          "loss": 406,
+          "winrate": 24.1,
+          "sumR": -19,
+          "halves": {
+            "Jan–Jun": {
+              "n": 349,
+              "win": 74,
+              "loss": 275,
+              "winrate": 21.2,
+              "sumR": -53
+            },
+            "Jul–Dez": {
+              "n": 186,
+              "win": 55,
+              "loss": 131,
+              "winrate": 29.6,
+              "sumR": 34
+            }
+          }
+        },
+        "5R": {
+          "n": 527,
+          "win": 83,
+          "loss": 444,
+          "winrate": 15.7,
+          "sumR": -29,
+          "halves": {
+            "Jan–Jun": {
+              "n": 344,
+              "win": 48,
+              "loss": 296,
+              "winrate": 14,
+              "sumR": -56
+            },
+            "Jul–Dez": {
+              "n": 183,
+              "win": 35,
+              "loss": 148,
+              "winrate": 19.1,
+              "sumR": 27
+            }
+          }
+        }
+      },
+      {
+        "k": 2.2,
+        "trades": 552,
+        "perWeek": 11.7,
+        "2R": {
+          "n": 546,
+          "win": 173,
+          "loss": 373,
+          "winrate": 31.7,
+          "sumR": -27,
+          "halves": {
+            "Jan–Jun": {
+              "n": 356,
+              "win": 102,
+              "loss": 254,
+              "winrate": 28.7,
+              "sumR": -50
+            },
+            "Jul–Dez": {
+              "n": 190,
+              "win": 71,
+              "loss": 119,
+              "winrate": 37.4,
+              "sumR": 23
+            }
+          }
+        },
+        "3R": {
+          "n": 545,
+          "win": 131,
+          "loss": 414,
+          "winrate": 24,
+          "sumR": -21,
+          "halves": {
+            "Jan–Jun": {
+              "n": 356,
+              "win": 75,
+              "loss": 281,
+              "winrate": 21.1,
+              "sumR": -56
+            },
+            "Jul–Dez": {
+              "n": 189,
+              "win": 56,
+              "loss": 133,
+              "winrate": 29.6,
+              "sumR": 35
+            }
+          }
+        },
+        "5R": {
+          "n": 537,
+          "win": 83,
+          "loss": 454,
+          "winrate": 15.5,
+          "sumR": -39,
+          "halves": {
+            "Jan–Jun": {
+              "n": 351,
+              "win": 48,
+              "loss": 303,
+              "winrate": 13.7,
+              "sumR": -63
+            },
+            "Jul–Dez": {
+              "n": 186,
+              "win": 35,
+              "loss": 151,
+              "winrate": 18.8,
+              "sumR": 24
+            }
+          }
+        }
+      },
+      {
+        "k": 2.3,
+        "trades": 566,
+        "perWeek": 12,
+        "2R": {
+          "n": 560,
+          "win": 180,
+          "loss": 380,
+          "winrate": 32.1,
+          "sumR": -20,
+          "halves": {
+            "Jan–Jun": {
+              "n": 364,
+              "win": 106,
+              "loss": 258,
+              "winrate": 29.1,
+              "sumR": -46
+            },
+            "Jul–Dez": {
+              "n": 196,
+              "win": 74,
+              "loss": 122,
+              "winrate": 37.8,
+              "sumR": 26
+            }
+          }
+        },
+        "3R": {
+          "n": 559,
+          "win": 136,
+          "loss": 423,
+          "winrate": 24.3,
+          "sumR": -15,
+          "halves": {
+            "Jan–Jun": {
+              "n": 364,
+              "win": 79,
+              "loss": 285,
+              "winrate": 21.7,
+              "sumR": -48
+            },
+            "Jul–Dez": {
+              "n": 195,
+              "win": 57,
+              "loss": 138,
+              "winrate": 29.2,
+              "sumR": 33
+            }
+          }
+        },
+        "5R": {
+          "n": 551,
+          "win": 88,
+          "loss": 463,
+          "winrate": 16,
+          "sumR": -23,
+          "halves": {
+            "Jan–Jun": {
+              "n": 359,
+              "win": 52,
+              "loss": 307,
+              "winrate": 14.5,
+              "sumR": -47
+            },
+            "Jul–Dez": {
+              "n": 192,
+              "win": 36,
+              "loss": 156,
+              "winrate": 18.8,
+              "sumR": 24
+            }
+          }
+        }
+      },
+      {
+        "k": 2.4,
+        "trades": 573,
+        "perWeek": 12.2,
+        "2R": {
+          "n": 567,
+          "win": 182,
+          "loss": 385,
+          "winrate": 32.1,
+          "sumR": -21,
+          "halves": {
+            "Jan–Jun": {
+              "n": 368,
+              "win": 108,
+              "loss": 260,
+              "winrate": 29.3,
+              "sumR": -44
+            },
+            "Jul–Dez": {
+              "n": 199,
+              "win": 74,
+              "loss": 125,
+              "winrate": 37.2,
+              "sumR": 23
+            }
+          }
+        },
+        "3R": {
+          "n": 566,
+          "win": 138,
+          "loss": 428,
+          "winrate": 24.4,
+          "sumR": -14,
+          "halves": {
+            "Jan–Jun": {
+              "n": 368,
+              "win": 81,
+              "loss": 287,
+              "winrate": 22,
+              "sumR": -44
+            },
+            "Jul–Dez": {
+              "n": 198,
+              "win": 57,
+              "loss": 141,
+              "winrate": 28.8,
+              "sumR": 30
+            }
+          }
+        },
+        "5R": {
+          "n": 558,
+          "win": 88,
+          "loss": 470,
+          "winrate": 15.8,
+          "sumR": -30,
+          "halves": {
+            "Jan–Jun": {
+              "n": 363,
+              "win": 52,
+              "loss": 311,
+              "winrate": 14.3,
+              "sumR": -51
+            },
+            "Jul–Dez": {
+              "n": 195,
+              "win": 36,
+              "loss": 159,
+              "winrate": 18.5,
+              "sumR": 21
+            }
+          }
+        }
+      },
+      {
+        "k": 2.5,
+        "trades": 582,
+        "perWeek": 12.4,
+        "2R": {
+          "n": 576,
+          "win": 184,
+          "loss": 392,
+          "winrate": 31.9,
+          "sumR": -24,
+          "halves": {
+            "Jan–Jun": {
+              "n": 375,
+              "win": 109,
+              "loss": 266,
+              "winrate": 29.1,
+              "sumR": -48
+            },
+            "Jul–Dez": {
+              "n": 201,
+              "win": 75,
+              "loss": 126,
+              "winrate": 37.3,
+              "sumR": 24
+            }
+          }
+        },
+        "3R": {
+          "n": 575,
+          "win": 140,
+          "loss": 435,
+          "winrate": 24.3,
+          "sumR": -15,
+          "halves": {
+            "Jan–Jun": {
+              "n": 375,
+              "win": 82,
+              "loss": 293,
+              "winrate": 21.9,
+              "sumR": -47
+            },
+            "Jul–Dez": {
+              "n": 200,
+              "win": 58,
+              "loss": 142,
+              "winrate": 29,
+              "sumR": 32
+            }
+          }
+        },
+        "5R": {
+          "n": 567,
+          "win": 89,
+          "loss": 478,
+          "winrate": 15.7,
+          "sumR": -33,
+          "halves": {
+            "Jan–Jun": {
+              "n": 370,
+              "win": 53,
+              "loss": 317,
+              "winrate": 14.3,
+              "sumR": -52
+            },
+            "Jul–Dez": {
+              "n": 197,
+              "win": 36,
+              "loss": 161,
+              "winrate": 18.3,
+              "sumR": 19
+            }
+          }
+        }
+      }
+    ]
+  }
+}

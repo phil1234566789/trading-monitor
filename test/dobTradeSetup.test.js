@@ -151,8 +151,8 @@ describe('checkDobTradeSetup: POI',()=>{
  it('ohne gemessenen ATR-Faktor gibt es kein POI (kein stiller Default)',()=>{
   const fixture=load('2026-11-02');
   expect(POI_MAX_DISTANCE_ATR).toBe(1.5);
-  expect(poiMaxDistanceAtr('GBPUSD')).toBeNull();
-  const result=checkDobTradeSetup({instrument:'GBPUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
+  expect(poiMaxDistanceAtr('EURUSD')).toBeNull();
+  const result=checkDobTradeSetup({instrument:'EURUSD',m5Candles:fixture.candles.m5,m1Candles:fixture.candles.m1,
    evaluatedAt:fixture.provenance.query.to,poiContext});
   expect(result.setups).toEqual([]);
   expect(result.rejected.length).toBeGreaterThan(0);

@@ -1,6 +1,6 @@
 // Befüllt dob_trade_setups (Statistikseite /dob-statistik) mit den einmaligen v0-Trades ab --from (Berlin), gleiche Zählweise wie
 // dobSetupWinrate.mjs: jeder M5-Schluss im Live-Fenster, letzte Sichtung je Setup-ID, Ausgang neu bis Datenende, Dedup Richtung/Entry/SL.
-// Flags: --refresh (Kerzen neu holen), --from YYYY-MM-DD, --dry (nichts schreiben, nur Kennzahlen), --run <Lauf-ID aus RUNS>,
+// Flags: --instrument (Standard XAUUSD), --refresh (Kerzen neu holen), --from YYYY-MM-DD, --dry (nichts schreiben, nur Kennzahlen), --run <Lauf-ID aus RUNS>,
 // --dump <Datei> (mit --dry: Zeilen als JSON, für bitgenaue Regressionsvergleiche nach Umbauten).
 import path from 'node:path';
 import { existsSync } from 'node:fs';
@@ -9,27 +9,32 @@ import { createServer } from 'vite';
 import { aggregateDobByMonth } from './dobWinrateAggregate.mjs';
 import { dobCandleCache } from './dobCandleCache.mjs';
 import { collectDobSetups, dobGridTrades, dobTradeKey, uniqueDobTrades } from './dobSetupGrid.mjs';
+import { instrumentConfig } from '../src/instrumentConfig.js';
 
 const flag = name => process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : undefined;
-const SYMBOL = 'XAUUSD', START_DAY = flag('--from') ?? '2026-01-01', DRY = process.argv.includes('--dry');
+const SYMBOL = flag('--instrument') ?? 'XAUUSD', START_DAY = flag('--from') ?? '2026-01-01', DRY = process.argv.includes('--dry');
 // Ein Lauf = ein Eintrag im Dropdown der Seite. v1 (POI) kommt als weiterer Eintrag mit eigenem Trade-Filter dazu.
 // pick: welche Setups von checkDobTradeSetup() der Lauf zählt. v0 = jedes DOB-Setup, v1 = nur mit POI.
 // poiType: POI-Art des Laufs (src/dobPoiType.js), bestimmt die POI-Erkennung; künftige LQ-Sweep-Läufe heißen dob-lq-sweep-v….
-const RUNS = {
-  'dob-setup-v0': { label: 'v0 · nur DOB', description: 'DOB + TP 2R, ohne POI', sort: 0, version: 'dob-setup-v0', poiType: 'htf_ob', pick: r => [...r.setups, ...r.rejected] },
-  'dob-setup-v1': { label: 'v1 · POI (G 1,5 ATR)', description: 'DOB + TP 2R, aktive H1/H4-OB-Zone höchstens 1,5 H1-ATR von OB1',
-    sort: 1, version: 'dob-setup-v1', poiType: 'htf_ob', pick: r => r.setups, poiOptions: { requireRetest: false } },
-  'dob-setup-v2': { label: 'v2 · POI mit Retest', description: 'wie v1, die H1/H4-Zone muss vor OB1 retestet sein',
-    sort: 2, version: 'dob-setup-v2', poiType: 'htf_ob', pick: r => r.setups, poiOptions: { requireRetest: true } },
+// Lauf-IDs: XAU behält dob-setup-vN, andere Instrumente bekommen das Instrument im Namen (dob-setup-gbpusd-vN), damit ein Füllen
+// nie die XAU-Läufe berührt. Der POI-Abstand k kommt je Instrument aus instrumentConfig (dobPoiMaxAtr).
+const runId = v => SYMBOL === 'XAUUSD' ? `dob-setup-${v}` : `dob-setup-${SYMBOL.toLowerCase()}-${v}`;
+const atrText = (instrumentConfig(SYMBOL).dobPoiMaxAtr ?? 0).toLocaleString('de-DE');
+const RUNS = Object.fromEntries([
+  ['v0', { label: 'v0 · nur DOB', description: 'DOB + TP 2R, ohne POI', sort: 0, pick: r => [...r.setups, ...r.rejected] }],
+  ['v1', { label: `v1 · POI (G ${atrText} ATR)`, description: `DOB + TP 2R, aktive H1/H4-OB-Zone höchstens ${atrText} H1-ATR von OB1`,
+    sort: 1, pick: r => r.setups, poiOptions: { requireRetest: false } }],
+  ['v2', { label: 'v2 · POI mit Retest', description: 'wie v1, die H1/H4-Zone muss vor OB1 retestet sein',
+    sort: 2, pick: r => r.setups, poiOptions: { requireRetest: true } }],
   // v3: alle v2-Trades mit Gegen-DOB-Status (none/dead/live); was gesperrt oder mit 5R gehandelt wird, entscheidet die Konfig.
-  'dob-setup-v3': { label: 'v3 · Gegen-DOB', description: 'wie v2 mit Gegen-DOB-Status seit dem Retest des POI; Sperre bzw. TP über „Sperren und Regeln“',
-    sort: 3, version: 'dob-setup-v3', poiType: 'htf_ob', pick: r => r.setups, poiOptions: { requireRetest: true }, counterDob: true },
-  // LQ-Sweep v0: POI = TS1.1-Setup mit gleicher Kante an OB1/OB2 (Philip). Der Lauf nimmt auch Überlappung und ≤ 1 USD daneben
-  // auf (features.poi_match), welche Stufe zählt, entscheidet die Konfig (poiMatchMode, Default gleiche Kante).
-  'dob-lq-sweep-v0': { label: 'v0 · TS1.1 an OB1/OB2', description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
-    sort: 10, version: 'dob-lq-sweep-v0', poiType: 'lq_sweep', pick: r => r.setups, poiOptions: { match: 'adjacent' }, counterDob: true },
-};
-const RUN_ID = flag('--run') ?? 'dob-setup-v0';
+  ['v3', { label: 'v3 · Gegen-DOB', description: 'wie v2 mit Gegen-DOB-Status seit dem Retest des POI; Sperre bzw. TP über „Sperren und Regeln“',
+    sort: 3, pick: r => r.setups, poiOptions: { requireRetest: true }, counterDob: true }],
+].map(([v, run]) => [runId(v), { ...run, version: `dob-setup-${v}`, poiType: 'htf_ob' }]));
+// LQ-Sweep v0: POI = TS1.1-Setup mit gleicher Kante an OB1/OB2 (Philip). Der Lauf nimmt auch Überlappung und ≤ 1 USD daneben
+// auf (features.poi_match), welche Stufe zählt, entscheidet die Konfig (poiMatchMode, Default gleiche Kante). Nur XAU.
+if (SYMBOL === 'XAUUSD') RUNS['dob-lq-sweep-v0'] = { label: 'v0 · TS1.1 an OB1/OB2', description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
+  sort: 10, version: 'dob-lq-sweep-v0', poiType: 'lq_sweep', pick: r => r.setups, poiOptions: { match: 'adjacent' }, counterDob: true };
+const RUN_ID = flag('--run') ?? runId('v0');
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 let envDir = root;
@@ -99,7 +104,7 @@ try {
     first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
     ...(LQ ? (poi => ({ poi_kind: 'ts11', poi_distance_usd: poi.gapUsd, poi_zone_top: poi.zone.top, poi_zone_bottom: poi.zone.bottom,
       poi_zone_start: poi.zoneStartTime, poi_gap_seconds: t.chart.firstOrderBlockStart - poi.zoneStartTime }))(bestPoi.get(dobTradeKey(t)))
-    : RUN_ID === 'dob-setup-v0' ? {} : { poi_kind: `ob_${t.poi.timeframe.toLowerCase()}`, poi_distance_usd: t.poi.distanceUsd,
+    : RUNS[RUN_ID].version === 'dob-setup-v0' ? {} : { poi_kind: `ob_${t.poi.timeframe.toLowerCase()}`, poi_distance_usd: t.poi.distanceUsd,
       poi_atr: t.poi.atr, poi_distance_atr: t.poi.distanceAtr,
       poi_gap_seconds: t.chart.firstOrderBlockStart - t.poi.zoneRecognizedAt,
       poi_zone_top: t.poi.zone.top, poi_zone_bottom: t.poi.zone.bottom,

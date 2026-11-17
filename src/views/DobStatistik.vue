@@ -20,7 +20,7 @@ import {fmtR,pnlClass} from '../format.js';
 import {cssColor} from '../chartColors.js';
 
 // Die Seite rechnet nichts nach, sie liest nur die vorberechneten Trades (scripts/dobTradeSetupsFill.mjs) und zählt sie.
-const INSTRUMENTS=['XAUUSD'],ROUTES=['a','b'],PAGE=200;
+const INSTRUMENTS=['XAUUSD','GBPUSD'],ROUTES=['a','b'],PAGE=200;
 const route=useRoute(),router=useRouter();
 const instrument=ref(INSTRUMENTS.includes(route.query.instrument)?route.query.instrument:'XAUUSD');
 const year=ref(String(route.query.year??new Date().getFullYear()));
@@ -30,7 +30,8 @@ const selectedRun=computed(()=>runs.value.find(r=>r.id===run.value));
 // POI-Art (src/dobPoiType.js): Läufe, Konfig und Zahlen nur dieser POI-Art, nie gemischt. Alte Links mit ?run= ohne
 // ?poi= nehmen die POI-Art ihres Laufs.
 const poiType=ref(Object.hasOwn(DOB_POI_TYPES,route.query.poi)?route.query.poi:null);
-const poiRuns=computed(()=>runs.value.filter(r=>r.poi_type===poiType.value));
+// Läufe je Instrument (dob_trade_setup_runs.instrument, ältere Zeilen ohne Spalte sind XAU).
+const poiRuns=computed(()=>runs.value.filter(r=>r.poi_type===poiType.value&&(r.instrument??'XAUUSD')===instrument.value));
 function setPoiType(f){poiType.value=f;if(!poiRuns.value.some(r=>r.id===run.value))run.value=poiRuns.value[0]?.id??'';}
 
 // Läufe wie auf /statistik per Dropdown und ?run=; ohne gültige Auswahl der erste nach sort.
@@ -59,6 +60,7 @@ async function load(){
 // Setzt loadRuns den Lauf erst, lädt der watch; sonst hier, damit „Aktualisieren“ auch ohne Wechsel neu liest.
 async function refresh(){const before=run.value;if(await loadRuns()&&run.value===before)await load();}
 refresh();
+watch(instrument,()=>{if(!poiRuns.value.some(r=>r.id===run.value))run.value=poiRuns.value[0]?.id??'';});
 watch([instrument,run],load);
 // Links mit anderem ?run= bei schon offener Seite (gleiche Route, keine Neuinitialisierung).
 watch(()=>route.query.run,value=>{if(typeof value==='string'&&value&&value!==run.value)run.value=value;});

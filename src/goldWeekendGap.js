@@ -33,7 +33,21 @@ export function goldM1ClosureCovered(from, to) {
   return ['Mon','Tue','Wed','Thu'].includes(start.day) && start.day===end.day && start.minutes>=17*60 && end.minutes<M1_REOPEN;
 }
 
-// Gemeinsame M1-Lückenprüfung: [from,to) fehlt nicht oder liegt (nur XAU) vollständig in einem Marktschluss.
+// FXCM-Forex (GBPUSD-Archiv 2026): Wochenschluss Fr ~16:58 bis So ~17:00 New York, sonntags bis 18:00 dünn; Tagespause Mo–Do
+// um 17:00 New York, im Archiv bis zu 49 Minuten. Beides gilt als Marktschluss, damit Trades über Nacht nicht als lückenhaft enden.
+const FOREX_CLOSE=16*60+50,FOREX_REOPEN_LATEST=18*60;
+export function forexM1ClosureCovered(from, to) {
+  if (!Number.isFinite(from) || !Number.isFinite(to) || from >= to || to-from > 3*86400) return false;
+  const start=clock(from),end=clock(to-0.001);
+  const weekend=({day,minutes})=>day==='Sat' || day==='Fri' && minutes>=FOREX_CLOSE || day==='Sun' && minutes<FOREX_REOPEN_LATEST;
+  if (weekend(start) && weekend(end)) return true;
+  return to-from <= (FOREX_REOPEN_LATEST-FOREX_CLOSE)*60 && ['Mon','Tue','Wed','Thu'].includes(start.day) && start.day===end.day
+    && start.minutes>=FOREX_CLOSE && end.minutes<FOREX_REOPEN_LATEST;
+}
+
+// Gemeinsame M1-Lückenprüfung: [from,to) fehlt nicht oder liegt vollständig in einem Marktschluss des Instruments.
 export function m1GapCovered(instrument, from, to) {
-  return from === to || isGoldInstrument(instrument) && goldM1ClosureCovered(from, to);
+  if (from === to) return true;
+  if (isGoldInstrument(instrument)) return goldM1ClosureCovered(from, to);
+  return instrument != null && forexM1ClosureCovered(from, to);
 }

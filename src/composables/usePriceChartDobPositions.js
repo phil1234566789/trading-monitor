@@ -14,7 +14,7 @@ const COLUMNS='id,instrument,direction,entry_time,entry_price,stop_price,exit_ti
 export function useDobRunOptions(){
  const runs=ref([]);
  onMounted(async()=>{
-  const {data,error}=await supabase.from('dob_trade_setup_runs').select('id,label,poi_type').order('sort').order('id').limit(200);
+  const {data,error}=await supabase.from('dob_trade_setup_runs').select('*').order('sort').order('id').limit(200);
   // POI-Art im Namen, damit HTF-OB- und LQ-Sweep-Läufe im Menü nicht verwechselt werden.
   if(!error)runs.value=data.map(r=>({...r,label:`${dobPoiTypeLabel(r.poi_type)} · ${r.label}`}));
  });

@@ -4,14 +4,16 @@ import {detectOrderBlocks} from './orderBlockDetection.js';
 export {M1_FVG_MIN_RETEST_FRACTION} from './m1FvgEntrySequence.js';
 import {m1FvgEntrySequence,advanceM1FvgEntrySequence,m1FvgSequenceResult} from './m1FvgEntrySequence.js';
 
-export function m1FvgEntryCandidates(candles,evaluatedAt,direction) {
+// orderBlockMinGap: Mindestlücke des zugehörigen M1-OB; null = Forex-Standard 1 Pip. Der DOB-Indikator nimmt 0, weil die FVG selbst
+// jede positive Lücke zählt: sonst fehlt bei GBP-FVGs unter 1 Pip der OB und jede volle Füllung wird zum Datenfehler (XAU unverändert).
+export function m1FvgEntryCandidates(candles,evaluatedAt,direction,{orderBlockMinGap=null}={}) {
   const rows=closedChecklistCandles(candles,'1m',evaluatedAt),result=[];
   const directions=direction?[direction]:['long','short'];
   for(let end=3;end<=rows.length;end++)for(const side of directions){
     const fvg=confirmedM1Fvg(rows,side,end);
     const formation=rows.slice(end-4,end);
     const contiguous=formation.length===4 && formation.every((c,i)=>!c.ignored && (!i||c.time===formation[i-1].time+60));
-    const orderBlock=fvg && contiguous ? detectOrderBlocks(formation,'1m',true)
+    const orderBlock=fvg && contiguous ? detectOrderBlocks(formation,'1m',true,orderBlockMinGap)
       .find(z=>z.startTime===fvg.candleTime && z.dir===(side==='long'?1:-1)) ?? null : null;
     if(fvg)result.push({...fvg,...m1FvgBounds(side,fvg.gap,rows[end-1]),
       confirmationCandleTime:rows[end-1].time,confirmationPrice:rows[end-1].close,

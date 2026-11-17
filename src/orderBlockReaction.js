@@ -60,7 +60,7 @@ export function reactionBreaksOrderBlock(candle,zone) {
 // m1Candles müssen bereits auf geschlossene Kerzen bis evaluatedAt gefiltert sein (closedChecklistCandles).
 // Reaktions-FVG = Entry-Kandidat aus m1FvgEntryCandidates, nicht orderBlockMitigationFvg: dieselbe FVG trägt die Entry-Routen und ihren M1-OB.
 export function createOrderBlockReactionContext(m1Candles,evaluatedAt,instrument) {
- const candidates=m1FvgEntryCandidates(m1Candles,evaluatedAt),byKnownAt={long:new Map(),short:new Map()},byDirection={long:[],short:[]};
+ const candidates=m1FvgEntryCandidates(m1Candles,evaluatedAt,undefined,{orderBlockMinGap:0}),byKnownAt={long:new Map(),short:new Map()},byDirection={long:[],short:[]};
  for(const fvg of candidates){
   byDirection[fvg.direction].push(fvg);
   const map=byKnownAt[fvg.direction];if(!map.has(fvg.recognizedAt))map.set(fvg.recognizedAt,[]);map.get(fvg.recognizedAt).push(fvg);
