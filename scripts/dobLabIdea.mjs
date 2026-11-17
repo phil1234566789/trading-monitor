@@ -6,8 +6,8 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
-import { loadDobRuns, DOB_SYMBOL as SYMBOL } from './dobRuns.mjs';
-import { dobTradeKey } from './dobSetupGrid.mjs';
+import { DOB_SYMBOL as SYMBOL } from './dobRuns.mjs';
+import { loadDobV3Lab } from './dobV3Carriers.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
 let envDir = root;
@@ -15,31 +15,10 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
-  const load = p => server.ssrLoadModule(p);
-  const [{ createDobCounterDobGate, dobSourceRetestTime }, { supabase }, { dobGuardrailsFromRow, dobConfigTpR, dobGuardrailReason, DOB_GUARDRAILS_DEFAULT },
-    { dobSourceZoneAgeSeconds }, { formatDatedTime }] = await Promise.all(
-    ['/src/dobCounterDob.js', '/src/supabaseClient.js', '/src/dobGuardrails.js', '/src/dobSourceOfStrength.js', '/src/berlinTime.js'].map(load));
-  const { v2Carriers, m5Marked, m1Marked, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor, gitHash } = await loadDobRuns(server, root);
-  const { data: cfgRow, error } = await supabase.from('dob_guardrails').select('*').eq('instrument', SYMBOL).maybeSingle();
-  if (error) throw error;
-  const config = dobGuardrailsFromRow(cfgRow);
-  // Träger wie der v3-Fill: bester Gegen-DOB-Status je Trade, Repräsentant = Paar mit diesem Status.
-  const gate = createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: SYMBOL });
-  const RANK = { none: 0, dead: 1, live: 2 }, best = new Map();
-  for (const t of v2Carriers) { const st = gate(t)?.status ?? 'none', k = dobTradeKey(t); if (!best.has(k) || RANK[st] < RANK[best.get(k).st]) best.set(k, { t, st }); }
+  const [{ dobSourceRetestTime }, { formatDatedTime }] = await Promise.all(['/src/dobCounterDob.js', '/src/berlinTime.js'].map(p => server.ssrLoadModule(p)));
+  const { cases, block: blockR, outcome, dataEnd, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
   const ideaOf = t => { const s = t.sourceOfStrength;
     return `${t.direction}:${s.timeframe}:${s.zoneStartTime}:${s.zone.bottom}:${s.zone.top}:${dobSourceRetestTime(t)}`; };
-
-  const lowerBound = t => { let lo = 0, hi = m1Marked.length; while (lo < hi) { const m = (lo + hi) >> 1; if (m1Marked[m].time < t) lo = m + 1; else hi = m; } return lo; };
-  const outcomes = new Map();
-  const outcome = (t, r) => { const k = `${dobTradeKey(t)}:${r}`; if (!outcomes.has(k)) outcomes.set(k, evaluateDoubleOrderBlockOutcome({ direction: t.direction,
-    entryTime: t.entryTime, entryPrice: t.entryPrice, stopPrice: t.stopPrice, candles: m1Marked.slice(lowerBound(t.entryTime)), evaluatedAt: dataEnd,
-    instrument: SYMBOL, rMultiple: r })); return outcomes.get(k); };
-  const month = t => berlinDateStrFor(t.entryTime).slice(0, 7);
-
-  const comboMode = { counterDobMode: 'live_block_dead_5r' };
-  const plain = { ...DOB_GUARDRAILS_DEFAULT, defaultTpR: config.defaultTpR, entryWindows: config.entryWindows.filter(w => w.action === 'tp'), ...comboMode };
-  const saved = { ...config, ...comboMode };
   const result = { measurement: 'dob-lab-idea-v1', git: gitHash, symbol: SYMBOL, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
     methodology: ['Trades: v2 mit Gegen-DOB-Status wie der v3-Fill (bester über die tragenden Paare), Modus Kombi; (a) nur TP-Fenster/Default, (b) Philips gespeicherte Konfig mit Sperren.',
       'Idee = gleiche Richtung + gleiche Kraft-Zone (TF, Start, Kanten) + gleiche Retest-Episode der Zone (Start der letzten Touch-Episode vor OB1).',
@@ -47,20 +26,15 @@ try {
       '(2) und (4) kausal in Entry-Reihenfolge über die zugelassenen Trades; (4) sperrt erst ab dem Ausstieg des Losses.',
       'n = Win + Loss, ΣR = R·Win − Loss; Halbjahre nach Berliner Entry-Monat.'],
     carriers: {} };
-  for (const [cName, cfg] of [['(a) Kombi ohne Sperren', plain], ['(b) Kombi mit Philips Sperren', saved]]) {
-    const list = [...best.values()].filter(({ t, st }) => !dobGuardrailReason(cfg, { entryTime: t.entryTime,
-      zoneAgeSeconds: dobSourceZoneAgeSeconds(t.sourceOfStrength, t.chart.firstOrderBlockStart), counterDobStatus: st }));
-    const rOf = new Map(list.map(({ t, st }) => [t, dobConfigTpR(cfg, t.entryTime, st)]));
-    const res = t => { const o = outcome(t, rOf.get(t)); return { status: o.status, exit: o.recognizedAt ?? Infinity, r: rOf.get(t) }; };
-    const stats = l => { let w = 0, lo = 0, sum = 0; for (const t of l) { const o = res(t); if (o.status === 'success') { w++; sum += o.r; } else if (o.status === 'loss') { lo++; sum -= 1; } }
-      return { n: w + lo, winrate: w + lo ? +(w / (w + lo) * 100).toFixed(1) : null, sumR: +sum.toFixed(1) }; };
-    const block = l => ({ trades: l.length, ...stats(l), 'Jan–Jun': stats(l.filter(t => month(t) <= '2026-06')), 'Jul–Nov': stats(l.filter(t => month(t) >= '2026-07')) });
+  for (const { name: cName, trades: list, tpR } of cases) {
+    const res = t => { const o = outcome(t, tpR(t)); return { status: o.status, exit: o.recognizedAt ?? Infinity, r: tpR(t) }; };
+    const block = l => blockR(l, tpR);
     const ideas = new Map();
-    for (const { t } of list) (ideas.get(ideaOf(t)) ?? ideas.set(ideaOf(t), []).get(ideaOf(t))).push(t);
+    for (const t of list) (ideas.get(ideaOf(t)) ?? ideas.set(ideaOf(t), []).get(ideaOf(t))).push(t);
     for (const l of ideas.values()) l.sort((a, b) => a.entryTime - b.entryTime);
     const pick = keep => [...ideas.values()].flatMap(l => { const kept = []; for (const t of l) if (keep(t, kept)) kept.push(t); return kept; });
     const rules = {
-      'Konfig (alle Entries)': list.map(x => x.t),
+      'Konfig (alle Entries)': list,
       '(1) nur erster Entry je Idee': pick((t, kept) => kept.length === 0),
       '(2) kein Entry, solange einer derselben Idee offen ist': pick((t, kept) => kept.every(k => res(k).exit <= t.entryTime)),
       '(3) höchstens 2 Entries je Idee': pick((t, kept) => kept.length < 2),

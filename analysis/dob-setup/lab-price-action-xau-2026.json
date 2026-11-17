@@ -1,0 +1,2401 @@
+{
+  "measurement": "dob-lab-price-action-v1",
+  "git": "5a8e40bf-dirty",
+  "dataEnd": 1794849660,
+  "dataEndBerlin": "2026-11-16",
+  "methodology": [
+    "Träger: scripts/dobV3Carriers.mjs (v3-Fill-Träger, Kombi; (a) ohne, (b) mit Philips Sperren), Ausgang zu 3R, 5R und TP nach Konfig.",
+    "Fenster: letzte 1/3/5 M5-Kerzen, die vor dem Entry geschlossen sind. Hammer je Kerze, Morning/Evening Star nur vollständig im Fenster.",
+    "Hammer: Körper ≤ 1/3 der Range, langer Docht ≥ 60 %, Gegendocht ≤ 25 %; Farbe egal (Philips Beispiele 28.08.). bull = unterer, bear = oberer Docht.",
+    "Gegenmuster = Musterseite gegen die Trade-Richtung; Gegenkerzen = Kerzen mit Farbe gegen die Trade-Richtung.",
+    "Regel „Gegenmuster im Fenster → sperren“: übrige Trades zum TP nach Konfig."
+  ],
+  "carriers": {
+    "(a) Kombi ohne Sperren": {
+      "trades": 385,
+      "konfig": {
+        "trades": 385,
+        "n": 384,
+        "winrate": 27.1,
+        "sumR": 136,
+        "Jan–Jun": {
+          "n": 218,
+          "winrate": 25.7,
+          "sumR": 56
+        },
+        "Jul–Nov": {
+          "n": 166,
+          "winrate": 28.9,
+          "sumR": 80
+        }
+      },
+      "windows": {
+        "1": {
+          "counterPattern": {
+            "false": {
+              "r3": {
+                "trades": 368,
+                "n": 367,
+                "winrate": 29.2,
+                "sumR": 61,
+                "Jan–Jun": {
+                  "n": 208,
+                  "winrate": 26.9,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 159,
+                  "winrate": 32.1,
+                  "sumR": 45
+                }
+              },
+              "r5": {
+                "trades": 368,
+                "n": 366,
+                "winrate": 20.8,
+                "sumR": 90,
+                "Jan–Jun": {
+                  "n": 207,
+                  "winrate": 19.3,
+                  "sumR": 33
+                },
+                "Jul–Nov": {
+                  "n": 159,
+                  "winrate": 22.6,
+                  "sumR": 57
+                }
+              },
+              "konfig": {
+                "trades": 368,
+                "n": 367,
+                "winrate": 27.2,
+                "sumR": 135,
+                "Jan–Jun": {
+                  "n": 208,
+                  "winrate": 26.4,
+                  "sumR": 63
+                },
+                "Jul–Nov": {
+                  "n": 159,
+                  "winrate": 28.3,
+                  "sumR": 72
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 17,
+                "n": 17,
+                "winrate": 23.5,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 10,
+                  "winrate": 10,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 42.9,
+                  "sumR": 5
+                }
+              },
+              "r5": {
+                "trades": 17,
+                "n": 17,
+                "winrate": 23.5,
+                "sumR": 7,
+                "Jan–Jun": {
+                  "n": 10,
+                  "winrate": 10,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 42.9,
+                  "sumR": 11
+                }
+              },
+              "konfig": {
+                "trades": 17,
+                "n": 17,
+                "winrate": 23.5,
+                "sumR": 1,
+                "Jan–Jun": {
+                  "n": 10,
+                  "winrate": 10,
+                  "sumR": -7
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 42.9,
+                  "sumR": 8
+                }
+              }
+            }
+          },
+          "withPattern": {
+            "false": {
+              "r3": {
+                "trades": 341,
+                "n": 341,
+                "winrate": 28.7,
+                "sumR": 51,
+                "Jan–Jun": {
+                  "n": 193,
+                  "winrate": 26.9,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 148,
+                  "winrate": 31.1,
+                  "sumR": 36
+                }
+              },
+              "r5": {
+                "trades": 341,
+                "n": 340,
+                "winrate": 21.2,
+                "sumR": 92,
+                "Jan–Jun": {
+                  "n": 192,
+                  "winrate": 20.3,
+                  "sumR": 42
+                },
+                "Jul–Nov": {
+                  "n": 148,
+                  "winrate": 22.3,
+                  "sumR": 50
+                }
+              },
+              "konfig": {
+                "trades": 341,
+                "n": 341,
+                "winrate": 26.4,
+                "sumR": 112,
+                "Jan–Jun": {
+                  "n": 193,
+                  "winrate": 25.9,
+                  "sumR": 55
+                },
+                "Jul–Nov": {
+                  "n": 148,
+                  "winrate": 27,
+                  "sumR": 57
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 44,
+                "n": 43,
+                "winrate": 30.2,
+                "sumR": 9,
+                "Jan–Jun": {
+                  "n": 25,
+                  "winrate": 20,
+                  "sumR": -5
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 44.4,
+                  "sumR": 14
+                }
+              },
+              "r5": {
+                "trades": 44,
+                "n": 43,
+                "winrate": 18.6,
+                "sumR": 5,
+                "Jan–Jun": {
+                  "n": 25,
+                  "winrate": 8,
+                  "sumR": -13
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 33.3,
+                  "sumR": 18
+                }
+              },
+              "konfig": {
+                "trades": 44,
+                "n": 43,
+                "winrate": 32.6,
+                "sumR": 24,
+                "Jan–Jun": {
+                  "n": 25,
+                  "winrate": 24,
+                  "sumR": 1
+                },
+                "Jul–Nov": {
+                  "n": 18,
+                  "winrate": 44.4,
+                  "sumR": 23
+                }
+              }
+            }
+          },
+          "counterCandles": {
+            "0": {
+              "r3": {
+                "trades": 180,
+                "n": 179,
+                "winrate": 30.7,
+                "sumR": 41,
+                "Jan–Jun": {
+                  "n": 102,
+                  "winrate": 28.4,
+                  "sumR": 14
+                },
+                "Jul–Nov": {
+                  "n": 77,
+                  "winrate": 33.8,
+                  "sumR": 27
+                }
+              },
+              "r5": {
+                "trades": 180,
+                "n": 178,
+                "winrate": 21.3,
+                "sumR": 50,
+                "Jan–Jun": {
+                  "n": 101,
+                  "winrate": 18.8,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 77,
+                  "winrate": 24.7,
+                  "sumR": 37
+                }
+              },
+              "konfig": {
+                "trades": 180,
+                "n": 179,
+                "winrate": 30.2,
+                "sumR": 86,
+                "Jan–Jun": {
+                  "n": 102,
+                  "winrate": 27.5,
+                  "sumR": 30
+                },
+                "Jul–Nov": {
+                  "n": 77,
+                  "winrate": 33.8,
+                  "sumR": 56
+                }
+              }
+            },
+            "1": {
+              "r3": {
+                "trades": 205,
+                "n": 205,
+                "winrate": 27.3,
+                "sumR": 19,
+                "Jan–Jun": {
+                  "n": 116,
+                  "winrate": 24.1,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 89,
+                  "winrate": 31.5,
+                  "sumR": 23
+                }
+              },
+              "r5": {
+                "trades": 205,
+                "n": 205,
+                "winrate": 20.5,
+                "sumR": 47,
+                "Jan–Jun": {
+                  "n": 116,
+                  "winrate": 19,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 89,
+                  "winrate": 22.5,
+                  "sumR": 31
+                }
+              },
+              "konfig": {
+                "trades": 205,
+                "n": 205,
+                "winrate": 24.4,
+                "sumR": 50,
+                "Jan–Jun": {
+                  "n": 116,
+                  "winrate": 24.1,
+                  "sumR": 26
+                },
+                "Jul–Nov": {
+                  "n": 89,
+                  "winrate": 24.7,
+                  "sumR": 24
+                }
+              }
+            }
+          },
+          "blockCounterPattern": {
+            "trades": 368,
+            "n": 367,
+            "winrate": 27.2,
+            "sumR": 135,
+            "Jan–Jun": {
+              "n": 208,
+              "winrate": 26.4,
+              "sumR": 63
+            },
+            "Jul–Nov": {
+              "n": 159,
+              "winrate": 28.3,
+              "sumR": 72
+            }
+          }
+        },
+        "3": {
+          "counterPattern": {
+            "false": {
+              "r3": {
+                "trades": 297,
+                "n": 296,
+                "winrate": 28.7,
+                "sumR": 44,
+                "Jan–Jun": {
+                  "n": 172,
+                  "winrate": 25,
+                  "sumR": 0
+                },
+                "Jul–Nov": {
+                  "n": 124,
+                  "winrate": 33.9,
+                  "sumR": 44
+                }
+              },
+              "r5": {
+                "trades": 297,
+                "n": 295,
+                "winrate": 20.7,
+                "sumR": 71,
+                "Jan–Jun": {
+                  "n": 171,
+                  "winrate": 18.7,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 124,
+                  "winrate": 23.4,
+                  "sumR": 50
+                }
+              },
+              "konfig": {
+                "trades": 297,
+                "n": 296,
+                "winrate": 26.7,
+                "sumR": 106,
+                "Jan–Jun": {
+                  "n": 172,
+                  "winrate": 23.8,
+                  "sumR": 34
+                },
+                "Jul–Nov": {
+                  "n": 124,
+                  "winrate": 30.6,
+                  "sumR": 72
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 88,
+                "n": 88,
+                "winrate": 29.5,
+                "sumR": 16,
+                "Jan–Jun": {
+                  "n": 46,
+                  "winrate": 30.4,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 28.6,
+                  "sumR": 6
+                }
+              },
+              "r5": {
+                "trades": 88,
+                "n": 88,
+                "winrate": 21.6,
+                "sumR": 26,
+                "Jan–Jun": {
+                  "n": 46,
+                  "winrate": 19.6,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 23.8,
+                  "sumR": 18
+                }
+              },
+              "konfig": {
+                "trades": 88,
+                "n": 88,
+                "winrate": 28.4,
+                "sumR": 30,
+                "Jan–Jun": {
+                  "n": 46,
+                  "winrate": 32.6,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 42,
+                  "winrate": 23.8,
+                  "sumR": 8
+                }
+              }
+            }
+          },
+          "withPattern": {
+            "false": {
+              "r3": {
+                "trades": 290,
+                "n": 290,
+                "winrate": 26.9,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 163,
+                  "winrate": 25.8,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 127,
+                  "winrate": 28.3,
+                  "sumR": 17
+                }
+              },
+              "r5": {
+                "trades": 290,
+                "n": 289,
+                "winrate": 19.4,
+                "sumR": 47,
+                "Jan–Jun": {
+                  "n": 162,
+                  "winrate": 17.9,
+                  "sumR": 12
+                },
+                "Jul–Nov": {
+                  "n": 127,
+                  "winrate": 21.3,
+                  "sumR": 35
+                }
+              },
+              "konfig": {
+                "trades": 290,
+                "n": 290,
+                "winrate": 24.8,
+                "sumR": 73,
+                "Jan–Jun": {
+                  "n": 163,
+                  "winrate": 23.9,
+                  "sumR": 31
+                },
+                "Jul–Nov": {
+                  "n": 127,
+                  "winrate": 26,
+                  "sumR": 42
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 95,
+                "n": 94,
+                "winrate": 35.1,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 27.3,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 46.2,
+                  "sumR": 33
+                }
+              },
+              "r5": {
+                "trades": 95,
+                "n": 94,
+                "winrate": 25.5,
+                "sumR": 50,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 21.8,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 30.8,
+                  "sumR": 33
+                }
+              },
+              "konfig": {
+                "trades": 95,
+                "n": 94,
+                "winrate": 34,
+                "sumR": 63,
+                "Jan–Jun": {
+                  "n": 55,
+                  "winrate": 30.9,
+                  "sumR": 25
+                },
+                "Jul–Nov": {
+                  "n": 39,
+                  "winrate": 38.5,
+                  "sumR": 38
+                }
+              }
+            }
+          },
+          "counterCandles": {
+            "0": {
+              "r3": {
+                "trades": 13,
+                "n": 13,
+                "winrate": 38.5,
+                "sumR": 7,
+                "Jan–Jun": {
+                  "n": 6,
+                  "winrate": 50,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 28.6,
+                  "sumR": 1
+                }
+              },
+              "r5": {
+                "trades": 13,
+                "n": 13,
+                "winrate": 38.5,
+                "sumR": 17,
+                "Jan–Jun": {
+                  "n": 6,
+                  "winrate": 50,
+                  "sumR": 12
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 28.6,
+                  "sumR": 5
+                }
+              },
+              "konfig": {
+                "trades": 13,
+                "n": 13,
+                "winrate": 38.5,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 6,
+                  "winrate": 50,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 28.6,
+                  "sumR": 3
+                }
+              }
+            },
+            "1": {
+              "r3": {
+                "trades": 137,
+                "n": 136,
+                "winrate": 35.3,
+                "sumR": 56,
+                "Jan–Jun": {
+                  "n": 74,
+                  "winrate": 32.4,
+                  "sumR": 22
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 38.7,
+                  "sumR": 34
+                }
+              },
+              "r5": {
+                "trades": 137,
+                "n": 135,
+                "winrate": 22.2,
+                "sumR": 45,
+                "Jan–Jun": {
+                  "n": 73,
+                  "winrate": 20.5,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 24.2,
+                  "sumR": 28
+                }
+              },
+              "konfig": {
+                "trades": 137,
+                "n": 136,
+                "winrate": 34.6,
+                "sumR": 85,
+                "Jan–Jun": {
+                  "n": 74,
+                  "winrate": 33.8,
+                  "sumR": 34
+                },
+                "Jul–Nov": {
+                  "n": 62,
+                  "winrate": 35.5,
+                  "sumR": 51
+                }
+              }
+            },
+            "2": {
+              "r3": {
+                "trades": 165,
+                "n": 165,
+                "winrate": 25.5,
+                "sumR": 3,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 21.4,
+                  "sumR": -14
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 31.3,
+                  "sumR": 17
+                }
+              },
+              "r5": {
+                "trades": 165,
+                "n": 165,
+                "winrate": 20,
+                "sumR": 33,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 16.3,
+                  "sumR": -2
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 25.4,
+                  "sumR": 35
+                }
+              },
+              "konfig": {
+                "trades": 165,
+                "n": 165,
+                "winrate": 23.6,
+                "sumR": 41,
+                "Jan–Jun": {
+                  "n": 98,
+                  "winrate": 20.4,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 67,
+                  "winrate": 28.4,
+                  "sumR": 30
+                }
+              }
+            },
+            "3+": {
+              "r3": {
+                "trades": 70,
+                "n": 70,
+                "winrate": 22.9,
+                "sumR": -6,
+                "Jan–Jun": {
+                  "n": 40,
+                  "winrate": 22.5,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 30,
+                  "winrate": 23.3,
+                  "sumR": -2
+                }
+              },
+              "r5": {
+                "trades": 70,
+                "n": 70,
+                "winrate": 17.1,
+                "sumR": 2,
+                "Jan–Jun": {
+                  "n": 40,
+                  "winrate": 17.5,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 30,
+                  "winrate": 16.7,
+                  "sumR": 0
+                }
+              },
+              "konfig": {
+                "trades": 70,
+                "n": 70,
+                "winrate": 18.6,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 40,
+                  "winrate": 20,
+                  "sumR": 3
+                },
+                "Jul–Nov": {
+                  "n": 30,
+                  "winrate": 16.7,
+                  "sumR": -4
+                }
+              }
+            }
+          },
+          "blockCounterPattern": {
+            "trades": 297,
+            "n": 296,
+            "winrate": 26.7,
+            "sumR": 106,
+            "Jan–Jun": {
+              "n": 172,
+              "winrate": 23.8,
+              "sumR": 34
+            },
+            "Jul–Nov": {
+              "n": 124,
+              "winrate": 30.6,
+              "sumR": 72
+            }
+          }
+        },
+        "5": {
+          "counterPattern": {
+            "false": {
+              "r3": {
+                "trades": 228,
+                "n": 228,
+                "winrate": 28.9,
+                "sumR": 36,
+                "Jan–Jun": {
+                  "n": 126,
+                  "winrate": 26.2,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 102,
+                  "winrate": 32.4,
+                  "sumR": 30
+                }
+              },
+              "r5": {
+                "trades": 228,
+                "n": 227,
+                "winrate": 20.7,
+                "sumR": 55,
+                "Jan–Jun": {
+                  "n": 125,
+                  "winrate": 19.2,
+                  "sumR": 19
+                },
+                "Jul–Nov": {
+                  "n": 102,
+                  "winrate": 22.5,
+                  "sumR": 36
+                }
+              },
+              "konfig": {
+                "trades": 228,
+                "n": 228,
+                "winrate": 27.2,
+                "sumR": 90,
+                "Jan–Jun": {
+                  "n": 126,
+                  "winrate": 24.6,
+                  "sumR": 32
+                },
+                "Jul–Nov": {
+                  "n": 102,
+                  "winrate": 30.4,
+                  "sumR": 58
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 157,
+                "n": 156,
+                "winrate": 28.8,
+                "sumR": 24,
+                "Jan–Jun": {
+                  "n": 92,
+                  "winrate": 26.1,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 64,
+                  "winrate": 32.8,
+                  "sumR": 20
+                }
+              },
+              "r5": {
+                "trades": 157,
+                "n": 156,
+                "winrate": 21.2,
+                "sumR": 42,
+                "Jan–Jun": {
+                  "n": 92,
+                  "winrate": 18.5,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 64,
+                  "winrate": 25,
+                  "sumR": 32
+                }
+              },
+              "konfig": {
+                "trades": 157,
+                "n": 156,
+                "winrate": 26.9,
+                "sumR": 46,
+                "Jan–Jun": {
+                  "n": 92,
+                  "winrate": 27.2,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 64,
+                  "winrate": 26.6,
+                  "sumR": 22
+                }
+              }
+            }
+          },
+          "withPattern": {
+            "false": {
+              "r3": {
+                "trades": 240,
+                "n": 240,
+                "winrate": 27.5,
+                "sumR": 24,
+                "Jan–Jun": {
+                  "n": 131,
+                  "winrate": 26,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 109,
+                  "winrate": 29.4,
+                  "sumR": 19
+                }
+              },
+              "r5": {
+                "trades": 240,
+                "n": 239,
+                "winrate": 20.1,
+                "sumR": 49,
+                "Jan–Jun": {
+                  "n": 130,
+                  "winrate": 18.5,
+                  "sumR": 14
+                },
+                "Jul–Nov": {
+                  "n": 109,
+                  "winrate": 22,
+                  "sumR": 35
+                }
+              },
+              "konfig": {
+                "trades": 240,
+                "n": 240,
+                "winrate": 26.3,
+                "sumR": 79,
+                "Jan–Jun": {
+                  "n": 131,
+                  "winrate": 25.2,
+                  "sumR": 35
+                },
+                "Jul–Nov": {
+                  "n": 109,
+                  "winrate": 27.5,
+                  "sumR": 44
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 145,
+                "n": 144,
+                "winrate": 31.3,
+                "sumR": 36,
+                "Jan–Jun": {
+                  "n": 87,
+                  "winrate": 26.4,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 38.6,
+                  "sumR": 31
+                }
+              },
+              "r5": {
+                "trades": 145,
+                "n": 144,
+                "winrate": 22.2,
+                "sumR": 48,
+                "Jan–Jun": {
+                  "n": 87,
+                  "winrate": 19.5,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 26.3,
+                  "sumR": 33
+                }
+              },
+              "konfig": {
+                "trades": 145,
+                "n": 144,
+                "winrate": 28.5,
+                "sumR": 57,
+                "Jan–Jun": {
+                  "n": 87,
+                  "winrate": 26.4,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 31.6,
+                  "sumR": 36
+                }
+              }
+            }
+          },
+          "counterCandles": {
+            "0": {
+              "r3": {
+                "trades": 1,
+                "n": 1,
+                "winrate": 0,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 1,
+                  "winrate": 0,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 0,
+                  "winrate": null,
+                  "sumR": 0
+                }
+              },
+              "r5": {
+                "trades": 1,
+                "n": 1,
+                "winrate": 0,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 1,
+                  "winrate": 0,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 0,
+                  "winrate": null,
+                  "sumR": 0
+                }
+              },
+              "konfig": {
+                "trades": 1,
+                "n": 1,
+                "winrate": 0,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 1,
+                  "winrate": 0,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 0,
+                  "winrate": null,
+                  "sumR": 0
+                }
+              }
+            },
+            "1": {
+              "r3": {
+                "trades": 46,
+                "n": 46,
+                "winrate": 37,
+                "sumR": 22,
+                "Jan–Jun": {
+                  "n": 25,
+                  "winrate": 40,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 33.3,
+                  "sumR": 7
+                }
+              },
+              "r5": {
+                "trades": 46,
+                "n": 45,
+                "winrate": 31.1,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 24,
+                  "winrate": 37.5,
+                  "sumR": 30
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 23.8,
+                  "sumR": 9
+                }
+              },
+              "konfig": {
+                "trades": 46,
+                "n": 46,
+                "winrate": 39.1,
+                "sumR": 44,
+                "Jan–Jun": {
+                  "n": 25,
+                  "winrate": 44,
+                  "sumR": 30
+                },
+                "Jul–Nov": {
+                  "n": 21,
+                  "winrate": 33.3,
+                  "sumR": 14
+                }
+              }
+            },
+            "2": {
+              "r3": {
+                "trades": 118,
+                "n": 117,
+                "winrate": 35,
+                "sumR": 47,
+                "Jan–Jun": {
+                  "n": 65,
+                  "winrate": 33.8,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 52,
+                  "winrate": 36.5,
+                  "sumR": 24
+                }
+              },
+              "r5": {
+                "trades": 118,
+                "n": 117,
+                "winrate": 22.2,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 65,
+                  "winrate": 20,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 52,
+                  "winrate": 25,
+                  "sumR": 26
+                }
+              },
+              "konfig": {
+                "trades": 118,
+                "n": 117,
+                "winrate": 34.2,
+                "sumR": 70,
+                "Jan–Jun": {
+                  "n": 65,
+                  "winrate": 35.4,
+                  "sumR": 33
+                },
+                "Jul–Nov": {
+                  "n": 52,
+                  "winrate": 32.7,
+                  "sumR": 37
+                }
+              }
+            },
+            "3+": {
+              "r3": {
+                "trades": 220,
+                "n": 220,
+                "winrate": 24.1,
+                "sumR": -8,
+                "Jan–Jun": {
+                  "n": 127,
+                  "winrate": 19.7,
+                  "sumR": -27
+                },
+                "Jul–Nov": {
+                  "n": 93,
+                  "winrate": 30.1,
+                  "sumR": 19
+                }
+              },
+              "r5": {
+                "trades": 220,
+                "n": 220,
+                "winrate": 18.2,
+                "sumR": 20,
+                "Jan–Jun": {
+                  "n": 127,
+                  "winrate": 15,
+                  "sumR": -13
+                },
+                "Jul–Nov": {
+                  "n": 93,
+                  "winrate": 22.6,
+                  "sumR": 33
+                }
+              },
+              "konfig": {
+                "trades": 220,
+                "n": 220,
+                "winrate": 20.9,
+                "sumR": 23,
+                "Jan–Jun": {
+                  "n": 127,
+                  "winrate": 17.3,
+                  "sumR": -6
+                },
+                "Jul–Nov": {
+                  "n": 93,
+                  "winrate": 25.8,
+                  "sumR": 29
+                }
+              }
+            }
+          },
+          "blockCounterPattern": {
+            "trades": 228,
+            "n": 228,
+            "winrate": 27.2,
+            "sumR": 90,
+            "Jan–Jun": {
+              "n": 126,
+              "winrate": 24.6,
+              "sumR": 32
+            },
+            "Jul–Nov": {
+              "n": 102,
+              "winrate": 30.4,
+              "sumR": 58
+            }
+          }
+        }
+      }
+    },
+    "(b) Kombi mit Philips Sperren": {
+      "trades": 328,
+      "konfig": {
+        "trades": 328,
+        "n": 327,
+        "winrate": 29.1,
+        "sumR": 151,
+        "Jan–Jun": {
+          "n": 184,
+          "winrate": 27.2,
+          "sumR": 66
+        },
+        "Jul–Nov": {
+          "n": 143,
+          "winrate": 31.5,
+          "sumR": 85
+        }
+      },
+      "windows": {
+        "1": {
+          "counterPattern": {
+            "false": {
+              "r3": {
+                "trades": 314,
+                "n": 313,
+                "winrate": 31.3,
+                "sumR": 79,
+                "Jan–Jun": {
+                  "n": 177,
+                  "winrate": 28.2,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 136,
+                  "winrate": 35.3,
+                  "sumR": 56
+                }
+              },
+              "r5": {
+                "trades": 314,
+                "n": 312,
+                "winrate": 22.1,
+                "sumR": 102,
+                "Jan–Jun": {
+                  "n": 176,
+                  "winrate": 20.5,
+                  "sumR": 40
+                },
+                "Jul–Nov": {
+                  "n": 136,
+                  "winrate": 24.3,
+                  "sumR": 62
+                }
+              },
+              "konfig": {
+                "trades": 314,
+                "n": 313,
+                "winrate": 29.1,
+                "sumR": 147,
+                "Jan–Jun": {
+                  "n": 177,
+                  "winrate": 27.7,
+                  "sumR": 70
+                },
+                "Jul–Nov": {
+                  "n": 136,
+                  "winrate": 30.9,
+                  "sumR": 77
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 14,
+                "n": 14,
+                "winrate": 28.6,
+                "sumR": 2,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 14.3,
+                  "sumR": -3
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 42.9,
+                  "sumR": 5
+                }
+              },
+              "r5": {
+                "trades": 14,
+                "n": 14,
+                "winrate": 28.6,
+                "sumR": 10,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 14.3,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 42.9,
+                  "sumR": 11
+                }
+              },
+              "konfig": {
+                "trades": 14,
+                "n": 14,
+                "winrate": 28.6,
+                "sumR": 4,
+                "Jan–Jun": {
+                  "n": 7,
+                  "winrate": 14.3,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 7,
+                  "winrate": 42.9,
+                  "sumR": 8
+                }
+              }
+            }
+          },
+          "withPattern": {
+            "false": {
+              "r3": {
+                "trades": 288,
+                "n": 288,
+                "winrate": 30.9,
+                "sumR": 68,
+                "Jan–Jun": {
+                  "n": 160,
+                  "winrate": 28.7,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 128,
+                  "winrate": 33.6,
+                  "sumR": 44
+                }
+              },
+              "r5": {
+                "trades": 288,
+                "n": 287,
+                "winrate": 22.6,
+                "sumR": 103,
+                "Jan–Jun": {
+                  "n": 159,
+                  "winrate": 22,
+                  "sumR": 51
+                },
+                "Jul–Nov": {
+                  "n": 128,
+                  "winrate": 23.4,
+                  "sumR": 52
+                }
+              },
+              "konfig": {
+                "trades": 288,
+                "n": 288,
+                "winrate": 28.1,
+                "sumR": 123,
+                "Jan–Jun": {
+                  "n": 160,
+                  "winrate": 27.5,
+                  "sumR": 64
+                },
+                "Jul–Nov": {
+                  "n": 128,
+                  "winrate": 28.9,
+                  "sumR": 59
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 40,
+                "n": 39,
+                "winrate": 33.3,
+                "sumR": 13,
+                "Jan–Jun": {
+                  "n": 24,
+                  "winrate": 20.8,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 15,
+                  "winrate": 53.3,
+                  "sumR": 17
+                }
+              },
+              "r5": {
+                "trades": 40,
+                "n": 39,
+                "winrate": 20.5,
+                "sumR": 9,
+                "Jan–Jun": {
+                  "n": 24,
+                  "winrate": 8.3,
+                  "sumR": -12
+                },
+                "Jul–Nov": {
+                  "n": 15,
+                  "winrate": 40,
+                  "sumR": 21
+                }
+              },
+              "konfig": {
+                "trades": 40,
+                "n": 39,
+                "winrate": 35.9,
+                "sumR": 28,
+                "Jan–Jun": {
+                  "n": 24,
+                  "winrate": 25,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 15,
+                  "winrate": 53.3,
+                  "sumR": 26
+                }
+              }
+            }
+          },
+          "counterCandles": {
+            "0": {
+              "r3": {
+                "trades": 155,
+                "n": 154,
+                "winrate": 32.5,
+                "sumR": 46,
+                "Jan–Jun": {
+                  "n": 88,
+                  "winrate": 29.5,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 66,
+                  "winrate": 36.4,
+                  "sumR": 30
+                }
+              },
+              "r5": {
+                "trades": 155,
+                "n": 153,
+                "winrate": 22.2,
+                "sumR": 51,
+                "Jan–Jun": {
+                  "n": 87,
+                  "winrate": 19.5,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 66,
+                  "winrate": 25.8,
+                  "sumR": 36
+                }
+              },
+              "konfig": {
+                "trades": 155,
+                "n": 154,
+                "winrate": 31.2,
+                "sumR": 84,
+                "Jan–Jun": {
+                  "n": 88,
+                  "winrate": 27.3,
+                  "sumR": 29
+                },
+                "Jul–Nov": {
+                  "n": 66,
+                  "winrate": 36.4,
+                  "sumR": 55
+                }
+              }
+            },
+            "1": {
+              "r3": {
+                "trades": 173,
+                "n": 173,
+                "winrate": 30.1,
+                "sumR": 35,
+                "Jan–Jun": {
+                  "n": 96,
+                  "winrate": 26,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 77,
+                  "winrate": 35.1,
+                  "sumR": 31
+                }
+              },
+              "r5": {
+                "trades": 173,
+                "n": 173,
+                "winrate": 22.5,
+                "sumR": 61,
+                "Jan–Jun": {
+                  "n": 96,
+                  "winrate": 20.8,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 77,
+                  "winrate": 24.7,
+                  "sumR": 37
+                }
+              },
+              "konfig": {
+                "trades": 173,
+                "n": 173,
+                "winrate": 27.2,
+                "sumR": 67,
+                "Jan–Jun": {
+                  "n": 96,
+                  "winrate": 27.1,
+                  "sumR": 37
+                },
+                "Jul–Nov": {
+                  "n": 77,
+                  "winrate": 27.3,
+                  "sumR": 30
+                }
+              }
+            }
+          },
+          "blockCounterPattern": {
+            "trades": 314,
+            "n": 313,
+            "winrate": 29.1,
+            "sumR": 147,
+            "Jan–Jun": {
+              "n": 177,
+              "winrate": 27.7,
+              "sumR": 70
+            },
+            "Jul–Nov": {
+              "n": 136,
+              "winrate": 30.9,
+              "sumR": 77
+            }
+          }
+        },
+        "3": {
+          "counterPattern": {
+            "false": {
+              "r3": {
+                "trades": 249,
+                "n": 248,
+                "winrate": 31,
+                "sumR": 60,
+                "Jan–Jun": {
+                  "n": 143,
+                  "winrate": 26.6,
+                  "sumR": 9
+                },
+                "Jul–Nov": {
+                  "n": 105,
+                  "winrate": 37.1,
+                  "sumR": 51
+                }
+              },
+              "r5": {
+                "trades": 249,
+                "n": 247,
+                "winrate": 22.3,
+                "sumR": 83,
+                "Jan–Jun": {
+                  "n": 142,
+                  "winrate": 20.4,
+                  "sumR": 32
+                },
+                "Jul–Nov": {
+                  "n": 105,
+                  "winrate": 24.8,
+                  "sumR": 51
+                }
+              },
+              "konfig": {
+                "trades": 249,
+                "n": 248,
+                "winrate": 28.6,
+                "sumR": 115,
+                "Jan–Jun": {
+                  "n": 143,
+                  "winrate": 25.2,
+                  "sumR": 42
+                },
+                "Jul–Nov": {
+                  "n": 105,
+                  "winrate": 33.3,
+                  "sumR": 73
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 79,
+                "n": 79,
+                "winrate": 31.6,
+                "sumR": 21,
+                "Jan–Jun": {
+                  "n": 41,
+                  "winrate": 31.7,
+                  "sumR": 11
+                },
+                "Jul–Nov": {
+                  "n": 38,
+                  "winrate": 31.6,
+                  "sumR": 10
+                }
+              },
+              "r5": {
+                "trades": 79,
+                "n": 79,
+                "winrate": 22.8,
+                "sumR": 29,
+                "Jan–Jun": {
+                  "n": 41,
+                  "winrate": 19.5,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 38,
+                  "winrate": 26.3,
+                  "sumR": 22
+                }
+              },
+              "konfig": {
+                "trades": 79,
+                "n": 79,
+                "winrate": 30.4,
+                "sumR": 36,
+                "Jan–Jun": {
+                  "n": 41,
+                  "winrate": 34.1,
+                  "sumR": 24
+                },
+                "Jul–Nov": {
+                  "n": 38,
+                  "winrate": 26.3,
+                  "sumR": 12
+                }
+              }
+            }
+          },
+          "withPattern": {
+            "false": {
+              "r3": {
+                "trades": 245,
+                "n": 245,
+                "winrate": 29.4,
+                "sumR": 43,
+                "Jan–Jun": {
+                  "n": 137,
+                  "winrate": 27.7,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 108,
+                  "winrate": 31.5,
+                  "sumR": 28
+                }
+              },
+              "r5": {
+                "trades": 245,
+                "n": 244,
+                "winrate": 21.3,
+                "sumR": 68,
+                "Jan–Jun": {
+                  "n": 136,
+                  "winrate": 19.9,
+                  "sumR": 26
+                },
+                "Jul–Nov": {
+                  "n": 108,
+                  "winrate": 23.1,
+                  "sumR": 42
+                }
+              },
+              "konfig": {
+                "trades": 245,
+                "n": 245,
+                "winrate": 27.3,
+                "sumR": 94,
+                "Jan–Jun": {
+                  "n": 137,
+                  "winrate": 26.3,
+                  "sumR": 45
+                },
+                "Jul–Nov": {
+                  "n": 108,
+                  "winrate": 28.7,
+                  "sumR": 49
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 83,
+                "n": 82,
+                "winrate": 36.6,
+                "sumR": 38,
+                "Jan–Jun": {
+                  "n": 47,
+                  "winrate": 27.7,
+                  "sumR": 5
+                },
+                "Jul–Nov": {
+                  "n": 35,
+                  "winrate": 48.6,
+                  "sumR": 33
+                }
+              },
+              "r5": {
+                "trades": 83,
+                "n": 82,
+                "winrate": 25.6,
+                "sumR": 44,
+                "Jan–Jun": {
+                  "n": 47,
+                  "winrate": 21.3,
+                  "sumR": 13
+                },
+                "Jul–Nov": {
+                  "n": 35,
+                  "winrate": 31.4,
+                  "sumR": 31
+                }
+              },
+              "konfig": {
+                "trades": 83,
+                "n": 82,
+                "winrate": 34.1,
+                "sumR": 57,
+                "Jan–Jun": {
+                  "n": 47,
+                  "winrate": 29.8,
+                  "sumR": 21
+                },
+                "Jul–Nov": {
+                  "n": 35,
+                  "winrate": 40,
+                  "sumR": 36
+                }
+              }
+            }
+          },
+          "counterCandles": {
+            "0": {
+              "r3": {
+                "trades": 8,
+                "n": 8,
+                "winrate": 50,
+                "sumR": 8,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 50,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 4,
+                  "winrate": 50,
+                  "sumR": 4
+                }
+              },
+              "r5": {
+                "trades": 8,
+                "n": 8,
+                "winrate": 50,
+                "sumR": 16,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 50,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 4,
+                  "winrate": 50,
+                  "sumR": 8
+                }
+              },
+              "konfig": {
+                "trades": 8,
+                "n": 8,
+                "winrate": 50,
+                "sumR": 13,
+                "Jan–Jun": {
+                  "n": 4,
+                  "winrate": 50,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 4,
+                  "winrate": 50,
+                  "sumR": 6
+                }
+              }
+            },
+            "1": {
+              "r3": {
+                "trades": 121,
+                "n": 120,
+                "winrate": 35.8,
+                "sumR": 52,
+                "Jan–Jun": {
+                  "n": 64,
+                  "winrate": 32.8,
+                  "sumR": 20
+                },
+                "Jul–Nov": {
+                  "n": 56,
+                  "winrate": 39.3,
+                  "sumR": 32
+                }
+              },
+              "r5": {
+                "trades": 121,
+                "n": 119,
+                "winrate": 21.8,
+                "sumR": 37,
+                "Jan–Jun": {
+                  "n": 63,
+                  "winrate": 20.6,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 56,
+                  "winrate": 23.2,
+                  "sumR": 22
+                }
+              },
+              "konfig": {
+                "trades": 121,
+                "n": 120,
+                "winrate": 34.2,
+                "sumR": 74,
+                "Jan–Jun": {
+                  "n": 64,
+                  "winrate": 32.8,
+                  "sumR": 29
+                },
+                "Jul–Nov": {
+                  "n": 56,
+                  "winrate": 35.7,
+                  "sumR": 45
+                }
+              }
+            },
+            "2": {
+              "r3": {
+                "trades": 138,
+                "n": 138,
+                "winrate": 28.3,
+                "sumR": 18,
+                "Jan–Jun": {
+                  "n": 80,
+                  "winrate": 23.8,
+                  "sumR": -4
+                },
+                "Jul–Nov": {
+                  "n": 58,
+                  "winrate": 34.5,
+                  "sumR": 22
+                }
+              },
+              "r5": {
+                "trades": 138,
+                "n": 138,
+                "winrate": 22.5,
+                "sumR": 48,
+                "Jan–Jun": {
+                  "n": 80,
+                  "winrate": 18.8,
+                  "sumR": 10
+                },
+                "Jul–Nov": {
+                  "n": 58,
+                  "winrate": 27.6,
+                  "sumR": 38
+                }
+              },
+              "konfig": {
+                "trades": 138,
+                "n": 138,
+                "winrate": 26.8,
+                "sumR": 56,
+                "Jan–Jun": {
+                  "n": 80,
+                  "winrate": 23.8,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 58,
+                  "winrate": 31,
+                  "sumR": 33
+                }
+              }
+            },
+            "3+": {
+              "r3": {
+                "trades": 61,
+                "n": 61,
+                "winrate": 26.2,
+                "sumR": 3,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 25,
+                  "sumR": 0
+                },
+                "Jul–Nov": {
+                  "n": 25,
+                  "winrate": 28,
+                  "sumR": 3
+                }
+              },
+              "r5": {
+                "trades": 61,
+                "n": 61,
+                "winrate": 19.7,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 19.4,
+                  "sumR": 6
+                },
+                "Jul–Nov": {
+                  "n": 25,
+                  "winrate": 20,
+                  "sumR": 5
+                }
+              },
+              "konfig": {
+                "trades": 61,
+                "n": 61,
+                "winrate": 21.3,
+                "sumR": 8,
+                "Jan–Jun": {
+                  "n": 36,
+                  "winrate": 22.2,
+                  "sumR": 7
+                },
+                "Jul–Nov": {
+                  "n": 25,
+                  "winrate": 20,
+                  "sumR": 1
+                }
+              }
+            }
+          },
+          "blockCounterPattern": {
+            "trades": 249,
+            "n": 248,
+            "winrate": 28.6,
+            "sumR": 115,
+            "Jan–Jun": {
+              "n": 143,
+              "winrate": 25.2,
+              "sumR": 42
+            },
+            "Jul–Nov": {
+              "n": 105,
+              "winrate": 33.3,
+              "sumR": 73
+            }
+          }
+        },
+        "5": {
+          "counterPattern": {
+            "false": {
+              "r3": {
+                "trades": 194,
+                "n": 194,
+                "winrate": 30.4,
+                "sumR": 42,
+                "Jan–Jun": {
+                  "n": 108,
+                  "winrate": 26.9,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 86,
+                  "winrate": 34.9,
+                  "sumR": 34
+                }
+              },
+              "r5": {
+                "trades": 194,
+                "n": 193,
+                "winrate": 21.8,
+                "sumR": 59,
+                "Jan–Jun": {
+                  "n": 107,
+                  "winrate": 20.6,
+                  "sumR": 25
+                },
+                "Jul–Nov": {
+                  "n": 86,
+                  "winrate": 23.3,
+                  "sumR": 34
+                }
+              },
+              "konfig": {
+                "trades": 194,
+                "n": 194,
+                "winrate": 28.9,
+                "sumR": 91,
+                "Jan–Jun": {
+                  "n": 108,
+                  "winrate": 25.9,
+                  "sumR": 35
+                },
+                "Jul–Nov": {
+                  "n": 86,
+                  "winrate": 32.6,
+                  "sumR": 56
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 134,
+                "n": 133,
+                "winrate": 32.3,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 76,
+                  "winrate": 28.9,
+                  "sumR": 12
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 36.8,
+                  "sumR": 27
+                }
+              },
+              "r5": {
+                "trades": 134,
+                "n": 133,
+                "winrate": 23.3,
+                "sumR": 53,
+                "Jan–Jun": {
+                  "n": 76,
+                  "winrate": 19.7,
+                  "sumR": 14
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 28.1,
+                  "sumR": 39
+                }
+              },
+              "konfig": {
+                "trades": 134,
+                "n": 133,
+                "winrate": 29.3,
+                "sumR": 60,
+                "Jan–Jun": {
+                  "n": 76,
+                  "winrate": 28.9,
+                  "sumR": 31
+                },
+                "Jul–Nov": {
+                  "n": 57,
+                  "winrate": 29.8,
+                  "sumR": 29
+                }
+              }
+            }
+          },
+          "withPattern": {
+            "false": {
+              "r3": {
+                "trades": 203,
+                "n": 203,
+                "winrate": 30,
+                "sumR": 41,
+                "Jan–Jun": {
+                  "n": 108,
+                  "winrate": 28.7,
+                  "sumR": 16
+                },
+                "Jul–Nov": {
+                  "n": 95,
+                  "winrate": 31.6,
+                  "sumR": 25
+                }
+              },
+              "r5": {
+                "trades": 203,
+                "n": 202,
+                "winrate": 22.3,
+                "sumR": 68,
+                "Jan–Jun": {
+                  "n": 107,
+                  "winrate": 21.5,
+                  "sumR": 31
+                },
+                "Jul–Nov": {
+                  "n": 95,
+                  "winrate": 23.2,
+                  "sumR": 37
+                }
+              },
+              "konfig": {
+                "trades": 203,
+                "n": 203,
+                "winrate": 29.1,
+                "sumR": 95,
+                "Jan–Jun": {
+                  "n": 108,
+                  "winrate": 28.7,
+                  "sumR": 49
+                },
+                "Jul–Nov": {
+                  "n": 95,
+                  "winrate": 29.5,
+                  "sumR": 46
+                }
+              }
+            },
+            "true": {
+              "r3": {
+                "trades": 125,
+                "n": 124,
+                "winrate": 33.1,
+                "sumR": 40,
+                "Jan–Jun": {
+                  "n": 76,
+                  "winrate": 26.3,
+                  "sumR": 4
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 43.8,
+                  "sumR": 36
+                }
+              },
+              "r5": {
+                "trades": 125,
+                "n": 124,
+                "winrate": 22.6,
+                "sumR": 44,
+                "Jan–Jun": {
+                  "n": 76,
+                  "winrate": 18.4,
+                  "sumR": 8
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 29.2,
+                  "sumR": 36
+                }
+              },
+              "konfig": {
+                "trades": 125,
+                "n": 124,
+                "winrate": 29,
+                "sumR": 56,
+                "Jan–Jun": {
+                  "n": 76,
+                  "winrate": 25,
+                  "sumR": 17
+                },
+                "Jul–Nov": {
+                  "n": 48,
+                  "winrate": 35.4,
+                  "sumR": 39
+                }
+              }
+            }
+          },
+          "counterCandles": {
+            "0": {
+              "r3": {
+                "trades": 1,
+                "n": 1,
+                "winrate": 0,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 1,
+                  "winrate": 0,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 0,
+                  "winrate": null,
+                  "sumR": 0
+                }
+              },
+              "r5": {
+                "trades": 1,
+                "n": 1,
+                "winrate": 0,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 1,
+                  "winrate": 0,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 0,
+                  "winrate": null,
+                  "sumR": 0
+                }
+              },
+              "konfig": {
+                "trades": 1,
+                "n": 1,
+                "winrate": 0,
+                "sumR": -1,
+                "Jan–Jun": {
+                  "n": 1,
+                  "winrate": 0,
+                  "sumR": -1
+                },
+                "Jul–Nov": {
+                  "n": 0,
+                  "winrate": null,
+                  "sumR": 0
+                }
+              }
+            },
+            "1": {
+              "r3": {
+                "trades": 39,
+                "n": 39,
+                "winrate": 38.5,
+                "sumR": 21,
+                "Jan–Jun": {
+                  "n": 20,
+                  "winrate": 40,
+                  "sumR": 12
+                },
+                "Jul–Nov": {
+                  "n": 19,
+                  "winrate": 36.8,
+                  "sumR": 9
+                }
+              },
+              "r5": {
+                "trades": 39,
+                "n": 38,
+                "winrate": 31.6,
+                "sumR": 34,
+                "Jan–Jun": {
+                  "n": 19,
+                  "winrate": 36.8,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 19,
+                  "winrate": 26.3,
+                  "sumR": 11
+                }
+              },
+              "konfig": {
+                "trades": 39,
+                "n": 39,
+                "winrate": 38.5,
+                "sumR": 39,
+                "Jan–Jun": {
+                  "n": 20,
+                  "winrate": 40,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 19,
+                  "winrate": 36.8,
+                  "sumR": 16
+                }
+              }
+            },
+            "2": {
+              "r3": {
+                "trades": 103,
+                "n": 102,
+                "winrate": 37.3,
+                "sumR": 50,
+                "Jan–Jun": {
+                  "n": 57,
+                  "winrate": 35.1,
+                  "sumR": 23
+                },
+                "Jul–Nov": {
+                  "n": 45,
+                  "winrate": 40,
+                  "sumR": 27
+                }
+              },
+              "r5": {
+                "trades": 103,
+                "n": 102,
+                "winrate": 23.5,
+                "sumR": 42,
+                "Jan–Jun": {
+                  "n": 57,
+                  "winrate": 21.1,
+                  "sumR": 15
+                },
+                "Jul–Nov": {
+                  "n": 45,
+                  "winrate": 26.7,
+                  "sumR": 27
+                }
+              },
+              "konfig": {
+                "trades": 103,
+                "n": 102,
+                "winrate": 36.3,
+                "sumR": 73,
+                "Jan–Jun": {
+                  "n": 57,
+                  "winrate": 36.8,
+                  "sumR": 35
+                },
+                "Jul–Nov": {
+                  "n": 45,
+                  "winrate": 35.6,
+                  "sumR": 38
+                }
+              }
+            },
+            "3+": {
+              "r3": {
+                "trades": 185,
+                "n": 185,
+                "winrate": 26.5,
+                "sumR": 11,
+                "Jan–Jun": {
+                  "n": 106,
+                  "winrate": 21.7,
+                  "sumR": -14
+                },
+                "Jul–Nov": {
+                  "n": 79,
+                  "winrate": 32.9,
+                  "sumR": 25
+                }
+              },
+              "r5": {
+                "trades": 185,
+                "n": 185,
+                "winrate": 20,
+                "sumR": 37,
+                "Jan–Jun": {
+                  "n": 106,
+                  "winrate": 17,
+                  "sumR": 2
+                },
+                "Jul–Nov": {
+                  "n": 79,
+                  "winrate": 24.1,
+                  "sumR": 35
+                }
+              },
+              "konfig": {
+                "trades": 185,
+                "n": 185,
+                "winrate": 23.2,
+                "sumR": 40,
+                "Jan–Jun": {
+                  "n": 106,
+                  "winrate": 19.8,
+                  "sumR": 9
+                },
+                "Jul–Nov": {
+                  "n": 79,
+                  "winrate": 27.8,
+                  "sumR": 31
+                }
+              }
+            }
+          },
+          "blockCounterPattern": {
+            "trades": 194,
+            "n": 194,
+            "winrate": 28.9,
+            "sumR": 91,
+            "Jan–Jun": {
+              "n": 108,
+              "winrate": 25.9,
+              "sumR": 35
+            },
+            "Jul–Nov": {
+              "n": 86,
+              "winrate": 32.6,
+              "sumR": 56
+            }
+          }
+        }
+      }
+    }
+  }
+}
