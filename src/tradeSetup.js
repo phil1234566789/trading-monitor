@@ -50,7 +50,7 @@ export function hasUninterruptedSweepReaction(setup, setupObs, m5Candles = []) {
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber
 // innerhalb von maxDelaySec danach entstanden sein muss. obs ist chronologisch (älteste
 // zuerst) sortiert — die erste Übereinstimmung ist daher automatisch die zeitlich früheste.
-function findFirstSetupObAfter(obs, obDir, afterTime, maxDelaySec) {
+export function findFirstSetupObAfter(obs, obDir, afterTime, maxDelaySec) {
   const deadline = afterTime + maxDelaySec;
   for (const ob of obs) {
     if (ob.dir === obDir && ob.startTime >= afterTime && ob.startTime <= deadline) return ob;
@@ -151,7 +151,7 @@ export function strongestSetupSweeps(sweeps) {
 // unbegrenzt und hat damit den schnellen Pfad bei jedem Sweep-and-Reclaim ausgeschaltet
 // (Setup #1617, 21.09.2026: Alarm 15 Minuten zu spät, weil erst Path A ihn auffing).
 // params.closeCheckMaxAgeSec: 0 = Check nie, Infinity = Check immer (Verhalten bis 2026-09-21).
-function sweepBrokenByClose(ls, m5Candles, dir, params) {
+export function sweepBrokenByClose(ls, m5Candles, dir, params) {
   if (sweepAgeSec(ls) >= params.closeCheckMaxAgeSec) return false;
   return closesBeyondLevel(m5Candles, ls.touchedTime, params.nowTime, ls.price, dir);
 }
@@ -240,7 +240,7 @@ function findImmediateLsSetups(h1Levels, m5Levels, m5Candles, dir, params) {
 // period-5-Pivot bestätigt also nur einen Preis, der beim Entstehen des OB längst feststeht.
 // Wo beide auseinanderliegen, liegt die Kante in 30 von 33 Fällen WEITER weg, also nie zu eng
 // (die fraktalbildende Kerze liegt immer im Fenster unten).
-function widenObForSweep(ob, fensterVonSec, dir, m5Candles) {
+export function widenObForSweep(ob, fensterVonSec, dir, m5Candles) {
   if (!m5Candles || fensterVonSec == null) return ob;
   const windowCandles = m5Candles.filter((c) => c.time >= fensterVonSec && c.time <= ob.startTime);
   if (windowCandles.length === 0) return ob;
