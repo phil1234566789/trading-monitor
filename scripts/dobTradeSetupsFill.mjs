@@ -74,6 +74,8 @@ try {
     // Weite SL-Variante (ferne OB2-Kante) nur, wo der SL am Retest-Extrem liegt; sonst null (eng = weit).
     ...(wide => ({ wide_max_r: wide?.maxR ?? null, wide_sl_hit: wide?.slHit ?? null, wide_ambiguous_r: wide?.ambiguousR ?? null,
       wide_risk_usd: wide?.riskUsd ?? null }))(dobWideVariant(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
+    // Neue Konfig-Merkmale (Philip): keine eigene Spalte, sondern eine Spalte features jsonb, geschrieben über eine gemeinsame
+    // Funktion mit allen Schlüsselnamen an einer Stelle (Gegenstück beim Lesen: dobRowGuardrailReason in src/dobGuardrails.js).
     counter_dob_status: counterStatus.get(dobTradeKey(t)) ?? null,
     first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
     ...(RUN_ID === 'dob-setup-v0' ? {} : { source_kind: `ob_${t.sourceOfStrength.timeframe.toLowerCase()}`, source_distance_usd: t.sourceOfStrength.distanceUsd,

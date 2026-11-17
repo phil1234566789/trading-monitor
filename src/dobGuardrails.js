@@ -68,6 +68,7 @@ export function dobGuardrailReason(config,{entryTime,zoneAgeSeconds,counterDobSt
  return null;
 }
 // Dieselben Urteile für eine Zeile aus dob_trade_setups (Statistikseite), damit die Feldzuordnung an einer Stelle steht.
+// Künftige Merkmale kommen aus der jsonb-Spalte features (Philip), gelesen über eine gemeinsame Funktion, nicht als neue Spalten.
 export const dobRowGuardrailReason=(config,row)=>dobGuardrailReason(config,{entryTime:row.entry_time,zoneAgeSeconds:row.source_zone_age_seconds,
  counterDobStatus:row.counter_dob_status??null});
 export const dobRowConfigTpR=(config,row)=>dobConfigTpR(config,row.entry_time,row.counter_dob_status??null);
