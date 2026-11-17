@@ -13,29 +13,31 @@ import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js'
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
 
-const SYMBOL='XAUUSD';
+// Jedes Instrument mit eigener Konfig (dob_guardrails), eigenem Alarmfenster und eigenem Herzschlag (dob_watcher_state); ein Fehler
+// bei einem Instrument hält die anderen nicht auf.
+const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
 // M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte POI-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
 const BAR_SECONDS: Record<string,number>={'1m':60,'5m':300,'1h':3600,'4h':14400};
 const offset=(sec:number)=>berlinOffsetMinutes(sec*1000);
 // Versand steuert die Alarme-Seite: Schalter alarm_settings.dob_setup (fehlende Zeile = an, wie poi-watcher) und
-// trading_schedules.alarm_windows von XAUUSD (fehlende Zeile = nie senden, wie poi-watcher). Vorgabe Mo–Fr 09:00–18:00.
+// trading_schedules.alarm_windows des Instruments (fehlende Zeile = nie senden, wie poi-watcher).
 // Erkennung und Protokoll laufen unabhängig davon 02:00–22:00 (Dedup, Statistik).
-async function alarmPolicy(client:any){
+async function alarmPolicy(client:any,instrument:string){
   const [setting,schedule]=await Promise.all([
     client.from('alarm_settings').select('enabled').eq('key','dob_setup').maybeSingle(),
-    client.from('trading_schedules').select('alarm_windows').eq('instrument',SYMBOL).maybeSingle()]);
+    client.from('trading_schedules').select('alarm_windows').eq('instrument',instrument).maybeSingle()]);
   const enabled=(checked(setting) as any)?.enabled??true;
   const windows=((checked(schedule) as any)?.alarm_windows??{weekday:[],saturday:[],sunday:[]}) as TradingWindows;
   return {enabled,windows,decide:(at:number)=>!enabled?'alarmDisabled':isWithinTradingWindows(at,windows)?null:'outsideAlarmWindow'};
 }
 
 // Cursor über das tatsächlich zuletzt gelieferte Zeitfeld: PostgREST kappt Seiten still bei ~1000 Zeilen (CLAUDE.md).
-async function closedCandles(client:any,bar:string,evaluatedAt:number){
+async function closedCandles(client:any,instrument:string,bar:string,evaluatedAt:number){
   const rows:any[]=[];let cursor=new Date(evaluatedAt*1000).toISOString();
   while(rows.length<COUNTS[bar]){
-    const page=checked(await client.from('fxcm_candles').select('time,open,high,low,close,volume').eq('instrument',SYMBOL).eq('bar',bar)
+    const page=checked(await client.from('fxcm_candles').select('time,open,high,low,close,volume').eq('instrument',instrument).eq('bar',bar)
       .lt('time',cursor).order('time',{ascending:false}).limit(Math.min(1000,COUNTS[bar]-rows.length))) as any[];
     if(!page.length)break;
     rows.push(...page);cursor=page[page.length-1].time;
@@ -63,38 +65,39 @@ async function deliver(client:any,event:any,blockedReason:string|null=null){
   return {id:event.id,status};
 }
 
-async function writeState(client:any,state:Record<string,unknown>){
-  checked(await client.from('dob_watcher_state').upsert({instrument:SYMBOL,last_run_at:new Date().toISOString(),updated_at:new Date().toISOString(),...state}));
+async function writeState(client:any,instrument:string,state:Record<string,unknown>){
+  checked(await client.from('dob_watcher_state').upsert({instrument,last_run_at:new Date().toISOString(),updated_at:new Date().toISOString(),...state}));
 }
 
 // dry: rechnet auch außerhalb 02:00–22:00, verschickt nichts und schreibt keinen Herzschlag (Prüfung von Datenpfad und Laufzeit).
-async function tick(client:any,dry=false,probes:number[]=[]){
-  const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60;
+async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dry=false,probes:number[]=[]){
+  const started=performance.now();
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
-  if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
+  if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
   // Sperr-Konfig je POI-Art jede Minute frisch (Statistikseite speichert direkt); gerechnet wird nur für POI-Arten ohne
   // gesperrten Monat, sind alle gesperrt, gar nicht.
   const poiTypes=(checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be,poi_match_mode,alarm_enabled')
-    .eq('instrument',SYMBOL).order('poi_type').limit(10)) as any[]).map(row=>({poiType:row.poi_type,guardrails:dobGuardrailsFromRow(row)}));
-  if(!dry&&!dobActivePoiTypes(poiTypes,evaluatedAt).length){await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}
-  const sessions=(checked(await client.from('sessions').select('label,from_minutes,to_minutes,days,ignore_liquidity').eq('instrument',SYMBOL).limit(200)) as any[])
+    .eq('instrument',instrument).order('poi_type').limit(10)) as any[]).map(row=>({poiType:row.poi_type,guardrails:dobGuardrailsFromRow(row)}));
+  if(!poiTypes.length){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'noConfig',error:null});return {skipped:'noConfig'};}
+  if(!dry&&!dobActivePoiTypes(poiTypes,evaluatedAt).length){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'blockedMonth',error:null});return {skipped:'blockedMonth'};}
+  const sessions=(checked(await client.from('sessions').select('label,from_minutes,to_minutes,days,ignore_liquidity').eq('instrument',instrument).limit(200)) as any[])
     .map(r=>({label:r.label,fromMinutes:r.from_minutes,toMinutes:r.to_minutes,days:r.days,ignoreLiquidity:r.ignore_liquidity??false}));
-  const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,bar,evaluatedAt)));
+  const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,instrument,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);
   // LQ-Sweep-POI = TS1.1-Setups aus trade_setups (poi-watcher schreibt sie); 2 Tage decken jeden möglichen DOB des Live-Fensters.
   const tradeSetups=poiTypes.some(p=>p.poiType==='lq_sweep')?(checked(await client.from('trade_setups')
     .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,ob_zones(top,bottom)')
-    .eq('instrument',SYMBOL).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[]).map(dobTs11FromRow):[];
-  const input={...dobLiveWindowInput({instrument:SYMBOL,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
+    .eq('instrument',instrument).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[]).map(dobTs11FromRow):[];
+  const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
     htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),
-    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:SYMBOL}),tradeSetups};
+    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:instrument}),tradeSetups};
   // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
-  const calcStart=performance.now(),runs=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
-  const stale=dobStaleAlarm({instrument:SYMBOL,lastM1Time:m1.at(-1)?.time,evaluatedAt});
+  const calcStart=performance.now(),runs:any[]=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
+  const stale=dobStaleAlarm({instrument:instrument,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   const events=[...runs.flatMap(r=>r.events.map((event:any)=>({event,run:r}))),...(stale?[{event:stale,run:null}]:[])];
   const count=(key:'setups'|'rejected')=>runs.reduce((n,r)=>n+r.result[key].length,0);
-  const policy=await alarmPolicy(client),blocked=policy.decide(evaluatedAt);
+  const policy=await alarmPolicy(client,instrument),blocked=policy.decide(evaluatedAt);
   if(dry)return {dry:true,evaluatedAt,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
     alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,
@@ -116,25 +119,35 @@ async function tick(client:any,dry=false,probes:number[]=[]){
       catch(error){d.autoPin={error:error instanceof Error?error.message:String(error)};console.error('DOB-Auto-Pin fehlgeschlagen',event.id,d.autoPin.error);}
     }
   }
-  await writeState(client,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
+  await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
     runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:count('setups'),rejected:count('rejected'),skipped:null,error:null});
   return {evaluatedAt,calcMs,poiTypes:runs.map(r=>r.poiType),setups:count('setups'),events:events.length,delivered};
 }
 
 // Fehler im Lauf: Herzschlag mit Fehler und ein Hinweis je Stunde, statt still zu schweigen.
-async function reportError(client:any,error:unknown){
+async function reportError(client:any,instrument:string,error:unknown){
   const message=error instanceof Error?error.message:String(error),now=Math.floor(Date.now()/1000);
-  await writeState(client,{error:message}).catch(()=>{});
-  await deliver(client,{id:`dob:error:${SYMBOL}:${berlinDateStrFor(now)}:${formatBerlinTime(Math.floor(now/3600)*3600)}`,instrument:SYMBOL,phase:'error',
-    signalAt:now,text:`⚠️ DOB-Watcher ${SYMBOL}: Lauf fehlgeschlagen (${message.slice(0,300)}). Alarme können fehlen.`},
-    (await alarmPolicy(client).catch(()=>null))?.decide(now)??null).catch(()=>{});
+  await writeState(client,instrument,{error:message}).catch(()=>{});
+  await deliver(client,{id:`dob:error:${instrument}:${berlinDateStrFor(now)}:${formatBerlinTime(Math.floor(now/3600)*3600)}`,instrument,phase:'error',
+    signalAt:now,text:`⚠️ DOB-Watcher ${instrument}: Lauf fehlgeschlagen (${message.slice(0,300)}). Alarme können fehlen.`},
+    (await alarmPolicy(client,instrument).catch(()=>null))?.decide(now)??null).catch(()=>{});
   return message;
+}
+
+// Alle Instrumente nacheinander zur selben Minute; Fehler je Instrument landen in dessen Herzschlag und als Hinweis.
+async function tick(client:any,dry=false,probes:number[]=[]){
+  const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={};
+  for(const instrument of INSTRUMENTS){
+    try{results[instrument]=await tickInstrument(client,instrument,evaluatedAt,dry,probes);}
+    catch(error){results[instrument]={error:await reportError(client,instrument,error)};}
+  }
+  return {evaluatedAt,runtimeMs:Math.round(performance.now()-started),instruments:results};
 }
 
 Deno.serve(async request=>{
   if(request.method==='OPTIONS')return new Response(null,{headers});
   const client=db();
-  if(request.method==='GET')return json(checked(await client.from('dob_watcher_state').select('*').eq('instrument',SYMBOL).maybeSingle()));
+  if(request.method==='GET')return json(checked(await client.from('dob_watcher_state').select('*').in('instrument',INSTRUMENTS).order('instrument')));
   if(request.method!=='POST')return json({error:'Method not allowed'},405);
   const token=request.headers.get('authorization')?.replace(/^Bearer /,'');
   if(!await secretMatches(token,env('SETUP2_WATCH_TOKEN')))return json({error:'Unauthorized'},401);
@@ -143,11 +156,11 @@ Deno.serve(async request=>{
     // Testnachricht: belegt Zustellung an den Kanal, bevor der erste echte Alarm kommt.
     if(body?.test){
       const now=Math.floor(Date.now()/1000);
-      return json(await deliver(client,{id:`dob:test:${new Date(now*1000).toISOString()}`,instrument:SYMBOL,phase:'test',signalAt:now,
-        text:`🧪 DOB-Watcher ${SYMBOL}: Testnachricht ${berlinDateStrFor(now)} ${formatBerlinTime(now)}. Ab jetzt kommen Alarme beim OB2-Retest und beim Entry (02:00–22:00).`}));
+      return json(await deliver(client,{id:`dob:test:${new Date(now*1000).toISOString()}`,instrument:'XAUUSD',phase:'test',signalAt:now,
+        text:`🧪 DOB-Watcher ${INSTRUMENTS.join(', ')}: Testnachricht ${berlinDateStrFor(now)} ${formatBerlinTime(now)}. Ab jetzt kommen Alarme beim OB2-Retest und beim Entry (02:00–22:00).`}));
     }
     return json(await tick(client,Boolean(body?.dry),Array.isArray(body?.probes)?body.probes.filter(Number.isFinite):[]));
   }catch(error){
-    return json({error:await reportError(client,error)},500);
+    return json({error:error instanceof Error?error.message:String(error)},500);
   }
 });
