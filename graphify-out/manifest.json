@@ -10488,9 +10488,9 @@
     "semantic_hash": ""
   },
   "scripts/dobLabBos.mjs": {
-    "mtime": 1794915618.2460477,
-    "seen": 1794915751.2527757,
-    "ast_hash": "79cac42de4b743322c517929c65b278e",
+    "mtime": 1794919157.0132575,
+    "seen": 1794919749.0471866,
+    "ast_hash": "85d7b5349a967c73b2a7339167912049",
     "semantic_hash": ""
   },
   "analysis/dob-setup/lab-bos-plateau-xau-2026.json": {
@@ -10500,9 +10500,9 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/lab-bos-xau-2026.json": {
-    "mtime": 1794916152.7522824,
-    "seen": 1794916640.315702,
-    "ast_hash": "4efeff025f34fe2da498f057d1bb2659",
+    "mtime": 1794919685.3288493,
+    "seen": 1794919749.0261486,
+    "ast_hash": "fd15b55feb3990eb209837dea8dfc62a",
     "semantic_hash": ""
   },
   "scripts/dobLabBosPlateau.mjs": {
