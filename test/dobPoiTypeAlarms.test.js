@@ -17,8 +17,11 @@ it('rechnet jede Familie mit ihrer Konfig und eigenen Alarm-IDs',()=>{
  const [htf,lq]=runs.map(r=>r.events[0]);
  expect(htf).toMatchObject({id:'dob:retest:XAUUSD:short:2000',poiType:'htf_ob'});
  expect(lq).toMatchObject({id:'dob:lq_sweep:retest:XAUUSD:short:2000',poiType:'lq_sweep'});
- expect(htf.text).toMatch(/^🟡 DOB HTF-OB XAUUSD Short/);
- expect(lq.text).toMatch(/^🟡 DOB LQ-Sweep XAUUSD Short/);
+ // Kopfzeile ohne POI-Art (Philip); die Art steht in der POI-Zeile.
+ expect(htf.text).toMatch(/^🟡 DOB XAUUSD Short · OB2-Retest/);
+ expect(lq.text).toMatch(/^🟡 DOB XAUUSD Short · OB2-Retest/);
+ expect(htf.text.split('\n')[1]).toBe('POI: –');
+ expect(lq.text.split('\n')[1]).toBe('POI: LQ-Sweep');
 });
 
 it('gesperrter Monat einer Familie lässt die andere laufen',()=>{

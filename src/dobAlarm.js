@@ -25,7 +25,9 @@ const price=v=>Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigit
 const zone=z=>`${price(z.bottom)}–${price(z.top)}`;
 const side=direction=>direction==='long'?'Long':'Short';
 export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=5m&replay=${at}`;
-function poiLine({poi:s}){
+// Die POI-Zeile nennt die Art (H1-OB/H4-OB bei HTF-OB, sonst den Namen der POI-Art); die Kopfzeile bleibt ohne Art.
+function poiLine({poi:s},poiType){
+ if(poiType!==DOB_DEFAULT_POI_TYPE)return `POI: ${dobPoiTypeLabel(poiType)}`;
  if(!s)return 'POI: –';
  const label=dobPoiLabel({poi_kind:`ob_${s.timeframe.toLowerCase()}`,poi_distance_atr:s.distanceAtr});
  const touch=dobRetestLabel({kind:s.retestKind,count:s.retestCount,ageSeconds:s.retestAgeSeconds});
@@ -39,7 +41,7 @@ const obLines=({chart})=>[`OB1 ${formatBerlinTime(chart.firstOrderBlockStart)} �
 // Erlaubte Setups zuerst: trägt irgendein Paar den Alarm ungesperrt, gewinnt es den Schlüssel (wie die Statistik-Dedup).
 // suppressed = nur Protokoll, nicht senden.
 export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED_ENTRY_ALARM,counterDobAlarm=DOB_COUNTER_DOB_ALARM,counterCandlesAlarm=DOB_COUNTER_CANDLES_ALARM,poiType=DOB_DEFAULT_POI_TYPE}={}){
- const events=new Map(),name=dobPoiTypeLabel(poiType);
+ const events=new Map();
  // HTF-OB behält die bisherigen IDs (Dedup gegen die Alarm-Historie), jede andere POI-Art bekommt ihren Schlüssel davor.
  const key=rest=>poiType===DOB_DEFAULT_POI_TYPE?`dob:${rest}`:`dob:${poiType}:${rest}`;
  for(const s of [...result.setups,...result.rejected.filter(r=>GUARDRAILS.has(r.reason))]){
@@ -47,7 +49,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
   if(s.phase==='ob2Retest'&&s.phaseSince>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){
    const id=key(`retest:${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`);
    if(!events.has(id))events.set(id,{id,poiType,phase:'ob2Retest',setupId:s.id,instrument,direction:s.direction,signalAt:s.phaseSince,guardrail,suppressed:!!guardrail,
-    text:[`🟡 DOB ${name} ${instrument} ${side(s.direction)} · OB2-Retest ${formatBerlinTime(s.phaseSince)}`,poiLine(s),...obLines(s),
+    text:[`🟡 DOB ${instrument} ${side(s.direction)} · OB2-Retest ${formatBerlinTime(s.phaseSince)}`,poiLine(s,poiType),...obLines(s),
      'noch kein Entry',
      dobChartUrl(id,instrument,s.phaseSince)].join('\n')});
   }
@@ -55,8 +57,8 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    const id=key(`entry:${instrument}:${s.direction}:${s.entryTime}:${s.entryPrice}:${s.stopPrice}`);
    const warn=({blockedEntryHour:blockedEntryAlarm,counterDob:counterDobAlarm,counterCandles:counterCandlesAlarm})[guardrail]==='warn';
    if(!events.has(id))events.set(id,{id,poiType,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
-    text:[warn?`⛔ DOB ${name} ${instrument} ${side(s.direction)} · ${WARN_TEXT[guardrail]} ${formatBerlinTime(s.entryTime)}, kein Trade`
-     :`🟢 DOB ${name} ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
+    text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${WARN_TEXT[guardrail]} ${formatBerlinTime(s.entryTime)}, kein Trade`
+     :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
      // POI und OB-Zonen stehen schon im Retest-Alarm; ein Ziel gibt der Alarm bewusst nicht vor.
      `Entry ${price(s.entryPrice)} · SL ${price(s.stopPrice)}`,
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
