@@ -15,17 +15,7 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
-  const { candlePatternsIn, candleDirection } = await server.ssrLoadModule('/src/candlePatterns.js');
-  const { cases, block, fmt, m5Marked, dataEnd, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
-  const lowerBound = t => { let lo = 0, hi = m5Marked.length; while (lo < hi) { const m = (lo + hi) >> 1; if (m5Marked[m].time < t) lo = m + 1; else hi = m; } return lo; };
-  // Letzte n M5-Kerzen, die vor dem Entry geschlossen sind (Session-ignorierte zählen mit: echte Preise).
-  const lastClosed = (t, n) => { const end = lowerBound(t.entryTime - 300 + 1); return m5Marked.slice(Math.max(0, end - n), end).filter(c => c.time + 300 <= t.entryTime); };
-  const featuresOf = (t, n) => {
-    const candles = lastClosed(t, n), against = t.direction === 'short' ? 'bull' : 'bear', withSide = against === 'bull' ? 'bear' : 'bull';
-    const patterns = candlePatternsIn(candles);
-    return { counterPattern: patterns.some(p => p.side === against), withPattern: patterns.some(p => p.side === withSide),
-      counterCandles: candles.filter(c => candleDirection(c) === against).length, patterns };
-  };
+  const { cases, block, fmt, priceAction: featuresOf, dataEnd, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
   const result = { measurement: 'dob-lab-price-action-v1', git: gitHash, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
     methodology: ['Träger: scripts/dobV3Carriers.mjs (v3-Fill-Träger, Kombi; (a) ohne, (b) mit Philips Sperren), Ausgang zu 3R, 5R und TP nach Konfig.',
       'Fenster: letzte 1/3/5 M5-Kerzen, die vor dem Entry geschlossen sind. Hammer je Kerze, Morning/Evening Star nur vollständig im Fenster.',

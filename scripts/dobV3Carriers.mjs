@@ -5,8 +5,8 @@ import { dobTradeKey } from './dobSetupGrid.mjs';
 
 export async function loadDobV3Lab(server, root) {
   const load = p => server.ssrLoadModule(p);
-  const [{ createDobCounterDobGate }, { supabase }, g, { dobSourceZoneAgeSeconds }] = await Promise.all(
-    ['/src/dobCounterDob.js', '/src/supabaseClient.js', '/src/dobGuardrails.js', '/src/dobSourceOfStrength.js'].map(load));
+  const [{ createDobCounterDobGate, dobSourceRetestTime }, { supabase }, g, { dobSourceZoneAgeSeconds }, { candlePatternsIn, candleDirection }] = await Promise.all(
+    ['/src/dobCounterDob.js', '/src/supabaseClient.js', '/src/dobGuardrails.js', '/src/dobSourceOfStrength.js', '/src/candlePatterns.js'].map(load));
   const runs = await loadDobRuns(server, root);
   const { v2Carriers, m5Marked, m1Marked, dataEnd, evaluateDoubleOrderBlockOutcome, berlinDateStrFor } = runs;
   const { data: cfgRow, error } = await supabase.from('dob_guardrails').select('*').eq('instrument', DOB_SYMBOL).maybeSingle();
@@ -37,6 +37,27 @@ export async function loadDobV3Lab(server, root) {
     return { n: w + l, winrate: w + l ? +(w / (w + l) * 100).toFixed(1) : null, sumR: +sum.toFixed(1) }; };
   const block = (list, rOf) => ({ trades: list.length, ...stats(list, rOf), 'Jan–Jun': stats(list.filter(t => month(t) <= '2026-06'), rOf),
     'Jul–Nov': stats(list.filter(t => month(t) >= '2026-07'), rOf) });
+  // Idee = Richtung + Kraft-Zone + Retest-Episode der Zone (DOB-LAB-IDEE); Regeln kausal in Entry-Reihenfolge, Ausgang zum tpR.
+  const ideaOf = t => { const s = t.sourceOfStrength; return `${t.direction}:${s.timeframe}:${s.zoneStartTime}:${s.zone.bottom}:${s.zone.top}:${dobSourceRetestTime(t)}`; };
+  const ideasOf = trades => { const ideas = new Map();
+    for (const t of trades) (ideas.get(ideaOf(t)) ?? ideas.set(ideaOf(t), []).get(ideaOf(t))).push(t);
+    for (const l of ideas.values()) l.sort((a, b) => a.entryTime - b.entryTime); return ideas; };
+  const ideaRules = (trades, tpR) => {
+    const res = t => { const o = outcome(t, tpR(t)); return { status: o.status, exit: o.recognizedAt ?? Infinity }; };
+    const ideas = ideasOf(trades), pick = keep => [...ideas.values()].flatMap(l => { const kept = []; for (const t of l) if (keep(t, kept)) kept.push(t); return kept; });
+    return { '(1) nur erster Entry je Idee': pick((t, kept) => kept.length === 0),
+      '(2) kein Entry, solange einer derselben Idee offen ist': pick((t, kept) => kept.every(k => res(k).exit <= t.entryTime)),
+      '(3) höchstens 2 Entries je Idee': pick((t, kept) => kept.length < 2),
+      '(4) nach einem Loss derselben Idee keine weiteren': pick((t, kept) => !kept.some(k => res(k).status === 'loss' && res(k).exit <= t.entryTime)) };
+  };
+  // Price Action (DOB-PA): letzte n M5-Kerzen, die vor dem Entry geschlossen sind; Gegenmuster/-kerzen gegen die Trade-Richtung.
+  const m5Index = t => { let lo = 0, hi = m5Marked.length; while (lo < hi) { const m = (lo + hi) >> 1; if (m5Marked[m].time + 300 <= t) lo = m + 1; else hi = m; } return lo; };
+  const priceAction = (t, n) => {
+    const end = m5Index(t.entryTime), candles = m5Marked.slice(Math.max(0, end - n), end), against = t.direction === 'short' ? 'bull' : 'bear';
+    const patterns = candlePatternsIn(candles);
+    return { counterPattern: patterns.some(p => p.side === against), withPattern: patterns.some(p => p.side !== against),
+      counterCandles: candles.filter(c => candleDirection(c) === against).length, patterns };
+  };
   const fmt = s => `${s.trades} T · ${s.n} ${s.winrate}% ${s.sumR}R (${s['Jan–Jun'].sumR}/${s['Jul–Nov'].sumR})`;
-  return { ...runs, config, cases, outcome, block, fmt };
+  return { ...runs, config, cases, outcome, block, fmt, ideasOf, ideaRules, priceAction };
 }

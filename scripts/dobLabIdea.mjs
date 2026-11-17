@@ -15,10 +15,8 @@ while (!existsSync(path.join(envDir, '.env')) && path.dirname(envDir) !== envDir
 
 const server = await createServer({ root, envDir, server: { middlewareMode: true, hmr: false }, appType: 'custom', logLevel: 'error' });
 try {
-  const [{ dobSourceRetestTime }, { formatDatedTime }] = await Promise.all(['/src/dobCounterDob.js', '/src/berlinTime.js'].map(p => server.ssrLoadModule(p)));
-  const { cases, block: blockR, outcome, dataEnd, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
-  const ideaOf = t => { const s = t.sourceOfStrength;
-    return `${t.direction}:${s.timeframe}:${s.zoneStartTime}:${s.zone.bottom}:${s.zone.top}:${dobSourceRetestTime(t)}`; };
+  const { formatDatedTime } = await server.ssrLoadModule('/src/berlinTime.js');
+  const { cases, block: blockR, outcome, ideasOf, ideaRules, dataEnd, berlinDateStrFor, gitHash } = await loadDobV3Lab(server, root);
   const result = { measurement: 'dob-lab-idea-v1', git: gitHash, symbol: SYMBOL, dataEnd, dataEndBerlin: berlinDateStrFor(dataEnd),
     methodology: ['Trades: v2 mit Gegen-DOB-Status wie der v3-Fill (bester über die tragenden Paare), Modus Kombi; (a) nur TP-Fenster/Default, (b) Philips gespeicherte Konfig mit Sperren.',
       'Idee = gleiche Richtung + gleiche Kraft-Zone (TF, Start, Kanten) + gleiche Retest-Episode der Zone (Start der letzten Touch-Episode vor OB1).',
@@ -27,19 +25,9 @@ try {
       'n = Win + Loss, ΣR = R·Win − Loss; Halbjahre nach Berliner Entry-Monat.'],
     carriers: {} };
   for (const { name: cName, trades: list, tpR } of cases) {
-    const res = t => { const o = outcome(t, tpR(t)); return { status: o.status, exit: o.recognizedAt ?? Infinity, r: tpR(t) }; };
+    const res = t => { const o = outcome(t, tpR(t)); return { status: o.status, exit: o.recognizedAt ?? Infinity }; };
     const block = l => blockR(l, tpR);
-    const ideas = new Map();
-    for (const t of list) (ideas.get(ideaOf(t)) ?? ideas.set(ideaOf(t), []).get(ideaOf(t))).push(t);
-    for (const l of ideas.values()) l.sort((a, b) => a.entryTime - b.entryTime);
-    const pick = keep => [...ideas.values()].flatMap(l => { const kept = []; for (const t of l) if (keep(t, kept)) kept.push(t); return kept; });
-    const rules = {
-      'Konfig (alle Entries)': list,
-      '(1) nur erster Entry je Idee': pick((t, kept) => kept.length === 0),
-      '(2) kein Entry, solange einer derselben Idee offen ist': pick((t, kept) => kept.every(k => res(k).exit <= t.entryTime)),
-      '(3) höchstens 2 Entries je Idee': pick((t, kept) => kept.length < 2),
-      '(4) nach einem Loss derselben Idee keine weiteren': pick((t, kept) => !kept.some(k => res(k).status === 'loss' && res(k).exit <= t.entryTime)),
-    };
+    const ideas = ideasOf(list), rules = { 'Konfig (alle Entries)': list, ...ideaRules(list, tpR) };
     const sizes = [...ideas.values()].map(l => l.length);
     const byPos = pos => [...ideas.values()].flatMap(l => pos < 3 ? (l[pos - 1] ? [l[pos - 1]] : []) : l.slice(2));
     // Beispiel 28.08.: alle Ideen mit ≥ 3 Trades, die in einer Stunde komplett ausgestoppt wurden, als Beleg.
