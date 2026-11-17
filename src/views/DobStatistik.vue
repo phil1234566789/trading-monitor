@@ -6,6 +6,8 @@ import {supabase} from '../supabaseClient.js';
 import {fetchAllRows} from '../dbReadPaging.js';
 import {dobRouteStats,dobGroups,dobTradeMonth,dobTradeSessions,dobChartLink,dobTradeR,dobSourceLabel,matchDobTradePins,dobTradePinKey,dobMaxRBucket,dobMaxRLabel,dobMaxRShares,DOB_MAX_R_FILTERS,DOB_OUTCOME_LABELS,DOB_R_TARGETS,dobBreakEven,dobTimeSlotGroups,dobZoneAgeBucket,DOB_ZONE_AGE_BUCKETS,dobTotalStats,DOB_RETEST_KINDS} from '../dobTradeStatistics.js';
 import DobStatsTable from '../components/DobStatsTable.vue';
+import DobGuardrailsPanel from '../components/DobGuardrailsPanel.vue';
+import {DOB_GUARDRAILS_DEFAULT,dobGuardrailsFromRow,dobGuardrailReason} from '../dobGuardrails.js';
 import {fetchDobTradePins,addDobTradePin,removePinEntry,updatePinNote} from '../pinContext.js';
 import SimulationPinMenu from '../components/SimulationPinMenu.vue';
 import SimulationPinFlag from '../components/SimulationPinFlag.vue';
@@ -33,13 +35,16 @@ async function loadRuns(){
 async function load(){
  if(!run.value)return;
  loading.value=true;error.value='';
- const [trades,sessionRows]=await Promise.all([
+ const [trades,sessionRows,guardrailRow]=await Promise.all([
   fetchAllRows((from,to)=>supabase.from('dob_trade_setups').select('*').eq('instrument',instrument.value).eq('run_id',run.value)
    .order('entry_time',{ascending:false}).order('id').range(from,to)),
-  supabase.from('sessions').select('label,from_minutes,to_minutes,days').eq('instrument',instrument.value).order('from_minutes').limit(200)]);
+  supabase.from('sessions').select('label,from_minutes,to_minutes,days').eq('instrument',instrument.value).order('from_minutes').limit(200),
+  supabase.from('dob_guardrails').select('*').eq('instrument',instrument.value).maybeSingle()]);
  loading.value=false;
  if(trades.error||sessionRows.error){error.value=(trades.error??sessionRows.error).message;return;}
  rows.value=trades.data;sessions.value=sessionRows.data;
+ // Fehlt die Sperr-Konfig (Tabelle noch leer oder nicht lesbar), gilt „nichts gesperrt“.
+ guardrails.value=dobGuardrailsFromRow(guardrailRow.error?null:guardrailRow.data);
 }
 // Setzt loadRuns den Lauf erst, lädt der watch; sonst hier, damit „Aktualisieren“ auch ohne Wechsel neu liest.
 async function refresh(){const before=run.value;if(await loadRuns()&&run.value===before)await load();}
@@ -100,7 +105,11 @@ const targets=computed(()=>[{name:'A',k:rA.value},{name:'B',k:rB.value}]);
 watch([instrument,year,run,rA,rB],([i,y,r,a,b])=>{shown.value=PAGE;router.replace({query:{run:r,instrument:i,year:y,rA:String(a),rB:String(b)}});});
 
 const years=computed(()=>[...new Set([year.value,...rows.value.map(r=>dobTradeMonth(r).slice(0,4))])].sort().reverse());
-const inYear=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(year.value)));
+const yearRows=computed(()=>rows.value.filter(r=>dobTradeMonth(r).startsWith(year.value)));
+// Sperr-Konfig (dob_guardrails, gleiche Funktion wie der Watcher): gesperrte Trades fallen aus Liste, Kacheln und Tabellen.
+const guardrails=ref(DOB_GUARDRAILS_DEFAULT),guardrailsOpen=useLocalStorageRef('dobStatsGuardrailsOpen',false);
+const blockedOf=r=>dobGuardrailReason(guardrails.value,{entryTime:r.entry_time,zoneAgeSeconds:r.source_zone_age_seconds});
+const inYear=computed(()=>yearRows.value.filter(r=>!blockedOf(r)));
 // Max-R-Filter (genaue Stufen, ODER) und Sortierung; ohne gespeichertes max_r (älterer Lauf-Stand) bleibt beides aus.
 const maxRFilter=ref([]),maxRSort=ref(''),retestFilter=ref([]);
 const hasRetest=computed(()=>inYear.value.some(r=>r.source_retest_kind));
@@ -162,10 +171,13 @@ const monthLabel=key=>MONTHS[Number(key.slice(5))-1];
         <button type="button" :disabled="loading" @click="refresh">{{ loading?'Wird geladen…':'Aktualisieren' }}</button>
       </div>
     </header>
+    <DobGuardrailsPanel v-if="!loading&&!error&&yearRows.length" :instrument="instrument" :config="guardrails" :rows="yearRows" :targets="targets"
+      :open="guardrailsOpen" @toggle="v=>{guardrailsOpen=v;}" @saved="c=>{guardrails=c;}" />
+    <p v-if="!loading&&!error&&yearRows.length>inYear.length" class="note" role="status">{{ yearRows.length-inYear.length }} von {{ yearRows.length }} Trades durch die Sperren ausgeblendet; alle Kennzahlen, Tabellen und die Tradeliste zeigen nur erlaubte Trades.</p>
     <p v-if="error" role="alert" class="error">{{ error }} <button @click="refresh">Erneut versuchen</button></p>
     <p v-else-if="loading" role="status" class="note">Trades werden geladen…</p>
     <p v-else-if="!runs.length" role="status" class="note">Noch keine berechneten DOB-Läufe.</p>
-    <p v-else-if="!inYear.length" role="status" class="note">Keine berechneten Trades für {{ selectedRun?.label }} · {{ instrument }} {{ year }}.</p>
+    <p v-else-if="!inYear.length" role="status" class="note">Keine erlaubten Trades für {{ selectedRun?.label }} · {{ instrument }} {{ year }}.</p>
     <template v-else>
       <section class="tiles" aria-label="Gesamt je Route">
         <article v-for="r in ROUTES" :key="r" class="tile">
