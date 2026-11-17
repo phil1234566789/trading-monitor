@@ -10668,15 +10668,33 @@
     "semantic_hash": ""
   },
   "analysis/dob-setup/lab-drawdown-xau-2026.json": {
-    "mtime": 1794933651.1013367,
-    "seen": 1794933741.6983814,
-    "ast_hash": "8a37a7f571cdda021e0e3aba316373c6",
+    "mtime": 1794934092.3240702,
+    "seen": 1794934249.872875,
+    "ast_hash": "4b74f309a34ae0657dccdac4fe6f0406",
     "semantic_hash": ""
   },
   "scripts/dobLabDrawdown.mjs": {
-    "mtime": 1794933648.1365871,
-    "seen": 1794933741.7228937,
-    "ast_hash": "e2c3a7c5dffad57084a31debbc6a9b09",
+    "mtime": 1794934048.517671,
+    "seen": 1794934249.8977685,
+    "ast_hash": "daaa37d629971c1db17114711c82e5ff",
+    "semantic_hash": ""
+  },
+  "analysis/dob-setup/lab-day-limit-xau-2026.json": {
+    "mtime": 1794934143.6599526,
+    "seen": 1794934249.872875,
+    "ast_hash": "9cabb129bda4281571f3263898f66bc1",
+    "semantic_hash": ""
+  },
+  "scripts/dobConfigTrades.mjs": {
+    "mtime": 1794934048.4672573,
+    "seen": 1794934249.896259,
+    "ast_hash": "712622bbebd15fe6df44475828f7a29c",
+    "semantic_hash": ""
+  },
+  "scripts/dobLabDayLimit.mjs": {
+    "mtime": 1794934140.0730004,
+    "seen": 1794934249.8977685,
+    "ast_hash": "dbc601d3d65481770976fbe3daf44c59",
     "semantic_hash": ""
   }
 }
