@@ -6,7 +6,9 @@ import {DOB_GUARDRAILS_DEFAULT} from '../src/dobGuardrails.js';
 const at=Date.parse('2026-11-18T10:00:00Z')/1000;
 const chart={firstOrderBlockStart:at-7200,secondOrderBlockStart:at-3600,firstOrderBlock:{top:20,bottom:18},secondOrderBlock:{top:19,bottom:17}};
 const poi={timeframe:'H1',zone:{top:3890,bottom:3885},distanceAtr:0.8};
-const s=(pairId,phase,extra={})=>({pairId,id:`${pairId}:a`,direction:'short',phase,phaseSince:at-600,entryTime:null,chart,poi,...extra});
+// Jedes Paar bekommt sein eigenes OB2 (die Zeile gruppiert je OB2), außer der Test teilt es bewusst.
+const s=(pairId,phase,extra={})=>({pairId,id:`${pairId}:a`,direction:'short',phase,phaseSince:at-600,entryTime:null,poi,
+ chart:{...chart,secondOrderBlockStart:extra.ob2??at-3600-Number(pairId.slice(1))*300},...extra});
 const run=(setups,rejected=[],poiType='htf_ob')=>({poiType,result:{setups,rejected},guardrails:{...DOB_GUARDRAILS_DEFAULT,defaultTpR:3},blockStats:null});
 
 it('mappt Phasen auf Status, unklar als läuft, frühe Phasen und Vortage fehlen',()=>{
@@ -33,4 +35,9 @@ it('Sperre mit Grund, verworfen nur ohne tragende POI-Art, weiteste Phase gewinn
  expect(rows.map(r=>`${r.poiType}:${r.pairId}:${r.status}`).sort()).toEqual(['htf_ob:p1:entry','htf_ob:p2:blocked','htf_ob:p3:dropped']);
  expect(rows.find(r=>r.pairId==='p2')).toMatchObject({blockLabel:'Gegen-DOB'});
  expect(rows.find(r=>r.pairId==='p3').detail).toContain('kein POI in Reichweite');
+});
+
+it('OB1-Partner mit gleichem OB2 ergeben eine Zeile',()=>{
+ const rows=dobWatcherCandidates([run([],[s('p1','ob2Retest',{reason:'noPoi',ob2:at-3600}),s('p2','ob2Retest',{reason:'noPoi',ob2:at-3600})])],at,'XAUUSD');
+ expect(rows).toHaveLength(1);
 });
