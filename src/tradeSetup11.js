@@ -8,7 +8,7 @@ import {confirmedOrderBlockSweepSource,evaluateSweepConfirmation,sweepSourceKey}
 import {obMinimum} from './instrumentConfig.js';
 import {reconstructTradeSetup11Projection} from './tradeSetup11Projection.js';
 
-export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v3';
+export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v4';
 
 function contextEntry(resolvers,input,symbol) {
  if(!resolvers.has(symbol))resolvers.set(symbol,{resolve:createTradeSetup11ContextResolver({...input,instrument:symbol}),closeReactionCache:createCloseReactionCache()});
@@ -67,7 +67,8 @@ function assessTradeSetup11Sources({setups=[],instrument,m5Candles=[],h1Candles=
   }
   const current=currentTradeSetup11Range(context,closeReactionCache),expectedTrend=setup.dir===-1?'uptrend':'downtrend';
   if(!current){finish('unknown','innerTrendUnknown');continue;}
-  if(current.trend===expectedTrend){finish('passed','currentTrendDirection',{currentRange:current});continue;}
+  // Mit dem Trend nur bei bestätigter Struktur (HH+HL bzw. LL+LH); ein Close-CHoCH markiert nur den Beginn der Gegenbewegung (P556/P544).
+  if(current.trend===expectedTrend&&current.basis==='confirmedNestedRange'){finish('passed','currentTrendDirection',{currentRange:current});continue;}
   const owner=findTradeSetup11SourceOwner({setup,context,resolveContext,expectedTrend,current});
   if(owner.status==='ready')finish('passed','sourceRangeDirection',{currentRange:current,sourceOwner:owner});
   else finish(owner.status==='unknown'?'unknown':'unmet',owner.reason,{currentRange:current,sourceOwner:owner});
