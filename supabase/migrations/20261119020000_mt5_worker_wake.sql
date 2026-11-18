@@ -44,3 +44,19 @@ create trigger mt5_wake_on_plan_pending after update of state on public.mt5_targ
   for each row when (new.state='pending' and old.state is distinct from 'pending') execute function public.mt5_wake_trigger();
 create trigger mt5_wake_on_history_request after update of history_requested_at on public.mt5_accounts
   for each row when (new.history_requested_at is distinct from old.history_requested_at) execute function public.mt5_wake_trigger();
+
+-- Übergangsbremse für den alten 1-s-Worker: eine RPC statt vieler Einzelabfragen entscheidet "nichts zu tun".
+create function public.mt5_worker_idle(p_account text,p_login text,p_server text) returns boolean
+language sql stable security definer set search_path=public,pg_temp as $$
+ select coalesce((select jsonb_array_length(snapshot->'positions')=0 and coalesce((snapshot->>'pending_orders')::int,1)=0
+                         and coalesce(snapshot->'worker_error','null'::jsonb)='null'::jsonb
+                  from mt5_bridge_state where id=p_account),false)
+  and not exists(select 1 from mt5_execution_orders where intent->>'account_login'=p_login and intent->>'account_server'=p_server
+                 and (status in ('searching','sending','unknown') or (status='executed' and result->'position_lifecycle'->>'closed_at_sec' is null)))
+  and not exists(select 1 from mt5_target_plans where plan->>'account_login'=p_login and plan->>'account_server'=p_server
+                 and state in ('pending','active','sending','unknown'))
+  and not exists(select 1 from mt5_guard_commands where account_id::text=p_account and status in ('pending','sending','unknown'))
+  and not exists(select 1 from mt5_worker_wake where ui_seen_at>now()-interval '90 seconds');
+$$;
+revoke all on function public.mt5_worker_idle(text,text,text) from public,anon,authenticated;
+grant execute on function public.mt5_worker_idle(text,text,text) to service_role;
