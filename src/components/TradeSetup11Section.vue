@@ -227,7 +227,7 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
     <p class="note"><strong>{{ current.code }}</strong> · {{ current.pin.kind }}<span v-if="current.setupId"> · Setup #{{ current.setupId }} ({{ current.detectorVersion ?? 'Version unbekannt' }})</span></p>
     <template v-if="diagnosis">
      <h4>Prüfschritte</h4>
-     <ul class="checks"><li v-for="(s,i) in diagnosis.steps" :key="i" :class="{bad:!s.ok}">{{ mark(s.ok) }} {{ s.label }}<span v-if="s.detail" class="detail"> · {{ s.detail }}</span><small v-if="s.code"> {{ s.code }}</small></li></ul>
+     <ul class="checks"><li v-for="(s,i) in diagnosis.steps" :key="i" :class="{bad:!s.ok}">{{ mark(s.ok) }} {{ s.label }}<span v-if="s.detail" class="detail"> · {{ s.detail }}</span><small v-if="s.code"> · {{ s.code }}</small></li></ul>
      <template v-if="chain">
       <h4>Prüfschritt Range-Kette (Stand evaluatedAt)</h4>
       <p v-if="chain.status!=='ready'" class="muted">{{ chain.status }} · {{ chain.reason }}</p>
@@ -275,7 +275,7 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
 .checks{list-style:none;margin:0;padding:0}
 .checks li{padding:1px 0}
 .checks li.bad{color:#ef9a9a}
-.checks small{color:#9aa3b2;font-size:11px;margin-left:6px}
+.checks small{color:#9aa3b2;font-size:11px}
 .checks .detail{color:inherit}
 .cand{border-top:1px solid #2a2e39;padding:6px 0}
 .muted{color:#9aa3b2}
