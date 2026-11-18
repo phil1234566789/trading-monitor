@@ -1,0 +1,1662 @@
+{
+  "measurement": "algo-watcher-oct-entries-v1",
+  "source": "setup2_alarm_events stage 3 trading, 07.–30.10.2026",
+  "methodology": [
+    "Ausgang je SL-Variante aus FXCM-M1 bis Berliner Tagesende (evaluateDoubleOrderBlockOutcome); was bis dahin weder TP noch SL traf, ist offen.",
+    "maxR in 0,5er-Stufen (dobMaxR) bis SL oder Tagesende, höchste Stufe 5 (= ≥ 5R).",
+    "duplicate: gleicher Entry wurde schon als früherer Alarm gemeldet.",
+    "Chart: Live-Watcher-Link, Replay = spätester Ausgang (sonst Tagesende) + 4 h."
+  ],
+  "balance": {
+    "alle Alarme": {
+      "EURUSD": {
+        "wide 2R": {
+          "n": 32,
+          "win": 19,
+          "loss": 13,
+          "other": 0,
+          "winrate": 59.4,
+          "sumR": 25
+        },
+        "wide 3R": {
+          "n": 32,
+          "win": 14,
+          "loss": 14,
+          "other": 4,
+          "winrate": 50,
+          "sumR": 28
+        },
+        "narrow 2R": {
+          "n": 32,
+          "win": 13,
+          "loss": 19,
+          "other": 0,
+          "winrate": 40.6,
+          "sumR": 7
+        },
+        "narrow 3R": {
+          "n": 32,
+          "win": 8,
+          "loss": 19,
+          "other": 5,
+          "winrate": 29.6,
+          "sumR": 5
+        }
+      },
+      "GBPUSD": {
+        "wide 2R": {
+          "n": 16,
+          "win": 5,
+          "loss": 11,
+          "other": 0,
+          "winrate": 31.3,
+          "sumR": -1
+        },
+        "wide 3R": {
+          "n": 16,
+          "win": 3,
+          "loss": 13,
+          "other": 0,
+          "winrate": 18.8,
+          "sumR": -4
+        },
+        "narrow 2R": {
+          "n": 16,
+          "win": 4,
+          "loss": 11,
+          "other": 1,
+          "winrate": 26.7,
+          "sumR": -3
+        },
+        "narrow 3R": {
+          "n": 16,
+          "win": 4,
+          "loss": 11,
+          "other": 1,
+          "winrate": 26.7,
+          "sumR": 1
+        }
+      },
+      "alle": {
+        "wide 2R": {
+          "n": 48,
+          "win": 24,
+          "loss": 24,
+          "other": 0,
+          "winrate": 50,
+          "sumR": 24
+        },
+        "wide 3R": {
+          "n": 48,
+          "win": 17,
+          "loss": 27,
+          "other": 4,
+          "winrate": 38.6,
+          "sumR": 24
+        },
+        "narrow 2R": {
+          "n": 48,
+          "win": 17,
+          "loss": 30,
+          "other": 1,
+          "winrate": 36.2,
+          "sumR": 4
+        },
+        "narrow 3R": {
+          "n": 48,
+          "win": 12,
+          "loss": 30,
+          "other": 6,
+          "winrate": 28.6,
+          "sumR": 6
+        }
+      }
+    },
+    "einmalig": {
+      "EURUSD": {
+        "wide 2R": {
+          "n": 29,
+          "win": 17,
+          "loss": 12,
+          "other": 0,
+          "winrate": 58.6,
+          "sumR": 22
+        },
+        "wide 3R": {
+          "n": 29,
+          "win": 14,
+          "loss": 13,
+          "other": 2,
+          "winrate": 51.9,
+          "sumR": 29
+        },
+        "narrow 2R": {
+          "n": 29,
+          "win": 11,
+          "loss": 18,
+          "other": 0,
+          "winrate": 37.9,
+          "sumR": 4
+        },
+        "narrow 3R": {
+          "n": 29,
+          "win": 8,
+          "loss": 18,
+          "other": 3,
+          "winrate": 30.8,
+          "sumR": 6
+        }
+      },
+      "GBPUSD": {
+        "wide 2R": {
+          "n": 14,
+          "win": 4,
+          "loss": 10,
+          "other": 0,
+          "winrate": 28.6,
+          "sumR": -2
+        },
+        "wide 3R": {
+          "n": 14,
+          "win": 2,
+          "loss": 12,
+          "other": 0,
+          "winrate": 14.3,
+          "sumR": -6
+        },
+        "narrow 2R": {
+          "n": 14,
+          "win": 3,
+          "loss": 10,
+          "other": 1,
+          "winrate": 23.1,
+          "sumR": -4
+        },
+        "narrow 3R": {
+          "n": 14,
+          "win": 3,
+          "loss": 10,
+          "other": 1,
+          "winrate": 23.1,
+          "sumR": -1
+        }
+      },
+      "alle": {
+        "wide 2R": {
+          "n": 43,
+          "win": 21,
+          "loss": 22,
+          "other": 0,
+          "winrate": 48.8,
+          "sumR": 20
+        },
+        "wide 3R": {
+          "n": 43,
+          "win": 16,
+          "loss": 25,
+          "other": 2,
+          "winrate": 39,
+          "sumR": 23
+        },
+        "narrow 2R": {
+          "n": 43,
+          "win": 14,
+          "loss": 28,
+          "other": 1,
+          "winrate": 33.3,
+          "sumR": 0
+        },
+        "narrow 3R": {
+          "n": 43,
+          "win": 11,
+          "loss": 28,
+          "other": 4,
+          "winrate": 28.2,
+          "sumR": 5
+        }
+      }
+    }
+  },
+  "entries": [
+    {
+      "id": "GBPUSD:setup1:14282:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:14282:countertrend-entry-model-1-v10:1791359040",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-07 09:44",
+      "entryPrice": 1.3246499999999999,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.3240699999999999,
+          "riskPips": 5.8,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791359580,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.3241699999999998,
+          "riskPips": 4.8,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791359220,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A14282%3Acountertrend-entry-model-1-v10%3A1791359040&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1791373980&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:14389:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:14389:countertrend-entry-model-1-v10:1791379740",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-07 15:29",
+      "entryPrice": 1.31981,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.31931,
+          "riskPips": 5,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1791383160,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.31934,
+          "riskPips": 4.7,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1791383100,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A14389%3Acountertrend-entry-model-1-v10%3A1791379740&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1791397560&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:14414:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:14414:countertrend-entry-model-1-v10:1791382320",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-07 16:12",
+      "entryPrice": 1.32027,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.3196700000000001,
+          "riskPips": 6,
+          "maxR": 3.5,
+          "slHit": false,
+          "exitOrDayEnd": 1791386040,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.31983,
+          "riskPips": 4.4,
+          "maxR": 4.5,
+          "slHit": false,
+          "exitOrDayEnd": 1791384960,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A14414%3Acountertrend-entry-model-1-v10%3A1791382320&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1791400440&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:14389:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:14389:countertrend-entry-model-1-v10:1791382320",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-07 16:12",
+      "entryPrice": 1.32027,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.3196700000000001,
+          "riskPips": 6,
+          "maxR": 3.5,
+          "slHit": false,
+          "exitOrDayEnd": 1791386040,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.31983,
+          "riskPips": 4.4,
+          "maxR": 4.5,
+          "slHit": false,
+          "exitOrDayEnd": 1791384960,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A14389%3Acountertrend-entry-model-1-v10%3A1791382320&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1791400440&bar=5m",
+      "duplicate": true
+    },
+    {
+      "id": "EURUSD:setup1:16107:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:16107:countertrend-entry-model-1-v10:1791530880",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-09 09:28",
+      "entryPrice": 1.12299,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.1235899999999999,
+          "riskPips": 6,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1791541440,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.1232900000000001,
+          "riskPips": 3,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1791536040,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A16107%3Acountertrend-entry-model-1-v10%3A1791530880&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1791555840&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:16107:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:16107:countertrend-entry-model-1-v10:1791532680",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-09 09:58",
+      "entryPrice": 1.12298,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.1232900000000001,
+          "riskPips": 3.1,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1791536040,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.12317,
+          "riskPips": 1.9,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791532740,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A16107%3Acountertrend-entry-model-1-v10%3A1791532680&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1791550440&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:16107:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:16107:countertrend-entry-model-1-v10:1791534060",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-09 10:21",
+      "entryPrice": 1.1228,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12326,
+          "riskPips": 4.6,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1791541200,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.12314,
+          "riskPips": 3.4,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791534300,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A16107%3Acountertrend-entry-model-1-v10%3A1791534060&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1791555600&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:16107:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:16107:countertrend-entry-model-1-v10:1791535440",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-09 10:44",
+      "entryPrice": 1.12247,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12307,
+          "riskPips": 6,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1791543660,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.1229500000000001,
+          "riskPips": 4.8,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1791542580,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A16107%3Acountertrend-entry-model-1-v10%3A1791535440&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1791558060&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:16291:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:16291:countertrend-entry-model-1-v10:1791546420",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-09 13:47",
+      "entryPrice": 1.3229199999999999,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.32232,
+          "riskPips": 6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791547680,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.32259,
+          "riskPips": 3.3,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791546960,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A16291%3Acountertrend-entry-model-1-v10%3A1791546420&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1791562080&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:18304:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:18304:countertrend-entry-model-1-v10:1791879780",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-13 10:23",
+      "entryPrice": 1.11857,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.11917,
+          "riskPips": 6,
+          "maxR": 1.5,
+          "slHit": true,
+          "exitOrDayEnd": 1791891840,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.11887,
+          "riskPips": 3,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791880260,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A18304%3Acountertrend-entry-model-1-v10%3A1791879780&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1791906240&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:18304:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:18304:countertrend-entry-model-1-v10:1791888480",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-13 12:48",
+      "entryPrice": 1.11854,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.1191,
+          "riskPips": 5.6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791891840,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.11884,
+          "riskPips": 3,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1791888720,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A18304%3Acountertrend-entry-model-1-v10%3A1791888480&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1791906240&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:19982:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:19982:countertrend-entry-model-1-v10:1792053180",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-15 10:33",
+      "entryPrice": 1.12256,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12316,
+          "riskPips": 6,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792059600,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.12296,
+          "riskPips": 4,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792054620,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A19982%3Acountertrend-entry-model-1-v10%3A1792053180&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792074000&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:19982:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:19982:countertrend-entry-model-1-v10:1792057140",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-15 11:39",
+      "entryPrice": 1.1225100000000001,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12296,
+          "riskPips": 4.5,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792059300,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.1227800000000001,
+          "riskPips": 2.7,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792058400,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A19982%3Acountertrend-entry-model-1-v10%3A1792057140&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792073700&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:19982:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:19982:countertrend-entry-model-1-v10:1792068360",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-15 14:46",
+      "entryPrice": 1.12077,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12137,
+          "riskPips": 6,
+          "maxR": 1.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792069200,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.12159,
+          "riskPips": 8.2,
+          "maxR": 1,
+          "slHit": true,
+          "exitOrDayEnd": 1792071420,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A19982%3Acountertrend-entry-model-1-v10%3A1792068360&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792085820&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:19982:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:19982:countertrend-entry-model-1-v10:1792071240",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-15 15:34",
+      "entryPrice": 1.12061,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12121,
+          "riskPips": 6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792071420,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.12128,
+          "riskPips": 6.7,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792071420,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A19982%3Acountertrend-entry-model-1-v10%3A1792071240&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792085820&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:19982:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:19982:countertrend-entry-model-1-v10:1792075440",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-15 16:44",
+      "entryPrice": 1.12141,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12201,
+          "riskPips": 6,
+          "maxR": 3.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792076640,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.12242,
+          "riskPips": 10.1,
+          "maxR": 2,
+          "slHit": false,
+          "exitOrDayEnd": 1792101600,
+          "2R": "success",
+          "3R": "open"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A19982%3Acountertrend-entry-model-1-v10%3A1792075440&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792116000&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:20416:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:20416:countertrend-entry-model-1-v10:1792078620",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-15 17:37",
+      "entryPrice": 1.12042,
+      "category": "full",
+      "variants": {
+        "wide": {
+          "stop": 1.12102,
+          "riskPips": 6,
+          "maxR": 0.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792083060,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.12076,
+          "riskPips": 3.4,
+          "maxR": 1.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792081740,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A20416%3Acountertrend-entry-model-1-v10%3A1792078620&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792097460&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:19982:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:19982:countertrend-entry-model-1-v10:1792078620",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-15 17:37",
+      "entryPrice": 1.12042,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12102,
+          "riskPips": 6,
+          "maxR": 0.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792083060,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.12076,
+          "riskPips": 3.4,
+          "maxR": 1.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792081740,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A19982%3Acountertrend-entry-model-1-v10%3A1792078620&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792097460&bar=5m",
+      "duplicate": true
+    },
+    {
+      "id": "EURUSD:setup1:20789:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:20789:countertrend-entry-model-1-v10:1792153680",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-16 14:28",
+      "entryPrice": 1.12492,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.1255199999999999,
+          "riskPips": 6,
+          "maxR": 1.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792159020,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.1252,
+          "riskPips": 2.8,
+          "maxR": 0.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792154100,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A20789%3Acountertrend-entry-model-1-v10%3A1792153680&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792173420&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:21734:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:21734:countertrend-entry-model-1-v10:1792415220",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-19 15:07",
+      "entryPrice": 1.1224,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.123,
+          "riskPips": 6,
+          "maxR": 3.5,
+          "slHit": false,
+          "exitOrDayEnd": 1792425660,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.1228,
+          "riskPips": 4,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792415520,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A21734%3Acountertrend-entry-model-1-v10%3A1792415220&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792440060&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:21698:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:21698:countertrend-entry-model-1-v10:1792415220",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-19 15:07",
+      "entryPrice": 1.1224,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12287,
+          "riskPips": 4.7,
+          "maxR": 4.5,
+          "slHit": false,
+          "exitOrDayEnd": 1792419300,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.1228,
+          "riskPips": 4,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792415520,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A21698%3Acountertrend-entry-model-1-v10%3A1792415220&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792433700&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:22730:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:22730:countertrend-entry-model-1-v10:1792500060",
+      "instrument": "EURUSD",
+      "direction": "long",
+      "entryTime": "2026-10-20 14:41",
+      "entryPrice": 1.12239,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12179,
+          "riskPips": 6,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792506240,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.12187,
+          "riskPips": 5.2,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792506120,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A22730%3Acountertrend-entry-model-1-v10%3A1792500060&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792520640&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:22730:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:22730:countertrend-entry-model-1-v10:1792502280",
+      "instrument": "EURUSD",
+      "direction": "long",
+      "entryTime": "2026-10-20 15:18",
+      "entryPrice": 1.12226,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12187,
+          "riskPips": 3.9,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792503720,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.12201,
+          "riskPips": 2.5,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792503240,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A22730%3Acountertrend-entry-model-1-v10%3A1792502280&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792518120&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:23697:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:23697:countertrend-entry-model-1-v10:1792577100",
+      "instrument": "EURUSD",
+      "direction": "long",
+      "entryTime": "2026-10-21 12:05",
+      "entryPrice": 1.12213,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.1215300000000001,
+          "riskPips": 6,
+          "maxR": 2.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792597860,
+          "2R": "success",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.12186,
+          "riskPips": 2.7,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792577340,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A23697%3Acountertrend-entry-model-1-v10%3A1792577100&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792612260&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:24583:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:24583:countertrend-entry-model-1-v10:1792648980",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-22 08:03",
+      "entryPrice": 1.12459,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12516,
+          "riskPips": 5.7,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792656480,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.1251,
+          "riskPips": 5.1,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792656480,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A24583%3Acountertrend-entry-model-1-v10%3A1792648980&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792670880&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:24583:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:24583:countertrend-entry-model-1-v10:1792652400",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-22 09:00",
+      "entryPrice": 1.1243400000000001,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.1248,
+          "riskPips": 4.6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792653000,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.12464,
+          "riskPips": 3,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792652520,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A24583%3Acountertrend-entry-model-1-v10%3A1792652400&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792667400&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:24780:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:24780:countertrend-entry-model-1-v10:1792652400",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-22 09:00",
+      "entryPrice": 1.1243400000000001,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12494,
+          "riskPips": 6,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1792662600,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.12464,
+          "riskPips": 3,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792652520,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A24780%3Acountertrend-entry-model-1-v10%3A1792652400&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792677000&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:26205:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:26205:countertrend-entry-model-1-v10:1792764000",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-23 16:00",
+      "entryPrice": 1.1199000000000001,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12045,
+          "riskPips": 5.5,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1792764600,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.12022,
+          "riskPips": 3.2,
+          "maxR": 0.5,
+          "slHit": true,
+          "exitOrDayEnd": 1792764480,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A26205%3Acountertrend-entry-model-1-v10%3A1792764000&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792779000&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:26271:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:26271:countertrend-entry-model-1-v10:1792765680",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-23 16:28",
+      "entryPrice": 1.1202,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.1208,
+          "riskPips": 6,
+          "maxR": 2,
+          "slHit": false,
+          "exitOrDayEnd": 1792792800,
+          "2R": "success",
+          "3R": "open"
+        },
+        "narrow": {
+          "stop": 1.12073,
+          "riskPips": 5.3,
+          "maxR": 2,
+          "slHit": false,
+          "exitOrDayEnd": 1792792800,
+          "2R": "success",
+          "3R": "open"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A26271%3Acountertrend-entry-model-1-v10%3A1792765680&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792807200&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:26205:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:26205:countertrend-entry-model-1-v10:1792765680",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-23 16:28",
+      "entryPrice": 1.1202,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.1208,
+          "riskPips": 6,
+          "maxR": 2,
+          "slHit": false,
+          "exitOrDayEnd": 1792792800,
+          "2R": "success",
+          "3R": "open"
+        },
+        "narrow": {
+          "stop": 1.12073,
+          "riskPips": 5.3,
+          "maxR": 2,
+          "slHit": false,
+          "exitOrDayEnd": 1792792800,
+          "2R": "success",
+          "3R": "open"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A26205%3Acountertrend-entry-model-1-v10%3A1792765680&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792807200&bar=5m",
+      "duplicate": true
+    },
+    {
+      "id": "EURUSD:setup1:26271:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:26271:countertrend-entry-model-1-v10:1792767180",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-23 16:53",
+      "entryPrice": 1.12009,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12062,
+          "riskPips": 5.3,
+          "maxR": 2,
+          "slHit": false,
+          "exitOrDayEnd": 1792792800,
+          "2R": "success",
+          "3R": "open"
+        },
+        "narrow": {
+          "stop": 1.12056,
+          "riskPips": 4.7,
+          "maxR": 2.5,
+          "slHit": false,
+          "exitOrDayEnd": 1792792800,
+          "2R": "success",
+          "3R": "open"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A26271%3Acountertrend-entry-model-1-v10%3A1792767180&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792807200&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:26205:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:26205:countertrend-entry-model-1-v10:1792767180",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-23 16:53",
+      "entryPrice": 1.12009,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.12062,
+          "riskPips": 5.3,
+          "maxR": 2,
+          "slHit": false,
+          "exitOrDayEnd": 1792792800,
+          "2R": "success",
+          "3R": "open"
+        },
+        "narrow": {
+          "stop": 1.12056,
+          "riskPips": 4.7,
+          "maxR": 2.5,
+          "slHit": false,
+          "exitOrDayEnd": 1792792800,
+          "2R": "success",
+          "3R": "open"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A26205%3Acountertrend-entry-model-1-v10%3A1792767180&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1792807200&bar=5m",
+      "duplicate": true
+    },
+    {
+      "id": "GBPUSD:setup1:27414:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:27414:countertrend-entry-model-1-v10:1793007420",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-26 10:37",
+      "entryPrice": 1.3348,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.33432,
+          "riskPips": 4.8,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793008740,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.33436,
+          "riskPips": 4.4,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793008620,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A27414%3Acountertrend-entry-model-1-v10%3A1793007420&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793023140&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:27523:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:27523:countertrend-entry-model-1-v10:1793013240",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-26 12:14",
+      "entryPrice": 1.3347799999999999,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.33418,
+          "riskPips": 6,
+          "maxR": 1.5,
+          "slHit": true,
+          "exitOrDayEnd": 1793020800,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.33454,
+          "riskPips": 2.4,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793013600,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A27523%3Acountertrend-entry-model-1-v10%3A1793013240&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793035200&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:28742:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:28742:countertrend-entry-model-1-v10:1793097540",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-27 11:39",
+      "entryPrice": 1.33162,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.33102,
+          "riskPips": 6,
+          "maxR": 2.5,
+          "slHit": true,
+          "exitOrDayEnd": 1793116080,
+          "2R": "success",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.3311,
+          "riskPips": 5.2,
+          "maxR": 3,
+          "slHit": true,
+          "exitOrDayEnd": 1793103120,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A28742%3Acountertrend-entry-model-1-v10%3A1793097540&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793130480&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:28742:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:28742:countertrend-entry-model-1-v10:1793111460",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-27 15:31",
+      "entryPrice": 1.33283,
+      "category": "full",
+      "variants": {
+        "wide": {
+          "stop": 1.33223,
+          "riskPips": 6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793112120,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.33229,
+          "riskPips": 5.4,
+          "maxR": 0.5,
+          "slHit": true,
+          "exitOrDayEnd": 1793112120,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A28742%3Acountertrend-entry-model-1-v10%3A1793111460&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793126520&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:29011:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:29011:countertrend-entry-model-1-v10:1793111460",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-27 15:31",
+      "entryPrice": 1.33283,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.33223,
+          "riskPips": 6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793112120,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.33229,
+          "riskPips": 5.4,
+          "maxR": 0.5,
+          "slHit": true,
+          "exitOrDayEnd": 1793112120,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A29011%3Acountertrend-entry-model-1-v10%3A1793111460&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793126520&bar=5m",
+      "duplicate": true
+    },
+    {
+      "id": "EURUSD:setup1:29956:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:29956:countertrend-entry-model-1-v10:1793180040",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-28 10:34",
+      "entryPrice": 1.1122,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.11262,
+          "riskPips": 4.2,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793180400,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.1124100000000001,
+          "riskPips": 2.1,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793180280,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A29956%3Acountertrend-entry-model-1-v10%3A1793180040&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1793194800&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:30125:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:30125:countertrend-entry-model-1-v10:1793193060",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-28 14:11",
+      "entryPrice": 1.1131900000000001,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.11366,
+          "riskPips": 4.7,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793194920,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.11365,
+          "riskPips": 4.6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793194920,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A30125%3Acountertrend-entry-model-1-v10%3A1793193060&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1793209320&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:30216:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:30216:countertrend-entry-model-1-v10:1793197680",
+      "instrument": "GBPUSD",
+      "direction": "short",
+      "entryTime": "2026-10-28 15:28",
+      "entryPrice": 1.32877,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.32937,
+          "riskPips": 6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793198640,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.32917,
+          "riskPips": 4,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793198220,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A30216%3Acountertrend-entry-model-1-v10%3A1793197680&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793213040&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:30218:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:30218:countertrend-entry-model-1-v10:1793198700",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-28 15:45",
+      "entryPrice": 1.11277,
+      "category": "full",
+      "variants": {
+        "wide": {
+          "stop": 1.11337,
+          "riskPips": 6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793199300,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.1131900000000001,
+          "riskPips": 4.2,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793199060,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A30218%3Acountertrend-entry-model-1-v10%3A1793198700&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1793213700&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:31289:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:31289:countertrend-entry-model-1-v10:1793265120",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-29 10:12",
+      "entryPrice": 1.11362,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.11422,
+          "riskPips": 6,
+          "maxR": 1.5,
+          "slHit": true,
+          "exitOrDayEnd": 1793269680,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.11444,
+          "riskPips": 8.2,
+          "maxR": 1,
+          "slHit": true,
+          "exitOrDayEnd": 1793270700,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A31289%3Acountertrend-entry-model-1-v10%3A1793265120&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1793285100&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:31602:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:31602:countertrend-entry-model-1-v10:1793281080",
+      "instrument": "GBPUSD",
+      "direction": "short",
+      "entryTime": "2026-10-29 14:38",
+      "entryPrice": 1.33205,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.33265,
+          "riskPips": 6,
+          "maxR": 0.5,
+          "slHit": true,
+          "exitOrDayEnd": 1793282820,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.33311,
+          "riskPips": 10.6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793282940,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A31602%3Acountertrend-entry-model-1-v10%3A1793281080&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793297340&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:31602:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:31602:countertrend-entry-model-1-v10:1793283180",
+      "instrument": "GBPUSD",
+      "direction": "short",
+      "entryTime": "2026-10-29 15:13",
+      "entryPrice": 1.33299,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.3335899999999998,
+          "riskPips": 6,
+          "maxR": 1,
+          "slHit": true,
+          "exitOrDayEnd": 1793283660,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.3336999999999999,
+          "riskPips": 7.1,
+          "maxR": 0.5,
+          "slHit": true,
+          "exitOrDayEnd": 1793283660,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A31602%3Acountertrend-entry-model-1-v10%3A1793283180&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793298060&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "EURUSD:setup1:32996:countertrend-entry-model-1-v10:3:EURUSD:EURUSD:setup1:32996:countertrend-entry-model-1-v10:1793360880",
+      "instrument": "EURUSD",
+      "direction": "short",
+      "entryTime": "2026-10-30 12:48",
+      "entryPrice": 1.1194600000000001,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.11997,
+          "riskPips": 5.1,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1793364120,
+          "2R": "success",
+          "3R": "success"
+        },
+        "narrow": {
+          "stop": 1.11981,
+          "riskPips": 3.5,
+          "maxR": 5,
+          "slHit": false,
+          "exitOrDayEnd": 1793363940,
+          "2R": "success",
+          "3R": "success"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=EURUSD%3AEURUSD%3Asetup1%3A32996%3Acountertrend-entry-model-1-v10%3A1793360880&run=live-watcher%3A2026-10&variant=both&instrument=EURUSD&replay=1793378520&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:33144:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:33144:countertrend-entry-model-1-v10:1793375460",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-30 16:51",
+      "entryPrice": 1.33904,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.33844,
+          "riskPips": 6,
+          "maxR": 2.5,
+          "slHit": true,
+          "exitOrDayEnd": 1793383020,
+          "2R": "success",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.33825,
+          "riskPips": 7.9,
+          "maxR": 1.5,
+          "slHit": false,
+          "exitOrDayEnd": 1793401200,
+          "2R": "open",
+          "3R": "open"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A33144%3Acountertrend-entry-model-1-v10%3A1793375460&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793415600&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:33144:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:33144:countertrend-entry-model-1-v10:1793378040",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-30 17:34",
+      "entryPrice": 1.3398299999999999,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.33923,
+          "riskPips": 6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793378640,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.33948,
+          "riskPips": 3.5,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793378520,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A33144%3Acountertrend-entry-model-1-v10%3A1793378040&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793393040&bar=5m",
+      "duplicate": false
+    },
+    {
+      "id": "GBPUSD:setup1:33144:countertrend-entry-model-1-v10:3:GBPUSD:GBPUSD:setup1:33144:countertrend-entry-model-1-v10:1793378880",
+      "instrument": "GBPUSD",
+      "direction": "long",
+      "entryTime": "2026-10-30 17:48",
+      "entryPrice": 1.33977,
+      "category": "risky",
+      "variants": {
+        "wide": {
+          "stop": 1.33917,
+          "riskPips": 6,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793381160,
+          "2R": "loss",
+          "3R": "loss"
+        },
+        "narrow": {
+          "stop": 1.33904,
+          "riskPips": 7.3,
+          "maxR": 0,
+          "slHit": true,
+          "exitOrDayEnd": 1793381220,
+          "2R": "loss",
+          "3R": "loss"
+        }
+      },
+      "chart": "https://phil1234566789.github.io/trading-monitor/#/?setup2=GBPUSD%3AGBPUSD%3Asetup1%3A33144%3Acountertrend-entry-model-1-v10%3A1793378880&run=live-watcher%3A2026-10&variant=both&instrument=GBPUSD&replay=1793395620&bar=5m",
+      "duplicate": false
+    }
+  ]
+}
