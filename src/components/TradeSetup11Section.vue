@@ -24,6 +24,7 @@ import ActionButton from './ui/ActionButton.vue';
 import {renderLowerStructure} from '../structureOverlay.js';
 import {barSecondsFor} from '../timeframes.js';
 import {dobEntryM1Structure} from '../dobEntryM1Structure.js';
+import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
 
 // Nur Ansicht/Diagnose: Fälle sind Philips Pins zu TS1.1, neue Pins erscheinen beim nächsten Laden ohne Codeänderung.
 const route=useRoute(),router=useRouter();
@@ -134,9 +135,15 @@ function setInstrument(instrument){
  symbol=instrument;
  series.applyOptions({priceFormat:priceFormatFor(instrument)});
 }
+// Wie die DOB-Sektion: nur bis zur am Zeitbalken geschlossenen Kerze, damit die Historie mitläuft.
+function shownCandles(){
+ const d=data.value;if(!d)return [];
+ const all=tf.value==='m1'?d.m1:d.m5;
+ return diagnosis.value?closedChecklistCandles(all,tf.value==='m1'?'1m':'5m',diagnosis.value.evaluatedAt):all;
+}
 function draw(){
  if(!series||!data.value||!diagnosis.value)return;
- const {kase,window:w,located}=data.value,candles=tf.value==='m1'?data.value.m1:data.value.m5,d=diagnosis.value;
+ const {kase,window:w,located}=data.value,candles=shownCandles(),d=diagnosis.value;
  if(!candles.length)return;
  setInstrument(kase.instrument);
  series.setData(candles);
@@ -179,7 +186,7 @@ function draw(){
 // Struktur wie in DOB-Entry M1 (dieselbe Berechnung); Anker = Fensterbeginn, also mindestens 24 h vor dem Fall.
 function drawStructure(){
  if(!series)return;
- const bar=tf.value==='m1'?'1m':'5m',candles=data.value?(tf.value==='m1'?data.value.m1:data.value.m5):[],instrument=data.value?.kase.instrument;
+ const bar=tf.value==='m1'?'1m':'5m',candles=shownCandles(),instrument=data.value?.kase.instrument;
  const result=structure.value&&candles.length?dobEntryM1Structure(candles,bar,data.value.window.view.from,instrument):null;
  renderLowerStructure(series,result,structurePrimitives,structureMarkers,candles,{symbol:instrument,replayUntil:candles.at(-1)?.time,
   show:!!result,debug:!!result,barSeconds:barSecondsFor(bar),timeframe:bar});

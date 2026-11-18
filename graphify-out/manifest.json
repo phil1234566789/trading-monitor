@@ -10806,9 +10806,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetup11Section.vue": {
-    "mtime": 1795039880.3095243,
-    "seen": 1795039947.8632853,
-    "ast_hash": "4378a50265d5c7e178695a19465e6c4b",
+    "mtime": 1795040189.6405456,
+    "seen": 1795040300.5041378,
+    "ast_hash": "715290e5838222c0fdc6fd6c89679a9c",
     "semantic_hash": ""
   },
   "src/tradeSetup11Debugger.js": {
