@@ -145,6 +145,15 @@ export function dobLiveWindowStart(m1Candles,instrument,evaluatedAt){
  return -Infinity;
 }
 
+// Datenstand des Live-Laufs: der M1-Feed liefert die letzte Kerze 1–2 min nach ihrem Schluss. Gegen die Uhrzeit gerechnet endet jeder
+// Reaktions-Walk sonst in einer Lücke (missingHistory statt awaitingFvg), und der OB2-Retest-Alarm kam nie. Bis maxLag gilt der Schluss der
+// letzten M1 als Stand; längere Lücken bleiben Lücken (Stale-Alarm, Marktschluss).
+export function dobDataAsOf(m1Candles,evaluatedAt,maxLag=180){
+ const last=closedChecklistCandles(m1Candles,'1m',evaluatedAt).at(-1);
+ const asOf=last?last.time+60:null;
+ return asOf!=null&&evaluatedAt-asOf<=maxLag?Math.min(evaluatedAt,asOf):evaluatedAt;
+}
+
 // Kerzen vor dem Schluss, die ein M5-OB/M1-FVG direkt nach dem Reopen als Vorgänger braucht: ohne sie fehlten
 // über 2026 13 Setups, die das Dashboard-Fenster zeigt. ponytail: fest 1 h, mehr nur, falls die Gegenprobe wieder abweicht.
 const LIVE_LOOKBACK_BARS={m5:12,m1:60};

@@ -1,6 +1,6 @@
 // DOB-Live-Watcher: jede Minute (pg_cron) checkDobTradeSetup() auf dem Fenster seit der letzten Tagespause, Alarm an Telegram
 // („Milky Land Alerts“, TELEGRAM_CHAT_ID). Erkennung und Texte kommen unverändert aus src/, damit Statistik und Alarm gleich rechnen.
-import {checkDobTradeSetup,dobLiveWindowInput} from '../../../src/dobTradeSetup.js';
+import {checkDobTradeSetup,dobDataAsOf,dobLiveWindowInput} from '../../../src/dobTradeSetup.js';
 import {markIgnoredCandles,htfObCandles} from '../../../src/sessionOccurrences.js';
 import {berlinOffsetMinutes,berlinDateStrFor,formatBerlinTime} from '../../../src/berlinTime.js';
 import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
@@ -106,16 +106,18 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const tradeSetups=poiTypes.some(p=>p.poiType==='lq_sweep')?(checked(await client.from('trade_setups')
     .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,ob_zones(top,bottom)')
     .eq('instrument',instrument).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[]).map(dobTs11FromRow):[];
-  const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
+  // Erkennung zum Datenstand (letzte M1, Feed-Verzug ≤ 3 min), Herzschlag, Stale-Alarm und Alarmfenster zur Uhrzeit.
+  const asOf=dobDataAsOf(m1Marked,evaluatedAt);
+  const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt:asOf,m1Candles:m1Marked,m5Candles:m5Marked,
     htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),
     counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:instrument}),tradeSetups};
   // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
-  const calcStart=performance.now(),runs:any[]=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
+  const calcStart=performance.now(),runs:any[]=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt:asOf,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
   const stale=dobStaleAlarm({instrument:instrument,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   const events=[...runs.flatMap(r=>r.events.map((event:any)=>({event,run:r}))),...(stale?[{event:stale,run:null}]:[])];
   const count=(key:'setups'|'rejected')=>runs.reduce((n,r)=>n+r.result[key].length,0);
   const policy=await alarmPolicy(client,instrument),blocked=policy.decide(evaluatedAt);
-  if(dry)return {dry:true,evaluatedAt,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
+  if(dry)return {dry:true,evaluatedAt,asOf,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
     alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,
     poiTypes:Object.fromEntries(poiTypes.map(({poiType,guardrails})=>{const r=runs.find(x=>x.poiType===poiType);
@@ -132,14 +134,14 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
     // Erster zugestellter Alarm eines Paars: DOB + POI anpinnen. Ein Pin-Fehler darf den schon versendeten Alarm nicht stören.
     const setup=run&&event.setupId&&[...run.result.setups,...run.result.rejected].find((s:any)=>s.id===event.setupId),pair=setup&&run.result.pairs.get(setup.pairId);
     if(pair&&(d.status==='sent'||d.status==='uncertain')){
-      try{d.autoPin=await dobAutoPin(client,{event,setup,pair,evaluatedAt,m5Candles:m5Marked,m1Candles:m1Marked});}
+      try{d.autoPin=await dobAutoPin(client,{event,setup,pair,evaluatedAt:asOf,m5Candles:m5Marked,m1Candles:m1Marked});}
       catch(error){d.autoPin={error:error instanceof Error?error.message:String(error)};console.error('DOB-Auto-Pin fehlgeschlagen',event.id,d.autoPin.error);}
     }
   }
   await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
     runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:count('setups'),rejected:count('rejected'),skipped:null,error:null,
     // Heutige Kandidaten fürs DOB-Watcher-Panel; außerhalb 02–22 Uhr bleibt der letzte Stand stehen.
-    candidates:dobWatcherCandidates(runs,evaluatedAt,instrument)});
+    candidates:dobWatcherCandidates(runs,asOf,instrument)});
   return {evaluatedAt,calcMs,poiTypes:runs.map(r=>r.poiType),setups:count('setups'),events:events.length,delivered};
 }
 

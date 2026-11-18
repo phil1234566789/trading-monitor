@@ -1,6 +1,6 @@
 import {readdirSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-import {checkDobTradeSetup,dobLiveWindowInput,dobLiveWindowStart} from '../src/dobTradeSetup.js';
+import {checkDobTradeSetup,dobDataAsOf,dobLiveWindowInput,dobLiveWindowStart} from '../src/dobTradeSetup.js';
 import {poiMaxDistanceAtr} from '../src/dobHtfObPoi.js';
 import {berlinOffsetMinutes} from '../src/berlinTime.js';
 import {directory,load,poiContext,run,berlin} from './dobFixtures.js';
@@ -106,6 +106,19 @@ describe('checkDobTradeSetup: Phase ob2Retest',()=>{
   const after=run(fixture,done.recognizedAt).setups.filter(s=>s.pairId===done.pairId);
   expect(after.map(s=>s.phase)).not.toContain('ob2Retest');
   expect(after.length).toBeGreaterThan(0);
+ });
+ // Live hängt der M1-Feed eine Minute nach: gegen die Uhrzeit gerechnet wurde der Retest zu missingHistory, der Alarm kam nie.
+ it('#134 meldet ob2Retest auch mit einer Minute Feed-Verzug, wenn der Watcher zum Datenstand rechnet',()=>{
+  const fixture=load('2026-11-12'),done=nearestIn(run(fixture).setups,{day:'2026-11-12',at:'14:11',direction:'short'});
+  const contactKnown=done.chart.secondRetestTime+60,clock=contactKnown+63;
+  const lagged={...fixture,candles:{...fixture.candles,m1:fixture.candles.m1.filter(c=>c.time+60<=contactKnown)}};
+  const retestOf=result=>all(result).find(s=>s.pairId===done.pairId&&s.phase==='ob2Retest');
+  expect(retestOf(run(lagged,clock))).toBeUndefined();
+  const asOf=dobDataAsOf(lagged.candles.m1,clock);
+  expect(asOf).toBe(contactKnown);
+  expect(retestOf(run(lagged,asOf))).toMatchObject({phaseSince:contactKnown});
+  // Längere Lücke bleibt Lücke.
+  expect(dobDataAsOf(lagged.candles.m1,contactKnown+600)).toBe(contactKnown+600);
  });
 });
 
