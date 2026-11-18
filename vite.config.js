@@ -3,6 +3,7 @@ import vue from "@vitejs/plugin-vue";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { execSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEBUG_DIR = path.join(__dirname, ".debug");
@@ -58,8 +59,31 @@ function debugMetadataWriter() {
   };
 }
 
+// Commit dieses Builds: im Bundle als __APP_SHA__, im dist als version.json. Die App vergleicht
+// beides (src/appVersion.js), weil GitHub Pages index.html 10 min cacht und F5 sonst alte Fassungen zeigt.
+function gitSha() {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA;
+  try {
+    return execSync("git rev-parse HEAD").toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
+const APP_SHA = gitSha();
+
+function versionJson() {
+  return {
+    name: "version-json",
+    apply: "build",
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: "version.json", source: JSON.stringify({ sha: APP_SHA, time: new Date().toISOString() }) });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [vue(), debugMetadataWriter()],
+  plugins: [vue(), debugMetadataWriter(), versionJson()],
+  define: { __APP_SHA__: JSON.stringify(APP_SHA) },
   // GitHub Pages liefert dieses Repo unter /trading-monitor/ aus (Project Page, kein
   // username.github.io-Root-Repo) — ohne base würden alle Asset-Pfade im Build von / statt
   // /trading-monitor/ ausgehen und 404en. Hash-History (siehe router.js) macht den Rest der

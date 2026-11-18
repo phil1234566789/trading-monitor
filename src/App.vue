@@ -9,8 +9,12 @@ import { useAlgoWatcher } from "./composables/useAlgoWatcher.js";
 import HttpErrorBanners from "./components/HttpErrorBanners.vue";
 import DrawingsModal from "./components/DrawingsModal.vue";
 import ToggleButton from "./components/ui/ToggleButton.vue";
+import ActionButton from "./components/ui/ActionButton.vue";
+import { useNewVersion, reloadUrl } from "./appVersion.js";
 import { CHART_MODES, chartMode, chartHint } from "./chartModes.js";
 
+const newSha = useNewVersion();
+const loadNewVersion = () => window.location.assign(reloadUrl(window.location, newSha.value));
 const { health: watcherHealth, tooltip: watcherTooltip } = useAlgoWatcher();
 const showDrawingsModal = ref(false);
 // Persistiert in Supabase (siehe useDrawings.js/drawingsStore.js) — hier nur der
@@ -82,6 +86,10 @@ const lastUpdateText = computed(() =>
         <span v-if="isActive" class="http-activity" :title="activeLabels.join(', ')">
           <span class="http-spinner"></span>
           {{ activeLabels.join(", ") }}
+        </span>
+        <span v-if="newSha" class="new-version">
+          Neue Version
+          <ActionButton class="new-version-btn" @click="loadNewVersion">Neu laden</ActionButton>
         </span>
       </div>
       <div class="bar-right">
@@ -175,6 +183,18 @@ const lastUpdateText = computed(() =>
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.new-version {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #7ea6ff;
+}
+
+.new-version-btn {
+  padding: 2px 8px;
+  font-size: 12px;
 }
 
 .last-update {
