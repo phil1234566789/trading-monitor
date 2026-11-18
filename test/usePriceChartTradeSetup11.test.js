@@ -4,7 +4,7 @@ vi.mock('../src/sessions.js',()=>({sessions:[{instrument:'XAUUSD',id:'gold'},{in
 vi.mock('../src/candleCache.js',()=>({fetchCandlesCached:mocks.fetch}));
 vi.mock('../src/composables/usePriceChartTradeSetups.js',()=>({usePriceChartTradeSetups(options){
   mocks.evaluate=options.evaluateCandidates;
-  return {tradeSetupsMetadata:{value:[]},getM5Candles:()=>[{time:300}],invalidate:vi.fn(),computeTradeSetups:mocks.compute,fetchM5Candles:mocks.baseFetch};
+  return {tradeSetupsMetadata:{value:[]},getM5Candles:()=>[{time:300}],invalidate:vi.fn(),holdsFor:()=>false,computeTradeSetups:mocks.compute,fetchM5Candles:mocks.baseFetch};
 }}));
 import {usePriceChartTradeSetup11,TRADE_SETUP_11_CONTEXT_COUNTS} from '../src/composables/usePriceChartTradeSetup11.js';
 import sqlCases from '../scripts/fixtures/tradeSetupSourceSqlCases.json';

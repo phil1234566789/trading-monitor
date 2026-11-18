@@ -39,8 +39,10 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
   function computeTradeSetups(input) {
     if(disposed)return;
     if(loadState==='loading'){
-      pendingInput=input;base.invalidate();
-      status.value='TS1.1: Native M5-/H1-/D1-Daten laden …';return;
+      pendingInput=input;
+      const held=base.holdsFor(input.symbol,input.evaluatedAt);
+      base.invalidate({symbol:input.symbol,evaluatedAt:input.evaluatedAt});
+      if(!held)status.value='TS1.1: Native M5-/H1-/D1-Daten laden …';return;
     }
     if(loadState==='error'){base.invalidate();status.value=loadError;return;}
     const matching=context.symbol===input.symbol;
@@ -55,8 +57,10 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
   async function fetchM5Candles(input) {
     const request=++revision;
     loadState='loading';loadError=null;pendingInput=null;
-    evaluation++;worker.cancel();base.invalidate();assessments.value=[];
-    status.value='TS1.1: Native M5-/H1-/D1-Daten laden …';
+    // Poll am selben Symbol/Stand: letzte Setups und Bewertungen sichtbar lassen, bis neue fertig sind.
+    const held=base.holdsFor(input.symbol,input.evaluatedAt);
+    evaluation++;worker.cancel();base.invalidate({symbol:input.symbol,evaluatedAt:input.evaluatedAt});
+    if(!held){assessments.value=[];status.value='TS1.1: Native M5-/H1-/D1-Daten laden …';}
     onUpdate?.();
     const loadContext=async()=>{
       try {

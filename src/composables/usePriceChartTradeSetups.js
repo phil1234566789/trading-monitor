@@ -44,6 +44,15 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
   let computationRevision = 0;
 
   const tradeSetupsMetadata = ref([]);
+  // Stand der sichtbaren Setups. Während Poll/Worker-Neuberechnung bleibt er stehen (sonst flackert
+  // die Zeichnung); geleert wird nur bei Symbolwechsel oder Rücksprung, damit kein Zukunftswissen erscheint.
+  let shown = null;
+  const holdsFor = (symbol, at) => shown?.symbol === symbol && Number.isFinite(at) && Number.isFinite(shown.at) && at >= shown.at;
+  function clearUnlessHeld(symbol, at) {
+    if (holdsFor(symbol, at)) return;
+    shown = null;
+    tradeSetupsMetadata.value = [];
+  }
 
   function getM5Candles() {
     return m5Candles;
@@ -61,6 +70,7 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
     if (candles.length === 0) {
       computationRevision++;
       computedInputKey = null;
+      shown = null;
       tradeSetupsMetadata.value = [];
       return;
     }
@@ -121,10 +131,11 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
       ...shorts.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Highs, symbol), label: "Short", setupNumber: n > 1 ? i + 1 : null })),
       ...longs.map((s, i) => ({ ...s, invalidationTarget: setupInvalidationTarget(s, m5Lows, symbol), label: "Long", setupNumber: n > 1 ? i + 1 : null })),
       ];
+      shown = { symbol, at: policyContext?.evaluatedAt };
     };
     computedInputKey = inputKey;
     if(candidates?.then){
-      tradeSetupsMetadata.value=[];
+      clearUnlessHeld(symbol, policyContext?.evaluatedAt);
       return candidates.then(rows=>{
         if(computationRevision!==request)return;
         apply(rows);onEvaluated?.();
@@ -189,6 +200,7 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
     }
   }
 
-  function invalidate(){computationRevision++;computedInputKey=null;tradeSetupsMetadata.value=[];}
-  return { tradeSetupsMetadata, getM5Candles, getTrendAnalysisM5Candles, computeTradeSetups, fetchM5Candles, invalidate };
+  // Ohne Scope (z.B. dispose) immer leeren; mit Scope bleibt ein gleicher/späterer Stand sichtbar.
+  function invalidate(scope={}){computationRevision++;computedInputKey=null;clearUnlessHeld(scope.symbol,scope.evaluatedAt);}
+  return { tradeSetupsMetadata, getM5Candles, getTrendAnalysisM5Candles, computeTradeSetups, fetchM5Candles, invalidate, holdsFor };
 }

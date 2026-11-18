@@ -4,7 +4,7 @@
 // in tradeSetupPipeline.test.js gegen echte Kerzen-Fixtures abgesichert — hier geht es nur um die
 // Orchestrierung DRUMHERUM, die bei der Migration neu geschrieben wurde: den leeren-Kerzen-Guard,
 // die history-Count-Slicing/setupNumber-Vergabe und die label-Zuordnung je Richtung.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { usePriceChartTradeSetups } from "../src/composables/usePriceChartTradeSetups.js";
 import gbpusdM5LongSetup0720 from "./fixtures/gbpusd-m5-2026-07-20-long-setup.json";
 import xauContinuation from './fixtures/xau-ts1-sweep-20261110.json';
@@ -60,6 +60,36 @@ describe("computeTradeSetups", () => {
     computeTradeSetups({ ...BASE_CTX, candles: gbpusdM5LongSetup0720, tradeSetupHistoryCount: 5 });
     const longs = tradeSetupsMetadata.value.filter((s) => s.label === "Long");
     expect(longs.map((s) => s.setupNumber)).toEqual(longs.map((_, i) => i + 1));
+  });
+});
+
+describe("computeTradeSetups: asynchrone Policy ohne Flackern", () => {
+  it("hält den letzten Stand während Poll und Neuberechnung, leert bei Symbolwechsel und Rücksprung", async () => {
+    let release;
+    const evaluateCandidates = vi.fn(rows => evaluateCandidates.mock.calls.length === 1
+      ? Promise.resolve(rows) : new Promise(resolve => { release = () => resolve(rows); }));
+    const { tradeSetupsMetadata, computeTradeSetups, invalidate } = usePriceChartTradeSetups({ evaluateCandidates });
+    const at = 1784540000;
+    await computeTradeSetups({ ...BASE_CTX, candles: gbpusdM5LongSetup0720, policyContext: { evaluatedAt: at } });
+    const shown = tradeSetupsMetadata.value;
+    expect(shown.length).toBeGreaterThan(0);
+    invalidate({ symbol: "GBPUSD", evaluatedAt: at });
+    expect(tradeSetupsMetadata.value).toBe(shown);
+    const next = computeTradeSetups({ ...BASE_CTX, candles: gbpusdM5LongSetup0720, policyContext: { evaluatedAt: at + 300 } });
+    expect(tradeSetupsMetadata.value).toBe(shown);
+    release(); await next;
+    expect(tradeSetupsMetadata.value.length).toBeGreaterThan(0);
+    invalidate({ symbol: "GBPUSD", evaluatedAt: at });
+    expect(tradeSetupsMetadata.value).toEqual([]);
+  });
+  it("leert sofort bei anderem Symbol oder ohne Scope", async () => {
+    const { tradeSetupsMetadata, computeTradeSetups, invalidate } = usePriceChartTradeSetups({ evaluateCandidates: rows => Promise.resolve(rows) });
+    await computeTradeSetups({ ...BASE_CTX, candles: gbpusdM5LongSetup0720, policyContext: { evaluatedAt: 1784540000 } });
+    invalidate({ symbol: "EURUSD", evaluatedAt: 1784540000 });
+    expect(tradeSetupsMetadata.value).toEqual([]);
+    await computeTradeSetups({ ...BASE_CTX, candles: gbpusdM5LongSetup0720, tradeSetupHistoryCount: 2, policyContext: { evaluatedAt: 1784540000 } });
+    invalidate();
+    expect(tradeSetupsMetadata.value).toEqual([]);
   });
 });
 
