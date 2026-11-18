@@ -28,7 +28,7 @@ export function dobWatcherCandidates(runs,evaluatedAt,instrument){
    if(!PHASES.has(s.phase))continue;
    const time=s.entryTime??s.phaseSince;
    if(!Number.isFinite(time)||berlinDateStrFor(s.phaseSince)!==today)continue;
-   const status=statusOf(s,evaluatedAt),ob2=`${s.direction}:${s.chart.secondOrderBlockStart}`,key=`${poiType}:${ob2}`,old=rows.get(key);
+   const status=statusOf(s,evaluatedAt),ob2=`${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`,key=`${poiType}:${ob2}`,old=rows.get(key);
    if(old&&RANK[old.status]>=RANK[status])continue;
    const setup={...s,instrument};
    const parts=[dobPoiLine(setup,poiType).replace(/^POI: /,'')];
