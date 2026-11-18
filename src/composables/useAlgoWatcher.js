@@ -9,6 +9,8 @@ let users = 0;
 let pollTimer;
 let clockTimer;
 let loading = false;
+// Versteckte Tabs (auch Agenten-Browserpanes) pollten rund um die Uhr mit; der Server-Watcher braucht das nicht.
+const refreshIfVisible = () => { if (!document.hidden) void refresh(); };
 async function refresh() {
   if (loading) return;
   loading = true;
@@ -20,12 +22,13 @@ export function useAlgoWatcher() {
   onMounted(() => {
     if (users++ === 0) {
       void refresh();
-      pollTimer = setInterval(refresh, 15000);
+      pollTimer = setInterval(refreshIfVisible, 15000);
+      document.addEventListener("visibilitychange", refreshIfVisible);
       clockTimer = setInterval(() => { now.value = Date.now(); }, 1000);
     }
   });
   onUnmounted(() => {
-    if (--users === 0) { clearInterval(pollTimer); clearInterval(clockTimer); }
+    if (--users === 0) { clearInterval(pollTimer); clearInterval(clockTimer); document.removeEventListener("visibilitychange", refreshIfVisible); }
   });
   const health = computed(() => error.value && !report.value ? {state:now.value-failureSince.value>300000?'error':'warning',label:now.value-failureSince.value>300000?'Störung':'Warnung',actionRequired:now.value-failureSince.value>300000,action:'Serverstatus ist nicht verlässlich. Bis zur Entwarnung die Marktbeobachtung selbst übernehmen.',pulse:false,reason:error.value} : watcherHealth(report.value, now.value));
   const tooltip = computed(() => watcherTooltip(report.value, health.value));
