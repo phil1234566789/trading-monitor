@@ -28,10 +28,14 @@ defineProps({
         <td>
           <span class="trade-direction" :class="r.direction">{{ r.directionLabel }}</span>
         </td>
-        <td>{{ r.detail }}</td>
+        <td>{{ r.detail }}<a v-if="r.link" class="chart-link" :href="r.link" target="_blank" rel="noopener">Chart</a></td>
         <td>{{ r.price }}</td>
         <td>{{ r.deliveryLabel ?? (r.notifiedAt ? "TG ✅" : "–") }}</td>
       </tr>
     </tbody>
   </table>
 </template>
+<style scoped>
+.chart-link{margin-left:8px;color:#91b8ff;cursor:pointer}
+.chart-link:focus-visible{outline:2px solid #91b8ff;outline-offset:2px}
+</style>

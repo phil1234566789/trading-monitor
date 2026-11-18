@@ -2,6 +2,7 @@ import { setup2AlarmRow } from "./algoWatcher.js";
 import { supabase } from "./supabaseClient.js";
 import { fetchTouchedZones, MAX_PROTOKOLL_ZEILEN } from "./poiZones.js";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
+import { dobAlarmLogRows } from "./dobAlarmLog.js";
 
 // Rohe (nicht auf Chart-Primitives gemappte) Zeilen fürs Protokoll — analog zu
 // fetchTouchedZones in poiZones.js, nur für liquidity_levels statt ob_zones.
@@ -39,16 +40,24 @@ async function fetchSetup2Alarms(instrument) {
   return data;
 }
 
-// Vereinheitlicht alle drei Alarm-Typen (siehe alarmSettings.js ALARM_TYPES) in eine
+async function fetchDobAlarms(instrument) {
+  const { data, error } = await supabase.from("dob_alarm_events").select("*")
+    .eq("instrument", instrument).order("signal_at", { ascending: false }).limit(MAX_PROTOKOLL_ZEILEN);
+  if (error) throw error;
+  return data;
+}
+
+// Vereinheitlicht alle Alarm-Typen (siehe alarmSettings.js ALARM_TYPES) in eine
 // gemeinsame, chronologisch sortierte Zeitleiste fürs Protokoll — jeder Typ bringt sein
 // eigenes DB-Schema mit, hier nur auf die fürs Protokoll gemeinsamen Anzeige-Felder gemappt.
 export async function fetchAlarmLog(instrument) {
   const precision = pricePrecisionForInstrument(instrument);
-  const [zones, liquidity, setups, setup2Events] = await Promise.all([
+  const [zones, liquidity, setups, setup2Events, dobEvents] = await Promise.all([
     fetchTouchedZones(instrument),
     fetchTouchedLiquidityLevels(instrument),
     fetchTradeSetups(instrument),
     fetchSetup2Alarms(instrument),
+    fetchDobAlarms(instrument),
   ]);
 
   const rows = [
@@ -90,6 +99,7 @@ export async function fetchAlarmLog(instrument) {
       notifiedAt: s.notified_at,
     })),
     ...setup2Events.map(setup2AlarmRow),
+    ...dobAlarmLogRows(dobEvents),
   ];
 
   rows.sort((a, b) => new Date(b.time) - new Date(a.time));
