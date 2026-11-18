@@ -30,7 +30,8 @@ export const dobWarnText=(guardrail,guardrails,entryTime)=>{const w=guardrail===
  return w?`${WARN_TEXT[guardrail]} ${clock(w.from)}–${clock(w.to)}, Entry`:WARN_TEXT[guardrail];};
 
 // Preise mit der Nachkommazahl des Instruments (XAU 2, Forex 5).
-const price=(v,instrument='XAUUSD')=>{const d=instrumentConfig(instrument).precision;return Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';};
+export const dobPrice=(v,instrument='XAUUSD')=>{const d=instrumentConfig(instrument).precision;return Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';};
+const price=dobPrice;
 const zone=(z,instrument)=>`${price(z.bottom,instrument)}–${price(z.top,instrument)}`;
 const rText=k=>`${k.toLocaleString('de-DE')}R`;
 // TP nach Konfig wie die Statistik (dobConfigTpR: Gegen-DOB tot → 5R, Zeitfenster-TP, sonst Default) samt Teilprofit; Preise aus dem

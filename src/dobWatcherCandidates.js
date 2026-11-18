@@ -1,5 +1,6 @@
 import {berlinDateStrFor,formatBerlinTime} from './berlinTime.js';
-import {dobPoiLine,dobTpLine,dobWarnText} from './dobAlarm.js';
+import {dobPoiLine,dobPrice,dobTpLine,dobWarnText} from './dobAlarm.js';
+import {DOB_DEFAULT_TP_R} from './dobGuardrails.js';
 import {dobBlockKey,dobBlockStatsText} from './dobBlockStats.js';
 import {poiMaxDistanceAtr} from './dobHtfObPoi.js';
 import {dobTs11Label} from './dobPoiLabel.js';
@@ -15,6 +16,8 @@ const RANK={dropped:0,blocked:1,retest:2,entry:3,running:3,win:4,loss:4};
 function statusOf(s,evaluatedAt){
  if(s.reason)return BLOCK_LABEL[s.reason]?'blocked':'dropped';
  if(s.phase==='ob2Retest'||s.phase==='ob2Recognized')return 'retest';
+ // Teilprofit: TP1 getroffen und Rest zu (Entry, TP2 oder SL) = Win, egal wie der Ausgang ohne Teilprofit stünde.
+ if(s.partialOutcome&&['breakeven','success','loss'].includes(s.partialOutcome.rest.status))return 'win';
  if(s.phase==='win'||s.phase==='loss')return s.phase;
  if(s.phase==='entry'&&s.entryTime>=evaluatedAt-DOB_ENTRY_FRESH_SECONDS)return 'entry';
  return 'running';
@@ -38,6 +41,31 @@ function obFrames(s){
  if(ts?.zone&&Number.isFinite(ts.zoneStartTime)&&ts.matchedEdge!=='both')frames.push({...frame(`TS1.1-OB #${ts.tradeSetupId}`,ts.zone,ts.zoneStartTime)});
  return frames;
 }
+// Status-Satz vorn im Detail (Philip): Status und Grund im Klartext, Preise im Format des Instruments, Zeiten in Berlin.
+const rText=k=>`${k.toLocaleString('de-DE')}R`;
+function partialText(p,px){
+ const rest=p.rest.status==='breakeven'?`Rest SL auf Entry um ${formatBerlinTime(p.rest.at)}`
+  :p.rest.status==='success'?`TP2 ${rText(p.tpR)} @ ${px(p.rest.price)} um ${formatBerlinTime(p.rest.at)}`:`Rest SL @ ${px(p.rest.price)} um ${formatBerlinTime(p.rest.at)}`;
+ return `Win: TP1 ${rText(p.atR)} @ ${px(p.tp1.price)} um ${formatBerlinTime(p.tp1.at)}, ${rest}`;
+}
+function statusHead(s,status,{instrument,poiType,guardrails,blockStats}){
+ const px=v=>dobPrice(v,instrument),setup={...s,instrument};
+ const levels=()=>[`SL ${px(s.stopPrice)}`,(dobTpLine(setup,guardrails)??'').replaceAll(' @ ',' ')].filter(Boolean).join(' · ');
+ switch(status){
+  case 'dropped':return `verworfen, weil: ${droppedText(s,poiType,instrument)}`;
+  case 'blocked':{
+   const at=s.entryTime??s.phaseSince,why=dobWarnText(s.reason,guardrails,at).replace(/^Entry in /,'').replace(/, Entry$/,'');
+   const stats=guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,s.reason,at)).replace(/^ · /,'').replace(/ \((.+)\)$/,', $1'):'';
+   return `gesperrt, weil: ${why}${stats?` (${stats})`:''}`;
+  }
+  case 'retest':return `OB2 berührt um ${formatBerlinTime(s.recognizedAt??s.phaseSince)}, Entry noch offen`;
+  case 'entry':return `Entry ${s.route} @ ${px(s.entryPrice)} um ${formatBerlinTime(s.entryTime)} · ${levels()}`;
+  case 'running':return `läuft seit ${formatBerlinTime(s.entryTime)} · ${levels()}`;
+  case 'loss':return `Loss: SL getroffen @ ${px(s.outcome?.exitPrice)} um ${formatBerlinTime(s.outcome?.recognizedAt??s.phaseSince)}`;
+  default:return s.partialOutcome?partialText(s.partialOutcome,px)
+   :`Win: TP ${rText(s.tpRule?.tpR??DOB_DEFAULT_TP_R)} getroffen @ ${px(s.outcome?.exitPrice)} um ${formatBerlinTime(s.outcome?.recognizedAt??s.phaseSince)}`;
+ }
+}
 const poiShort=(s,poiType)=>poiType==='lq_sweep'?'LQ-Sweep':s.poi?.timeframe?`${s.poi.timeframe}-OB`:'HTF-OB';
 
 // runs: Ergebnis von dobPoiTypeAlarmRuns (je POI-Art result, guardrails, blockStats). Eine Zeile je POI-Art, Richtung und OB2 (wie die
@@ -51,13 +79,11 @@ export function dobWatcherCandidates(runs,evaluatedAt,instrument){
    if(!Number.isFinite(time)||berlinDateStrFor(s.phaseSince)!==today)continue;
    const status=statusOf(s,evaluatedAt),ob2=`${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`,key=`${poiType}:${ob2}`,old=rows.get(key);
    if(old&&RANK[old.status]>=RANK[status])continue;
-   const setup={...s,instrument};
-   // Verworfen: nur der Grund (mit Zone bzw. TS1.1), damit keine POI-Zeile neben „kein POI“ steht.
-   const parts=status==='dropped'?[droppedText(s,poiType,instrument)]:[dobPoiLine(setup,poiType).replace(/^POI: /,'')];
-   if(status==='blocked')parts.push(`${dobWarnText(s.reason,guardrails,s.entryTime??s.phaseSince)}${guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,s.reason,s.entryTime??s.phaseSince)):''}`);
-   if(s.entryTime!=null&&status!=='blocked'&&status!=='dropped'){const tp=dobTpLine(setup,guardrails);if(tp)parts.push(tp);}
+   const head=statusHead(s,status,{instrument,poiType,guardrails,blockStats});
+   // Verworfen: der Grund nennt Zone bzw. TS1.1 schon, keine POI-Zeile neben „kein POI“.
+   const poiText=status==='dropped'?null:dobPoiLine({...s,instrument},poiType).replace(/^POI: /,'POI ');
    rows.set(key,{key,ob2,instrument,poiType,pairId:s.pairId,direction:s.direction,status,blockLabel:BLOCK_LABEL[s.reason]??null,
-    time:status==='win'||status==='loss'?s.phaseSince:time,poi:poiShort(s,poiType),detail:parts.join(' · '),
+    time:status==='win'||status==='loss'?s.phaseSince:time,poi:poiShort(s,poiType),head,poiText,detail:[head,poiText].filter(Boolean).join(' · '),
     tradeSetupId:s.poi?.kind==='ts11'?s.poi.tradeSetupId:null,chartAt:time+60,frames:obFrames(s)});
   }
  }

@@ -7,7 +7,7 @@ import ChecklistOrderBlock from './ChecklistOrderBlock.vue';
 
 // DOB-Watcher-Panel nach Philips abgenommener Vorschau: Kopf mit Herzschlag, „Aktuell“ (Retest und frischer Entry aller Assets) und
 // aufklappbares „Protokoll“ des Tages mit Asset-Filtern. Jede Zeile ist ein Button und klappt Details, die OB-Rahmen (OB1, OB2,
-// TS1.1-OB wie in der Checkliste) sowie Chart- und Pin-Link auf.
+// TS1.1-OB wie in der Checkliste) sowie Chart- und Pin-Link auf. Vorn steht der Status-Satz mit Grund, nach den Rahmen der POI.
 const props=defineProps({status:Object,candidates:Array});
 const emit=defineEmits(['open-chart','open-pin']);
 const STATUS_TEXT={retest:'Retest',entry:'Entry',running:'läuft',win:'Win',loss:'Loss',dropped:'verworfen'};
@@ -49,8 +49,9 @@ const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
           </span>
         </button>
         <div v-if="openKey === r.key" class="details">
-          <span>{{ r.detail }}</span>
+          <span class="head-line">{{ r.head ?? r.detail }}</span>
           <ChecklistOrderBlock v-for="f in r.frames ?? []" :key="f.label" :preview="f" :instrument="r.instrument" :label="f.label" />
+          <span v-if="r.poiText">{{ r.poiText }}</span>
           <span class="links">
             <a href="#" @click.prevent="emit('open-chart', r)">Chart öffnen</a>
             <a v-if="r.pinId" href="#" @click.prevent="emit('open-pin', r)">Pin #{{ r.pinId }}</a>
@@ -79,8 +80,9 @@ const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
               <span class="chip" :data-status="r.status">{{ r.statusText }} · {{ r.clock }}</span>
             </button>
             <div v-if="openKey === r.key" class="details">
-              <span>{{ r.detail }}</span>
+              <span class="head-line">{{ r.head ?? r.detail }}</span>
               <ChecklistOrderBlock v-for="f in r.frames ?? []" :key="f.label" :preview="f" :instrument="r.instrument" :label="f.label" />
+              <span v-if="r.poiText">{{ r.poiText }}</span>
               <span class="links">
                 <a href="#" @click.prevent="emit('open-chart', r)">Chart öffnen</a>
                 <a v-if="r.pinId" href="#" @click.prevent="emit('open-pin', r)">Pin #{{ r.pinId }}</a>
@@ -123,6 +125,7 @@ const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
 .chip[data-status=loss],.chip[data-status=blocked]{background:rgba(239,83,80,.15);color:#ff8a87}
 .chip[data-status=dropped]{background:#262a35;color:#9aa0ac}
 .details{padding:2px 4px 8px 24px;display:flex;flex-direction:column;gap:4px;font-size:11px;color:#9aa0ac}
+.head-line{color:#d1d4dc}
 .links{display:flex;gap:12px}
 .links a{color:#7aa2ff;cursor:pointer}.links a:hover{color:#a9c1ff}
 .log{border-top:1px solid #2a2e39}

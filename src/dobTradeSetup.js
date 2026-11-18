@@ -60,6 +60,17 @@ function withTarget(pair,setup,rule,{m1Candles,evaluatedAt}){
   outcome:{status:outcome.status,recognizedAt:outcome.recognizedAt,exitPrice:outcome.exitPrice,reason:outcome.reason}};
 }
 
+// Ausgang mit Teilprofit fürs Panel („TP1 3R … Rest SL auf Entry …“): erst TP1, danach der Rest bis zum Konfig-TP, bei be mit SL auf
+// Entry ab TP1. null, solange TP1 nicht getroffen ist; der Setup-Ausgang selbst bleibt beim Konfig-TP ohne Teilprofit.
+function partialOutcome(setup,{atR,be},tpR,{m1Candles,evaluatedAt}){
+ const run=(rMultiple,breakevenAtR=null)=>evaluateDoubleOrderBlockOutcome({direction:setup.direction,entryTime:setup.entryTime,entryPrice:setup.entryPrice,
+  stopPrice:setup.stopPrice,candles:m1Candles,evaluatedAt,instrument:setup.instrument,rMultiple,breakevenAtR});
+ const tp1=run(atR);
+ if(tp1.status!=='success')return null;
+ const rest=run(tpR,be?atR:null);
+ return {atR,tpR,tp1:{price:tp1.exitPrice,at:tp1.recognizedAt},rest:{status:rest.status,price:rest.exitPrice,at:rest.recognizedAt}};
+}
+
 // POI-Erkennung je POI-Art (src/dobPoiType.js): input → pair → {poi, reason}; reason null = POI trägt.
 // Alles danach (Sperren, Gegen-DOB, Entry, Ziel) ist für alle POI-Arten derselbe Ablauf.
 function htfObPoi(input){
@@ -109,6 +120,7 @@ export function checkDobTradeSetup(input){
   // Teilprofit nur für den Alarmtext (TP1/TP2); Ziel und Ausgang des Setups bleiben beim Konfig-TP.
   const partial=setup.tpRule&&dobPartialPlan(guardrails,setup.tpRule.tpR);
   if(partial)setup.tpRule={...setup.tpRule,partial};
+  if(partial&&setup.entryTime!=null)setup.partialOutcome=partialOutcome(setup,partial,setup.tpRule.tpR,input);
   // Anti-Gate erst nach des POI: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
   const m5Trend=input.trendGate?.({...setup,poi});
   if(m5Trend?.rejectReason)rejected.push({...setup,poi,m5Trend,reason:m5Trend.rejectReason});
