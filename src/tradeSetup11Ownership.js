@@ -35,7 +35,7 @@ export function currentTradeSetup11Range(context,closeReactionCache) {
  return {...snapshotRange(candidate),trend,depth:1,basis:'existingCloseReactionChoch',knownAt:fact.recognizedAt,confirmation:fact};
 }
 
-export function findTradeSetup11SourceOwner({setup,context,resolveContext,expectedTrend}) {
+export function findTradeSetup11SourceOwner({setup,context,resolveContext,expectedTrend,current}) {
  if(setup.ls.sourceKind==='orderBlock'){
   const source=setup.ls,raw=context.rawCandles??context.candles,index=raw.findIndex(c=>c.time===source.sourceStartTime);
   const origins=new Set(index<0?[]:raw.slice(Math.max(0,index-2),index+1).map(c=>c.time));
@@ -43,7 +43,7 @@ export function findTradeSetup11SourceOwner({setup,context,resolveContext,expect
   const pivots=(setup.dir===1?context.sourceLiquidity.highs:context.sourceLiquidity.lows)
    .filter(p=>p.price===source.price&&origins.has(p.pivotTime));
   // Der OB-Altersanker ist kein Fraktal: nur ein wirklich erkannter Ursprungspivot darf die Range belegen.
-  const proofs=pivots.map(level=>findTradeSetup11SourceOwner({setup:{...setup,ls:level},context,resolveContext,expectedTrend}));
+  const proofs=pivots.map(level=>findTradeSetup11SourceOwner({setup:{...setup,ls:level},context,resolveContext,expectedTrend,current}));
   const proof=proofs.find(p=>p.status==='ready');
   if(proof)return {...proof,sourceKind:'orderBlock',sourceStartTime:source.sourceStartTime};
   return proofs.find(p=>p.status==='unknown')??{status:'unmet',reason:'orderBlockSourceRangeNotAssociated'};
@@ -61,7 +61,9 @@ export function findTradeSetup11SourceOwner({setup,context,resolveContext,expect
   pivot:{price:level.price,pivotTime:level.pivotTime}});
  const youngest=birthContext.chain.at(-1),birthDepth=birthContext.chain.length-1;
  const members=state=>[state.currRange.low,state.currRange.high,...state.structurePivots,...state.innerStructurePivots];
- if(birthDepth>0&&youngest.trend===expectedTrend&&members(youngest).some(p=>samePivot(p,level)))
+ // Die Wurzel belegt die LS nur, wenn die Gegen-Range ein Close-CHoCH jünger als die LS ist (Philips Regel, Pin 557).
+ const counterAfterLevel=current?.basis==='existingCloseReactionChoch'&&current.confirmation?.originTime>level.pivotTime;
+ if((birthDepth>0||counterAfterLevel)&&youngest.trend===expectedTrend&&members(youngest).some(p=>samePivot(p,level)))
   return proof(youngest,birthDepth,birthContext.stateKnownAt,'deepestRangeAtLevelBirth');
  const times=[...context.pivotsOuter.map(p=>knownAt(p,context.periods.outer)),
   ...context.pivotsInner.map(p=>knownAt(p,context.periods.inner)),level.touchedTime]

@@ -56,6 +56,14 @@ it('DR 139: Philips M1-LS hat kein M5-Fraktal, TS1.1 bleibt unbekannt',()=>{
  expect(result.verdict).toBe('TS1.1 unknown');
 });
 
+it('Pin 557 (#55028): Wurzel trägt die LS, weil die Gegen-Range ein jüngerer Close-CHoCH ist',()=>{
+ const {result}=run(load('./fixtures/ts11-ls-ob/xau-2026-11-18.json'),{id:557,kind:'ob_zone',note:'astreiner Short',
+  obZone:{instrument:'XAUUSD',direction:'short',timeframe:'5M',top:3786.62,bottom:3779.74,startTime:'2026-11-18T09:55:00+00:00'}});
+ expect(result.setup.sweeps.map(s=>s.level.price)).toContain(3783.64);
+ expect(result.assessment).toMatchObject({status:'passed',reason:'sourceRangeDirection'});
+ expect(result.verdict).toBe('TS1.1 ✓');
+});
+
 it('meldet einen H1-OB-Pin als nicht auswertbar statt zu raten',()=>{
  expect(ts11CaseFromPin({id:1,kind:'ob_zone',note:'TS1.1',obZone:{instrument:'XAUUSD',direction:'short',timeframe:'1H',startTime:'2026-10-22T00:00:00Z'}}).error)
   .toMatch(/H1/);
