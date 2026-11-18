@@ -57,6 +57,8 @@ it('shows green only for fresh, ready and independently monitored operation',()=
  expect(balanceHealth({...status,health:{...status.health,incident:{code:'fault'}}},true,account,now).ok).toBe(false);
  expect(balanceHealth({...status,health:null},true,account,now).ok).toBe(false);
  expect(balanceHealth(status,true,account,now+151000).ok).toBe(false);
+ expect(balanceHealth({...status,ui_health_read_at:now},true,account,now+31*60000).ok).toBe(true);
+ expect(balanceHealth({...status,ui_health_read_at:now},true,account,now+33*60000).ok).toBe(false);
  expect(balanceHealth({...status,bridge:{snapshot:{...status.bridge.snapshot,trade_allowed:false}}},true,account,now).ok).toBe(false);
  expect(balanceHealth(status,true,{...account,login:2},now).ok).toBe(false);
  expect(balanceHealth({...status,server_live_allowed:false},true,account,now).ok).toBe(false);

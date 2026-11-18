@@ -31,13 +31,15 @@ export function challengeGauge(balance,floor,target){
   floorLabel:floorPosition==null?null:{x:110-122*Math.cos(angle),y:104-122*Math.sin(angle)},progress:balancePosition(balance,RISK_BASE,target),
   gain:position!=null&&start!=null?Math.max(0,position-start):0};
 }
+// mt5-health läuft alle 15 min, die UI liest den Stand ebenfalls nur alle 15 min: bis ~30 min Alter sind normal.
+export const MMT_HEALTH_MAX_AGE_MS=32*60_000;
 export function balanceHealth(status,fresh,account,now){
  if(status?.bridge?.snapshot?.worker_error||status?.health?.incident)return {ok:false,label:'Betrieb gestört'};
  if(entryDailyStopReason(status,now))return {ok:false,label:'Tagesstopp aktiv'};
  if(status?.ui_cached)return {ok:false,neutral:true,label:'Gespeicherter Stand'};
  if(!fresh||!status?.online||!mmtAccountSnapshot(account,status?.bridge))return {ok:false,label:'Verbindung prüfen'};
  const checked=Date.parse(status?.health?.checked_at);
- if(!Number.isFinite(checked)||checked>now||now-checked>(status?.ui_health_read_at?960000:150000))return {ok:false,label:'Überwachung prüfen'};
+ if(!Number.isFinite(checked)||checked>now||now-checked>(status?.ui_health_read_at?MMT_HEALTH_MAX_AGE_MS:150000))return {ok:false,label:'Überwachung prüfen'};
  if(!mmtExecutionReady(account,status,status?.bridge?.snapshot))return {ok:false,label:'Handel gesperrt'};
  return {ok:true,label:status?.ui_health_read_at?'Letzte Prüfung OK':'Alles OK'};
 }

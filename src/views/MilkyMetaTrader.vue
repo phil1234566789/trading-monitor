@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 import { useStatusBar } from '../composables/useStatusBar.js';
 import { mmtStaleSeconds, mmtConnectionStatus, mmtAccountSnapshot } from '../milkyMetaTraderPolling.js';
 import { positionCommissions } from '../milkyMetaTraderStatistics.js';
+import { MMT_HEALTH_MAX_AGE_MS } from '../milkyMetaTraderBalances.js';
 import { cssColor } from '../chartColors.js';
 import MilkyMetaTraderStatistics from '../components/MilkyMetaTraderStatistics.vue';
 import MilkyMetaTraderBalances from '../components/MilkyMetaTraderBalances.vue';
@@ -128,7 +129,7 @@ async function cancel(id) {await run(async()=>{await api('cancel',{id});await re
         <p v-if="workerProblem" role="alert" class="mmt-error">Ausführung gestört: {{workerProblem.code}}<span v-if="workerProblem.stage"> in {{workerProblem.stage}}</span>. Entry-Aufträge und Brokerstatus prüfen; nichts blind erneut senden.</p>
         <p v-if="status?.health?.incident">Fehleralarm: <span v-for="item in status.health.deliveries" :key="item.channel">{{item.channel==='pushover'?'Pushover':'Telegram'}} {{deliveryLabels[item.status]??item.status}}. </span></p>
         <p v-if="status?.health&&!status.health.checked_at" role="alert">Unabhängige Alarmprüfung noch nicht bestätigt.</p>
-        <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>960000" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
+        <p v-else-if="status?.health?.checked_at&&Date.now()-Date.parse(status.health.checked_at)>MMT_HEALTH_MAX_AGE_MS" role="alert" class="mmt-error">Unabhängige Alarmprüfung ist veraltet. Letzte Prüfung: {{time(status.health.checked_at)}} (Berlin).</p>
       <MmtOpenBrokerPositions :positions="allPositions" :issues="positionIssues" />
       <div class="mmt-workspace">
         <div class="mmt-main-column">
