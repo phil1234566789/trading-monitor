@@ -2076,9 +2076,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/deploy.yml": {
-    "mtime": 1795038727.7597473,
-    "seen": 1795039048.8948095,
-    "ast_hash": "fa2aae34259c1f8e0f1e9f46cd64f761",
+    "mtime": 1795041316.5591507,
+    "seen": 1795041442.6810834,
+    "ast_hash": "0f8da46a97e42088add8b9fce89144d0",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -11001,6 +11001,18 @@
     "mtime": 1795039690.9088027,
     "seen": 1795039947.9378273,
     "ast_hash": "37b9c928975224c741dc60e133213364",
+    "semantic_hash": ""
+  },
+  "scripts/edgeFunctionsToDeploy.mjs": {
+    "mtime": 1795041301.5763626,
+    "seen": 1795041442.3481627,
+    "ast_hash": "0828c9b7800726990bab123bb76549ee",
+    "semantic_hash": ""
+  },
+  "test/edgeFunctionsToDeploy.test.js": {
+    "mtime": 1795041301.7095184,
+    "seen": 1795041442.552542,
+    "ast_hash": "64ad1b07c60781178860fdf3da179d26",
     "semantic_hash": ""
   }
 }
