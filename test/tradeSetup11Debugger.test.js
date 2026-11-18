@@ -1,5 +1,8 @@
 import {readFileSync} from 'node:fs';
 import {expect,it} from 'vitest';
+import {createTradeSetup11ContextResolver,currentTradeSetup11Range,findTradeSetup11SourceOwner} from '../src/tradeSetup11Ownership.js';
+import {createCloseReactionCache} from '../src/m5CloseReactionHistory.js';
+import {detectLiquidityLevels} from '../src/liquidityDetection.js';
 import {isTs11Pin,noteLsPrice,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case,ts11CaseWindow,ts11LeadOf,TS11_LEADS} from '../src/tradeSetup11Debugger.js';
 
 const load=path=>JSON.parse(readFileSync(new URL(path,import.meta.url),'utf8'));
@@ -62,6 +65,19 @@ it('Pin 557 (#55028): Wurzel trägt die LS, weil die Gegen-Range ein jüngerer C
  expect(result.setup.sweeps.map(s=>s.level.price)).toContain(3783.64);
  expect(result.assessment).toMatchObject({status:'passed',reason:'sourceRangeDirection'});
  expect(result.verdict).toBe('TS1.1 ✓');
+});
+
+it.each([['07:45 vor dem Range-Low 09:20','2026-11-18T06:45:00Z','2026-11-18T09:35:00Z','ready'],
+ ['10:40 nach dem Range-Low 09:20 (Gegenbewegung)','2026-11-18T09:40:00Z','2026-11-18T11:55:00Z','unmet']])
+('Pin 557: LS-Pivot %s',(_,pivot,touch,status)=>{
+ const f=load('./fixtures/ts11-ls-ob/xau-2026-11-18.json'),{m5,h1,d1}=f.candles,at=Date.parse(touch)/1000;
+ const resolve=createTradeSetup11ContextResolver({m5Candles:m5,h1Candles:h1,d1Candles:d1,settings:f.settings,
+  sessionConfigs:f.sessionConfigs.filter(s=>s.instrument==='XAUUSD'),instrument:'XAUUSD'}),context=resolve(at+600);
+ const level={...detectLiquidityLevels(context.candles,5).highs.find(p=>p.pivotTime===Date.parse(pivot)/1000),touchedTime:at};
+ const current=currentTradeSetup11Range(context,createCloseReactionCache());
+ expect(current).toMatchObject({trend:'uptrend',basis:'existingCloseReactionChoch'});
+ expect(findTradeSetup11SourceOwner({setup:{ls:level,dir:-1},context,resolveContext:resolve,expectedTrend:'downtrend',current}).status)
+  .toBe(status);
 });
 
 it('meldet einen H1-OB-Pin als nicht auswertbar statt zu raten',()=>{
