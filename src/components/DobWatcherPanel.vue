@@ -101,7 +101,7 @@ const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
 .state{font-size:12px}
 .section-title{padding:10px 12px 4px;font-size:12px;font-weight:600}
 .list{padding:4px 8px 10px;display:flex;flex-direction:column}
-.log-list{padding:0 8px 10px}
+.log-list{padding:0 8px 10px;max-height:300px;overflow-y:auto}
 .item{border-top:1px solid #232733}
 .row{width:100%;min-height:36px;padding:6px 4px;border:none;background:transparent;cursor:pointer;display:grid;grid-template-columns:12px 34px 54px minmax(0,1fr) auto;column-gap:8px;align-items:center;font-size:12px;text-align:left;color:#d1d4dc;border-radius:4px}
 .row:hover,.row.open{background:#222736}
