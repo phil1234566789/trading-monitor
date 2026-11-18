@@ -60,3 +60,11 @@ it('renders the frozen pin and its as-of over a recomputed same-ID live loss',as
  await vi.waitFor(()=>expect(workers).toHaveLength(1));workers[0].onmessage({data:{result:{status:'ready',pairs:[live]}}});
  const call=renderDoubleOrderBlocks.mock.calls.at(-1);expect(call[1]).toEqual([frozen]);expect(call[4].pairEvaluatedAt.get('same')).toBe(900);expect(JSON.stringify(c.hoveredPin)).toBe(original);a.dispose();
 });
+it('keeps drawn pairs while the next minute re-evaluates, but clears on replay jump back',async()=>{
+  const c=context(),a=useDoubleOrderBlockChart(()=>c);a.refresh();await vi.waitFor(()=>expect(workers).toHaveLength(1));
+  const primitive={};renderDoubleOrderBlocks.mockReturnValueOnce([{primitive}]);
+  workers[0].onmessage({data:{result:{status:'ready',pairs:[{id:'pair'}]}}});
+  c.evaluatedAt=1260;a.refresh();expect(c.series.detachPrimitive).not.toHaveBeenCalled();
+  await vi.waitFor(()=>expect(workers).toHaveLength(2));
+  c.evaluatedAt=600;a.refresh();expect(c.series.detachPrimitive).toHaveBeenCalledWith(primitive);a.dispose();
+});

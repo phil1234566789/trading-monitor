@@ -8,7 +8,7 @@ import {renderDoubleOrderBlocks,hitDoubleOrderBlock,doubleOrderBlockDetails} fro
 
 export function useDoubleOrderBlockChart(context) {
   const status=ref(''),details=ref('');
-  let key=null,sequence=0,worker=null,disposed=false,items=[],series=null,pairs=[],timer=null,coverage=null,hoveredPairId=null;
+  let key=null,sequence=0,worker=null,disposed=false,items=[],series=null,pairs=[],timer=null,coverage=null,hoveredPairId=null,shown=null;
   function schedule() {
     clearTimeout(timer);
     if(!disposed&&context().enabled&&context().replayUntil==null)timer=setTimeout(refresh,nextCandlePollDelay('1m'));
@@ -39,7 +39,7 @@ export function useDoubleOrderBlockChart(context) {
         onResult:result=>{
           if(disposed||request!==sequence)return;
           worker=null;
-          pairs=result.pairs??[];
+          pairs=result.pairs??[];shown={symbol:c.symbol,at:c.evaluatedAt};
           const coverageText=`M5 ab ${formatDatedTime(m5[0].time)} · M1 ${m1.length?'ab '+formatDatedTime(m1[0].time):'fehlt'}`;
           status.value=(result.status==='unknown'?'DOB: Daten unvollständig.':`DOB: ${pairs.length} bestätigt im Ausschnitt.`)+' '+coverageText;
           draw();
@@ -55,11 +55,17 @@ export function useDoubleOrderBlockChart(context) {
     const c=context();
     if(disposed)return;
     if(c.snapshot||!c.series||!c.candles.length||!Number.isFinite(c.evaluatedAt)) {
-      sequence++;worker?.terminate();worker=null;key=null;pairs=[];clear();clearTimeout(timer);timer=null;status.value='';return;
+      sequence++;worker?.terminate();worker=null;key=null;pairs=[];shown=null;clear();clearTimeout(timer);timer=null;status.value='';return;
     }
-    if(!c.enabled){sequence++;worker?.terminate();worker=null;key=null;pairs=[];clearTimeout(timer);timer=null;draw();status.value=c.pinnedSnapshots?.length?'DOB: eingefrorene Pin-Snapshots.':'';return;}
+    if(!c.enabled){sequence++;worker?.terminate();worker=null;key=null;pairs=[];shown=null;clearTimeout(timer);timer=null;draw();status.value=c.pinnedSnapshots?.length?'DOB: eingefrorene Pin-Snapshots.':'';return;}
     const nextKey=JSON.stringify([c.symbol,Math.floor(c.evaluatedAt/60)]);
-    if(nextKey!==key){key=nextKey;sequence++;worker?.terminate();worker=null;pairs=[];clear();void load(c,sequence);}
+    if(nextKey!==key){
+      key=nextKey;sequence++;worker?.terminate();worker=null;
+      // Gleiches Symbol, Zeit nur vorwärts (Minutentakt, Poll, Sessions): alte Paare stehen lassen bis zum neuen Ergebnis,
+      // sonst flackert der Indikator jede Minute. Symbolwechsel/Replay-Rücksprung leeren sofort (kein Blick in die Zukunft).
+      if(!(shown?.symbol===c.symbol&&c.evaluatedAt>=shown.at)){pairs=[];shown=null;clear();}
+      void load(c,sequence);
+    }
     else draw();
     schedule();
   }
