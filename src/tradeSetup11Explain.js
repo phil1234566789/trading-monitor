@@ -1,18 +1,20 @@
 import {formatBerlinTime,formatDatedTime} from './berlinTime.js';
-import {fmtPrice} from './format.js';
+import {fmtPrice,pricePrecisionForInstrument} from './format.js';
 
 // Klartext zur TS1.1-Quellenprüfung, damit Philip jeden Schritt ohne Code nachvollziehen kann; der Code steht klein dahinter.
 const TREND={uptrend:'Aufwärts',downtrend:'Abwärts'};
 const day=t=>formatDatedTime(t).slice(0,10);
 export const ts11When=(t,ref)=>t==null?'–':ref!=null&&day(t)===day(ref)?formatBerlinTime(t):formatDatedTime(t);
 export const ts11TrendText=t=>TREND[t]??t;
-export const ts11Point=(p,ref)=>p?`${fmtPrice(p.price)} (${ts11When(p.pivotTime,ref)})`:'–';
+// Präzision je Instrument: Forex braucht 5 Stellen, sonst stünde bei GBP nur „1,31“.
+export const ts11Price=(price,instrument)=>fmtPrice(price,pricePrecisionForInstrument(instrument));
+export const ts11Point=(p,ref,instrument)=>p?`${ts11Price(p.price,instrument)} (${ts11When(p.pivotTime,ref)})`:'–';
 
-export function explainTs11Source({assessment,source,dir,evaluatedAt}){
+export function explainTs11Source({assessment,source,dir,evaluatedAt,instrument}){
  const w=t=>ts11When(t,evaluatedAt),ev=assessment.trendEvidence??{},cur=ev.currentRange,owner=ev.sourceOwner;
  const expected=dir===1?'Abwärts':'Aufwärts',isOb=source.level.sourceKind==='orderBlock';
  const pivot=owner?.pivot?.pivotTime??source.level.pivotTime;
- const prefix=isOb&&owner?.pivot?`OB-Quelle über Ursprungspivot ${fmtPrice(owner.pivot.price)} (${w(owner.pivot.pivotTime)}): `:'';
+ const prefix=isOb&&owner?.pivot?`OB-Quelle über Ursprungspivot ${ts11Price(owner.pivot.price,instrument)} (${w(owner.pivot.pivotTime)}): `:'';
  const counter=cur?.basis==='existingCloseReactionChoch'?cur.confirmation?.originTime:null;
  const extreme=cur?.trend==='uptrend'?'Range-Low':'Range-High';
  const range=owner?.range&&`${ts11TrendText(owner.range.trend)}-${owner.depth===0?'Wurzel':`Range Tiefe ${owner.depth}`}`;

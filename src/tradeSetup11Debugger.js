@@ -13,8 +13,7 @@ import {evaluateSweepConfirmation} from './tradeSetupSweepSources.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {filterTradeSetup11Candidates} from './tradeSetup11.js';
 import {currentTradeSetup11Range} from './tradeSetup11Ownership.js';
-import {explainTs11Source} from './tradeSetup11Explain.js';
-import {fmtPrice} from './format.js';
+import {explainTs11Source,ts11Price} from './tradeSetup11Explain.js';
 import {mergeCandles} from './candleCache.js';
 import {TRADE_SETUP_M5_CANDLE_COUNT,TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
 import {tradeSetupFromRow} from './tradeSetupRow.js';
@@ -121,6 +120,7 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true}=
  // Kontext wird einmal bis Fensterende geladen; je Zeitpunkt nur das, was dann geschlossen war.
  policy={h1:closedChecklistCandles(policy.h1??[],'1h',evaluatedAt),d1:closedChecklistCandles(policy.d1??[],'1D',evaluatedAt),
   m5:policy.m5&&closedChecklistCandles(policy.m5,'5m',evaluatedAt)};
+ const px=p=>ts11Price(p,kase.instrument);
  steps.push(check('Setup-OB vorhanden',true,`Start ${formatDatedTime(ob.startTime)}`));
  const setup=detectTradeSetups(kase.dir,ctx.own,[],ctx.own,ctx.obs,ctx.params,ctx.clean,ctx.rows)
   .find(s=>s.obStartTime===ob.startTime);
@@ -130,11 +130,11 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true}=
  const candidates=ctx.own.filter(l=>near(l)||(l.touched&&l.touchedTime<=ob.startTime&&ob.startTime-l.touchedTime<=2*ctx.params.obMaxDelaySec))
   .map(level=>({level,philip:near(level),inSetup:!!setup?.sweeps.some(s=>s.level===level),checks:candidateChecks(level,ob,ctx,kase,recognizedAt)}));
  if(kase.lsPrice!=null&&!candidates.some(c=>c.philip))steps.push(check(`M5-Fraktal bei LS ${kase.lsPrice}`,false,'Detektor kennt dort kein Fraktal (Periode 5, z. B. M1-Pivot)'));
- steps.push(check(`TS1 (${TRADE_SETUP_DETECTOR_VERSION}) findet Setup`,!!setup,setup?`LS ${setup.ls.price}`:'kein gültiger Sweep zu diesem OB, siehe Kandidaten'));
+ steps.push(check(`TS1 (${TRADE_SETUP_DETECTOR_VERSION}) findet Setup`,!!setup,setup?`LS ${px(setup.ls.price)}`:'kein gültiger Sweep zu diesem OB, siehe Kandidaten'));
  if(!setup)return {evaluatedAt,steps,candidates,setup:null,verdict:'kein TS1-Setup'};
  // Die gezeichnete Box ist breiter als die OB-Kerze: sie reicht bis zum Sweep-Extrem (= Invalidierung).
  const sweepEdge=kase.dir===1?setup.obTop:setup.obBottom;
- steps.push(check('Setup-Box',true,`OB-Kerze ${fmtPrice(ob.bottom)}–${fmtPrice(ob.top)} · Box/Invalidierung bis Sweep-${kase.dir===1?'Hoch':'Tief'} ${fmtPrice(sweepEdge)}`));
+ steps.push(check('Setup-Box',true,`OB-Kerze ${px(ob.bottom)}–${px(ob.top)} · Box/Invalidierung bis Sweep-${kase.dir===1?'Hoch':'Tief'} ${px(sweepEdge)}`));
  const forbidden=isForbiddenAt(sessions,ob.startTime,u=>berlinOffsetMinutes(u*1000));
  steps.push(check('OB nicht in verbotener Session',!forbidden,forbidden?'Chart blendet das Setup aus':''));
  const input={instrument:kase.instrument,m5Candles:mergeCandles(policy.m5??[],ctx.window),h1Candles:policy.h1,d1Candles:policy.d1,
@@ -147,8 +147,8 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true}=
   // Je Quelle einzeln bewerten (wie die Policy-Variante), damit die belegende Range für den Klartext vorliegt.
   const single=filterTradeSetup11Candidates({...input,setups:[{...setup,instrument:kase.instrument,ls:source.level,sweeps:[source],confirmationSources:[source]}]}).assessments[0];
   const kind=source.level.sourceKind==='orderBlock'?'OB':'LS';
-  steps.push({...check(`  Quelle ${kind} ${fmtPrice(source.level.price)}`,single.status==='passed',
-   explainTs11Source({assessment:single,source,dir:kase.dir,evaluatedAt})),code:`${single.status} · ${single.reason}`});
+  steps.push({...check(`  Quelle ${kind} ${ts11Price(source.level.price,kase.instrument)}`,single.status==='passed',
+   explainTs11Source({assessment:single,source,dir:kase.dir,evaluatedAt,instrument:kase.instrument})),code:`${single.status} · ${single.reason}`});
  }
  const verdict=forbidden?'ausgeblendet (verbotene Session)':assessment.status==='passed'?'TS1.1 ✓':`TS1.1 ${assessment.status}`;
  return {evaluatedAt,steps,candidates,setup:{...setup,instrument:kase.instrument},assessment,verdict};

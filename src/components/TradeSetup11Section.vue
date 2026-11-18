@@ -19,7 +19,7 @@ import {createCloseReactionCache} from '../m5CloseReactionHistory.js';
 import {mergeCandles} from '../candleCache.js';
 import PinTypeChips from './PinTypeChips.vue';
 import DebuggerTimeBar from './DebuggerTimeBar.vue';
-import {ts11Point,ts11TrendText,ts11When} from '../tradeSetup11Explain.js';
+import {ts11Point,ts11Price,ts11TrendText,ts11When} from '../tradeSetup11Explain.js';
 import ActionButton from './ui/ActionButton.vue';
 import {renderLowerStructure} from '../structureOverlay.js';
 import {barSecondsFor} from '../timeframes.js';
@@ -163,7 +163,7 @@ function draw(){
  if(kase.lsPrice!=null)priceLines.push(series.createPriceLine({price:kase.lsPrice,color:cssColor('liquiditySweepM5'),lineWidth:1,lineStyle:LineStyle.Dashed,title:'Pin-LS'}));
  // Durchgefallene Kandidaten nur in der Liste rechts; im Chart lenken sie ab (Philip: „kann weg“).
  for(const c of d.candidates.filter(c=>!c.inSetup&&c.checks.every(x=>x.ok)))priceLines.push(series.createPriceLine({price:c.level.price,
-  color:cssColor('tradeWin'),lineWidth:1,lineStyle:LineStyle.Dotted,title:`LS ${c.level.price}`}));
+  color:cssColor('tradeWin'),lineWidth:1,lineStyle:LineStyle.Dotted,title:`LS ${px(c.level.price)}`}));
  const sec=tf.value==='m1'?60:300,mark=Math.floor((d.evaluatedAt-300)/sec)*sec;
  markers.setMarkers(mark<=candles.at(-1).time&&mark>=candles[0].time?[{time:mark,position:'aboveBar',shape:'arrowDown',color:cssColor('tradeConfirmation'),text:'TS1.1-Prüfung'}]:[]);
  drawStructure();
@@ -194,7 +194,8 @@ onMounted(async()=>{
  try{await loadCases();}catch(e){error.value=e.message;}finally{loading.value=false;}});
 onBeforeUnmount(()=>{request++;clearTimeout(diagnoseTimer);clearTimeout(insertedTimer);clearTimeout(savedTimer);drawing.dispose();chart?.unsubscribeClick(insertChartPoint);chart?.remove();chart=series=null;});
 const mark=ok=>ok?'✓':'✗';
-const pt=p=>ts11Point(p,at.value);
+const pt=p=>ts11Point(p,at.value,current.value?.instrument);
+const px=p=>ts11Price(p,current.value?.instrument);
 const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Ursprung ${ts11When(c.originTime,at.value)} · erkannt ${ts11When(c.recognizedAt,at.value)}`
  :'innerste bestätigte Range der Kette';
 </script>
@@ -239,7 +240,7 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
      <h4>LS-Kandidaten am OB</h4>
      <p v-if="!diagnosis.candidates.length" class="muted">Keine M5-Level im Sweep-Fenster.</p>
      <div v-for="c in diagnosis.candidates" :key="c.level.pivotTime+':'+c.level.price" class="cand">
-      <strong>LS {{ c.level.price }}</strong> · Pivot {{ formatDatedTime(c.level.pivotTime) }}<span v-if="c.philip"> · Pin-LS</span><span v-if="c.inSetup"> · im Setup</span>
+      <strong>LS {{ px(c.level.price) }}</strong> · Pivot {{ formatDatedTime(c.level.pivotTime) }}<span v-if="c.philip"> · Pin-LS</span><span v-if="c.inSetup"> · im Setup</span>
       <ul class="checks"><li v-for="x in c.checks" :key="x.label" :class="{bad:!x.ok}">{{ mark(x.ok) }} {{ x.label }}<small v-if="x.detail"> · {{ x.detail }}</small></li></ul>
      </div>
      <p class="muted">H1-LS prüft die Lupe nicht; der Chart nimmt H1-Level aus der Marktstruktur dazu.</p>

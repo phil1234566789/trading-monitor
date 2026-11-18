@@ -3,7 +3,7 @@ import {expect,it} from 'vitest';
 import {createTradeSetup11ContextResolver,currentTradeSetup11Range,findTradeSetup11SourceOwner} from '../src/tradeSetup11Ownership.js';
 import {createCloseReactionCache} from '../src/m5CloseReactionHistory.js';
 import {detectLiquidityLevels} from '../src/liquidityDetection.js';
-import {explainTs11Source} from '../src/tradeSetup11Explain.js';
+import {explainTs11Source,ts11Point} from '../src/tradeSetup11Explain.js';
 import {isTs11Pin,noteLsPrice,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case,ts11CaseWindow,ts11LeadOf,TS11_LEADS,ts11ChainAt,ts11ChangeTimes} from '../src/tradeSetup11Debugger.js';
 
 const load=path=>JSON.parse(readFileSync(new URL(path,import.meta.url),'utf8'));
@@ -114,6 +114,12 @@ it('Klartext: LS-Pivot nach dem Range-Low gehört zur Gegenbewegung',()=>{
   assessment:{status:'unmet',reason:'sourceRangeNotAssociated',trendEvidence:{currentRange:{trend:'uptrend',basis:'existingCloseReactionChoch',
    confirmation:{originTime:berlin('2026-11-18T08:20:00Z')}},sourceOwner:{status:'unmet'}}}}))
   .toBe('LS-Pivot 10:40 liegt nach dem Range-Low 09:20 und gehört damit zur Gegenbewegung → zählt nicht');
+});
+
+it('Kettenpreise mit Instrument-Präzision statt rohem Float (P556)',()=>{
+ const t=Date.parse('2026-11-18T09:05:00Z')/1000;
+ expect(ts11Point({price:1.3147499999999999,pivotTime:t},t,'GBPUSD')).toBe('1,31475 (10:05)');
+ expect(ts11Point({price:3757.31,pivotTime:t},t,'XAUUSD')).toBe('3.757,31 (10:05)');
 });
 
 it('Änderungszeiten: nur Wechsel gegenüber dem vorigen Schritt',()=>{
