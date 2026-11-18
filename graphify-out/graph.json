@@ -37148,7 +37148,7 @@
       "file_type": "code",
       "norm_label": "basistext()",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L206"
+      "source_location": "L209"
     },
     {
       "id": "src_components_tradesetup11section_diagnoseat",
@@ -37184,7 +37184,7 @@
       "file_type": "code",
       "norm_label": "drawstructure()",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L187"
+      "source_location": "L190"
     },
     {
       "id": "src_components_tradesetup11section_loadcases",
@@ -37208,7 +37208,7 @@
       "file_type": "code",
       "norm_label": "mark()",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L203"
+      "source_location": "L206"
     },
     {
       "id": "src_components_tradesetup11section_optiontext",
@@ -37232,7 +37232,7 @@
       "file_type": "code",
       "norm_label": "pt()",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L204"
+      "source_location": "L207"
     },
     {
       "id": "src_components_tradesetup11section_px",
@@ -37244,7 +37244,7 @@
       "file_type": "code",
       "norm_label": "px()",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L205"
+      "source_location": "L208"
     },
     {
       "id": "src_components_tradesetup11section_scanchanges",
@@ -115261,7 +115261,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L206",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -115309,7 +115309,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L157",
+      "source_location": "L160",
       "weight": 1.0
     },
     {
@@ -115321,7 +115321,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L160",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -115333,7 +115333,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L160",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -115345,7 +115345,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L161",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -115357,7 +115357,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L168",
+      "source_location": "L171",
       "weight": 1.0
     },
     {
@@ -115369,7 +115369,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L173",
+      "source_location": "L176",
       "weight": 1.0
     },
     {
@@ -115381,7 +115381,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L176",
+      "source_location": "L179",
       "weight": 1.0
     },
     {
@@ -115393,7 +115393,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L189",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -115405,7 +115405,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L190",
+      "source_location": "L193",
       "weight": 1.0
     },
     {
@@ -115417,7 +115417,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L191",
+      "source_location": "L194",
       "weight": 1.0
     },
     {
@@ -115429,7 +115429,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L191",
+      "source_location": "L194",
       "weight": 1.0
     },
     {
@@ -115441,7 +115441,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L192",
+      "source_location": "L195",
       "weight": 1.0
     },
     {
@@ -115525,7 +115525,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L204",
+      "source_location": "L207",
       "weight": 1.0
     },
     {
@@ -115537,7 +115537,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L205",
+      "source_location": "L208",
       "weight": 1.0
     },
     {
@@ -296575,7 +296575,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L203",
+      "source_location": "L206",
       "weight": 1.0
     },
     {
@@ -296586,7 +296586,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L204",
+      "source_location": "L207",
       "weight": 1.0
     },
     {
@@ -296597,7 +296597,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L205",
+      "source_location": "L208",
       "weight": 1.0
     },
     {
@@ -296608,7 +296608,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L206",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -352862,7 +352862,7 @@
       "confidence_score": 0.85,
       "context": "argument",
       "source_file": "src/components/TradeSetup11Section.vue",
-      "source_location": "L196",
+      "source_location": "L199",
       "weight": 1.0
     },
     {
@@ -360752,5 +360752,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "18634a131e4c53888921144a82a333edf1b83158"
+  "built_at_commit": "bd7de212fe3ca63f51f16e89919c3fbc3353dbdd"
 }

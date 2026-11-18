@@ -146,7 +146,10 @@ function draw(){
  const {kase,window:w,located}=data.value,candles=shownCandles(),d=diagnosis.value;
  if(!candles.length)return;
  setInstrument(kase.instrument);
+ // Kürzere Daten verschieben sonst den Ausschnitt mit der letzten Kerze; Indizes beginnen fest bei view.from.
+ const view=fitPending?null:chart.timeScale().getVisibleLogicalRange();
  series.setData(candles);
+ if(view)chart.timeScale().setVisibleLogicalRange(view);
  primitives.forEach(p=>series.detachPrimitive(p));primitives=[];
  priceLines.forEach(l=>series.removePriceLine(l));priceLines=[];
  // Vor dem OB-Schluss nichts zeichnen, was erst danach bekannt ist (auch nicht die DB-Zeile).
