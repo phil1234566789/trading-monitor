@@ -1,8 +1,8 @@
 import {RISK_BASE} from './mt5RiskContract.js';
-import {accountBridge,activeMt5Account,checked,mt5Database} from './mt5Credentials.ts';
+import {accountBridge,activeMt5Account,cachedMt5Read,checked,mt5Database} from './mt5Credentials.ts';
 import {riskPolicyDay,riskPolicyContext} from './riskPolicyContext.js';
 export async function readRiskPolicy(accountId:string){
- const policy=checked(await mt5Database().from('mt5_risk_policies').select('*').eq('account_id',accountId).maybeSingle());
+ const policy=await cachedMt5Read('policy:'+accountId,async()=>checked(await mt5Database().from('mt5_risk_policies').select('*').eq('account_id',accountId).maybeSingle()));
  return riskPolicyContext(policy,Math.floor(Date.now()/1000));
 }
 export async function riskPolicyAction(body:Record<string,any>){

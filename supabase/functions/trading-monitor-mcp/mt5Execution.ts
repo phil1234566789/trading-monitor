@@ -6,7 +6,7 @@ import {assertDailyStopSnapshot} from './dailyStopContract.js';
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
 import { isExecutionId, isSameExecutionResult, validateExecutionResult, validatePositionLifecycle, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
-import { accountBridge, activeMt5Account, checked, mt5Database as database } from './mt5Credentials.ts';
+import { accountBridge, activeMt5Account, activeMt5AccountId, checked, mt5Database as database } from './mt5Credentials.ts';
 
 export async function executionConfig(accountId?:unknown) {
   if (Deno.env.get('MT5_EXECUTION_ENABLED') !== 'true') {
@@ -100,8 +100,7 @@ export async function workerAction(body: Record<string, any>) {
   if (body.action === 'poll') {
     const snapshot = validateWorkerSnapshot(body.snapshot, {...config,allowLive:true});
     checked(await db.from('mt5_bridge_state').upsert({ id:config.accountId, snapshot, heartbeat_at:now }));
-    const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
-    if(settings?.active_account_id===config.accountId)checked(await db.from('mt5_bridge_state').upsert({id:'primary',snapshot,heartbeat_at:now}));
+    if(await activeMt5AccountId(db)===config.accountId)checked(await db.from('mt5_bridge_state').upsert({id:'primary',snapshot,heartbeat_at:now}));
     checked(await db.from('mt5_execution_orders').update({status:'expired',updated_at:now})
       .eq('status','searching').lte('expires_at',now));
     const orders = checked(await db.from('mt5_execution_orders').select('*')

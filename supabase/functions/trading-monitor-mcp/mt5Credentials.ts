@@ -33,17 +33,34 @@ export async function decryptCredential(value:{iv:string;ciphertext:string}, ide
   return new TextDecoder().decode(clear);
 }
 
+// Nur mt5-worker schaltet das ein: der VPS-Worker las Konto/aktives Konto/Policy pro Zyklus mehrfach (~23k REST/h).
+// Handelszustand (Orders, Guards, Daily Stops, Bridge) bleibt bewusst ungecacht.
+let readCacheMs=0;
+const readCache=new Map<string,{at:number;value:unknown}>();
+export function enableMt5ReadCache(ms:number){readCacheMs=ms;}
+export async function cachedMt5Read<T>(key:string,read:()=>Promise<T>):Promise<T>{
+  if(!readCacheMs)return read();
+  const hit=readCache.get(key);
+  if(hit&&Date.now()-hit.at<readCacheMs)return structuredClone(hit.value) as T;
+  const value=await read();
+  readCache.set(key,{at:Date.now(),value:structuredClone(value)});
+  return value;
+}
+export const activeMt5AccountId=(db=mt5Database())=>cachedMt5Read('settings',async()=>
+  checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single())?.active_account_id??null);
+const readMt5Account=(db:any,id:string)=>cachedMt5Read('account:'+id,async()=>checked(await db.from('mt5_accounts').select('*').eq('id',id).single()));
+
 export async function activeMt5Account(accountId?:unknown) {
   const db=mt5Database();
   if(accountId!=null){
     if(typeof accountId!=='string'||!/^[0-9a-f-]{36}$/i.test(accountId))throw new Error('invalid_account');
-    const account=checked(await db.from('mt5_accounts').select('*').eq('id',accountId).single());
+    const account:any=await readMt5Account(db,accountId);
     if(!account||account.archived)throw new Error('archived_account');
     return account;
   }
-  const settings=checked(await db.from('mt5_execution_settings').select('active_account_id').eq('id','primary').single());
-  if (!settings?.active_account_id) throw new Error('no_active_account');
-  const account=checked(await db.from('mt5_accounts').select('*').eq('id',settings.active_account_id).single());
+  const activeId=await activeMt5AccountId(db);
+  if (!activeId) throw new Error('no_active_account');
+  const account:any=await readMt5Account(db,activeId);
   if (!account||account.archived) throw new Error('no_active_account');
   return account;
 }

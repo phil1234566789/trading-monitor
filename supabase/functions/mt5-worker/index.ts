@@ -2,7 +2,10 @@ import {targetPlanAction} from '../trading-monitor-mcp/mt5TargetPlans.ts';
 import {dailyStopAction} from '../trading-monitor-mcp/mt5DailyStop.ts';
 import { historyWorkerAction } from '../trading-monitor-mcp/mt5History.ts';
 import { workerAction } from '../trading-monitor-mcp/mt5Execution.ts';
-import { workerConfiguration } from '../trading-monitor-mcp/mt5Credentials.ts';
+import { workerConfiguration, enableMt5ReadCache } from '../trading-monitor-mcp/mt5Credentials.ts';
+
+// 15 s: Konto-/Policy-Änderungen greifen beim Worker spätestens so verzögert.
+enableMt5ReadCache(15_000);
 
 Deno.serve(async req => {
   const token = Deno.env.get('MT5_WORKER_TOKEN');
