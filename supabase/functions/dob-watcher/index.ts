@@ -13,6 +13,7 @@ import {dobGuardrailsFromRow,dobEntryRule} from '../../../src/dobGuardrails.js';
 import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
 import {dobTs11FromRow} from '../../../src/dobLqSweepPoi.js';
+import {tradeSetup11RowVerdicts,tradeSetup11M5Start,TRADE_SETUP_11_VERSION} from '../../../src/tradeSetup11Rows.js';
 import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
@@ -23,7 +24,12 @@ const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
 // M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte POI-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
-const BAR_SECONDS: Record<string,number>={'1m':60,'5m':300,'1h':3600,'4h':14400};
+const BAR_SECONDS: Record<string,number>={'1m':60,'5m':300,'1h':3600,'4h':14400,'1D':86400};
+// TS1.1-Trendkontext wie der Chart (tradeSetup11ContextLoader: 300 D1, M5 ab dem D1-Anker, höchstens 15000).
+const TS11_D1=300,TS11_MAX_M5=15000;
+// ponytail: ein neues TS1.1-Urteil je Tick über alle Instrumente (Edge-CPU-Limit); fehlende gelten bis dahin
+// nicht als TS1.1, d. h. ein LQ-Sweep-Alarm kommt höchstens ein paar Minuten später, nie fälschlich.
+const TS11_PER_TICK=1;
 const offset=(sec:number)=>berlinOffsetMinutes(sec*1000);
 // Versand steuert die Alarme-Seite: Schalter alarm_settings.dob_setup (fehlende Zeile = an, wie poi-watcher) und
 // trading_schedules.alarm_windows des Instruments (fehlende Zeile = nie senden, wie poi-watcher).
@@ -38,11 +44,11 @@ async function alarmPolicy(client:any,instrument:string){
 }
 
 // Cursor über das tatsächlich zuletzt gelieferte Zeitfeld: PostgREST kappt Seiten still bei ~1000 Zeilen (CLAUDE.md).
-async function closedCandles(client:any,instrument:string,bar:string,evaluatedAt:number){
+async function closedCandles(client:any,instrument:string,bar:string,evaluatedAt:number,count=COUNTS[bar]){
   const rows:any[]=[];let cursor=new Date(evaluatedAt*1000).toISOString();
-  while(rows.length<COUNTS[bar]){
+  while(rows.length<count){
     const page=checked(await client.from('fxcm_candles').select('time,open,high,low,close,volume').eq('instrument',instrument).eq('bar',bar)
-      .lt('time',cursor).order('time',{ascending:false}).limit(Math.min(1000,COUNTS[bar]-rows.length))) as any[];
+      .lt('time',cursor).order('time',{ascending:false}).limit(Math.min(1000,count-rows.length))) as any[];
     if(!page.length)break;
     rows.push(...page);cursor=page[page.length-1].time;
   }
@@ -82,12 +88,36 @@ async function blockStatsFor(client:any,instrument:string,row:any,guardrails:any
   return stats;
 }
 
+// LQ-Sweep-POI = TS1.1 wie im Chart: trade_setups der letzten 2 Tage (decken jeden DOB des Live-Fensters) durch tradeSetup11RowVerdicts.
+// Das Urteil wird je Zeile einmal gerechnet und gespeichert; M5/D1 für den Trendkontext nur laden, wenn eins fehlt (Edge-CPU).
+async function ts11Setups(client:any,instrument:string,evaluatedAt:number,h1:any[],sessions:any[],dry:boolean,budget:{left:number}){
+  const rows=checked(await client.from('trade_setups').select('*,trade_setup_sweeps(price,pivot_time,touched_time,timeframe,is_primary),ob_zones(top,bottom)')
+    .eq('instrument',instrument).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[];
+  const cached=rows.length?checked(await client.from('trade_setup_ts11_verdicts').select('trade_setup_id,status').eq('version',TRADE_SETUP_11_VERSION)
+    .in('trade_setup_id',rows.map(r=>r.id)).limit(1000)) as any[]:[];
+  const status=new Map(cached.map(v=>[Number(v.trade_setup_id),v.status]));
+  const pending=rows.filter(r=>!status.has(r.id)),missing=budget.left>0?pending.slice(-budget.left):[];
+  budget.left-=missing.length;
+  if(missing.length){
+    const d1=await closedCandles(client,instrument,'1D',evaluatedAt,TS11_D1),from=tradeSetup11M5Start({rows:missing,h1Candles:h1,d1Candles:d1});
+    // Kalendergrenze überschätzt die Barzahl (Wochenenden), lädt also eher etwas mehr als nötig.
+    const m5=from==null?[]:await closedCandles(client,instrument,'5m',evaluatedAt,Math.min(TS11_MAX_M5,Math.ceil((evaluatedAt-from)/300)));
+    const verdicts=tradeSetup11RowVerdicts({rows:missing,instrument,m5Candles:m5,h1Candles:h1,d1Candles:d1,evaluatedAt,sessionConfigs:sessions});
+    // unknown erst nach 1 h endgültig: vorher kann der Kerzenstand bis zur Setup-Erkennung noch fehlen.
+    const final=missing.filter(r=>verdicts.get(r.id).status!=='unknown'||Date.parse(r.ob_start_time)/1000+3600<evaluatedAt);
+    if(!dry&&final.length)checked(await client.from('trade_setup_ts11_verdicts').upsert(final.map(r=>({trade_setup_id:r.id,version:TRADE_SETUP_11_VERSION,
+      status:verdicts.get(r.id).status,reason:verdicts.get(r.id).reason})),{onConflict:'trade_setup_id,version',ignoreDuplicates:true}));
+    for(const [id,v] of verdicts)status.set(id,v.status);
+  }
+  return {setups:rows.filter(r=>status.get(r.id)==='passed').map(dobTs11FromRow),rows:rows.length,evaluated:missing.length,pending:pending.length-missing.length};
+}
+
 async function writeState(client:any,instrument:string,state:Record<string,unknown>){
   checked(await client.from('dob_watcher_state').upsert({instrument,last_run_at:new Date().toISOString(),updated_at:new Date().toISOString(),...state}));
 }
 
 // dry: rechnet auch außerhalb 02:00–22:00, verschickt nichts und schreibt keinen Herzschlag (Prüfung von Datenpfad und Laufzeit).
-async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dry=false,probes:number[]=[]){
+async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dry=false,probes:number[]=[],budget={left:TS11_PER_TICK}){
   const started=performance.now();
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
@@ -102,10 +132,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,instrument,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);
-  // LQ-Sweep-POI = TS1.1-Setups aus trade_setups (poi-watcher schreibt sie); 2 Tage decken jeden möglichen DOB des Live-Fensters.
-  const tradeSetups=poiTypes.some(p=>p.poiType==='lq_sweep')?(checked(await client.from('trade_setups')
-    .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,ob_zones(top,bottom)')
-    .eq('instrument',instrument).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[]).map(dobTs11FromRow):[];
+  const ts11=poiTypes.some(p=>p.poiType==='lq_sweep')?await ts11Setups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null,tradeSetups=ts11?.setups??[];
   const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt,m1Candles:m1Marked,m5Candles:m5Marked,
     htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),
     counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:instrument}),tradeSetups};
@@ -116,7 +143,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const count=(key:'setups'|'rejected')=>runs.reduce((n,r)=>n+r.result[key].length,0);
   const policy=await alarmPolicy(client,instrument),blocked=policy.decide(evaluatedAt);
   if(dry)return {dry:true,evaluatedAt,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
-    alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
+    alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,ts11:ts11&&{rows:ts11.rows,evaluated:ts11.evaluated,pending:ts11.pending,passed:ts11.setups.length},bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,
     poiTypes:Object.fromEntries(poiTypes.map(({poiType,guardrails})=>{const r=runs.find(x=>x.poiType===poiType);
       return [poiType,{guardrails,entryRuleNow:dobEntryRule(guardrails,evaluatedAt),setups:r?.result.setups.length??null,rejected:r?.result.rejected.length??null,
@@ -155,9 +182,9 @@ async function reportError(client:any,instrument:string,error:unknown){
 
 // Alle Instrumente nacheinander zur selben Minute; Fehler je Instrument landen in dessen Herzschlag und als Hinweis.
 async function tick(client:any,dry=false,probes:number[]=[]){
-  const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={};
+  const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={},budget={left:TS11_PER_TICK};
   for(const instrument of INSTRUMENTS){
-    try{results[instrument]=await tickInstrument(client,instrument,evaluatedAt,dry,probes);}
+    try{results[instrument]=await tickInstrument(client,instrument,evaluatedAt,dry,probes,budget);}
     catch(error){results[instrument]={error:await reportError(client,instrument,error)};}
   }
   return {evaluatedAt,runtimeMs:Math.round(performance.now()-started),instruments:results};

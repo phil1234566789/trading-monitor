@@ -1,4 +1,4 @@
-import { collectNestedChain } from './marketStructureAnalysis';
+import { collectNestedChain } from './marketStructureAnalysis.ts';
 
 // Historische Close-Prüfungen brauchen keine angewendeten Pivotlisten, Phasen oder
 // kompletten Unterbäume. Nur Seed-Identität und damalige Schutzlevel bleiben erhalten.

@@ -1,5 +1,5 @@
 import {buildHistoricalDailyAnchors} from './tradeSetup2Anchors.js';
-import {computeRangesPivots,buildMarketStructureState,collectNestedChain} from './marketStructureAnalysis';
+import {computeRangesPivots,buildMarketStructureState,collectNestedChain} from './marketStructureAnalysis.ts';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {markIgnoredCandles} from './sessionOccurrences.js';
 import {berlinOffsetMinutes} from './berlinTime.js';
