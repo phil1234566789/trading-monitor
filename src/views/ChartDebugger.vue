@@ -7,7 +7,6 @@ import {OrderBlockPrimitive,renderPersistedZones} from '../orderBlocks.js';
 import {renderDoubleOrderBlocks} from '../doubleOrderBlockRendering.js';
 import {tintM1FvgCandidates} from '../fvgCandleTint.js';
 import {cssColor,cssColorScaled} from '../chartColors.js';
-import {formatDatedTime} from '../berlinTime.js';
 import {CHART_DEBUGGER_CASES,CASE_GROUPS,expectedText,productMatches,loadCaseFixture,evaluateCase,caseSteps,caseInstrument} from '../chartDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOrderBlocks.js';
 import {obReactionGraph,graphChangeTimes,structuralState} from '../obReactionGraph.js';
@@ -17,6 +16,7 @@ import DobPairGraph from '../components/DobPairGraph.vue';
 import {dobPairGraph,dobChangeTimes} from '../dobPairGraph.js';
 import DobEntryM1Section from '../components/DobEntryM1Section.vue';
 import TradeSetup11Section from '../components/TradeSetup11Section.vue';
+import DebuggerTimeBar from '../components/DebuggerTimeBar.vue';
 
 const route=useRoute(),router=useRouter();
 // Sektion DOB-Entry M1 ist eine reine Ansicht ohne Fixture; die Fall-Sektion bleibt per v-show montiert, ihr Chart braucht chartEl.
@@ -49,8 +49,6 @@ const graph=computed(()=>result.value&&obReactionGraph({...graphInput(result.val
 const endResult=computed(()=>fixture.value&&evaluateCase(current.value,fixture.value,steps.value.through,options.value));
 const changeTimes=computed(()=>endResult.value?(level.value==='dob'&&isPair.value?dobChangeTimes(endResult.value):graphChangeTimes(graphInput(endResult.value)))
  .filter(t=>t>=steps.value.from&&t<=steps.value.through):[]);
-const jumpTarget=delta=>{const at=evaluatedAt.value;return delta>0?changeTimes.value.find(t=>t>at):changeTimes.value.findLast(t=>t<at);};
-const jump=delta=>{const target=jumpTarget(delta);if(target!=null)evaluatedAt.value=target;};
 
 // ✓/✗ im Dropdown: Produktergebnis unter W1 am Fensterende gegen Philips Soll; im Hintergrund, Fall für Fall.
 const productCheck=ref({});
@@ -78,13 +76,6 @@ watch(caseId,async id=>{
  }catch(e){error.value=e.message;}
 },{immediate:true});
 
-const step=delta=>{evaluatedAt.value=Math.min(steps.value.through,Math.max(steps.value.from,evaluatedAt.value+delta*60));};
-function onKey(e){
- if(e.target.tagName==='SELECT'||!['ArrowLeft','ArrowRight'].includes(e.key))return;
- // Sonst bewegt ein fokussierter Slider sich zusätzlich selbst.
- e.preventDefault();
- (e.shiftKey?jump:step)(e.key==='ArrowLeft'?-1:1);
-}
 
 // Marker sitzen auf der Kerze, deren Schluss das Wissen liefert (knownAt = Kerzenzeit + 60).
 const bar=knownAt=>knownAt-60;
@@ -144,11 +135,10 @@ onMounted(()=>{
  ({chart,candleSeries:series}=createPriceChart(chartEl.value,'XAUUSD'));
  chart.applyOptions({autoSize:true});
  markers=createSeriesMarkers(series,[]);
- window.addEventListener('keydown',onKey);
  checkAllCases();
  draw();
 });
-onBeforeUnmount(()=>{window.removeEventListener('keydown',onKey);chart?.remove();chart=series=null;});
+onBeforeUnmount(()=>{chart?.remove();chart=series=null;});
 watch(result,draw);
 watch(graphRole,draw);
 watch(tf,()=>{fitPending=true;draw();});
@@ -162,15 +152,11 @@ watch(tf,()=>{fitPending=true;draw();});
   <div v-show="section==='cases'" class="bar">
    <select v-model="caseId"><optgroup v-for="[group,cases] in CASE_GROUPS" :key="group" :label="group">
     <option v-for="c in cases" :key="c.id" :value="c.id">{{ c.label }} · erwartet: {{ expectedText(c) }}{{ checkMark(c.id) }}</option></optgroup></select>
-   <button @click="jump(-1)" :disabled="jumpTarget(-1)==null" title="Zur vorigen Änderung im Knotenplan (Shift+←)">◀ vorige Änderung</button>
-   <button @click="step(-1)" title="Eine M1-Kerze zurück (←)">◀</button>
-   <input type="range" :min="steps.from" :max="steps.through" step="60" :value="evaluatedAt" @input="evaluatedAt=Number($event.target.value)">
-   <button @click="step(1)" title="Eine M1-Kerze vor (→)">▶</button>
-   <button @click="jump(1)" :disabled="jumpTarget(1)==null" title="Zur nächsten Änderung im Knotenplan (Shift+→)">nächste Änderung ▶</button>
-   <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
-   <label>Near-Touch <select v-model="nearTouch"><option value="none">aus</option><option value="second">OB2</option><option value="both">OB1+OB2</option></select></label>
-   <label><input type="checkbox" v-model="bridgeClosures"> Marktschluss überbrücken</label>
-   <span class="at">evaluatedAt {{ evaluatedAt ? formatDatedTime(evaluatedAt) : '–' }}</span>
+   <DebuggerTimeBar v-model="evaluatedAt" :from="steps.from" :through="steps.through" :change-times="changeTimes" :active="section==='cases'">
+    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
+    <label>Near-Touch <select v-model="nearTouch"><option value="none">aus</option><option value="second">OB2</option><option value="both">OB1+OB2</option></select></label>
+    <label><input type="checkbox" v-model="bridgeClosures"> Marktschluss überbrücken</label>
+   </DebuggerTimeBar>
   </div>
   <div v-show="section==='cases'" class="main">
    <div ref="chartEl" class="chart"></div>
@@ -190,8 +176,6 @@ watch(tf,()=>{fitPending=true;draw();});
 <style scoped>
 .chart-debugger{display:flex;flex-direction:column;height:calc(100vh - 60px);padding:8px;gap:8px}
 .bar{display:flex;align-items:center;gap:8px;white-space:nowrap}
-.bar input[type=range]{flex:1}
-.at{font-variant-numeric:tabular-nums;white-space:nowrap}
 .main{flex:1;display:flex;gap:8px;min-height:0}
 .chart{flex:1;min-width:0}
 .graph{width:460px;flex:none;overflow:auto;padding-right:4px}

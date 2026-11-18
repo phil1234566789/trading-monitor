@@ -5,13 +5,14 @@ import {detectTradeSetups,detectSetupObs,hasUninterruptedSweepReaction,findFirst
 import {detectLiquidityLevels} from './liquidityDetection.js';
 import {tradeSetupParameters} from './tradeSetupParameters.js';
 import {markIgnoredCandles} from './sessionOccurrences.js';
-import {berlinOffsetMinutes} from './berlinTime.js';
+import {berlinOffsetMinutes,formatDatedTime} from './berlinTime.js';
 import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {obMinimum,instrumentConfig} from './instrumentConfig.js';
 import {isForbiddenAt} from './sessions.js';
 import {evaluateSweepConfirmation} from './tradeSetupSweepSources.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {filterTradeSetup11Candidates} from './tradeSetup11.js';
+import {currentTradeSetup11Range} from './tradeSetup11Ownership.js';
 import {mergeCandles} from './candleCache.js';
 import {TRADE_SETUP_M5_CANDLE_COUNT,TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
 import {tradeSetupFromRow} from './tradeSetupRow.js';
@@ -83,7 +84,7 @@ export function locateTs11Case(kase,m5,sessions){
   }
  }
  const fallback=level?.touchedTime!=null?level.touchedTime+obMaxDelaySec:kase.anchorTime;
- return {ob,obNote,level,evaluatedAt:(ob?.startTime??fallback)+600};
+ return {ob,obNote,level,evaluatedAt:(ob?.startTime??fallback)+600,obKnownAt:ob?ob.startTime+600:null};
 }
 
 const check=(label,ok,detail='')=>({label,ok,detail});
@@ -111,6 +112,12 @@ function candidateChecks(level,ob,ctx,kase,recognizedAt){
 export function diagnoseTs11Case(kase,m5,sessions,located,policy){
  const {ob,evaluatedAt}=located,ctx=prepare(kase,m5,sessions,evaluatedAt),steps=[];
  if(!ob)return {evaluatedAt,steps:[check('Setup-OB vorhanden',false,located.obNote)],candidates:[],setup:null,verdict:'kein TS1-Setup'};
+ // Zeitbalken: vor dem OB-Schluss gibt es kein Setup, auch wenn der OB aus dem späten Fenster schon feststeht.
+ if(evaluatedAt<located.obKnownAt)return {evaluatedAt,steps:[check('Setup-OB bekannt',false,`erst ab ${formatDatedTime(located.obKnownAt)}`)],
+  candidates:[],setup:null,verdict:'OB noch nicht bekannt'};
+ // Kontext wird einmal bis Fensterende geladen; je Zeitpunkt nur das, was dann geschlossen war.
+ policy={h1:closedChecklistCandles(policy.h1??[],'1h',evaluatedAt),d1:closedChecklistCandles(policy.d1??[],'1D',evaluatedAt),
+  m5:policy.m5&&closedChecklistCandles(policy.m5,'5m',evaluatedAt)};
  steps.push(check('Setup-OB vorhanden',true,`${ob.bottom}–${ob.top}`));
  const setup=detectTradeSetups(kase.dir,ctx.own,[],ctx.own,ctx.obs,ctx.params,ctx.clean,ctx.rows)
   .find(s=>s.obStartTime===ob.startTime);
@@ -133,6 +140,18 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy){
  return {evaluatedAt,steps,candidates,setup:{...setup,instrument:kase.instrument},assessment,verdict};
 }
 
+// Range-Kette der TS1.1-Policy zum Zeitpunkt at, inklusive der aktuellen Range (auch per Close-CHoCH wie bei Pin 557).
+export function ts11ChainAt(resolve,closeReactionCache,at){
+ const context=resolve(at);
+ if(context.status!=='ready')return {status:context.status,reason:context.reason,links:[],current:null,key:`${context.status}:${context.reason}`};
+ const point=p=>p&&{price:p.price,pivotTime:p.pivotTime};
+ const links=context.chain.map((s,depth)=>({depth,trend:s.trend,low:point(s.currRange.low),high:point(s.currRange.high)}));
+ const c=currentTradeSetup11Range(context,closeReactionCache);
+ const current=c&&{depth:c.depth,trend:c.trend,basis:c.basis??null,low:point(c.low),high:point(c.high)};
+ return {status:'ready',links,current,key:JSON.stringify([links,current])};
+}
+// Zeitpunkte, an denen sich der Schlüssel (Urteil + Kette) gegenüber dem vorigen Schritt ändert.
+export const ts11ChangeTimes=samples=>samples.filter((s,i)=>i>0&&s.key!==samples[i-1].key).map(s=>s.at);
 const HOUR=3600;
 // Philip braucht mindestens einen Tag M5-Vorlauf, um den Trend am Fall selbst zu lesen.
 export const TS11_LEADS=[['24h','24 h',24*HOUR],['36h','36 h',36*HOUR],['48h','48 h',48*HOUR],['72h','72 h',72*HOUR]];

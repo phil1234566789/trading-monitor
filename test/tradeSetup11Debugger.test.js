@@ -3,7 +3,7 @@ import {expect,it} from 'vitest';
 import {createTradeSetup11ContextResolver,currentTradeSetup11Range,findTradeSetup11SourceOwner} from '../src/tradeSetup11Ownership.js';
 import {createCloseReactionCache} from '../src/m5CloseReactionHistory.js';
 import {detectLiquidityLevels} from '../src/liquidityDetection.js';
-import {isTs11Pin,noteLsPrice,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case,ts11CaseWindow,ts11LeadOf,TS11_LEADS} from '../src/tradeSetup11Debugger.js';
+import {isTs11Pin,noteLsPrice,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case,ts11CaseWindow,ts11LeadOf,TS11_LEADS,ts11ChainAt,ts11ChangeTimes} from '../src/tradeSetup11Debugger.js';
 
 const load=path=>JSON.parse(readFileSync(new URL(path,import.meta.url),'utf8'));
 const oct12=load('./fixtures/ts11-native/context.json'),oct22=load('./fixtures/ts11-ls-ob/xau-2026-10-22.json');
@@ -78,6 +78,27 @@ it.each([['07:45 vor dem Range-Low 09:20','2026-11-18T06:45:00Z','2026-11-18T09:
  expect(current).toMatchObject({trend:'uptrend',basis:'existingCloseReactionChoch'});
  expect(findTradeSetup11SourceOwner({setup:{ls:level,dir:-1},context,resolveContext:resolve,expectedTrend:'downtrend',current}).status)
   .toBe(status);
+});
+
+it('Zeitbalken Pin 557: vor dem OB kein Urteil, Kette wechselt um 10:25 Berlin auf die Close-CHoCH-Range',()=>{
+ const f=load('./fixtures/ts11-ls-ob/xau-2026-11-18.json'),{m5,h1,d1}=f.candles;
+ const kase=ts11CaseFromPin({id:557,kind:'ob_zone',note:'',obZone:{instrument:'XAUUSD',direction:'short',timeframe:'5M',top:3786.62,bottom:3779.74,startTime:'2026-11-18T09:55:00+00:00'}});
+ const located=locateTs11Case(kase,m5,sessions),diagnose=at=>diagnoseTs11Case(kase,m5,sessions,{...located,evaluatedAt:at},{m5,h1,d1});
+ expect(located.obKnownAt).toBe(Date.parse('2026-11-18T10:05:00Z')/1000);
+ expect(diagnose(located.obKnownAt-300).verdict).toBe('OB noch nicht bekannt');
+ expect(diagnose(located.obKnownAt).verdict).toBe('TS1.1 ✓');
+ const resolve=createTradeSetup11ContextResolver({m5Candles:m5,h1Candles:h1,d1Candles:d1,settings:{},sessionConfigs:sessions,instrument:'XAUUSD'});
+ const cache=createCloseReactionCache(),chainAt=iso=>ts11ChainAt(resolve,cache,Date.parse(iso)/1000);
+ // Vorher nur die Wurzel: die ist kein Richtungsbeleg, also keine aktuelle Range.
+ expect(chainAt('2026-11-18T09:20:00Z')).toMatchObject({links:[{depth:0,trend:'downtrend'}],current:null});
+ expect(chainAt('2026-11-18T09:30:00Z').current).toMatchObject({trend:'uptrend',basis:'existingCloseReactionChoch'});
+ const samples=[];
+ for(let at=Date.parse('2026-11-18T09:00:00Z')/1000;at<=Date.parse('2026-11-18T09:40:00Z')/1000;at+=300)samples.push({at,key:chainAt(new Date(at*1000).toISOString()).key});
+ expect(ts11ChangeTimes(samples)).toContain(Date.parse('2026-11-18T09:25:00Z')/1000);
+});
+
+it('Änderungszeiten: nur Wechsel gegenüber dem vorigen Schritt',()=>{
+ expect(ts11ChangeTimes([{at:1,key:'a'},{at:2,key:'a'},{at:3,key:'b'},{at:4,key:'b'},{at:5,key:'a'}])).toEqual([3,5]);
 });
 
 it('meldet einen H1-OB-Pin als nicht auswertbar statt zu raten',()=>{
