@@ -1,7 +1,7 @@
 import {doubleOrderBlockPinSnapshot} from './doubleOrderBlockPin.js';
 import {persistDoubleOrderBlockPin,upsertM5ObZoneId} from '../supabase/functions/_shared/doubleOrderBlockPinStore.js';
 
-// Beim ersten zugestellten Alarm eines DOB-Paars (Retest oder Entry) pinnt der dob-watcher den DOB und seinen POI
+// Beim ersten Alarm eines DOB-Paars (Retest oder Entry) pinnt der dob-watcher den DOB und seinen POI
 // über die bestehenden Pin-Wege (dob_pin_key bzw. ob_zone_id). Ein vorhandener Pin bleibt unangetastet, damit Philips Notiz
 // nicht überschrieben wird; H1/H4-Zonen werden nur gesucht, nie angelegt (wie Dashboard und MCP).
 const HTF={H1:'1H',H4:'4H'};
@@ -10,7 +10,7 @@ const must=({data,error})=>{if(error)throw new Error(error.message);return data;
 
 export async function dobAutoPin(client,{event,setup,pair,evaluatedAt,m5Candles,m1Candles}){
  const poiType=event.poiType??'htf_ob';
- const earlier=must(await client.from('dob_alarm_events').select('id').eq('poi_type',poiType).like('setup_id',`${pair.id}:%`).neq('id',event.id).in('status',['sent','uncertain']).limit(1));
+ const earlier=must(await client.from('dob_alarm_events').select('id').eq('poi_type',poiType).like('setup_id',`${pair.id}:%`).neq('id',event.id).neq('status','suppressed').limit(1));
  if(earlier.length)return {skipped:'notFirstAlarm'};
  const existing=must(await client.from('pin_context').select('id').eq('dob_pin_key',pair.id).maybeSingle());
  // Der Retest-Kandidat hat noch keine Entry-Routen, der Pin-Validator verlangt das Feld.

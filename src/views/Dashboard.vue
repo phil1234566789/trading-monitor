@@ -2457,7 +2457,7 @@ watch(selectedTradingAccountId, () => {
     @add-anti-confluence-from-picker="onAddAntiConfluenceFromPicker"
     />
     <aside v-if="mmtControllerStarted||mmtVisibility.sidebar||showDobWatcher" v-show="mmtVisibility.sidebar||(showDobWatcher&&!snapshotView)" class="chart-trading-sidebar">
-    <DobWatcherPanel v-if="showDobWatcher && !snapshotView" :status="dobWatcher.status.value" :candidates="dobWatcher.candidates.value" @open-chart="openDobWatcherChart" @open-pin="openDobWatcherPin" />
+    <DobWatcherPanel v-if="showDobWatcher && !snapshotView" :status="dobWatcher.status.value" :candidates="dobWatcher.candidates.value" :delivery-issues="dobWatcher.deliveryIssues.value" @open-chart="openDobWatcherChart" @open-pin="openDobWatcherPin" />
     <DashboardMmt v-if="mmtControllerStarted" v-show="mmtVisibility.panel" :enabled="mmtVisibility.controller" :symbol="currentSymbol" :annotations="visibleAnnotations" :last-candle-time="priceChartRef?.lastCandleTime" :replay="replayActive" @broker-positions="brokerPositions=$event" />
     <TradeSetupCockpit
       @setup-saved="refreshTscRange"

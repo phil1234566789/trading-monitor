@@ -14,7 +14,8 @@ import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
 import {dobTs11FromRow} from '../../../src/dobLqSweepPoi.js';
 import {tradeSetup11RowVerdicts,tradeSetup11M5Start,TRADE_SETUP_11_VERSION} from '../../../src/tradeSetup11Rows.js';
-import {secretMatches,sendTelegramText} from '../_shared/setup2Notifications.js';
+import {secretMatches} from '../_shared/setup2Notifications.js';
+import {flushDobOutbox} from '../_shared/dobDelivery.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
 import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHoursGate.ts';
 
@@ -56,23 +57,15 @@ async function closedCandles(client:any,instrument:string,bar:string,evaluatedAt
     .filter(c=>c.time+BAR_SECONDS[bar]<=evaluatedAt);
 }
 
-// Gesperrt (Schalter aus, außerhalb des Fensters oder Sperre aus dob_guardrails): ins Protokoll als suppressed mit Grund,
-// nie nachsenden (der Dedup-Schlüssel ist damit verbraucht). guardrail hält die Sperre auch bei gesendeten Warn-Alarmen fest.
-async function deliver(client:any,event:any,blockedReason:string|null=null){
+// Nur protokollieren; gesendet wird danach gesammelt (flushDobOutbox), damit ein hängendes Telegram die Erkennung nicht aufhält.
+// Gesperrt (Schalter aus, außerhalb des Fensters oder Sperre aus dob_guardrails): suppressed mit Grund, nie nachsenden (der
+// Dedup-Schlüssel ist damit verbraucht). guardrail hält die Sperre auch bei gesendeten Warn-Alarmen fest.
+async function record(client:any,event:any,blockedReason:string|null=null){
   const inserted=checked(await client.from('dob_alarm_events').upsert({id:event.id,instrument:event.instrument,poi_type:event.poiType??'htf_ob',phase:event.phase,setup_id:event.setupId??null,
     direction:event.direction??null,signal_at:new Date(event.signalAt*1000).toISOString(),text:event.text,guardrail:event.guardrail??null,
     ...(blockedReason?{status:'suppressed',error:blockedReason}:{})},{onConflict:'id',ignoreDuplicates:true}).select('id')) as any[];
   if(!inserted.length)return null;
-  if(blockedReason)return {id:event.id,status:'suppressed',reason:blockedReason};
-  let status='sent',error=null;
-  try{await sendTelegramText(event.text,env);}
-  catch(failure){
-    error=failure instanceof Error?failure.message:'Telegram failed';
-    // Ein Transportfehler kann trotzdem zugestellt sein; nie blind doppelt senden.
-    status=error.includes('rejected')||error.includes('missing')?'failed':'uncertain';
-  }
-  checked(await client.from('dob_alarm_events').update({status,error,sent_at:status==='sent'?new Date().toISOString():null}).eq('id',event.id));
-  return {id:event.id,status};
+  return blockedReason?{id:event.id,status:'suppressed',reason:blockedReason}:{id:event.id,status:'pending'};
 }
 
 // Statistik der Sperren (⛔-Text) aus dem Referenzlauf: nur neu, wenn die Konfig seit der letzten Rechnung gespeichert wurde oder die
@@ -155,12 +148,12 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   for(const {event,run} of events){
     // Alarm-Schalter je POI-Art (Konfig alarmEnabled): aus = nur Protokoll, wie eine Sperre.
     const off=run&&run.guardrails?.alarmEnabled===false?'poiTypeAlarmOff':null;
-    const d:any=await deliver(client,event,event.suppressed?event.guardrail:off??blocked);
+    const d:any=await record(client,event,event.suppressed?event.guardrail:off??blocked);
     if(!d)continue;
     delivered.push(d);
-    // Erster zugestellter Alarm eines Paars: DOB + POI anpinnen. Ein Pin-Fehler darf den schon versendeten Alarm nicht stören.
+    // Erster Alarm eines Paars: DOB + POI anpinnen. Ein Pin-Fehler darf den Alarm nicht stören.
     const setup=run&&event.setupId&&[...run.result.setups,...run.result.rejected].find((s:any)=>s.id===event.setupId),pair=setup&&run.result.pairs.get(setup.pairId);
-    if(pair&&(d.status==='sent'||d.status==='uncertain')){
+    if(pair&&d.status==='pending'){
       try{d.autoPin=await dobAutoPin(client,{event,setup,pair,evaluatedAt:asOf,m5Candles:m5Marked,m1Candles:m1Marked});}
       catch(error){d.autoPin={error:error instanceof Error?error.message:String(error)};console.error('DOB-Auto-Pin fehlgeschlagen',event.id,d.autoPin.error);}
     }
@@ -176,7 +169,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
 async function reportError(client:any,instrument:string,error:unknown){
   const message=error instanceof Error?error.message:String(error),now=Math.floor(Date.now()/1000);
   await writeState(client,instrument,{error:message}).catch(()=>{});
-  await deliver(client,{id:`dob:error:${instrument}:${berlinDateStrFor(now)}:${formatBerlinTime(Math.floor(now/3600)*3600)}`,instrument,phase:'error',
+  await record(client,{id:`dob:error:${instrument}:${berlinDateStrFor(now)}:${formatBerlinTime(Math.floor(now/3600)*3600)}`,instrument,phase:'error',
     signalAt:now,text:`⚠️ DOB-Watcher ${instrument}: Lauf fehlgeschlagen (${message.slice(0,300)}). Alarme können fehlen.`},
     (await alarmPolicy(client,instrument).catch(()=>null))?.decide(now)??null).catch(()=>{});
   return message;
@@ -189,7 +182,9 @@ async function tick(client:any,dry=false,probes:number[]=[]){
     try{results[instrument]=await tickInstrument(client,instrument,evaluatedAt,dry,probes,budget);}
     catch(error){results[instrument]={error:await reportError(client,instrument,error)};}
   }
-  return {evaluatedAt,runtimeMs:Math.round(performance.now()-started),instruments:results};
+  // Auch außerhalb 02–22 Uhr: Wiederholungen und Ausfallmeldungen dürfen nicht bis zum Morgen warten.
+  const delivery=dry?null:await flushDobOutbox(client,env,Math.floor(Date.now()/1000)).catch(error=>({error:error instanceof Error?error.message:String(error)}));
+  return {evaluatedAt,runtimeMs:Math.round(performance.now()-started),instruments:results,delivery};
 }
 
 Deno.serve(async request=>{
@@ -204,8 +199,9 @@ Deno.serve(async request=>{
     // Testnachricht: belegt Zustellung an den Kanal, bevor der erste echte Alarm kommt.
     if(body?.test){
       const now=Math.floor(Date.now()/1000);
-      return json(await deliver(client,{id:`dob:test:${new Date(now*1000).toISOString()}`,instrument:'XAUUSD',phase:'test',signalAt:now,
-        text:`🧪 DOB-Watcher ${INSTRUMENTS.join(', ')}: Testnachricht ${berlinDateStrFor(now)} ${formatBerlinTime(now)}. Ab jetzt kommen Alarme beim OB2-Retest und beim Entry (02:00–22:00).`}));
+      await record(client,{id:`dob:test:${new Date(now*1000).toISOString()}`,instrument:'XAUUSD',phase:'test',signalAt:now,
+        text:`🧪 DOB-Watcher ${INSTRUMENTS.join(', ')}: Testnachricht ${berlinDateStrFor(now)} ${formatBerlinTime(now)}. Ab jetzt kommen Alarme beim OB2-Retest und beim Entry (02:00–22:00).`});
+      return json(await flushDobOutbox(client,env,now));
     }
     return json(await tick(client,Boolean(body?.dry),Array.isArray(body?.probes)?body.probes.filter(Number.isFinite):[]));
   }catch(error){

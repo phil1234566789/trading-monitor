@@ -1,6 +1,7 @@
 import {ref,computed,onMounted,onUnmounted} from 'vue';
 import {supabase} from '../supabaseClient.js';
-import {dobWatcherStatus} from '../dobWatcherStatus.js';
+import {dobWatcherStatus,dobDeliveryIssues} from '../dobWatcherStatus.js';
+import {berlinDateStrFor,berlinDayRangeUtcMs} from '../berlinTime.js';
 
 // Herzschlag und heutige Kandidaten des dob-watchers für Navigation und Panel; der Watcher rechnet, die Seite liest nur.
 // ponytail: Polling alle 30 s statt Realtime; reicht bei einem Lauf pro Minute.
@@ -8,7 +9,7 @@ const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
 const POLL_MS=30_000;
 
 export function useDobWatcher(){
- const states=ref([]),pins=ref({}),now=ref(Math.floor(Date.now()/1000)),error=ref('');
+ const states=ref([]),pins=ref({}),deliveryRows=ref([]),now=ref(Math.floor(Date.now()/1000)),error=ref('');
  let timer=null;
  async function load(){
   const {data,error:e}=await supabase.from('dob_watcher_state').select('instrument,last_run_at,skipped,error,last_m1_time,candidates')
@@ -16,6 +17,11 @@ export function useDobWatcher(){
   now.value=Math.floor(Date.now()/1000);
   if(e){error.value=e.message;return;}
   error.value='';states.value=data;
+  // Heute nicht sicher zugestellte Telegram-Alarme; ein Lesefehler hier blendet nur diese Liste aus.
+  const {startUtcMs}=berlinDayRangeUtcMs(berlinDateStrFor(now.value));
+  const {data:open}=await supabase.from('dob_alarm_events').select('id,instrument,text,status,attempts,detected_at,outage_notified_at')
+   .in('status',['pending','sending','uncertain','failed']).gte('detected_at',new Date(startUtcMs).toISOString()).order('detected_at',{ascending:false}).limit(50);
+  deliveryRows.value=open??[];
   // Pin je DOB-Paar (Auto-Pin beim ersten Alarm, dob_pin_key = Paar-ID).
   const keys=[...new Set(data.flatMap(s=>(s.candidates??[]).map(c=>c.pairId)))];
   if(!keys.length){pins.value={};return;}
@@ -27,5 +33,6 @@ export function useDobWatcher(){
  const status=computed(()=>error.value?{tone:'down',text:'nicht lesbar'}:dobWatcherStatus(states.value,now.value));
  const candidates=computed(()=>states.value.flatMap(s=>s.candidates??[]).map(c=>({...c,pinId:pins.value[c.pairId]??null}))
   .sort((a,b)=>b.time-a.time));
- return {status,candidates,refresh:load};
+ const deliveryIssues=computed(()=>dobDeliveryIssues(deliveryRows.value,now.value));
+ return {status,candidates,deliveryIssues,refresh:load};
 }

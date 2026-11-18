@@ -8,7 +8,7 @@ import ChecklistOrderBlock from './ChecklistOrderBlock.vue';
 // DOB-Watcher-Panel nach Philips abgenommener Vorschau: Kopf mit Herzschlag, „Aktuell“ (Retest und frischer Entry aller Assets) und
 // aufklappbares „Protokoll“ des Tages mit Asset-Filtern. Jede Zeile ist ein Button und klappt Details, die OB-Rahmen (OB1, OB2,
 // TS1.1-OB wie in der Checkliste) sowie Chart- und Pin-Link auf. Vorn steht der Status-Satz mit Grund, nach den Rahmen der POI.
-const props=defineProps({status:Object,candidates:Array});
+const props=defineProps({status:Object,candidates:Array,deliveryIssues:Array});
 const emit=defineEmits(['open-chart','open-pin']);
 const STATUS_TEXT={retest:'Retest',entry:'Entry',running:'läuft',win:'Win',loss:'Loss',dropped:'verworfen'};
 const ASSETS=['XAU','GBP','EUR'];
@@ -33,6 +33,15 @@ const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
       <span class="dot" :data-tone="status.tone"></span>
       <span class="state">{{ status.text }}</span>
     </div>
+
+    <template v-if="deliveryIssues?.length">
+      <div class="section-title issue-title" role="alert">Telegram-Zustellung gestört ({{ deliveryIssues.length }})</div>
+      <div class="list">
+        <div v-for="d in deliveryIssues" :key="d.key" class="issue">
+          <span class="asset">{{ d.asset }}</span><span class="issue-head">{{ d.head }}</span><span class="chip" data-status="loss">{{ d.label }} · {{ d.clock }}</span>
+        </div>
+      </div>
+    </template>
 
     <div class="section-title">Aktuell ({{ current.length }})</div>
     <div class="list">
@@ -126,6 +135,9 @@ const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
 .chip[data-status=dropped]{background:#262a35;color:#9aa0ac}
 .details{padding:2px 4px 8px 24px;display:flex;flex-direction:column;gap:4px;font-size:11px;color:#9aa0ac}
 .head-line{color:#d1d4dc}
+.issue-title{color:#ff8a87}
+.issue{min-height:30px;padding:4px;display:grid;grid-template-columns:34px minmax(0,1fr) auto;column-gap:8px;align-items:center;font-size:12px;border-top:1px solid #232733}
+.issue-head{color:#9aa0ac;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .links{display:flex;gap:12px}
 .links a{color:#7aa2ff;cursor:pointer}.links a:hover{color:#a9c1ff}
 .log{border-top:1px solid #2a2e39}

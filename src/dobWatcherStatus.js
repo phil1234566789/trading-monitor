@@ -21,3 +21,12 @@ export function dobWatcherStatus(states,nowSec){
  if(gaps.length){const worst=Math.min(...gaps.map(g=>g.next));return {tone:'gap',text:`Daten-Lücke · ${minutes(nowSec-worst)}`};}
  return {tone:'ok',text:`läuft · ${formatBerlinTime(lastRun)}`};
 }
+
+// Telegram-Zustellungen, die nicht sicher angekommen sind (dob_alarm_events, Outbox in _shared/dobDelivery.js): Panel zeigt sie,
+// statt dass ein Alarm still fehlt. pending/sending erst nach 2 min, vorher läuft der Versand noch normal.
+const DELIVERY_LABEL={failed:'nicht zugestellt',uncertain:'Annahme unklar',pending:'noch nicht gesendet',sending:'Versand hängt'};
+export function dobDeliveryIssues(rows,nowSec){
+ return rows.filter(r=>r.status==='failed'||r.status==='uncertain'||nowSec-sec(r.detected_at)>120)
+  .map(r=>({key:r.id,asset:DOB_WATCHER_SHORT[r.instrument]??r.instrument,clock:formatBerlinTime(sec(r.detected_at)),head:r.text.split('\n')[0],
+   label:r.status==='uncertain'&&!r.outage_notified_at&&r.attempts<2?'Annahme unklar, Wiederholung folgt':DELIVERY_LABEL[r.status]}));
+}
