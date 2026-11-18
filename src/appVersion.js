@@ -1,5 +1,5 @@
 import { ref, onMounted, onUnmounted } from "vue";
-import { HTTP_BACKGROUND } from "./composables/useHttpActivity.js";
+import { HTTP_SILENT } from "./composables/useHttpActivity.js";
 
 const POLL_MS = 5 * 60 * 1000;
 
@@ -14,7 +14,7 @@ export function useNewVersion() {
   if (import.meta.env.DEV) return newSha;
   async function check() {
     try {
-      const res = await fetch(`${import.meta.env.BASE_URL}version.json`, { cache: "no-store", [HTTP_BACKGROUND]: true });
+      const res = await fetch(`${import.meta.env.BASE_URL}version.json`, { cache: "no-store", [HTTP_SILENT]: true });
       const { sha } = await res.json();
       if (isNewVersion(__APP_SHA__, sha)) newSha.value = sha;
     } catch {

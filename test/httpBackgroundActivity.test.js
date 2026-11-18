@@ -27,3 +27,16 @@ it('keeps background requests tracked without foreground spinner and still repor
  await watcher;
  vi.unstubAllGlobals();
 });
+
+it('lets silent requests fail without banner or activity',async()=>{
+ vi.resetModules();
+ const fetch=vi.fn(()=>Promise.reject(new Error('offline')));
+ vi.stubGlobal('window',{fetch,location:{origin:'https://example.test'}});
+ const {installHttpActivityTracking,useHttpActivity,HTTP_SILENT}=await import('../src/composables/useHttpActivity.js');
+ installHttpActivityTracking();
+ const activity=useHttpActivity();
+ await expect(window.fetch('https://example.test/version.json',{[HTTP_SILENT]:true})).rejects.toThrow('offline');
+ expect(activity.errors).toHaveLength(0);
+ expect(activity.backgroundLabels.value).toHaveLength(0);
+ vi.unstubAllGlobals();
+});

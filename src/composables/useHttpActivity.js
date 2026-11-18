@@ -10,6 +10,8 @@ import { computed, reactive } from "vue";
 // also wirklich ALLES ab, auch zukünftige Fetch-Aufrufe an neuen Stellen, ohne dass die dort
 // extra angebunden werden müssten.
 export const HTTP_BACKGROUND = Symbol('httpBackground');
+// Geht ganz am Tracking vorbei: der Versions-Check (appVersion.js) scheitert still und versucht es beim nächsten Takt.
+export const HTTP_SILENT = Symbol('httpSilent');
 const backgroundCounts = reactive(new Map());
 const foregroundCounts = reactive(new Map()); // Label -> Anzahl gerade laufender Aufrufe mit diesem Label
 
@@ -84,6 +86,7 @@ export function installHttpActivityTracking() {
   patched = true;
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (...args) => {
+    if (args[1]?.[HTTP_SILENT]) return originalFetch(...args);
     const url = args[0] instanceof Request ? args[0].url : args[0];
     const label = labelFor(url);
     // Der globale Watcher liest regelmäßig nur Gesundheitsdaten; auch er ist Hintergrundarbeit.
