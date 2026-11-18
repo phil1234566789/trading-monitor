@@ -34,7 +34,7 @@ const RUNS = Object.fromEntries([
 // auf (features.poi_match), welche Stufe zählt, entscheidet die Konfig (poiMatchMode, Default gleiche Kante). Lauf-ID wie oben:
 // XAU dob-lq-sweep-v0, sonst mit Instrument (dob-lq-sweep-gbpusd-v0).
 RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`] = { label: 'v0 · TS1.1 an OB1/OB2',
-  description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
+  description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (TS1.1 wie im Chart, mit Trend-Policy; Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
   sort: 10, version: 'dob-lq-sweep-v0', poiType: 'lq_sweep', pick: r => r.setups, poiOptions: { match: 'adjacent' }, counterDob: true };
 const RUN_ID = flag('--run') ?? runId('v0');
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
@@ -48,14 +48,14 @@ try {
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { dobPoiContext, dobPoiZoneAgeSeconds }, { dobMaxR, dobWideVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, dobPoiFeatures, DOB_BREAKEVEN_AT_R_LEVELS },
-    { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }, { tradeSetup11RowVerdicts, TRADE_SETUP_11_VERSION }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js',
-      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js'].map(load));
+      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/tradeSetup11Rows.js'].map(load));
   const LQ = RUNS[RUN_ID].poiType === 'lq_sweep';
-  // TS1.1-Setups (alle Detektorversionen; die Version steht als Merkmal am Trade), nur für LQ-Sweep-Läufe.
-  const tradeSetups = LQ ? await (async () => { const { data, error } = await fetchAllRows((from, to) => supabase.from('trade_setups')
-    .select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_touched_time,ls_timeframe,ob_zones(top,bottom)')
-    .eq('instrument', SYMBOL).order('ob_start_time').order('id').range(from, to)); if (error) throw error; return data.map(dobTs11FromRow); })() : undefined;
+  // trade_setups-Zeilen (alle Detektorversionen) nur für LQ-Sweep-Läufe; TS1.1 daraus erst unten mit dem Trendkontext.
+  const tradeSetupRows = LQ ? await (async () => { const { data, error } = await fetchAllRows((from, to) => supabase.from('trade_setups')
+    .select('*,trade_setup_sweeps(price,pivot_time,touched_time,timeframe,is_primary),ob_zones(top,bottom)')
+    .eq('instrument', SYMBOL).order('ob_start_time').order('id').range(from, to)); if (error) throw error; return data; })() : undefined;
 
   const startSec = berlinDayRangeUtcMs(START_DAY).startUtcMs / 1000;
   const cache = dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
@@ -69,8 +69,20 @@ try {
   const poiContext = dobPoiContext({ instrument: SYMBOL, m5Candles: mark(m5All), htfCandles: {
     '1h': htfObCandles(mark(await htf.candles('1h', 3600, 200)), sessions, offset),
     '4h': htfObCandles(mark(await htf.candles('4h', 4 * 3600, 100)), sessions, offset) } });
+  const ts11Cache = LQ && dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup', 'ts11'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
+    defaultStartSec: berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000, startSec: berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000, fetchInitialCandles, supabase });
+  const ts11Candles = LQ && { m5: await ts11Cache.candles('5m', 300, 300), h1: await htf.candles('1h', 3600, 200), d1: await ts11Cache.candles('1D', 86400, 300) };
   const m1Marked = mark(m1All), m5Marked = mark(m5All);
   const dataEnd = Math.min(m1All.at(-1).time + 60, Math.floor(Date.now() / 1000));
+  // TS1.1 wie im Chart und im Watcher (tradeSetup11RowVerdicts, Trend-Policy). Das Urteil hängt nur an Kerzen bis zur Setup-Erkennung,
+  // daher einmal zum Datenende. Eigener Cache-Ordner: M5/D1 ab 15.11.2025 für den D1-Anker, ohne die Lauf-Kerzen oben zu verändern.
+  const tradeSetups = LQ ? (() => {
+    const verdicts = tradeSetup11RowVerdicts({ rows: tradeSetupRows, instrument: SYMBOL, m5Candles: ts11Candles.m5, h1Candles: ts11Candles.h1,
+      d1Candles: ts11Candles.d1, evaluatedAt: dataEnd, sessionConfigs: sessions });
+    const counts = Object.groupBy([...verdicts.values()], v => v.status);
+    console.log(`TS1.1 ${TRADE_SETUP_11_VERSION}: ${tradeSetupRows.length} Zeilen · ${Object.entries(counts).map(([k, v]) => `${k} ${v.length}`).join(' · ')}`);
+    return tradeSetupRows.filter(r => verdicts.get(r.id)?.status === 'passed').map(dobTs11FromRow);
+  })() : undefined;
 
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
   // Der Lauf entscheidet, welche Setups zählen; die POI kommt aus dem einmal vorberechneten Kontext.

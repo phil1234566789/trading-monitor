@@ -1,6 +1,6 @@
 import {instrumentConfig} from './instrumentConfig.js';
 
-// POI-Art LQ-Sweep (Philip): der POI ist ein TS1.1-Setup aus trade_setups, keine eigene Sweep-Erkennung. Verbindung zum DOB: OB1
+// POI-Art LQ-Sweep (Philip): der POI ist ein TS1.1-Setup (trade_setups, gefiltert wie im Chart: tradeSetup11RowVerdicts). Zum DOB: OB1
 // oder OB2 hat mit dem TS1.1-OB mindestens eine gleiche Kante (≤ 1 Tick); als TS1.1-OB zählen die gespeicherte Box und das rohe
 // M5-OB dahinter (ob_zone_id), weil TS1.1 die Box bis zum Sweep-Extrem aufweitet. „Nur Überlappung“ und „knapp daneben“ sind
 // Merkmale für die Statistik, keine Regel; welche Stufe zählt, entscheidet poiMatchMode der Konfig. Deno-tauglich (Watcher).

@@ -1,4 +1,4 @@
-import { buildMarketStructureState, collectNestedChain, computeRangesPivots } from './marketStructureAnalysis';
+import { buildMarketStructureState, collectNestedChain, computeRangesPivots } from './marketStructureAnalysis.ts';
 import { closeReactionHistory } from './m5CloseReactionHistory.js';
 import { createIncrementalLiquidityDetector } from './incrementalLiquidityLevels.js';
 

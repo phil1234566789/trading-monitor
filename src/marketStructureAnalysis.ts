@@ -7,8 +7,8 @@
 // Chart-Primitives, inkl. LiquidityLinePrimitive/cssColor/lineWidth/PIP_SIZE) lebt seitdem separat
 // in marketStructureRendering.ts.
 import { detectLiquidityLevels } from "./liquidityDetection.js";
-import { closesPastLevel, withCandleCloseWindow } from "./candleCloseWindow";
-import type { Pivot, PivotHigh, PivotLow, MarketStructureState, RangeTrend } from "./range.type";
+import { closesPastLevel, withCandleCloseWindow } from "./candleCloseWindow.ts";
+import type { Pivot, PivotHigh, PivotLow, MarketStructureState, RangeTrend } from "./range.type.ts";
 
 // "up": bestätigt einen Uptrend (bestehendes Verhalten, Default -> ändert nichts an bisherigen
 // Aufrufern/Tests). "down": exakt gespiegelt, für den Nested-Gegentrend-Tracker (CHoCH-Erkennung,
