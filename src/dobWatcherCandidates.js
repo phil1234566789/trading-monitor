@@ -1,6 +1,8 @@
 import {berlinDateStrFor} from './berlinTime.js';
 import {dobPoiLine,dobTpLine,dobWarnText} from './dobAlarm.js';
 import {dobBlockKey,dobBlockStatsText} from './dobBlockStats.js';
+import {poiMaxDistanceAtr} from './dobHtfObPoi.js';
+import {dobTs11Label} from './dobPoiLabel.js';
 
 // Heutige DOB-Kandidaten eines Watcher-Laufs für das DOB-Watcher-Panel (Dashboard): der Watcher schreibt sie je Instrument nach
 // dob_watcher_state.candidates, die Seite zeigt sie nur an. Frühe OB1-Phasen bleiben draußen (Philip), unklar zählt als „läuft“.
@@ -17,6 +19,16 @@ function statusOf(s,evaluatedAt){
  if(s.phase==='entry'&&s.entryTime>=evaluatedAt-DOB_ENTRY_FRESH_SECONDS)return 'entry';
  return 'running';
 }
+const num=v=>v.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1});
+// Warum ein DOB verworfen ist, konkret statt „kein POI in Reichweite“ neben einer genannten Zone (Philip): HTF-OB mit Abstand und
+// Grenze des Instruments, LQ-Sweep mit dem nächsten TS1.1 und wie weit es von der Kante weg ist.
+function droppedText(s,poiType,instrument){
+ if(!['noPoi','missingTradeSetups'].includes(s.reason))return 'ohne POI-Daten';
+ if(poiType==='lq_sweep')return `kein TS1.1-OB mit gleicher Kante${s.poi?.kind==='ts11'?` · nächstes ${dobTs11Label({...s.poi,instrument})}`:''}`;
+ const max=poiMaxDistanceAtr(instrument);
+ if(!s.poi)return 'keine retestete H1/H4-Zone (Zone nicht retestet)';
+ return `nächste ${s.poi.timeframe}-Zone ${num(s.poi.distanceAtr)} ATR weg, erlaubt ≤ ${num(max)} ATR`;
+}
 const poiShort=(s,poiType)=>poiType==='lq_sweep'?'LQ-Sweep':s.poi?.timeframe?`${s.poi.timeframe}-OB`:'HTF-OB';
 
 // runs: Ergebnis von dobPoiTypeAlarmRuns (je POI-Art result, guardrails, blockStats). Eine Zeile je POI-Art, Richtung und OB2 (wie die
@@ -31,8 +43,8 @@ export function dobWatcherCandidates(runs,evaluatedAt,instrument){
    const status=statusOf(s,evaluatedAt),ob2=`${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`,key=`${poiType}:${ob2}`,old=rows.get(key);
    if(old&&RANK[old.status]>=RANK[status])continue;
    const setup={...s,instrument};
-   const parts=[dobPoiLine(setup,poiType).replace(/^POI: /,'')];
-   if(status==='dropped')parts.push(s.reason==='noPoi'?'kein POI in Reichweite':'ohne POI-Daten');
+   // Verworfen: nur der Grund (mit Zone bzw. TS1.1), damit keine POI-Zeile neben „kein POI“ steht.
+   const parts=status==='dropped'?[droppedText(s,poiType,instrument)]:[dobPoiLine(setup,poiType).replace(/^POI: /,'')];
    if(status==='blocked')parts.push(`${dobWarnText(s.reason,guardrails,s.entryTime??s.phaseSince)}${guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,s.reason,s.entryTime??s.phaseSince)):''}`);
    if(s.entryTime!=null&&status!=='blocked'&&status!=='dropped'){const tp=dobTpLine(setup,guardrails);if(tp)parts.push(tp);}
    rows.set(key,{key,ob2,instrument,poiType,pairId:s.pairId,direction:s.direction,status,blockLabel:BLOCK_LABEL[s.reason]??null,

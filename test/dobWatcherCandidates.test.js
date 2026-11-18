@@ -34,10 +34,21 @@ it('Sperre mit Grund, verworfen nur ohne tragende POI-Art, weiteste Phase gewinn
  ],at,'XAUUSD');
  expect(rows.map(r=>`${r.poiType}:${r.pairId}:${r.status}`).sort()).toEqual(['htf_ob:p1:entry','htf_ob:p2:blocked','htf_ob:p3:dropped']);
  expect(rows.find(r=>r.pairId==='p2')).toMatchObject({blockLabel:'Gegen-DOB'});
- expect(rows.find(r=>r.pairId==='p3').detail).toContain('kein POI in Reichweite');
+ expect(rows.find(r=>r.pairId==='p3').detail).toBe('nächste H1-Zone 0,8 ATR weg, erlaubt ≤ 1,5 ATR');
 });
 
 it('OB1-Partner mit gleichem OB2 ergeben eine Zeile',()=>{
  const rows=dobWatcherCandidates([run([],[s('p1','ob2Retest',{reason:'noPoi',ob2:at-3600}),s('p2','ob2Retest',{reason:'noPoi',ob2:at-3600})])],at,'XAUUSD');
  expect(rows).toHaveLength(1);
+});
+
+it('verworfen nennt den konkreten Grund: HTF ohne Retest, LQ-Sweep mit nächstem TS1.1',()=>{
+ const rows=dobWatcherCandidates([
+  run([],[s('p1','ob2Retest',{reason:'noPoi',poi:null})]),
+  run([],[s('p2','ob2Retest',{reason:'noPoi',poi:{kind:'ts11',tradeSetupId:42,match:'adjacent',gapUsd:0.00012}})],'lq_sweep'),
+ ],at,'GBPUSD');
+ expect(rows.find(r=>r.pairId==='p1').detail).toBe('keine retestete H1/H4-Zone (Zone nicht retestet)');
+ expect(rows.find(r=>r.pairId==='p2').detail).toBe('kein TS1.1-OB mit gleicher Kante · nächstes TS1.1 #42 · 1,2 Pips daneben');
+ const gbp=dobWatcherCandidates([run([],[s('p3','ob2Retest',{reason:'noPoi',poi:{...poi,distanceAtr:5.7}})])],at,'GBPUSD');
+ expect(gbp[0].detail).toBe('nächste H1-Zone 5,7 ATR weg, erlaubt ≤ 1,0 ATR');
 });
