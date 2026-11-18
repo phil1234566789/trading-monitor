@@ -153,8 +153,9 @@ function draw(){
   borderColor:cssColor('dobConfirmed'),textColor:cssColor('dobConfirmed'),borderWidth:1,label:'Pin-OB',forceLabel:true},candles);
   series.attachPrimitive(p);primitives.push(p);}
  if(kase.lsPrice!=null)priceLines.push(series.createPriceLine({price:kase.lsPrice,color:cssColor('liquiditySweepM5'),lineWidth:1,lineStyle:LineStyle.Dashed,title:'Pin-LS'}));
- for(const c of d.candidates.filter(c=>!c.inSetup))priceLines.push(series.createPriceLine({price:c.level.price,
-  color:c.checks.every(x=>x.ok)?cssColor('tradeWin'):cssColor('tradeLoss'),lineWidth:1,lineStyle:LineStyle.Dotted,title:`LS ${c.level.price}`}));
+ // Durchgefallene Kandidaten nur in der Liste rechts; im Chart lenken sie ab (Philip: „kann weg“).
+ for(const c of d.candidates.filter(c=>!c.inSetup&&c.checks.every(x=>x.ok)))priceLines.push(series.createPriceLine({price:c.level.price,
+  color:cssColor('tradeWin'),lineWidth:1,lineStyle:LineStyle.Dotted,title:`LS ${c.level.price}`}));
  const sec=tf.value==='m1'?60:300,mark=Math.floor((d.evaluatedAt-300)/sec)*sec;
  markers.setMarkers(mark<=candles.at(-1).time&&mark>=candles[0].time?[{time:mark,position:'aboveBar',shape:'arrowDown',color:cssColor('tradeConfirmation'),text:'TS1.1-Prüfung'}]:[]);
  drawStructure();
