@@ -19,6 +19,7 @@ import {createCloseReactionCache} from '../m5CloseReactionHistory.js';
 import {mergeCandles} from '../candleCache.js';
 import PinTypeChips from './PinTypeChips.vue';
 import DebuggerTimeBar from './DebuggerTimeBar.vue';
+import {ts11Point,ts11TrendText,ts11When} from '../tradeSetup11Explain.js';
 import ActionButton from './ui/ActionButton.vue';
 import {renderLowerStructure} from '../structureOverlay.js';
 import {barSecondsFor} from '../timeframes.js';
@@ -76,9 +77,9 @@ watch([current,lead,tail],async([kase,l,n])=>{
  }catch(e){if(mine===request){status.value='';error.value=e.message;}}
 });
 
-// Zeitbalken: Diagnose und Kette je Zeitpunkt; beim Ziehen nur den letzten Wert rechnen (~30–90 ms je Diagnose).
+// Zeitbalken: Diagnose und Kette je Zeitpunkt; beim Ziehen nur den letzten Wert rechnen (~0,1–0,3 s je erklärter Diagnose).
 const at=ref(0),diagnosis=shallowRef(null),chain=shallowRef(null),changeTimes=ref(null),scanned=ref(0);
-const diagnoseAt=(d,t)=>diagnoseTs11Case(d.kase,d.m5All,d.own,{...d.located,evaluatedAt:t},d.policy);
+const diagnoseAt=(d,t,explain=true)=>diagnoseTs11Case(d.kase,d.m5All,d.own,{...d.located,evaluatedAt:t},d.policy,{explain});
 let diagnoseTimer=null;
 watch([data,at],([d,t])=>{
  clearTimeout(diagnoseTimer);
@@ -90,7 +91,7 @@ async function scanChanges(d,mine){
  changeTimes.value=null;scanned.value=0;
  const samples=[],{from,through}=d.range,obKnownAt=d.located.obKnownAt??Infinity;
  for(let t=from;t<=through;t+=300){
-  const verdict=t<obKnownAt?'vor OB':diagnoseAt(d,t).verdict;
+  const verdict=t<obKnownAt?'vor OB':diagnoseAt(d,t,false).verdict;
   samples.push({at:t,key:verdict+ts11ChainAt(d.resolve,d.closeCache,t).key});
   if(t>=obKnownAt||samples.length%12===0){
    scanned.value=Math.round((t-from)/Math.max(1,through-from)*100);
@@ -152,6 +153,13 @@ function draw(){
  if(ob){const p=new OrderBlockPrimitive({...ob,endTime:ob.startTime+1800,touched:true},{fillColor:cssColorScaled('dobConfirmed',.18),
   borderColor:cssColor('dobConfirmed'),textColor:cssColor('dobConfirmed'),borderWidth:1,label:'Pin-OB',forceLabel:true},candles);
   series.attachPrimitive(p);primitives.push(p);}
+ // Aktuelle Range der TS1.1-Kette zum Zeitpunkt des Zeitbalkens, von ihrem ältesten Grenzpivot bis evaluatedAt.
+ const cur=chain.value?.current,sec5=tf.value==='m1'?60:300;
+ if(cur?.low&&cur?.high){const p=new OrderBlockPrimitive({top:cur.high.price,bottom:cur.low.price,
+   startTime:Math.floor(Math.min(cur.low.pivotTime,cur.high.pivotTime)/sec5)*sec5,endTime:Math.floor((d.evaluatedAt-300)/sec5)*sec5,touched:true},
+  {fillColor:cssColorScaled('tradeConfirmation',.08),borderColor:cssColor('tradeConfirmation'),textColor:cssColor('tradeConfirmation'),borderWidth:1,
+   label:`Aktuelle Range · Tiefe ${cur.depth} · ${ts11TrendText(cur.trend)}`,forceLabel:true},candles);
+  series.attachPrimitive(p);primitives.push(p);}
  if(kase.lsPrice!=null)priceLines.push(series.createPriceLine({price:kase.lsPrice,color:cssColor('liquiditySweepM5'),lineWidth:1,lineStyle:LineStyle.Dashed,title:'Pin-LS'}));
  // Durchgefallene Kandidaten nur in der Liste rechts; im Chart lenken sie ab (Philip: „kann weg“).
  for(const c of d.candidates.filter(c=>!c.inSetup&&c.checks.every(x=>x.ok)))priceLines.push(series.createPriceLine({price:c.level.price,
@@ -186,8 +194,9 @@ onMounted(async()=>{
  try{await loadCases();}catch(e){error.value=e.message;}finally{loading.value=false;}});
 onBeforeUnmount(()=>{request++;clearTimeout(diagnoseTimer);clearTimeout(insertedTimer);clearTimeout(savedTimer);drawing.dispose();chart?.unsubscribeClick(insertChartPoint);chart?.remove();chart=series=null;});
 const mark=ok=>ok?'✓':'✗';
-const pt=p=>p?`${p.price} (${formatBerlinTime(p.pivotTime)})`:'–';
-const trendText={uptrend:'Aufwärts',downtrend:'Abwärts'};
+const pt=p=>ts11Point(p,at.value);
+const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Ursprung ${ts11When(c.originTime,at.value)} · erkannt ${ts11When(c.recognizedAt,at.value)}`
+ :'innerste bestätigte Range der Kette';
 </script>
 
 <template>
@@ -217,13 +226,13 @@ const trendText={uptrend:'Aufwärts',downtrend:'Abwärts'};
     <p class="note"><strong>{{ current.code }}</strong> · {{ current.pin.kind }}<span v-if="current.setupId"> · Setup #{{ current.setupId }} ({{ current.detectorVersion ?? 'Version unbekannt' }})</span></p>
     <template v-if="diagnosis">
      <h4>Prüfschritte</h4>
-     <ul class="checks"><li v-for="(s,i) in diagnosis.steps" :key="i" :class="{bad:!s.ok}">{{ mark(s.ok) }} {{ s.label }}<small v-if="s.detail"> · {{ s.detail }}</small></li></ul>
+     <ul class="checks"><li v-for="(s,i) in diagnosis.steps" :key="i" :class="{bad:!s.ok}">{{ mark(s.ok) }} {{ s.label }}<span v-if="s.detail" class="detail"> · {{ s.detail }}</span><small v-if="s.code"> {{ s.code }}</small></li></ul>
      <template v-if="chain">
-      <h4>Range-Kette</h4>
+      <h4>Prüfschritt Range-Kette (Stand evaluatedAt)</h4>
       <p v-if="chain.status!=='ready'" class="muted">{{ chain.status }} · {{ chain.reason }}</p>
       <ul v-else class="checks">
-       <li v-for="l in chain.links" :key="l.depth">Tiefe {{ l.depth }}{{ l.depth===0?' (Wurzel)':'' }} · {{ trendText[l.trend] ?? l.trend }} · L {{ pt(l.low) }} · H {{ pt(l.high) }}</li>
-       <li v-if="chain.current"><strong>Aktuell</strong> · Tiefe {{ chain.current.depth }} · {{ trendText[chain.current.trend] ?? chain.current.trend }}<small v-if="chain.current.basis"> · {{ chain.current.basis }}</small></li>
+       <li v-for="l in chain.links" :key="l.depth">Tiefe {{ l.depth }}{{ l.depth===0?' (Wurzel)':'' }} · {{ ts11TrendText(l.trend) }} · H {{ pt(l.high) }} · L {{ pt(l.low) }} · bestätigt</li>
+       <li v-if="chain.current"><strong>Aktuelle Range</strong> · Tiefe {{ chain.current.depth }} · {{ ts11TrendText(chain.current.trend) }} · H {{ pt(chain.current.high) }} · L {{ pt(chain.current.low) }} · {{ basisText(chain.current) }}</li>
        <li v-else class="muted">Keine aktuelle Range (Wurzel ist kein Richtungsbeleg)</li>
       </ul>
      </template>
@@ -265,7 +274,8 @@ const trendText={uptrend:'Aufwärts',downtrend:'Abwärts'};
 .checks{list-style:none;margin:0;padding:0}
 .checks li{padding:1px 0}
 .checks li.bad{color:#ef9a9a}
-.checks small{color:#9aa3b2}
+.checks small{color:#9aa3b2;font-size:11px;margin-left:6px}
+.checks .detail{color:inherit}
 .cand{border-top:1px solid #2a2e39;padding:6px 0}
 .muted{color:#9aa3b2}
 .err{color:#ef5350}

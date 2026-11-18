@@ -13,6 +13,8 @@ import {evaluateSweepConfirmation} from './tradeSetupSweepSources.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {filterTradeSetup11Candidates} from './tradeSetup11.js';
 import {currentTradeSetup11Range} from './tradeSetup11Ownership.js';
+import {explainTs11Source} from './tradeSetup11Explain.js';
+import {fmtPrice} from './format.js';
 import {mergeCandles} from './candleCache.js';
 import {TRADE_SETUP_M5_CANDLE_COUNT,TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
 import {tradeSetupFromRow} from './tradeSetupRow.js';
@@ -109,7 +111,8 @@ function candidateChecks(level,ob,ctx,kase,recognizedAt){
 }
 
 // policy: {h1,d1,m5} aus loadTradeSetup11Context; m5 ist die längere Ankerhistorie wie im Chart.
-export function diagnoseTs11Case(kase,m5,sessions,located,policy){
+// explain=false spart die Einzelbewertung je Quelle (Änderungssuche des Zeitbalkens braucht nur das Urteil).
+export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true}={}){
  const {ob,evaluatedAt}=located,ctx=prepare(kase,m5,sessions,evaluatedAt),steps=[];
  if(!ob)return {evaluatedAt,steps:[check('Setup-OB vorhanden',false,located.obNote)],candidates:[],setup:null,verdict:'kein TS1-Setup'};
  // Zeitbalken: vor dem OB-Schluss gibt es kein Setup, auch wenn der OB aus dem späten Fenster schon feststeht.
@@ -118,7 +121,7 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy){
  // Kontext wird einmal bis Fensterende geladen; je Zeitpunkt nur das, was dann geschlossen war.
  policy={h1:closedChecklistCandles(policy.h1??[],'1h',evaluatedAt),d1:closedChecklistCandles(policy.d1??[],'1D',evaluatedAt),
   m5:policy.m5&&closedChecklistCandles(policy.m5,'5m',evaluatedAt)};
- steps.push(check('Setup-OB vorhanden',true,`${ob.bottom}–${ob.top}`));
+ steps.push(check('Setup-OB vorhanden',true,`Start ${formatDatedTime(ob.startTime)}`));
  const setup=detectTradeSetups(kase.dir,ctx.own,[],ctx.own,ctx.obs,ctx.params,ctx.clean,ctx.rows)
   .find(s=>s.obStartTime===ob.startTime);
  const recognizedAt=orderBlockRecognitionTimes(ctx.rows,'5m').get(ob.startTime);
@@ -129,13 +132,24 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy){
  if(kase.lsPrice!=null&&!candidates.some(c=>c.philip))steps.push(check(`M5-Fraktal bei LS ${kase.lsPrice}`,false,'Detektor kennt dort kein Fraktal (Periode 5, z. B. M1-Pivot)'));
  steps.push(check(`TS1 (${TRADE_SETUP_DETECTOR_VERSION}) findet Setup`,!!setup,setup?`LS ${setup.ls.price}`:'kein gültiger Sweep zu diesem OB, siehe Kandidaten'));
  if(!setup)return {evaluatedAt,steps,candidates,setup:null,verdict:'kein TS1-Setup'};
+ // Die gezeichnete Box ist breiter als die OB-Kerze: sie reicht bis zum Sweep-Extrem (= Invalidierung).
+ const sweepEdge=kase.dir===1?setup.obTop:setup.obBottom;
+ steps.push(check('Setup-Box',true,`OB-Kerze ${fmtPrice(ob.bottom)}–${fmtPrice(ob.top)} · Box/Invalidierung bis Sweep-${kase.dir===1?'Hoch':'Tief'} ${fmtPrice(sweepEdge)}`));
  const forbidden=isForbiddenAt(sessions,ob.startTime,u=>berlinOffsetMinutes(u*1000));
  steps.push(check('OB nicht in verbotener Session',!forbidden,forbidden?'Chart blendet das Setup aus':''));
  const input={instrument:kase.instrument,m5Candles:mergeCandles(policy.m5??[],ctx.window),h1Candles:policy.h1,d1Candles:policy.d1,
   settings:{},sessionConfigs:sessions,evaluatedAt,sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE};
  const assessment=filterTradeSetup11Candidates({...input,setups:[{...setup,instrument:kase.instrument}]}).assessments[0];
- steps.push(check('TS1.1-Trendregel',assessment.status==='passed',`${assessment.status} · ${assessment.reason}`));
- for(const s of assessment.trendEvidence.sourceAssessments??[])steps.push(check(`  Quelle ${s.sourceKey?.split(':').slice(0,2).join(' ')} ${s.sourceKey?.split(':')[4]??''}`,s.status==='passed',`${s.status} · ${s.reason}`));
+ steps.push({...check('TS1.1-Trendregel',assessment.status==='passed',assessment.status==='passed'?'mindestens eine Quelle zählt'
+  :assessment.status==='unknown'?'nicht entscheidbar':'keine Quelle zählt'),code:`${assessment.status} · ${assessment.reason}`});
+ const sources=explain?(setup.confirmationSources??setup.sweeps??[]):[];
+ for(const source of sources){
+  // Je Quelle einzeln bewerten (wie die Policy-Variante), damit die belegende Range für den Klartext vorliegt.
+  const single=filterTradeSetup11Candidates({...input,setups:[{...setup,instrument:kase.instrument,ls:source.level,sweeps:[source],confirmationSources:[source]}]}).assessments[0];
+  const kind=source.level.sourceKind==='orderBlock'?'OB':'LS';
+  steps.push({...check(`  Quelle ${kind} ${fmtPrice(source.level.price)}`,single.status==='passed',
+   explainTs11Source({assessment:single,source,dir:kase.dir,evaluatedAt})),code:`${single.status} · ${single.reason}`});
+ }
  const verdict=forbidden?'ausgeblendet (verbotene Session)':assessment.status==='passed'?'TS1.1 ✓':`TS1.1 ${assessment.status}`;
  return {evaluatedAt,steps,candidates,setup:{...setup,instrument:kase.instrument},assessment,verdict};
 }
@@ -147,7 +161,8 @@ export function ts11ChainAt(resolve,closeReactionCache,at){
  const point=p=>p&&{price:p.price,pivotTime:p.pivotTime};
  const links=context.chain.map((s,depth)=>({depth,trend:s.trend,low:point(s.currRange.low),high:point(s.currRange.high)}));
  const c=currentTradeSetup11Range(context,closeReactionCache);
- const current=c&&{depth:c.depth,trend:c.trend,basis:c.basis??null,low:point(c.low),high:point(c.high)};
+ const current=c&&{depth:c.depth,trend:c.trend,basis:c.basis??null,low:point(c.low),high:point(c.high),
+  originTime:c.confirmation?.originTime??null,recognizedAt:c.confirmation?.recognizedAt??c.knownAt??null};
  return {status:'ready',links,current,key:JSON.stringify([links,current])};
 }
 // Zeitpunkte, an denen sich der Schlüssel (Urteil + Kette) gegenüber dem vorigen Schritt ändert.

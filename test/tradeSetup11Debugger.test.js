@@ -3,6 +3,7 @@ import {expect,it} from 'vitest';
 import {createTradeSetup11ContextResolver,currentTradeSetup11Range,findTradeSetup11SourceOwner} from '../src/tradeSetup11Ownership.js';
 import {createCloseReactionCache} from '../src/m5CloseReactionHistory.js';
 import {detectLiquidityLevels} from '../src/liquidityDetection.js';
+import {explainTs11Source} from '../src/tradeSetup11Explain.js';
 import {isTs11Pin,noteLsPrice,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case,ts11CaseWindow,ts11LeadOf,TS11_LEADS,ts11ChainAt,ts11ChangeTimes} from '../src/tradeSetup11Debugger.js';
 
 const load=path=>JSON.parse(readFileSync(new URL(path,import.meta.url),'utf8'));
@@ -95,6 +96,24 @@ it('Zeitbalken Pin 557: vor dem OB kein Urteil, Kette wechselt um 10:25 Berlin a
  const samples=[];
  for(let at=Date.parse('2026-11-18T09:00:00Z')/1000;at<=Date.parse('2026-11-18T09:40:00Z')/1000;at+=300)samples.push({at,key:chainAt(new Date(at*1000).toISOString()).key});
  expect(ts11ChangeTimes(samples)).toContain(Date.parse('2026-11-18T09:25:00Z')/1000);
+});
+
+it('Pin 557 erklärt Box und Quellen im Klartext',()=>{
+ const {result}=run(load('./fixtures/ts11-ls-ob/xau-2026-11-18.json'),{id:557,kind:'ob_zone',note:'',
+  obZone:{instrument:'XAUUSD',direction:'short',timeframe:'5M',top:3786.62,bottom:3779.74,startTime:'2026-11-18T09:55:00+00:00'}});
+ const step=prefix=>result.steps.find(s=>s.label.trim().startsWith(prefix));
+ expect(step('Setup-Box').detail).toBe('OB-Kerze 3.779,74–3.784,14 · Box/Invalidierung bis Sweep-Hoch 3.786,62');
+ expect(step('Quelle LS 3.783,64')).toMatchObject({ok:true,code:'passed · sourceRangeDirection',
+  detail:'LS-Pivot 07:45 gehört zur Abwärts-Wurzel und ist älter als das Range-Low 09:20, an dem die Gegen-Range (Close-CHoCH) beginnt → zählt'});
+ expect(step('Quelle OB 3.779,88')).toMatchObject({ok:false,code:'unmet · orderBlockSourceRangeNotAssociated'});
+});
+
+it('Klartext: LS-Pivot nach dem Range-Low gehört zur Gegenbewegung',()=>{
+ const at=Date.parse('2026-11-18T11:00:00Z')/1000,berlin=iso=>Date.parse(iso)/1000;
+ expect(explainTs11Source({dir:1,evaluatedAt:at,source:{level:{pivotTime:berlin('2026-11-18T09:40:00Z'),price:3786.62}},
+  assessment:{status:'unmet',reason:'sourceRangeNotAssociated',trendEvidence:{currentRange:{trend:'uptrend',basis:'existingCloseReactionChoch',
+   confirmation:{originTime:berlin('2026-11-18T08:20:00Z')}},sourceOwner:{status:'unmet'}}}}))
+  .toBe('LS-Pivot 10:40 liegt nach dem Range-Low 09:20 und gehört damit zur Gegenbewegung → zählt nicht');
 });
 
 it('Änderungszeiten: nur Wechsel gegenüber dem vorigen Schritt',()=>{
