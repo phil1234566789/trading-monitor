@@ -56,7 +56,7 @@ it('verworfen nennt den konkreten Grund: HTF ohne Retest, LQ-Sweep mit nächstem
 it('Detail-Rahmen: OB1, OB2 und das TS1.1-OB, wenn es nicht exakt OB1/OB2 ist',()=>{
  const ts={kind:'ts11',tradeSetupId:50740,zone:{top:21,bottom:19.5},zoneStartTime:at-7500,matchedEdge:'top',match:'edge',gapUsd:0,lsPrice:20.5};
  const [row]=dobWatcherCandidates([run([s('p1','ob2Retest',{poi:ts})],[],'lq_sweep')],at,'XAUUSD');
- expect(row.frames.map(f=>f.label)).toEqual(['OB1 · bärische M5 OB (09:00)','OB2 · bärische M5 OB (09:55)','TS1.1-OB #50740 · bärische M5 OB (08:55)']);
+ expect(row.frames.map(f=>f.label)).toEqual(['OB1 · bärische M5 OB (09:00)','OB2 · bärische M5 OB (09:55)','TS1.1-OB #50740 · LS 20,50 · bärische M5 OB (08:55)']);
  expect(row.frames[0].ob).toEqual({dir:-1,top:20,bottom:18,startTime:at-7200});
  const [same]=dobWatcherCandidates([run([s('p1','ob2Retest',{poi:{...ts,matchedEdge:'both'}})],[],'lq_sweep')],at,'XAUUSD');
  expect(same.frames).toHaveLength(2);
@@ -77,4 +77,11 @@ it('Status-Satz: läuft, Loss, Win, Win mit Teilprofit, gesperrt mit Statistik',
  const blocked=dobWatcherCandidates([{...run([],[s('p1','entry',{...fx,reason:'blockedEntryHour'})]),
   guardrails:{...DOB_GUARDRAILS_DEFAULT,entryWindows:[{from:570,to:720,action:'block'}]},blockStats:{years:'2026',byKey:{[key]:{n:40,wr3:12.8,sum3:-9}}}}],at,'GBPUSD');
  expect(blocked[0].head).toBe('gesperrt, weil: Sperrzeit 09:30–12:00 (dort WR3 12,8 %, −9R, 2026)');
+});
+
+it('HTF-OB: POI-Zone als erster Rahmen, auch bei verworfen, ältere Zone mit Datum',()=>{
+ const far={timeframe:'H4',zone:{top:3910,bottom:3900},zoneStartTime:Date.parse('2026-11-14T08:00:00Z')/1000,distanceAtr:27.2};
+ const [row]=dobWatcherCandidates([run([],[s('p1','ob2Retest',{reason:'noPoi',poi:far})])],at,'XAUUSD');
+ expect(row.frames[0]).toMatchObject({label:'POI · H4-OB (14.11. 09:00)',ob:{dir:-1,top:3910,bottom:3900}});
+ expect(row.frames.map(f=>f.label.split(' ·')[0])).toEqual(['POI','OB1','OB2']);
 });

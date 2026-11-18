@@ -32,13 +32,19 @@ function droppedText(s,poiType,instrument){
  if(!s.poi)return 'keine retestete H1/H4-Zone (Zone nicht retestet)';
  return `nächste ${s.poi.timeframe}-Zone ${num(s.poi.distanceAtr)} ATR weg, erlaubt ≤ ${num(max)} ATR`;
 }
-// Rahmen fürs aufgeklappte Detail (ChecklistOrderBlock): OB1, OB2 und bei LQ-Sweep das TS1.1-OB, wenn es nicht exakt OB1/OB2 ist.
-function obFrames(s){
- const dir=s.direction==='long'?1:-1,word=dir===1?'bullische':'bärische',c=s.chart;
- const frame=(name,zone,start)=>({label:`${name} · ${word} M5 OB (${formatBerlinTime(start)})`,ob:{dir,top:zone.top,bottom:zone.bottom,startTime:start}});
- const frames=[frame('OB1',c.firstOrderBlock,c.firstOrderBlockStart),frame('OB2',c.secondOrderBlock,c.secondOrderBlockStart)];
+// Rahmen fürs aufgeklappte Detail (ChecklistOrderBlock): bei HTF-OB zuerst die POI-Zone (auch die zu weite bei verworfen, Philip),
+// dann OB1, OB2 und bei LQ-Sweep das TS1.1-OB mit LS-Preis, wenn es nicht exakt OB1/OB2 ist. Zonen von Vortagen mit Datum.
+function obFrames(s,instrument){
+ const dir=s.direction==='long'?1:-1,word=dir===1?'bullische':'bärische',c=s.chart,day=berlinDateStrFor(c.secondOrderBlockStart);
+ const when=t=>{const d=berlinDateStrFor(t);return d===day?formatBerlinTime(t):`${d.slice(8,10)}.${d.slice(5,7)}. ${formatBerlinTime(t)}`;};
+ const box=(label,zone,start)=>({label,ob:{dir,top:zone.top,bottom:zone.bottom,startTime:start}});
+ const frame=(name,zone,start)=>box(`${name} · ${word} M5 OB (${when(start)})`,zone,start);
+ const htf=s.poi?.zone&&s.poi.kind!=='ts11'&&s.poi.timeframe&&Number.isFinite(s.poi.zoneStartTime)?s.poi:null;
+ const frames=[...(htf?[box(`POI · ${htf.timeframe}-OB (${when(htf.zoneStartTime)})`,htf.zone,htf.zoneStartTime)]:[]),
+  frame('OB1',c.firstOrderBlock,c.firstOrderBlockStart),frame('OB2',c.secondOrderBlock,c.secondOrderBlockStart)];
  const ts=s.poi?.kind==='ts11'?s.poi:null;
- if(ts?.zone&&Number.isFinite(ts.zoneStartTime)&&ts.matchedEdge!=='both')frames.push({...frame(`TS1.1-OB #${ts.tradeSetupId}`,ts.zone,ts.zoneStartTime)});
+ if(ts?.zone&&Number.isFinite(ts.zoneStartTime)&&ts.matchedEdge!=='both')
+  frames.push(frame(`TS1.1-OB #${ts.tradeSetupId}${Number.isFinite(ts.lsPrice)?` · LS ${dobPrice(ts.lsPrice,instrument)}`:''}`,ts.zone,ts.zoneStartTime));
  return frames;
 }
 // Status-Satz vorn im Detail (Philip): Status und Grund im Klartext, Preise im Format des Instruments, Zeiten in Berlin.
@@ -84,7 +90,7 @@ export function dobWatcherCandidates(runs,evaluatedAt,instrument){
    const poiText=status==='dropped'?null:dobPoiLine({...s,instrument},poiType).replace(/^POI: /,'POI ');
    rows.set(key,{key,ob2,instrument,poiType,pairId:s.pairId,direction:s.direction,status,blockLabel:BLOCK_LABEL[s.reason]??null,
     time:status==='win'||status==='loss'?s.phaseSince:time,poi:poiShort(s,poiType),head,poiText,detail:[head,poiText].filter(Boolean).join(' · '),
-    tradeSetupId:s.poi?.kind==='ts11'?s.poi.tradeSetupId:null,chartAt:time+60,frames:obFrames(s)});
+    tradeSetupId:s.poi?.kind==='ts11'?s.poi.tradeSetupId:null,chartAt:time+60,frames:obFrames(s,instrument)});
   }
  }
  const carried=new Set([...rows.values()].filter(r=>r.status!=='dropped').map(r=>r.ob2)),dropped=new Set();
