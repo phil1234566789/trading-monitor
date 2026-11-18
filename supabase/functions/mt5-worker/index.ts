@@ -2,6 +2,7 @@ import {targetPlanAction} from '../trading-monitor-mcp/mt5TargetPlans.ts';
 import {dailyStopAction} from '../trading-monitor-mcp/mt5DailyStop.ts';
 import { historyWorkerAction } from '../trading-monitor-mcp/mt5History.ts';
 import { workerAction } from '../trading-monitor-mcp/mt5Execution.ts';
+import { workerCycle } from '../trading-monitor-mcp/mt5WorkerCycle.ts';
 import { workerConfiguration, enableMt5ReadCache } from '../trading-monitor-mcp/mt5Credentials.ts';
 
 // 15 s: Konto-/Policy-Änderungen greifen beim Worker spätestens so verzögert.
@@ -15,7 +16,7 @@ Deno.serve(async req => {
   if (text.length > 64_000) return new Response('Payload too large',{status:413});
   try {
     const body=JSON.parse(text);
-    return Response.json((body.action==='risk_context'||body.action?.startsWith('guard_')) ? await dailyStopAction(body) : body.action==='configuration' ? await workerConfiguration(body.account_id) : body.action?.startsWith('target_') ? await targetPlanAction(body,true) : body.action?.startsWith('history_') ? await historyWorkerAction(body) : await workerAction(body),
+    return Response.json(body.action==='cycle' ? await workerCycle(body) : (body.action==='risk_context'||body.action?.startsWith('guard_')) ? await dailyStopAction(body) : body.action==='configuration' ? await workerConfiguration(body.account_id) : body.action?.startsWith('target_') ? await targetPlanAction(body,true) : body.action?.startsWith('history_') ? await historyWorkerAction(body) : await workerAction(body),
       {headers:{'Cache-Control':'no-store'}});
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'worker_failed';

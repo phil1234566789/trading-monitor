@@ -9,6 +9,13 @@ describe('MMT independent health assessment',()=>{
     expect(issue.code).toBe('AttributeError');
     expect(issue.key).toContain('prepare');
   });
+  it('tolerates the hourly idle heartbeat but stays strict once an order waits',()=>{
+    const idle={...bridge,poll_mode:'idle',heartbeat_at:new Date(now-50*60000).toISOString()};
+    expect(assessMt5Health({selected,bridge:idle,orders:[]},now)).toBeNull();
+    expect(assessMt5Health({selected,bridge:{...idle,heartbeat_at:new Date(now-66*60000).toISOString()},orders:[]},now).code).toBe('worker_offline');
+    expect(assessMt5Health({selected,bridge:idle,orders:[{id:'o',status:'searching',updated_at:new Date(now).toISOString()}]},now).code).toBe('worker_offline');
+    expect(assessMt5Health({selected,bridge:{...idle,poll_mode:'active'},orders:[]},now).code).toBe('worker_offline');
+  });
   it('detects a stopped heartbeat independently of the worker',()=>{
     expect(assessMt5Health({selected,bridge:{...bridge,heartbeat_at:new Date(now-61000).toISOString()},orders:[]},now).code).toBe('worker_offline');
     expect(assessMt5Health({selected,bridge,orders:[]},now)).toBeNull();

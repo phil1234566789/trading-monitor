@@ -6,7 +6,10 @@ const sections=new Set(['catalog','snapshots','orders','guards','health','balanc
 export async function readMt5UiState(body:Record<string,unknown>){
  const requested=body.action==='ui_activity'?[]:body.sections;
  if(!Array.isArray(requested)||requested.length>6||requested.some(s=>typeof s!=='string'||!sections.has(s)))throw new Error('invalid_ui_sections');
- const data:any=checked(await mt5Database().rpc('mt5_read_ui_state',{p_sections:[...new Set(requested)]}));
+ // Jeder UI-Poll kommt nur aus einem sichtbaren MMT-Tab: das ist die Präsenz, die den VPS-Worker aktiv hält.
+ const db=mt5Database(),[read,presence]=await Promise.all([db.rpc('mt5_read_ui_state',{p_sections:[...new Set(requested)]}),db.rpc('mt5_touch_presence')]);
+ if(presence.error)console.error('mt5_presence_failed');
+ const data:any=checked(read);
  if(!data||!data.revisions)throw new Error('mt5_storage_unavailable');
  if(requested.includes('catalog'))Object.assign(data,{execution_enabled:Deno.env.get('MT5_EXECUTION_ENABLED')==='true',server_live_allowed:Deno.env.get('MT5_ALLOW_LIVE')==='true'});
  const now=Math.floor(Date.now()/1000),day=tradingDay(now);

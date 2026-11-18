@@ -1,7 +1,7 @@
 import {afterEach,expect,it,vi} from 'vitest';
 const state=vi.hoisted(()=>({account:{id:'account',login:42,server:'Demo',mode:'demo'},bridge:null,policy:null,enqueue:vi.fn()}));
 vi.mock('../supabase/functions/trading-monitor-mcp/mt5Credentials.ts',()=>({
- activeMt5Account:async()=>state.account,accountBridge:async()=>state.bridge,
+ activeMt5Account:async()=>state.account,accountBridge:async()=>state.bridge,freshBridge:async()=>state.bridge,
  checked:({data,error})=>{if(error)throw error;return data;},
  mt5Database:()=>({from:()=>({select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null})}),rpc:state.enqueue}),
 }));

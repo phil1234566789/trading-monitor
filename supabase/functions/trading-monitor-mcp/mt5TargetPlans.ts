@@ -1,5 +1,5 @@
 import {z} from 'npm:zod@3.24.1';
-import {accountBridge,activeMt5Account,checked,mt5Database} from './mt5Credentials.ts';
+import {accountBridge,activeMt5Account,checked,freshBridge,mt5Database} from './mt5Credentials.ts';
 import {executionConfig} from './mt5Execution.ts';
 import {validateWorkerSnapshot,validateDispatchAccount} from './executionContract.js';
 import {validateTargetAllocation} from './targetPlanContract.js';
@@ -46,7 +46,7 @@ export async function targetPlanAction(body:Record<string,unknown>,worker=false)
    if(order.status!=='executed'||!order.result?.price||!order.result?.volume||order.result?.position_lifecycle?.state==='closed')throw new Error('target_fill_required');
    validateDispatchAccount(order.intent,config);
   }
-  const bridge:any=await accountBridge(await activeMt5Account(body.account_id));
+  const bridge:any=await freshBridge(await activeMt5Account(body.account_id),5000);
   const heartbeat=Date.parse(bridge?.heartbeat_at),now=Date.now();
   if(!Number.isFinite(heartbeat)||now-heartbeat>5000||heartbeat>now+1000)throw new Error('bridge_offline');
   const s=validateWorkerSnapshot(bridge.snapshot,config);

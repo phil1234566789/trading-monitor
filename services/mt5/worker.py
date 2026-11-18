@@ -15,6 +15,11 @@ from target_worker import TargetEngine
 from terminal_connection import initialize_terminal
 from history_mailbox import HistoryMailbox
 from position_costs import PositionCosts
+from wake_listener import WakeListener
+
+# Leerlauf: Heartbeat stündlich; ohne Realtime-Verbindung halbminütlich, damit kein Weckruf verloren geht.
+IDLE_HEARTBEAT_SEC = 3600
+IDLE_FALLBACK_SEC = 30
 
 
 class NoRedirect(HTTPRedirectHandler):
@@ -50,8 +55,11 @@ class Cloud:
 
 
 class Engine:
-    def __init__(self, broker, cloud, journal, execute=True):
+    def __init__(self, broker, cloud, journal, execute=True, wake=None):
         self.broker, self.cloud, self.journal = broker, cloud, journal
+        self.wake=wake
+        self.idle_since=None
+        self.next_risk_context=None
         self.execute=execute
         self.daily_stop=DailyStopEngine(broker,cloud,journal.db,execute)
         self.targets=TargetEngine(broker,cloud,journal.db,execute,self.refresh_risk_context)
@@ -75,8 +83,8 @@ class Engine:
         except Exception:
             print(json.dumps(dict(event='fault_report_pending')),flush=True)
 
-    def refresh_risk_context(self):
-        context=self.cloud.call('risk_context',dict(account_login=self.broker.login,account_server=self.broker.server))
+    def refresh_risk_context(self,context=None):
+        if context is None:context=self.cloud.call('risk_context',dict(account_login=self.broker.login,account_server=self.broker.server))
         now=time.time()
         if (not isinstance(context,dict) or type(context.get('latched')) is not bool
                 or context.get('daily_stop_ready') is not True
@@ -95,7 +103,12 @@ class Engine:
         return self.broker.prepare(intent)
 
     def snapshot(self):
-        self.refresh_risk_context()
+        # Der Kontext aus dem letzten cycle-Call spart einen Roundtrip, solange er die 5-s-Frist hält.
+        cached,self.next_risk_context=self.next_risk_context,None
+        try:self.refresh_risk_context(cached)
+        except ValueError:
+            if cached is None:raise
+            self.refresh_risk_context()
         snapshot=self.broker.snapshot()
         snapshot['quotes']=self.broker.quotes()
         snapshot['target_plans_ready']=self.execute
@@ -177,17 +190,48 @@ class Engine:
         finally:
             self.journal.finish(intent['id'], result)
 
+    def local_busy(self):
+        db=self.journal.db
+        return bool(self.journal.pending()) or any(db.execute(f'SELECT 1 FROM {table} WHERE delivered=0 LIMIT 1').fetchone()
+                                                   for table in ('guard_sends','target_sends'))
+
+    def broker_exposed(self):
+        # Lokale Terminal-Abfrage kostet keine DB-Anfrage: auch manuell eröffnete Positionen wecken den Schutz.
+        api=getattr(self.broker,'api',None)
+        if api is None:return True
+        positions,orders=api.positions_total(),api.orders_total()
+        return positions is None or orders is None or positions>0 or orders>0
+
+    def wake_due(self,now):
+        if self.idle_since is None:return True
+        if self.wake is not None and self.wake.event.is_set():
+            self.wake.event.clear();return True
+        joined=self.wake is not None and self.wake.joined
+        return now-self.idle_since>=(IDLE_HEARTBEAT_SEC if joined else IDLE_FALLBACK_SEC) or self.broker_exposed()
+
+    def cycle(self,snapshot,watch_cursor):
+        body=dict(snapshot=snapshot,exposure=self.daily_stop.broker.exposure(),watch_cursor=watch_cursor,
+                  local_busy=self.local_busy(),account_login=self.broker.login,account_server=self.broker.server,**self.targets.poll_fields())
+        response=self.cloud.call('cycle',body)
+        if not isinstance(response.get('guard'),dict) or not isinstance(response.get('plans'),list):raise ValueError('invalid_cycle_response')
+        self.next_risk_context=response.get('risk_context')
+        return response
+
     def run(self):
         orders, next_poll, watch_cursor = [], 0.0, None
         while True:
             try:
+                if self.idle_since is not None:
+                    if not self.wake_due(time.monotonic()):
+                        time.sleep(1);continue
+                    self.idle_since=None;next_poll=0.0
                 checked_cycle=False
                 flush_ok=self.flush() if self.execute else True
                 if time.monotonic() >= next_poll:
                     snapshot=self.snapshot()
-                    response = self.cloud.call('poll', dict(snapshot=snapshot,watch_cursor=watch_cursor))
-                    daily_allowed=self.daily_stop.cycle(snapshot)
-                    self.targets.cycle(risk_allowed=daily_allowed)
+                    response=self.cycle(snapshot,watch_cursor)
+                    daily_allowed=self.daily_stop.cycle(snapshot,response['guard'])
+                    self.targets.cycle(risk_allowed=daily_allowed,plans=response['plans'])
                     try:self.history_mailbox.request(response.get('history_request'))
                     except (OSError,ValueError):print('history_request_delivery_failed',flush=True)
                     try:self.position_costs.sync()
@@ -201,6 +245,10 @@ class Engine:
                     if not isinstance(orders, list) or len(orders) > 100:
                         raise ValueError('invalid_order_list')
                     next_poll = time.monotonic() + 1
+                    # Ohne Weckweg (alte Konfiguration) bleibt es beim 1-s-Takt.
+                    if response.get('idle') is True and self.wake is not None and not orders and not watched:
+                        self.idle_since=time.monotonic()
+                        print(json.dumps(dict(event='worker_idle',realtime=self.wake.joined)),flush=True)
                 if self.execute and flush_ok and not self.daily_stop.latched and not any(row.get('status') in ('sending', 'unknown') for row in orders):
                     for row in orders:
                         if row.get('status') == 'searching':
@@ -210,6 +258,7 @@ class Engine:
             except Exception as error:
                 self.report_fault(error)
                 orders, next_poll, watch_cursor = [], 0.0, None
+                self.idle_since=self.next_risk_context=None
                 time.sleep(2)
             else:
                 if flush_ok and checked_cycle:self.last_fault=None
@@ -254,7 +303,9 @@ def main():
         broker.account(config['mode'])
         journal_path = Path(os.environ.get('MT5_JOURNAL_PATH', Path(__file__).with_name('execution.sqlite3')))
         with Journal(journal_path) as journal:
-            Engine(broker, cloud, journal,execute=not args.monitor).run()
+            realtime=config.get('realtime')
+            wake=WakeListener(realtime['url'],realtime['apikey'],realtime['topic']).start() if isinstance(realtime,dict) else None
+            Engine(broker, cloud, journal,execute=not args.monitor,wake=wake).run()
         return 0
     finally:
         mt5.shutdown()

@@ -6,7 +6,7 @@ import {assertDailyStopSnapshot} from './dailyStopContract.js';
 import {scheduleMt5Health,getMt5Health} from './mt5Health.ts';
 
 import { isExecutionId, isSameExecutionResult, validateExecutionResult, validatePositionLifecycle, validateWorkerFault, validateDispatchAccount, validateExecutionIntent, validateWorkerSnapshot } from './executionContract.js';
-import { accountBridge, activeMt5Account, activeMt5AccountId, checked, mt5Database as database } from './mt5Credentials.ts';
+import { accountBridge, activeMt5Account, activeMt5AccountId, checked, freshBridge, mt5Database as database } from './mt5Credentials.ts';
 
 export async function executionConfig(accountId?:unknown) {
   if (Deno.env.get('MT5_EXECUTION_ENABLED') !== 'true') {
@@ -65,7 +65,7 @@ export async function createExecutionOrder(input: Record<string, unknown>, confi
   }
   const now = Math.floor(Date.now()/1000);
   const intent = validateExecutionIntent({ ...input, created_sec:now }, config, now);
-  const bridge = await accountBridge(await activeMt5Account(accountId));
+  const bridge = await freshBridge(await activeMt5Account(accountId),15_000);
   if (!bridge || Date.now() - Date.parse(bridge.heartbeat_at) > 15_000) throw new Error('bridge_offline');
   validateWorkerSnapshot(bridge.snapshot, config);
   assertDailyStopSnapshot(bridge.snapshot,now);
@@ -99,8 +99,9 @@ export async function workerAction(body: Record<string, any>) {
   }
   if (body.action === 'poll') {
     const snapshot = validateWorkerSnapshot(body.snapshot, {...config,allowLive:true});
-    checked(await db.from('mt5_bridge_state').upsert({ id:config.accountId, snapshot, heartbeat_at:now }));
-    if(await activeMt5AccountId(db)===config.accountId)checked(await db.from('mt5_bridge_state').upsert({id:'primary',snapshot,heartbeat_at:now}));
+    // Jeder Poll ist zunächst aktiv; erst workerCycle stuft nach der Gesamtprüfung auf Leerlauf herab.
+    checked(await db.from('mt5_bridge_state').upsert({ id:config.accountId, snapshot, heartbeat_at:now, poll_mode:'active' }));
+    if(await activeMt5AccountId(db)===config.accountId)checked(await db.from('mt5_bridge_state').upsert({id:'primary',snapshot,heartbeat_at:now,poll_mode:'active'}));
     checked(await db.from('mt5_execution_orders').update({status:'expired',updated_at:now})
       .eq('status','searching').lte('expires_at',now));
     const orders = checked(await db.from('mt5_execution_orders').select('*')

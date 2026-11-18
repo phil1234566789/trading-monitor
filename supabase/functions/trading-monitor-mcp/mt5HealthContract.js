@@ -1,8 +1,12 @@
+// Worker-Leerlauf: Heartbeat jede Stunde, plus Spielraum für einen verzögerten Zyklus.
+export const IDLE_HEARTBEAT_MS=65*60_000;
 export function assessMt5Health({selected,bridge,orders},now=Date.now()) {
   if(!selected)return null;
   const unknown=orders.find(o=>o.status==='unknown'||o.status==='sending'&&now-Date.parse(o.updated_at)>30000);
   if(unknown)return {key:'unknown:'+unknown.id,code:'send_outcome_unknown',detail:{order_id:unknown.id}};
-  if(!bridge||now-Date.parse(bridge.heartbeat_at)>60000)return {key:'offline:'+selected.id,code:'worker_offline',detail:{}};
+  // Leerlauf meldet sich nur stündlich; ein offener Auftrag verlangt sofort wieder den strengen 60-s-Takt.
+  const idle=bridge?.poll_mode==='idle'&&!orders.some(o=>['searching','sending','unknown'].includes(o.status));
+  if(!bridge||now-Date.parse(bridge.heartbeat_at)>(idle?IDLE_HEARTBEAT_MS:60000))return {key:'offline:'+selected.id,code:'worker_offline',detail:{}};
   const snapshot=bridge.snapshot;
   if(snapshot.account_login!==Number(selected.login)||snapshot.account_server!==selected.server)
     return {key:'account:'+selected.id,code:'account_mismatch',detail:{}};

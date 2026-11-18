@@ -65,12 +65,14 @@ class TargetEngine:
         finally:
             with self.db:self.db.execute('UPDATE target_sends SET result=? WHERE id=?',(json.dumps(result,allow_nan=False),id))
 
-    def cycle(self,risk_allowed=True):
+    def poll_fields(self):
+        return dict(exit_plan_version=1) if self.supports_stops and getattr(self.broker,'supports_stops',False) is True else {}
+
+    def cycle(self,risk_allowed=True,plans=None):
         if not self.execute:return
         self.flush()
         if not risk_allowed:return
-        response=self.cloud.call('target_poll',dict(exit_plan_version=1) if self.supports_stops and getattr(self.broker,'supports_stops',False) is True else {})
-        plans=response.get('plans')
+        if plans is None:plans=self.cloud.call('target_poll',self.poll_fields()).get('plans')
         if not isinstance(plans,list) or len(plans)>100:raise ValueError('invalid_target_plan_list')
         for row in plans:self.consider(row)
         self.flush()

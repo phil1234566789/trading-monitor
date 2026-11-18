@@ -4,7 +4,7 @@
     "broker.py": "6fc2a261728ad1925bfdb98193209bebce460b661e3ff4ea749b0755c8093d17",
     "broker_close.py": "8919e8abadd6f60121acc0d3a9b8db510262820962241c678daaafc0100ee7e7",
     "core.py": "2d52730df2901147eba6ebbeee2fe1b501084ae31cf328b25e1648ce3297f632",
-    "daily_stop.py": "5889ffdc25f532c1780f54318184f477ca4db92660e2d867da3b6396850899b2",
+    "daily_stop.py": "77b04f4dbb6a483fbadecb13ae11ddbb7deb0cca73a034a24edd533589b8d706",
     "guard_broker.py": "df1a8b81cd9d4204e12d2736ffaf3ca1cda2140240de5ae9e937f4be721a0c2c",
     "health.py": "dc65da41e7410bf9635606883adb160050e59ab7865c2ea50adc86bf9ebab792",
     "history_deals.py": "a26ea4900858631054865029959bb2907383adb6f5d63b6fc7230e72d4275c0c",
@@ -17,11 +17,12 @@
     "risk_snapshot.py": "0fae4d312c623bb711c51506e8fbbe39df919e45d8100f12e27ad3dc488e9720",
     "stop_risk.py": "511fc045b3d3bd723295bb09e2157cda36c50813389d41a8f6ceb8be1aafe09e",
     "target_broker.py": "619fa7d26aea2ef723f73f9afa8ab3b78af9aeb51133c2415e0e7b6a8aea7e5a",
-    "target_worker.py": "ba5bc34181d7a917a17439f14cd8258c977a58257679a736116939aff422cac7",
+    "target_worker.py": "5aa092c6d30758cc806dc3ffac5fa936a0f71dafd330c731d365d75d8201a8d2",
     "terminal_connection.py": "7156e8431fd6c08cc0af691ce7c728682e94dec7120516efdf0bb6e7c478e225",
+    "wake_listener.py": "bc5f144486b4b81ec2e1ad1a275def9e4c407ad88dd1589e31d07cc9d53d1582",
     "windows_account_launcher.py": "0eabfb3dc692da1a52111169ca263e4b7f81886e39628e79b1b34711e6cfb90d",
     "windows_history_launcher.py": "cfaed2f9814e428a7b136b7864c8150524606fbcce1385529e91e415a1012140",
-    "worker.py": "e4e10c324f116986e247de59d53d0ece5d5245e6ae963153dc72eb8cc3d131b6",
+    "worker.py": "cc43a55190243805b6e9335489dc55b4e0cdf48f11b6a6e39a00301f497d8211",
     "worker_environment.py": "8f9cdc2b0e88b1b19c112dbb685048a9c28ae42bb032a8b11fc4c09d9c3e0f2a",
     "worker_lock.py": "301f115491c9f075ae5dc16cae336e4e62440e4e957b59003e964550f2426f09"
   }

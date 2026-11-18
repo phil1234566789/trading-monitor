@@ -29,8 +29,8 @@ class DailyStopEngine:
                 except Exception:result=dict(status='unknown',reason='guard_reconcile_unavailable')
             self.record(row,result)
 
-    def cycle(self,snapshot):
-        response=self.call('guard_sync',dict(snapshot=snapshot,exposure=self.broker.exposure()))
+    def cycle(self,snapshot,response=None):
+        if response is None:response=self.call('guard_sync',dict(snapshot=snapshot,exposure=self.broker.exposure()))
         if type(response.get('latched')) is not bool or not isinstance(response.get('commands'),list):raise ValueError('invalid_guard_response')
         self.latched=response['latched']
         if not self.execute:return not self.latched

@@ -68,7 +68,7 @@ export async function activeMt5Account(accountId?:unknown) {
 export async function workerConfiguration(accountId?:unknown) {
   if (Deno.env.get('MT5_EXECUTION_ENABLED') !== 'true') throw new Error('mt5_not_configured');
   const account=await activeMt5Account(accountId);
-  return {account_login:account.login,account_server:account.server,mode:account.mode,
+  return {account_login:account.login,account_server:account.server,mode:account.mode,realtime:await workerRealtime(),
     password:await decryptCredential(account.credentials,`${account.login}:${account.server}`),
     allow_live:Deno.env.get('MT5_ALLOW_LIVE')==='true'};
 }
@@ -79,4 +79,23 @@ export async function accountBridge(account:any){
   const legacy=checked(await db.from('mt5_bridge_state').select('*').eq('id','primary').maybeSingle());
   const matching=legacy?.snapshot?.account_login===Number(account.login)&&legacy.snapshot.account_server===account.server?legacy:null;
   return own&&(!matching||Date.parse(own.heartbeat_at)>=Date.parse(matching.heartbeat_at))?own:matching;
+}
+
+// Im Leerlauf schläft der Worker bis zu 1 h; wer eine frische Bridge braucht (MCP-Entry, Preview), weckt ihn und wartet kurz.
+export async function freshBridge(account:any,maxAgeMs:number){
+  const fresh=(b:any)=>{const at=Date.parse(b?.heartbeat_at);return Number.isFinite(at)&&Date.now()-at<=maxAgeMs&&at<=Date.now()+1000;};
+  let bridge=await accountBridge(account);
+  if(fresh(bridge))return bridge;
+  checked(await mt5Database().rpc('mt5_touch_presence'));
+  for(const deadline=Date.now()+8000;Date.now()<deadline;){
+    await new Promise(r=>setTimeout(r,700));
+    bridge=await accountBridge(account);
+    if(fresh(bridge))return bridge;
+  }
+  return bridge;
+}
+
+export async function workerRealtime(){
+  const wake:any=checked(await mt5Database().from('mt5_worker_wake').select('topic').eq('id',true).single());
+  return {url:Deno.env.get('SUPABASE_URL')!.replace(/^https:/,'wss:')+'/realtime/v1/websocket',apikey:Deno.env.get('SUPABASE_ANON_KEY'),topic:wake.topic};
 }

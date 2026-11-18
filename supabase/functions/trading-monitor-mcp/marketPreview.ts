@@ -1,4 +1,4 @@
-import { accountBridge, activeMt5Account, checked, mt5Database } from './mt5Credentials.ts';
+import { freshBridge, activeMt5Account, checked, mt5Database } from './mt5Credentials.ts';
 import { executionConfig, createExecutionOrder } from './mt5Execution.ts';
 import { validateWorkerSnapshot } from './executionContract.js';
 import { buildMarketPreview, buildEntrySearchPreview, signMarketPreview, verifyMarketPreview } from './marketPreviewContract.js';
@@ -10,7 +10,7 @@ export async function marketPreviewAction(body:Record<string,any>) {
   const secret='mmt-market-preview:'+key;
   const config=await executionConfig(body.account_id);
   if(['preview','search_preview'].includes(body.action)) {
-    const bridge=await accountBridge(await activeMt5Account(body.account_id));
+    const bridge=await freshBridge(await activeMt5Account(body.account_id),15000);
     if(!bridge||Date.now()-Date.parse(bridge.heartbeat_at)>15000) throw new Error('bridge_offline');
     const snapshot=validateWorkerSnapshot(bridge.snapshot,{...config,allowLive:true});
     if(body.action==='preview'&&body.order?.risk_mode!=null)throw new Error('invalid_risk_mode');
