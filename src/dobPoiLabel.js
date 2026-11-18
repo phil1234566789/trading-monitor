@@ -11,10 +11,12 @@ export function dobRetestLabel({kind,count,ageSeconds}){
 // POI aus den v1-Feldern, z.B. „H1-OB · 0,8 ATR · Folge-Touch vor 40 min“; v0 hat keine und zeigt „–“.
 // LQ-Sweep: „TS1.1 #50160 · Kante“ bzw. „· Überlappung“ / „· 0,8 USD daneben“ (Forex in Pips); Schlüssel wie src/dobTradeFeatures.js.
 const MATCH_TEXT={edge:'Kante',overlap:'Überlappung'};
+const fmtLevel=(v,instrument)=>{const d=instrumentConfig(instrument??'XAUUSD').precision;return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});};
 const gapText=(gap,instrument)=>instrument&&instrument!=='XAUUSD'?`${(gap/instrumentConfig(instrument).pip).toLocaleString('de-DE',{maximumFractionDigits:1})} Pips`
  :`${Number(gap).toLocaleString('de-DE',{maximumFractionDigits:2})} USD`;
-export function dobTs11Label({tradeSetupId,match,gapUsd,instrument}){
- return `TS1.1 #${tradeSetupId}${match?` · ${MATCH_TEXT[match]??`${gapText(gapUsd,instrument)} daneben`}`:''}`;
+// lsPrice (gesweeptes LS-Level) steht vorn, damit Philip das Level im Chart findet: „1,32068 · TS1.1 #50740 · Kante“.
+export function dobTs11Label({tradeSetupId,match,gapUsd,instrument,lsPrice}){
+ return `${Number.isFinite(lsPrice)?`${fmtLevel(lsPrice,instrument)} · `:''}TS1.1 #${tradeSetupId}${match?` · ${MATCH_TEXT[match]??`${gapText(gapUsd,instrument)} daneben`}`:''}`;
 }
 export function dobPoiLabel(row){
  if(!row.poi_kind)return '–';

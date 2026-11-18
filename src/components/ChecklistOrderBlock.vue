@@ -7,11 +7,13 @@ import { cssColorScaled } from '../chartColors.js';
 const props = defineProps({
   preview: { type: Object, required: true },
   instrument: { type: String, required: true },
+  // Eigene Beschriftung (DOB-Watcher-Panel: OB1/OB2/TS1.1-OB); dann ohne Sweep-Zuordnung und Kandidaten-Hinweis.
+  label: { type: String, default: null },
 });
 const bearish = computed(() => props.preview.ob.dir === -1);
-const title = computed(() => `${bearish.value ? 'bärische' : 'bullische'} M5 OB${Number.isFinite(props.preview.recognizedAt) ? ` (${formatBerlinTime(props.preview.recognizedAt)} erkannt)` : ''}`);
+const title = computed(() => props.label ?? `${bearish.value ? 'bärische' : 'bullische'} M5 OB${Number.isFinite(props.preview.recognizedAt) ? ` (${formatBerlinTime(props.preview.recognizedAt)} erkannt)` : ''}`);
 const price = value => fmtPrice(value, pricePrecisionForInstrument(props.instrument));
-const hint = computed(() => props.preview.linked ? `Dem Sweep zugeordnet${Number.isFinite(props.preview.assignedAt) ? ` um ${formatBerlinTime(props.preview.assignedAt)}` : ''}.`
+const hint = computed(() => props.label ? '' : props.preview.linked ? `Dem Sweep zugeordnet${Number.isFinite(props.preview.assignedAt) ? ` um ${formatBerlinTime(props.preview.assignedAt)}` : ''}.`
   : `Erster von ${props.preview.candidateCount} zeitlich folgenden M5-OB-Kandidaten. Zuordnung zur Sweep-Bewegung ungeklärt.`);
 const colors = computed(() => {
   const token = bearish.value ? 'obBearM5' : 'obBullM5';
@@ -23,7 +25,7 @@ const colors = computed(() => {
   <figure class="checklist-ob" :aria-label="`${title}: Oberkante ${price(preview.ob.top)}, Unterkante ${price(preview.ob.bottom)}. ${hint}`">
     <figcaption class="checklist-ob-zone" :style="colors" :title="`${hint} Ursprung: ${formatDatedTime(preview.ob.startTime)} · Berlin`">
       <span class="checklist-ob-top" aria-hidden="true">{{ price(preview.ob.top) }}</span>
-      {{ title }}<span v-if="!preview.linked" class="checklist-ob-candidate"> · Kandidat</span>
+      {{ title }}<span v-if="!label && !preview.linked" class="checklist-ob-candidate"> · Kandidat</span>
       <span class="checklist-ob-bottom" aria-hidden="true">{{ price(preview.ob.bottom) }}</span>
     </figcaption>
   </figure>

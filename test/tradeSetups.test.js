@@ -67,6 +67,12 @@ describe("mergeDbTradeSetups", () => {
     expect(mergeDbTradeSetups([live], [db])).toEqual([live]);
   });
 
+  it("hängt die DB-ID der Dublette als dbTradeSetupId an das Live-Setup (Debug-Label), tradeSetupId bleibt leer", () => {
+    const [merged] = mergeDbTradeSetups([live], [{ ...db, tradeSetupId: 50740 }]);
+    expect(merged).toMatchObject({ ...live, dbTradeSetupId: 50740 });
+    expect(merged.tradeSetupId).toBeUndefined();
+  });
+
   it("behält ein nur in der DB vorhandenes Setup — genau der Divergenzfall", () => {
     const nurDb = { dir: 1, obStartTime: 2400, fromDb: true };
     expect(mergeDbTradeSetups([live], [db, nurDb])).toEqual([live, nurDb]);

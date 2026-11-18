@@ -80,3 +80,9 @@ describe('⛔ bei jeder Konfig-Sperre mit Statistik der Sperre (Q23)',()=>{
   expect(head('counterCandles',{years:'2026',byKey:{}}).text.split('\n')[0]).toMatch(/kein Trade$/);
  });
 });
+
+it('LQ-Sweep-POI-Zeile nennt das gesweepte LS-Level vorn',()=>{
+ const poi={kind:'ts11',tradeSetupId:50740,match:'edge',gapUsd:0,lsPrice:1.32068};
+ const [lq]=dobPoiTypeAlarmRuns({poiTypes:[poiTypes[1]],input:{},evaluatedAt:at,check:()=>({setups:[{...retest,instrument:'GBPUSD',poi}],rejected:[],pairs:new Map()})});
+ expect(lq.events[0].text.split('\n')[1]).toBe('POI: LQ-Sweep 1,32068 · TS1.1 #50740 · Kante');
+});

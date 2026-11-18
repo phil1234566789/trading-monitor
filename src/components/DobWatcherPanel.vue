@@ -3,9 +3,11 @@ import {computed,ref} from 'vue';
 import {useLocalStorageRef} from '../composables/useLocalStorageRef.js';
 import {formatBerlinTime} from '../berlinTime.js';
 import {DOB_WATCHER_SHORT} from '../dobWatcherStatus.js';
+import ChecklistOrderBlock from './ChecklistOrderBlock.vue';
 
 // DOB-Watcher-Panel nach Philips abgenommener Vorschau: Kopf mit Herzschlag, „Aktuell“ (Retest und frischer Entry aller Assets) und
-// aufklappbares „Protokoll“ des Tages mit Asset-Filtern. Jede Zeile ist ein Button und klappt Details, Chart- und Pin-Link auf.
+// aufklappbares „Protokoll“ des Tages mit Asset-Filtern. Jede Zeile ist ein Button und klappt Details, die OB-Rahmen (OB1, OB2,
+// TS1.1-OB wie in der Checkliste) sowie Chart- und Pin-Link auf.
 const props=defineProps({status:Object,candidates:Array});
 const emit=defineEmits(['open-chart','open-pin']);
 const STATUS_TEXT={retest:'Retest',entry:'Entry',running:'läuft',win:'Win',loss:'Loss',dropped:'verworfen'};
@@ -48,6 +50,7 @@ const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
         </button>
         <div v-if="openKey === r.key" class="details">
           <span>{{ r.detail }}</span>
+          <ChecklistOrderBlock v-for="f in r.frames ?? []" :key="f.label" :preview="f" :instrument="r.instrument" :label="f.label" />
           <span class="links">
             <a href="#" @click.prevent="emit('open-chart', r)">Chart öffnen</a>
             <a v-if="r.pinId" href="#" @click.prevent="emit('open-pin', r)">Pin #{{ r.pinId }}</a>
@@ -77,6 +80,7 @@ const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
             </button>
             <div v-if="openKey === r.key" class="details">
               <span>{{ r.detail }}</span>
+              <ChecklistOrderBlock v-for="f in r.frames ?? []" :key="f.label" :preview="f" :instrument="r.instrument" :label="f.label" />
               <span class="links">
                 <a href="#" @click.prevent="emit('open-chart', r)">Chart öffnen</a>
                 <a v-if="r.pinId" href="#" @click.prevent="emit('open-pin', r)">Pin #{{ r.pinId }}</a>

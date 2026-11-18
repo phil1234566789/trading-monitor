@@ -51,6 +51,11 @@ export async function fetchTradeSetups(instrument, replayUntilSec = null) {
 export function mergeDbTradeSetups(liveSetups, dbSetups) {
   const key = (s) => `${s.dir}|${s.obStartTime}`;
   const byKey = new Map(dbSetups.map((s) => [key(s), s]));
-  for (const s of liveSetups) byKey.set(key(s), s);
+  // Die DB-ID der Dublette bleibt als dbTradeSetupId am Live-Setup (Debug-Label „Short #4 · #50740“, Zuordnung zum DOB-Watcher-Panel);
+  // bewusst nicht tradeSetupId, das den Pin-Weg (mit Quellen-Snapshot) umstellen würde.
+  for (const s of liveSetups) {
+    const db = byKey.get(key(s));
+    byKey.set(key(s), db?.fromDb ? { ...s, dbTradeSetupId: db.tradeSetupId } : s);
+  }
   return [...byKey.values()].sort((a, b) => a.obStartTime - b.obStartTime);
 }

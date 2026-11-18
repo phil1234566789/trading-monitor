@@ -1,4 +1,4 @@
-import {berlinDateStrFor} from './berlinTime.js';
+import {berlinDateStrFor,formatBerlinTime} from './berlinTime.js';
 import {dobPoiLine,dobTpLine,dobWarnText} from './dobAlarm.js';
 import {dobBlockKey,dobBlockStatsText} from './dobBlockStats.js';
 import {poiMaxDistanceAtr} from './dobHtfObPoi.js';
@@ -29,6 +29,15 @@ function droppedText(s,poiType,instrument){
  if(!s.poi)return 'keine retestete H1/H4-Zone (Zone nicht retestet)';
  return `nächste ${s.poi.timeframe}-Zone ${num(s.poi.distanceAtr)} ATR weg, erlaubt ≤ ${num(max)} ATR`;
 }
+// Rahmen fürs aufgeklappte Detail (ChecklistOrderBlock): OB1, OB2 und bei LQ-Sweep das TS1.1-OB, wenn es nicht exakt OB1/OB2 ist.
+function obFrames(s){
+ const dir=s.direction==='long'?1:-1,word=dir===1?'bullische':'bärische',c=s.chart;
+ const frame=(name,zone,start)=>({label:`${name} · ${word} M5 OB (${formatBerlinTime(start)})`,ob:{dir,top:zone.top,bottom:zone.bottom,startTime:start}});
+ const frames=[frame('OB1',c.firstOrderBlock,c.firstOrderBlockStart),frame('OB2',c.secondOrderBlock,c.secondOrderBlockStart)];
+ const ts=s.poi?.kind==='ts11'?s.poi:null;
+ if(ts?.zone&&Number.isFinite(ts.zoneStartTime)&&ts.matchedEdge!=='both')frames.push({...frame(`TS1.1-OB #${ts.tradeSetupId}`,ts.zone,ts.zoneStartTime)});
+ return frames;
+}
 const poiShort=(s,poiType)=>poiType==='lq_sweep'?'LQ-Sweep':s.poi?.timeframe?`${s.poi.timeframe}-OB`:'HTF-OB';
 
 // runs: Ergebnis von dobPoiTypeAlarmRuns (je POI-Art result, guardrails, blockStats). Eine Zeile je POI-Art, Richtung und OB2 (wie die
@@ -49,7 +58,7 @@ export function dobWatcherCandidates(runs,evaluatedAt,instrument){
    if(s.entryTime!=null&&status!=='blocked'&&status!=='dropped'){const tp=dobTpLine(setup,guardrails);if(tp)parts.push(tp);}
    rows.set(key,{key,ob2,instrument,poiType,pairId:s.pairId,direction:s.direction,status,blockLabel:BLOCK_LABEL[s.reason]??null,
     time:status==='win'||status==='loss'?s.phaseSince:time,poi:poiShort(s,poiType),detail:parts.join(' · '),
-    tradeSetupId:s.poi?.kind==='ts11'?s.poi.tradeSetupId:null,chartAt:time+60});
+    tradeSetupId:s.poi?.kind==='ts11'?s.poi.tradeSetupId:null,chartAt:time+60,frames:obFrames(s)});
   }
  }
  const carried=new Set([...rows.values()].filter(r=>r.status!=='dropped').map(r=>r.ob2)),dropped=new Set();
