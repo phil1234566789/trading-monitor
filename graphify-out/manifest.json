@@ -10884,9 +10884,9 @@
     "semantic_hash": ""
   },
   "src/dobWatcherCandidates.js": {
-    "mtime": 1794989855.2038152,
-    "seen": 1794989931.4349058,
-    "ast_hash": "efac34cc5d6c249c4182ee639628eeb9",
+    "mtime": 1794990190.2190206,
+    "seen": 1794990434.88153,
+    "ast_hash": "3d1165fbe8fa7539e88049f983645df4",
     "semantic_hash": ""
   },
   "src/dobWatcherStatus.js": {
@@ -10908,9 +10908,9 @@
     "semantic_hash": ""
   },
   "test/dobWatcherCandidates.test.js": {
-    "mtime": 1794989855.2048213,
-    "seen": 1794989931.4359057,
-    "ast_hash": "2d9306f14de8bf674547f611a75db7d6",
+    "mtime": 1794990190.2190206,
+    "seen": 1794990435.0209832,
+    "ast_hash": "95809a37aff87c593439756d59b757e1",
     "semantic_hash": ""
   },
   "test/dobWatcherStatus.test.js": {
