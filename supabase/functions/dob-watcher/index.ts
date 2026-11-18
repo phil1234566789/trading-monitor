@@ -6,6 +6,7 @@ import {berlinOffsetMinutes,berlinDateStrFor,formatBerlinTime} from '../../../sr
 import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
 import {dobPoiTypeAlarmRuns,dobStaleAlarm} from '../../../src/dobAlarm.js';
 import {dobBlockStats} from '../../../src/dobBlockStats.js';
+import {dobWatcherCandidates} from '../../../src/dobWatcherCandidates.js';
 import {dobCanonicalRunId} from '../../../src/dobPoiType.js';
 import {fetchAllRows} from '../_shared/fetchAllRows.ts';
 import {dobGuardrailsFromRow,dobEntryRule} from '../../../src/dobGuardrails.js';
@@ -136,7 +137,9 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
     }
   }
   await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),last_m1_time:m1.length?new Date(m1[m1.length-1].time*1000).toISOString():null,
-    runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:count('setups'),rejected:count('rejected'),skipped:null,error:null});
+    runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:count('setups'),rejected:count('rejected'),skipped:null,error:null,
+    // Heutige Kandidaten fürs DOB-Watcher-Panel; außerhalb 02–22 Uhr bleibt der letzte Stand stehen.
+    candidates:dobWatcherCandidates(runs,evaluatedAt,instrument)});
   return {evaluatedAt,calcMs,poiTypes:runs.map(r=>r.poiType),setups:count('setups'),events:events.length,delivered};
 }
 

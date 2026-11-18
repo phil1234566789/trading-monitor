@@ -26,7 +26,7 @@ const WARN_TEXT={blockedEntryHour:'Entry in Sperrzeit',counterDob:'Gegen-DOB sei
  blockedMonth:'Monat gesperrt, Entry',blockedZoneAge:'POI-Zone jünger als das Mindestalter, Entry'};
 const clock=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
 // Sperrzeit mit Fenster („Entry in Sperrzeit 10:30–12:00“), sonst der feste Text.
-const warnText=(guardrail,guardrails,entryTime)=>{const w=guardrail==='blockedEntryHour'&&guardrails?dobEntryRule(guardrails,entryTime).window:null;
+export const dobWarnText=(guardrail,guardrails,entryTime)=>{const w=guardrail==='blockedEntryHour'&&guardrails?dobEntryRule(guardrails,entryTime).window:null;
  return w?`${WARN_TEXT[guardrail]} ${clock(w.from)}–${clock(w.to)}, Entry`:WARN_TEXT[guardrail];};
 
 // Preise mit der Nachkommazahl des Instruments (XAU 2, Forex 5).
@@ -35,7 +35,7 @@ const zone=(z,instrument)=>`${price(z.bottom,instrument)}–${price(z.top,instru
 const rText=k=>`${k.toLocaleString('de-DE')}R`;
 // TP nach Konfig wie die Statistik (dobConfigTpR: Gegen-DOB tot → 5R, Zeitfenster-TP, sonst Default) samt Teilprofit; Preise aus dem
 // Risiko Entry ↔ SL. Ohne Konfig keine Zeile.
-function tpLine(s,guardrails){
+export function dobTpLine(s,guardrails){
  if(!guardrails)return null;
  const tp=dobConfigTpR(guardrails,s.entryTime,s.counterDob?.status??null),plan=dobPartialPlan(guardrails,tp);
  const at=k=>price(s.entryPrice+(s.direction==='long'?1:-1)*k*Math.abs(s.entryPrice-s.stopPrice),s.instrument);
@@ -44,7 +44,7 @@ function tpLine(s,guardrails){
 const side=direction=>direction==='long'?'Long':'Short';
 export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=5m&replay=${at}`;
 // Die POI-Zeile nennt die Art (H1-OB/H4-OB bei HTF-OB, sonst den Namen der POI-Art); die Kopfzeile bleibt ohne Art.
-function poiLine({poi:s,instrument},poiType){
+export function dobPoiLine({poi:s,instrument},poiType){
  if(poiType!==DOB_DEFAULT_POI_TYPE)return `POI: ${dobPoiTypeLabel(poiType)}${s?.kind==='ts11'?` · ${dobTs11Label({...s,instrument})}`:''}`;
  if(!s)return 'POI: –';
  const label=dobPoiLabel({poi_kind:`ob_${s.timeframe.toLowerCase()}`,poi_distance_atr:s.distanceAtr});
@@ -67,7 +67,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
   if(s.phase==='ob2Retest'&&s.phaseSince>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){
    const id=key(`retest:${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`);
    if(!events.has(id))events.set(id,{id,poiType,phase:'ob2Retest',setupId:s.id,instrument,direction:s.direction,signalAt:s.phaseSince,guardrail,suppressed:!!guardrail,
-    text:[`🟡 DOB ${instrument} ${side(s.direction)} · OB2-Retest ${formatBerlinTime(s.phaseSince)}`,poiLine(s,poiType),...obLines(s),
+    text:[`🟡 DOB ${instrument} ${side(s.direction)} · OB2-Retest ${formatBerlinTime(s.phaseSince)}`,dobPoiLine(s,poiType),...obLines(s),
      'noch kein Entry',
      dobChartUrl(id,instrument,s.phaseSince)].join('\n')});
   }
@@ -75,10 +75,10 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    const id=key(`entry:${instrument}:${s.direction}:${s.entryTime}:${s.entryPrice}:${s.stopPrice}`);
    const warn=({blockedEntryHour:blockedEntryAlarm,blockedMonth:blockedEntryAlarm,blockedZoneAge:blockedEntryAlarm,counterDob:counterDobAlarm,counterCandles:counterCandlesAlarm})[guardrail]==='warn';
    if(!events.has(id))events.set(id,{id,poiType,phase:'entry',setupId:s.id,instrument,direction:s.direction,signalAt:s.entryTime,guardrail,suppressed:!!guardrail&&!warn,
-    text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${warnText(guardrail,guardrails,s.entryTime)} ${formatBerlinTime(s.entryTime)}, kein Trade${guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,guardrail,s.entryTime)):''}`
+    text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${dobWarnText(guardrail,guardrails,s.entryTime)} ${formatBerlinTime(s.entryTime)}, kein Trade${guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,guardrail,s.entryTime)):''}`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
      // Die POI-Zeile zeigt auch hier die Art (Philip); OB-Zonen stehen im Retest-Alarm. TP nach Konfig nur beim echten Entry, nie bei ⛔.
-     poiLine(s,poiType),`Entry ${price(s.entryPrice,instrument)} · SL ${price(s.stopPrice,instrument)}`,...(warn?[]:[tpLine({...s,instrument},guardrails)].filter(Boolean)),
+     dobPoiLine(s,poiType),`Entry ${price(s.entryPrice,instrument)} · SL ${price(s.stopPrice,instrument)}`,...(warn?[]:[dobTpLine({...s,instrument},guardrails)].filter(Boolean)),
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
   }
  }

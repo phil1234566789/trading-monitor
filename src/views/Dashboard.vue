@@ -7,6 +7,8 @@ import { useRoute, useRouter } from "vue-router";
 import { liveMonthViewId } from "../liveWatcherMonth.js";
 import {mmtChartVisibility} from '../mmtChartStatus.js';
 import DashboardMmt from '../components/DashboardMmt.vue';
+import DobWatcherPanel from '../components/DobWatcherPanel.vue';
+import {useDobWatcher} from '../composables/useDobWatcher.js';
 import PriceChart from "../components/PriceChart.vue";
 import { GOLD_CHART_BARS, goldChartSelection } from "../goldChartPolicy.js";
 import TradeSetupCockpit from "../components/TradeSetupCockpit.vue";
@@ -316,6 +318,18 @@ const showNewsModal = ref(false);
 // Öffnen/Schließen-Zustand (nicht persistiert), showSessions (die Sichtbarkeit) dagegen schon,
 // wie die übrigen Indikator-Toggles.
 const showSessions = useLocalStorageRef("showSessions", true);
+// DOB-Watcher-Panel über dem MMT (abgenommene Vorschau): Toggle in der Navigation mit Herzschlag-Punkt, Daten vom dob-watcher.
+const showDobWatcher = useLocalStorageRef("showDobWatcher", true);
+const dobWatcher = useDobWatcher();
+// Aktuelle Kandidaten live (nur Asset + DOB-Ebene), Protokoll-Zeilen im Replay am Zeitpunkt; der Pin-Link öffnet zusätzlich die Pins.
+function openDobWatcherChart(row) {
+  const live = row.status === "retest" || row.status === "entry";
+  void router.push({ query: { dob: row.pairId, instrument: row.instrument, bar: "5m", ...(live ? {} : { replay: String(row.chartAt) }) } });
+}
+function openDobWatcherPin(row) {
+  showPinPanel.value = true;
+  openDobWatcherChart(row);
+}
 const showSessionsModal = ref(false);
 // Sessions-Bänder markieren Tageszeit-Fenster (Asia/London/NY etc.) — auf 4h/1D-Kerzen liegen
 // mehrere Sessions in einer einzigen Kerze, die Bänder werden dann zu bedeutungslosem Gematsche.
@@ -2213,6 +2227,10 @@ watch(selectedTradingAccountId, () => {
         </ToggleButton>
       </div>
 
+      <ToggleButton class="dob-watcher-toggle" :class="{ active: showDobWatcher }" :aria-pressed="showDobWatcher" :title="`DOB-Watcher: ${dobWatcher.status.value.text}`" @click="showDobWatcher = !showDobWatcher">
+        <span class="dob-watcher-dot" :data-tone="dobWatcher.status.value.tone"></span>DOB-Watcher
+      </ToggleButton>
+
       <div class="toggle-group">
         <ToggleButton :class="{ active: showNews }" @click="showNews = !showNews">
           News
@@ -2438,7 +2456,8 @@ watch(selectedTradingAccountId, () => {
     @add-target-from-picker="onAddTargetFromPicker"
     @add-anti-confluence-from-picker="onAddAntiConfluenceFromPicker"
     />
-    <aside v-if="mmtControllerStarted||mmtVisibility.sidebar" v-show="mmtVisibility.sidebar" class="chart-trading-sidebar">
+    <aside v-if="mmtControllerStarted||mmtVisibility.sidebar||showDobWatcher" v-show="mmtVisibility.sidebar||(showDobWatcher&&!snapshotView)" class="chart-trading-sidebar">
+    <DobWatcherPanel v-if="showDobWatcher && !snapshotView" :status="dobWatcher.status.value" :candidates="dobWatcher.candidates.value" @open-chart="openDobWatcherChart" @open-pin="openDobWatcherPin" />
     <DashboardMmt v-if="mmtControllerStarted" v-show="mmtVisibility.panel" :enabled="mmtVisibility.controller" :symbol="currentSymbol" :annotations="visibleAnnotations" :last-candle-time="priceChartRef?.lastCandleTime" :replay="replayActive" @broker-positions="brokerPositions=$event" />
     <TradeSetupCockpit
       @setup-saved="refreshTscRange"
@@ -2732,6 +2751,9 @@ watch(selectedTradingAccountId, () => {
 }
 
 .chart-trading-sidebar{display:flex;flex-direction:column;gap:8px;width:340px;flex:0 0 340px;min-width:0}
+.dob-watcher-toggle{display:inline-flex;align-items:center;gap:6px}
+.dob-watcher-dot{width:8px;height:8px;border-radius:50%;background:#26a69a}
+.dob-watcher-dot[data-tone=gap]{background:#f5a623}.dob-watcher-dot[data-tone=down]{background:#ef5350}.dob-watcher-dot[data-tone=pause]{background:#787b86}
 .chart-trading-sidebar :deep(.tsc-card){width:100%;flex:1;min-height:0}
 @media(max-width:900px){.chart-tsc-row{flex-wrap:wrap}.chart-tsc-row-chart{flex-basis:100%}.chart-trading-sidebar{width:100%;flex-basis:100%}}
 .chart-tsc-row-chart {
