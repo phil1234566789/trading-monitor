@@ -1,7 +1,7 @@
 import {evaluateDoubleOrderBlockPriceGap} from './doubleOrderBlockPriceGap.js';
 import {evaluateDoubleOrderBlockRetestDay} from './doubleOrderBlockRetestDay.js';
 import {doubleOrderBlockDisplay} from './doubleOrderBlocks.js';
-import {structuralState,reasonText,price,time,range} from './obReactionGraph.js';
+import {structuralState,reasonText,price,time,range,usePricePrecision} from './obReactionGraph.js';
 
 // DOB-Ebene des Chart-Debuggers: Paar-Gates in der Reihenfolge von detectDoubleOrderBlocks. Die OB-Reaktion ist hier nur
 // ein Gate-Knoten je OB; ihre Details stehen in der Reaktions-Ebene. Ohne erkanntes Paar rechnet der Plan die Gates mit
@@ -20,6 +20,7 @@ function reactionGate(id,role,{orderBlock,reaction}){
 }
 
 export function dobPairGraph({dir,orderBlocks:[first,second],pair,hold,evaluatedAt,instrument='XAUUSD'}){
+ usePricePrecision(instrument);
  const a=first.orderBlock,b=second.orderBlock,ra=first.reaction,rb=second.reaction;
  const aLive=structuralState(ra)==='true',bLive=structuralState(rb)==='true',side=dir===1?'höher':'tiefer';
  const n={};

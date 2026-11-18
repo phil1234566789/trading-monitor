@@ -1,8 +1,7 @@
 import {measureOrderBlockPenetration,orderBlockPenetration} from './orderBlockPenetration.js';
-import {candleInvalidatesOrderBlock} from './orderBlockDetection.js';
 import {internalFvgOpenAt,firstIndex,TOUCH_TOLERANCE_FRACTION,reactionBreaksOrderBlock} from './orderBlockReaction.js';
 import {formatBerlinTime} from './berlinTime.js';
-import {fmtPrice} from './format.js';
+import {fmtPrice,pricePrecisionForInstrument} from './format.js';
 const TOUCH_PCT=`${TOUCH_TOLERANCE_FRACTION*100} %`;
 
 // Knotenplan der OB-Reaktion im Chart-Debugger: Knoten = v7-Entscheidungsbaum (Default W1), Zustände nur aus dem
@@ -25,7 +24,10 @@ export const reasonText=reason=>REASON_TEXT[reason]??reason;
 
 export const structuralState=r=>r?.structuralState??r?.state??'unknown';
 const adjective=dir=>dir===1?'bullische':'bärische';
-export const price=p=>fmtPrice(p,2),time=t=>formatBerlinTime(t);
+// ponytail: Genauigkeit gilt je Graph-Aufruf (XAU 2, Forex 5), statt das Instrument durch ~30 price()/range()-Aufrufe zu reichen.
+let precision=2;
+export const usePricePrecision=instrument=>{precision=pricePrecisionForInstrument(instrument??'XAUUSD');};
+export const price=p=>fmtPrice(p,precision),time=t=>formatBerlinTime(t);
 export const range=z=>`${price(z.bottom)}–${price(z.top)}`;
 const pct=n=>Number(n.toFixed(2))+' %';
 const ROUTE_STATUS={entry:'visited',rejected:'rejected',unknown:'unknown',pending:'unknown'};
@@ -148,6 +150,7 @@ function roleView({entry,pair=null,partner=null,hold=null}){
 }
 
 export function obReactionGraph({dir,entry,context,evaluatedAt,nearTouch=false,bridgeClosures=false,...links}){
+ usePricePrecision(context?.instrument);
  const {orderBlock:ob,reaction:r}=entry,adj=adjective(dir),{first,live,routes,pair,partner,hold}=roleView({entry,...links});
  const contact=r?.contact,fvg=r?.fvg,rejected=structuralState(r)==='false',closed=r?.reason==='marketClosed',open=s=>s?'unknown':'not-visited';
  const n={};
@@ -298,10 +301,10 @@ export function fvgFillChangeAt(context,fvg){
  return hi;
 }
 
-// Interner M1-OB: Label wechselt bei erster Berührung und beim Bruch (gehalten → gebrochen).
+// Interner M1-OB: Label wechselt bei erster Berührung und beim Bruch (gehalten → gebrochen), Bruchregel wie orderBlockMeter.
 function orderBlockChangeTimes(context,ob){
  if(!ob)return [];
  const rows=rowsFrom(context,ob.recognizedAt),dir=ob.dir===1?'long':'short';
- const touch=rows.find(c=>orderBlockPenetration(ob,dir,c)>=0),broken=rows.find(c=>candleInvalidatesOrderBlock(c,ob));
+ const touch=rows.find(c=>orderBlockPenetration(ob,dir,c)>=0),broken=rows.find(c=>reactionBreaksOrderBlock(c,ob));
  return [touch&&touch.time+60,broken&&broken.time+60];
 }

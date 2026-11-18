@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {CHART_DEBUGGER_CASES,loadCaseFixture,evaluateCase,caseSteps,expectationOf,expectedText,productMatches} from '../src/chartDebuggerCases.js';
 import {measureReactionContact} from '../src/orderBlockReaction.js';
+import {dobPairGraph} from '../src/dobPairGraph.js';
 
 const NEAR={nearTouch:'second'};
 const byId=id=>CHART_DEBUGGER_CASES.find(c=>c.id===id);
@@ -56,6 +57,19 @@ describe('Chart-Debugger: OB-Reaktions-Fälle unter dem Produkt-Default W1 (nur 
   const holdBreak=m1.find(c=>c.time>first.reaction.knownAt&&c.high>first.reaction.penetration.extremePrice);
   expect(holdBreak).toMatchObject({time:1791784800,high:4192.69});
   expect(holdBreak.time).toBeLessThan(second.reaction.knownAt);
+ });
+ it('Pin 542 (GBPUSD): the 02:35/02:36 highs only tie the OB1 retest extreme, so the strict hold passes and the pair stands',async()=>{
+  const {orderBlocks:[first],m1,pair,hold}=await at('542');
+  expect(pair).toMatchObject({id:'dob:GBPUSD:-1:1794958200:1794966000',entries:{a:{entryTime:1794967140}}});
+  expect(pair.entries.a.entryPrice).toBeCloseTo(1.32041,5);expect(pair.entries.a.stopPrice).toBeCloseTo(1.32057,5);
+  expect(hold).toMatchObject({status:'passed',final:true,checkedFrom:1794959880,anchor:{kind:'exact'}});
+  expect(hold.anchor.price).toBeCloseTo(1.32068,5);
+  // Gleichstand, kein Überbieten: genau zwei M1-Hochs treffen den Anker, keines liegt darüber.
+  const atAnchor=m1.filter(c=>c.time>=hold.checkedFrom&&c.time<1794967140&&c.high>=hold.anchor.price);
+  expect(atAnchor.map(c=>[c.time,c.high===hold.anchor.price])).toEqual([[1794965700,true],[1794965760,true]]);
+  expect(expectedText(byId('542'))).toMatch(/^Offen · /);
+  // GBPUSD im Knotenplan mit 5 Nachkommastellen, nicht XAU-gerundet „1,32“.
+  expect(JSON.stringify(dobPairGraph({dir:-1,orderBlocks:(await at('542')).orderBlocks,pair,hold,evaluatedAt:1794967140,instrument:'GBPUSD'}))).toContain('1,32068');
  });
  it('the near-touch switch restores the near-touch reactions of OB2',async()=>{
   expect((await at('P14',undefined,NEAR)).pair.entries).toMatchObject({a:{status:'ready',entryTime:1792151400,entryPrice:4176.29,stopPrice:4181.98},

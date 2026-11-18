@@ -30,6 +30,9 @@ function crosshairTimeFormatter(time) {
   return `${DAY_MONTH.format(new Date(time * 1000))} ${formatBerlinTime(time)}`;
 }
 
+// Forex braucht 5 Nachkommastellen (Pipette); der Default 0.01 würde GBPUSD auf 1.34 runden.
+export const priceFormatFor = (symbol) => ({ type: "price", precision: pricePrecisionForInstrument(symbol), minMove: symbol === "XAUUSD" ? 0.01 : 0.00001 });
+
 export function createPriceChart(container, symbol) {
   const chart = createChart(container, {
     layout: {
@@ -62,8 +65,7 @@ export function createPriceChart(container, symbol) {
     borderVisible: false,
     wickUpColor: cssColor("candleUp"),
     wickDownColor: cssColor("candleDown"),
-    // Forex braucht 5 Nachkommastellen (Pipette); der Default 0.01 würde GBPUSD auf 1.34 runden.
-    priceFormat: { type: "price", precision: pricePrecisionForInstrument(symbol), minMove: symbol === "XAUUSD" ? 0.01 : 0.00001 },
+    priceFormat: priceFormatFor(symbol),
   });
   return { chart, candleSeries };
 }

@@ -9,6 +9,7 @@
     "504": {"verdict": "negative", "reaction": "false", "routes": {"a": "rejected", "b": "rejected"}, "source": "Philip: kein Entry; Gegen-FVG sperrt A, M1-OB-Tiefe verwirft B um 07:54"},
     "507": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"},
     "508": {"verdict": "positive", "dob": true, "source": "Philip 16.11.2026: valide DOB, Outcome nicht Teil des Solls"},
+    "542": {"verdict": "offen", "state": "true", "note": "02:35/02:36 Hoch = OB1-Retest-Extrem 1,32068, Hold strikt (>) → DOB; Gleichstand als Bruch?", "source": "Pin 542 (Philip 18.11.2026): Fachfrage offen, Produkt erkennt das Paar, Hold bestanden"},
     "SL1": {"verdict": "positive", "dob": true, "stop": {"b": "retestExtreme"}, "source": "Q19 entschieden: Docht-Füllung gilt, Fall bleibt als Beleg. SL = Retest-Extrem 3979,09, alle internen Short-FVGs von OB2 vor dem Entry 06:49 gefüllt"},
     "497": {"verdict": "negative", "dob": false, "hold": {"status": "failed", "breakAt": 1791784800}, "source": "Main DOB-PINS-497-498-2: Hold gebrochen 08:00; Q11 entschieden: Regel bleibt, die OB2-bildende Kerze zählt für den Hold"},
     "498": {"verdict": "negative", "dob": false, "hold": {"status": "failed", "breakAt": 1791784800}, "source": "Main DOB-PINS-497-498-2: Hold gebrochen 08:00; Q11 entschieden: Regel bleibt, die OB2-bildende Kerze zählt für den Hold"},

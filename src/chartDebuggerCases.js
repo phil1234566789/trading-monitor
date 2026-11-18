@@ -11,6 +11,8 @@ import references from '../test/fixtures/dob-native/references.json';
 import EXPECTATIONS from '../test/fixtures/dob-native/chart-debugger-expectations.json';
 
 const INSTRUMENT='XAUUSD';
+// Fälle sind XAU, sofern sie kein eigenes Instrument nennen (Pin 542 = GBPUSD).
+export const caseInstrument=c=>c.instrument??INSTRUMENT;
 // Statische Imports wären ~1 MB im Bundle; jeder Fixture-Tag wird erst bei Auswahl nachgeladen.
 const FIXTURES={
  '2026-10-16':()=>import('../test/fixtures/dob-native/2026-10-16.json'),
@@ -22,6 +24,7 @@ const FIXTURES={
  '2026-10-12':()=>import('../test/fixtures/dob-native/2026-10-12.json'),
  '2026-10-20-p17':()=>import('../test/fixtures/dob-native/2026-10-20-p17.json'),
  '2026-11-12':()=>import('../test/fixtures/dob-native/2026-11-12.json'),
+ '2026-11-18-gbp':()=>import('../test/fixtures/dob-native/2026-11-18-gbp.json'),
 };
 export const loadCaseFixture=async c=>(await FIXTURES[c.day]()).default;
 
@@ -45,6 +48,8 @@ export const CHART_DEBUGGER_CASES=[
  // graphRole/level: Startansicht; beide öffnen die DOB-Ebene, in der Reaktions-Ebene 497 mit OB1 (Hold), 498 mit OB2.
  {id:'497',label:'Pin 497 · OB1 · Short · 12.10. · Paar mit 498',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800],graphRole:'first',level:'dob'},
  {id:'498',label:'Pin 498 · OB2 · Short · 12.10. · Paar mit 497',day:'2026-10-12',dir:-1,orderBlocks:[1791781800,1791784800],level:'dob'},
+ // 542: 02:35-Hoch 1,32068 = OB1-Retest-Extrem (00:50) = OB2-Top; der Hold vergleicht strikt (>), Gleichstand bricht nicht.
+ {id:'542',label:'Pin 542 · DOB Short · GBPUSD · 18.11. · 02:35 Gleichstand am OB1-Retest-Extrem',day:'2026-11-18-gbp',instrument:'GBPUSD',dir:-1,orderBlocks:[1794958200,1794966000],level:'dob'},
  {id:'SL1',label:'SL1 · DOB Short · 12.11. · Route b, SL Retest-Extrem (interne FVGs gefüllt)',day:'2026-11-12',dir:-1,orderBlocks:[1794457500,1794460800],level:'dob'},
  {id:'U1',label:'U1 · Short · 03.11. · Gegen-FVG offen, OB bricht vor Entry b',day:'2026-11-03',dir:-1,orderBlocks:[1793694900]},
  {id:'U2',label:'U2 · Short · 09.11. · FVG ragt unten raus, SL M5-Kante',day:'2026-11-09',dir:-1,orderBlocks:[1794234600]},
@@ -92,9 +97,10 @@ export function caseSteps(c,fixture){
 
 // Dieselbe Eingabe wie der Dashboard-Worker (geschlossen + Session-Ignore), dieselben Produktmodule wie Chart und Messung.
 export function evaluateCase(c,fixture,evaluatedAt,options={}){
- const input=doubleOrderBlockInput({m5:fixture.candles.m5,m1:fixture.candles.m1,symbol:INSTRUMENT,evaluatedAt}),m5=input.m5Candles,m1=input.m1Candles;
- const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(INSTRUMENT,'5m'));
- const context=createOrderBlockReactionContext(m1,evaluatedAt,INSTRUMENT);
+ const instrument=caseInstrument(c);
+ const input=doubleOrderBlockInput({m5:fixture.candles.m5,m1:fixture.candles.m1,symbol:instrument,evaluatedAt}),m5=input.m5Candles,m1=input.m1Candles;
+ const recognition=orderBlockRecognitionTimes(m5,'5m'),zones=detectOrderBlocks(m5,'5m',true,obMinimum(instrument,'5m'));
+ const context=createOrderBlockReactionContext(m1,evaluatedAt,instrument);
  const orderBlocks=c.orderBlocks.map((startTime,index)=>{
   // Ein Einzel-OB wird wie OB2 bewertet: nur dort trägt die Reaktion Entry-Routen (Pins 500/502 = OB2 von P14/P16).
   const role=c.orderBlocks.length===1||index===1?'second':'first',zone=zones.find(z=>z.startTime===startTime&&z.dir===c.dir);
@@ -106,7 +112,7 @@ export function evaluateCase(c,fixture,evaluatedAt,options={}){
  });
  let pair=null;
  if(c.orderBlocks.length===2){
-  const id=`dob:${INSTRUMENT}:${c.dir}:${c.orderBlocks[0]}:${c.orderBlocks[1]}`;
+  const id=`dob:${instrument}:${c.dir}:${c.orderBlocks[0]}:${c.orderBlocks[1]}`;
   pair=detectDoubleOrderBlocks({...input,options}).pairs.find(p=>p.id===id)??null;
  }
  const [first,second]=c.orderBlocks.length===2?orderBlocks:[];

@@ -2,13 +2,13 @@
 import {computed,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
 import {createSeriesMarkers,LineStyle} from 'lightweight-charts';
-import {createPriceChart} from '../priceChartSetup.js';
+import {createPriceChart,priceFormatFor} from '../priceChartSetup.js';
 import {OrderBlockPrimitive,renderPersistedZones} from '../orderBlocks.js';
 import {renderDoubleOrderBlocks} from '../doubleOrderBlockRendering.js';
 import {tintM1FvgCandidates} from '../fvgCandleTint.js';
 import {cssColor,cssColorScaled} from '../chartColors.js';
 import {formatDatedTime} from '../berlinTime.js';
-import {CHART_DEBUGGER_CASES,CASE_GROUPS,expectedText,productMatches,loadCaseFixture,evaluateCase,caseSteps} from '../chartDebuggerCases.js';
+import {CHART_DEBUGGER_CASES,CASE_GROUPS,expectedText,productMatches,loadCaseFixture,evaluateCase,caseSteps,caseInstrument} from '../chartDebuggerCases.js';
 import {DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS,reactionOptionsFor} from '../doubleOrderBlocks.js';
 import {obReactionGraph,graphChangeTimes,structuralState} from '../obReactionGraph.js';
 import {chartDebuggerFvgZones,chartDebuggerReactionZones,chartDebuggerOpponentZones} from '../chartDebuggerFvgs.js';
@@ -40,7 +40,7 @@ watch(caseId,()=>{level.value=current.value.orderBlocks.length===2?current.value
 // fall mitschreiben: beim Fallwechsel ersetzt der Fixture-Watcher die Query im selben Tick, route.query ist dann noch alt.
 watch(level,l=>{if(route.query.ebene!==l)router.replace({query:{...route.query,fall:caseId.value,ebene:l}});});
 const openReaction=role=>{graphRole.value=role;level.value='reaction';};
-const dobGraph=computed(()=>result.value&&isPair.value&&level.value==='dob'&&dobPairGraph({dir:current.value.dir,...result.value,evaluatedAt:evaluatedAt.value}));
+const dobGraph=computed(()=>result.value&&isPair.value&&level.value==='dob'&&dobPairGraph({dir:current.value.dir,...result.value,evaluatedAt:evaluatedAt.value,instrument:caseInstrument(current.value)}));
 const graphInput=({orderBlocks,context,pair,hold})=>{const entry=orderBlocks.find(o=>o.role===graphRole.value);
  return {entry,context,pair,hold,partner:orderBlocks.find(o=>o!==entry)??null};};
 const graph=computed(()=>result.value&&obReactionGraph({...graphInput(result.value),dir:current.value.dir,evaluatedAt:evaluatedAt.value,
@@ -96,6 +96,8 @@ function draw(){
  const reactionFvgs=orderBlocks.map(o=>o.reaction?.fvg).filter(Boolean),candles=tf.value==='m1'?m1:result.value.m5;
  // M1-Zeitpunkte auf die M5-Kerze legen, sonst fehlen Marker zwischen zwei M5-Balken.
  const snap=t=>Math.floor(t/sec)*sec,last=candles.at(-1)?.time??-Infinity;
+ // Fälle mischen XAU und Forex; der Chart entsteht einmal, das Preisformat folgt dem Fall.
+ series.applyOptions({priceFormat:priceFormatFor(caseInstrument(current.value))});
  series.setData(tintM1FvgCandidates(candles,reactionFvgs,tf.value==='m1'?'1m':'5m',cssColor('fvgCandle')));
  // Sichtbereich erst nach setData setzen, sonst wirft lightweight-charts 'Value is null'.
  if(fitPending){fitPending=false;chart.timeScale().setVisibleRange({from:steps.value.from-1800,to:steps.value.through});}

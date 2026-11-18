@@ -2,7 +2,7 @@
 import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
 import {createSeriesMarkers,LineStyle} from 'lightweight-charts';
-import {createPriceChart} from '../priceChartSetup.js';
+import {createPriceChart,priceFormatFor} from '../priceChartSetup.js';
 import {OrderBlockPrimitive} from '../orderBlocks.js';
 import {usePriceChartTradeSetupDrawing} from '../composables/usePriceChartTradeSetupDrawing.js';
 import {fetchInitialCandles} from '../forexCandles.js';
@@ -99,7 +99,7 @@ function insertChartPoint(param){
 function setInstrument(instrument){
  if(symbol===instrument)return;
  symbol=instrument;
- series.applyOptions({priceFormat:{type:'price',precision:pricePrecisionForInstrument(instrument),minMove:instrument==='XAUUSD'?0.01:0.00001}});
+ series.applyOptions({priceFormat:priceFormatFor(instrument)});
 }
 function draw(){
  if(!series||!data.value)return;
