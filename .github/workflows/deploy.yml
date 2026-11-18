@@ -64,6 +64,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           base=$(gh run list --workflow deploy.yml --branch main --status success --limit 1 --json headSha -q '.[0].headSha // ""')
+          # Manueller Start (Run workflow) rollt die src-Bündler immer aus, z. B. nach dem Eintragen des Tokens.
+          if [ "${{ github.event_name }}" = workflow_dispatch ]; then base=""; fi
           echo "Basis: ${base:-keine (erster Lauf)}"
           names=$(node scripts/edgeFunctionsToDeploy.mjs "$base")
           echo "Functions: ${names:-keine}"
