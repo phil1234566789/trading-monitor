@@ -1,0 +1,244 @@
+{
+  "measurement": "dob-lab-lq-sweep-base-v1",
+  "git": "c1a070a8",
+  "instrument": "GBPUSD",
+  "run": "dob-lq-sweep-gbpusd-v0",
+  "breakEven": {
+    "3R": 25,
+    "5R": 16.7
+  },
+  "share": {
+    "edge": 869,
+    "overlap": 581,
+    "adjacent": 140
+  },
+  "methodology": [
+    "Lauf dob-lq-sweep-gbpusd-v0 (DB): DOB, dessen OB1/OB2 mit einem TS1.1-OB (Box oder rohes M5-OB) eine Kante teilt (1 Tick), überlappt oder knapp daneben liegt (XAU ≤ 1 USD, Forex ≤ 3 Pips).",
+    "Stärkste Verbindung je Trade über alle tragenden Paare; einmalige Trades (Richtung/Entry/SL). Ohne Sperren, Gegen-DOB nur als Status gespeichert.",
+    "Win/Loss je festem Ziel aus max_r/sl_hit (dobTotalStats); Halbjahre nach Berliner Entry-Monat; Ø Trades je Kalenderwoche."
+  ],
+  "byLevel": {
+    "gleiche Kante (Regel)": {
+      "trades": 869,
+      "3R": {
+        "win": 200,
+        "loss": 654,
+        "winrate": 23.4,
+        "sumR": -54
+      },
+      "5R": {
+        "win": 126,
+        "loss": 717,
+        "winrate": 14.9,
+        "sumR": -87
+      },
+      "Jan–Jun": {
+        "3R": {
+          "win": 107,
+          "loss": 356,
+          "winrate": 23.1,
+          "sumR": -35
+        },
+        "5R": {
+          "win": 74,
+          "loss": 387,
+          "winrate": 16.1,
+          "sumR": -17
+        }
+      },
+      "Jul–Dez": {
+        "3R": {
+          "win": 93,
+          "loss": 298,
+          "winrate": 23.8,
+          "sumR": -19
+        },
+        "5R": {
+          "win": 52,
+          "loss": 330,
+          "winrate": 13.6,
+          "sumR": -70
+        }
+      },
+      "perWeek": 18.9
+    },
+    "Kante oder Überlappung": {
+      "trades": 1450,
+      "3R": {
+        "win": 332,
+        "loss": 1083,
+        "winrate": 23.5,
+        "sumR": -87
+      },
+      "5R": {
+        "win": 218,
+        "loss": 1179,
+        "winrate": 15.6,
+        "sumR": -89
+      },
+      "Jan–Jun": {
+        "3R": {
+          "win": 191,
+          "loss": 625,
+          "winrate": 23.4,
+          "sumR": -52
+        },
+        "5R": {
+          "win": 132,
+          "loss": 676,
+          "winrate": 16.3,
+          "sumR": -16
+        }
+      },
+      "Jul–Dez": {
+        "3R": {
+          "win": 141,
+          "loss": 458,
+          "winrate": 23.5,
+          "sumR": -35
+        },
+        "5R": {
+          "win": 86,
+          "loss": 503,
+          "winrate": 14.6,
+          "sumR": -73
+        }
+      },
+      "perWeek": 31.5
+    },
+    "alle (inkl. knapp daneben)": {
+      "trades": 1590,
+      "3R": {
+        "win": 368,
+        "loss": 1179,
+        "winrate": 23.8,
+        "sumR": -75
+      },
+      "5R": {
+        "win": 238,
+        "loss": 1288,
+        "winrate": 15.6,
+        "sumR": -98
+      },
+      "Jan–Jun": {
+        "3R": {
+          "win": 210,
+          "loss": 674,
+          "winrate": 23.8,
+          "sumR": -44
+        },
+        "5R": {
+          "win": 141,
+          "loss": 735,
+          "winrate": 16.1,
+          "sumR": -30
+        }
+      },
+      "Jul–Dez": {
+        "3R": {
+          "win": 158,
+          "loss": 505,
+          "winrate": 23.8,
+          "sumR": -31
+        },
+        "5R": {
+          "win": 97,
+          "loss": 553,
+          "winrate": 14.9,
+          "sumR": -68
+        }
+      },
+      "perWeek": 34.6
+    }
+  },
+  "onlyLevel": {
+    "overlap": {
+      "trades": 581,
+      "3R": {
+        "win": 132,
+        "loss": 429,
+        "winrate": 23.5,
+        "sumR": -33
+      },
+      "5R": {
+        "win": 92,
+        "loss": 462,
+        "winrate": 16.6,
+        "sumR": -2
+      },
+      "Jan–Jun": {
+        "3R": {
+          "win": 84,
+          "loss": 269,
+          "winrate": 23.8,
+          "sumR": -17
+        },
+        "5R": {
+          "win": 58,
+          "loss": 289,
+          "winrate": 16.7,
+          "sumR": 1
+        }
+      },
+      "Jul–Dez": {
+        "3R": {
+          "win": 48,
+          "loss": 160,
+          "winrate": 23.1,
+          "sumR": -16
+        },
+        "5R": {
+          "win": 34,
+          "loss": 173,
+          "winrate": 16.4,
+          "sumR": -3
+        }
+      },
+      "perWeek": 12.6
+    },
+    "adjacent": {
+      "trades": 140,
+      "3R": {
+        "win": 36,
+        "loss": 96,
+        "winrate": 27.3,
+        "sumR": 12
+      },
+      "5R": {
+        "win": 20,
+        "loss": 109,
+        "winrate": 15.5,
+        "sumR": -9
+      },
+      "Jan–Jun": {
+        "3R": {
+          "win": 19,
+          "loss": 49,
+          "winrate": 27.9,
+          "sumR": 8
+        },
+        "5R": {
+          "win": 9,
+          "loss": 59,
+          "winrate": 13.2,
+          "sumR": -14
+        }
+      },
+      "Jul–Dez": {
+        "3R": {
+          "win": 17,
+          "loss": 47,
+          "winrate": 26.6,
+          "sumR": 4
+        },
+        "5R": {
+          "win": 11,
+          "loss": 50,
+          "winrate": 18,
+          "sumR": 5
+        }
+      },
+      "perWeek": 3.1
+    }
+  }
+}
