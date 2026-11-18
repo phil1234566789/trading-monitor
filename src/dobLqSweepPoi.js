@@ -1,4 +1,5 @@
 import {instrumentConfig} from './instrumentConfig.js';
+import {tradeSetup11SourceTimes} from './tradeSetup11Context.js';
 
 // POI-Art LQ-Sweep (Philip): der POI ist ein TS1.1-Setup (trade_setups, gefiltert wie im Chart: tradeSetup11RowVerdicts). Zum DOB: OB1
 // oder OB2 hat mit dem TS1.1-OB mindestens eine gleiche Kante (≤ 1 Tick); als TS1.1-OB zählen die gespeicherte Box und das rohe
@@ -12,12 +13,13 @@ export const dobLqAdjacentMax=instrument=>instrument==='XAUUSD'?1:3*instrumentCo
 const MAX_AGE_SECONDS=24*3600;
 const time=v=>v==null?null:typeof v==='number'?v:Date.parse(v)/1000;
 
-// Zeile aus trade_setups (mit eingebettetem ob_zones(top,bottom)) → Eingabe der Erkennung.
+// Zeile aus trade_setups (mit eingebettetem ob_zones(top,bottom)) → Eingabe der Erkennung. knownAt: ab dann kennt auch der Chart das
+// TS1.1 (OB + FVG mit C3-Schluss, wie die Trend-Policy); nicht created_at, das ist bei nachgetragenen Zeilen zu spät.
 export function dobTs11FromRow(row){
  const raw=row.ob_zones??row.ob_zone??null;
  return {id:row.id,direction:row.direction,top:Number(row.ob_top),bottom:Number(row.ob_bottom),
   rawTop:raw?.top==null?null:Number(raw.top),rawBottom:raw?.bottom==null?null:Number(raw.bottom),
-  startTime:time(row.ob_start_time),lsPrice:row.ls_price==null?null:Number(row.ls_price),lsTouchedTime:time(row.ls_touched_time),
+  startTime:time(row.ob_start_time),knownAt:tradeSetup11SourceTimes({obStartTime:time(row.ob_start_time)}).nativeGeometryKnownAt??Infinity,lsPrice:row.ls_price==null?null:Number(row.ls_price),lsTouchedTime:time(row.ls_touched_time),
   lsTimeframe:row.ls_timeframe??null};
 }
 
@@ -42,14 +44,15 @@ export function dobLqSweepMatch(pair,ts,tick,adjacentMax=1){
 
 // Erkennung für checkDobTradeSetup: input.tradeSetups (dobTs11FromRow); schwächste noch zählende Stufe aus poiOptions.match (Lauf),
 // sonst aus der Konfig (poiMatchMode, Watcher).
-// Kausal: Sweep und TS1.1-OB liegen vor der Erkennung des DOB-Paars.
+// Kausal: Sweep und TS1.1 sind bei Erkennung des DOB-Paars schon bekannt; ein früher erkanntes Paar bekommt den POI auch später nicht
+// (live käme der Alarm zu spät, der Lauf darf ihn nicht als rechtzeitig zählen).
 export function lqSweepPoi(input){
  const tick=instrumentConfig(input.instrument).tick,adjacentMax=dobLqAdjacentMax(input.instrument),allowed=DOB_LQ_MATCH_LEVELS.indexOf(input.poiOptions?.match??input.guardrails?.poiMatchMode??'edge');
  const list=input.tradeSetups??[];
  return pair=>{
   let poi=null;
   for(const ts of list){
-   if(ts.direction!==pair.direction||ts.startTime>pair.recognizedAt||(ts.lsTouchedTime??ts.startTime)>pair.recognizedAt
+   if(ts.direction!==pair.direction||ts.knownAt>pair.recognizedAt||(ts.lsTouchedTime??ts.startTime)>pair.recognizedAt
     ||ts.startTime<pair.firstOrderBlock.startTime-MAX_AGE_SECONDS)continue;
    const m=dobLqSweepMatch(pair,ts,tick,adjacentMax);
    if(!m)continue;

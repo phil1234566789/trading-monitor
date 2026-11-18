@@ -134,7 +134,8 @@ try {
   // Abgleich: Ziel 2R aus max_r/sl_hit muss dem gespeicherten Ausgang entsprechen (gleicher Verfolgungszeitraum).
   console.log('2R aus max_r:', JSON.stringify({ win: rows.filter(r => r.max_r >= 2).length, loss: rows.filter(r => r.max_r < 2 && r.sl_hit && !(r.ambiguous_r >= 2)).length,
     open: rows.filter(r => r.max_r < 2 && !r.sl_hit).length, outcomeWin: rows.filter(r => r.outcome === 'success').length, outcomeLoss: rows.filter(r => r.outcome === 'loss').length }));
-  if (DRY) { if (flag('--dump')) (await import('node:fs')).writeFileSync(flag('--dump'), JSON.stringify(rows)); process.exit(0); }
+  if (flag('--dump')) (await import('node:fs')).writeFileSync(flag('--dump'), JSON.stringify(rows));
+  if (DRY) process.exit(0);
   // Nach 8–10 min Rechnen ist die gepoolte Verbindung oft serverseitig zu (fetch failed: ECONNRESET/ECONNABORTED); der Ersatz ist idempotent.
   const write = () => supabase.rpc('replace_dob_trade_setups', { p_run: { id: RUN_ID, label: RUNS[RUN_ID].label, description: RUNS[RUN_ID].description, sort: RUNS[RUN_ID].sort, setup_version: RUNS[RUN_ID].version, poi_type: RUNS[RUN_ID].poiType, data_end: dataEnd },
     p_instrument: SYMBOL, p_rows: rows });
