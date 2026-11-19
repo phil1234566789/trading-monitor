@@ -77,3 +77,10 @@ it('freezes a fractal touched after the canonical setup time as still open (pin 
  expect(source.fractal.touched).toBe(true);
  expect(restoreTradeSetupSourceSnapshot(JSON.parse(JSON.stringify(payload))).fractal.endTime).toBe(Infinity);
 });
+it('accepts the root as LS owner (depth 0, v7 root rule) but no depth-0 nested range',async()=>{
+ const source=setup();source.trendEvidence.goWitness.ownerProof={status:'ready',range:owner(),depth:0,knownAt:3000,
+  basis:'deepestRangeAtLevelBirth',pivot:{price:100,pivotTime:300}};
+ source.ls=pivot;source.sweeps=[sw(pivot)];source.confirmationSources=[sw(pivot)];source.confirmationHistory=[];
+ expect((await capture(source)).setup.trendEvidence.goWitness.ownerProof.depth).toBe(0);
+ source.trendEvidence.goWitness.ownerProof={...owner(),depth:0};await expect(capture(source)).rejects.toThrow();
+});

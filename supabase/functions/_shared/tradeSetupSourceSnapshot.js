@@ -59,7 +59,8 @@ function assertOwnerProof(proof,dir,asOf,source) {
  const basis=proof?.range?['deepestRangeAtLevelBirth','rangeBoundaryBeforeSweep','protectedPivotBeforeSweep']
   :['confirmedNestedRange','existingCloseReactionChoch'];
  if(!object(proof)||!basis.includes(proof.basis)||!time(proof.knownAt)||proof.knownAt>asOf
-  ||!Number.isSafeInteger(proof.depth)||proof.depth<1||range?.trend!==expected
+  // Tiefe 0 = Wurzel: seit v7 darf sie die LS belegen (findTradeSetup11SourceOwner, counterAfterLevel).
+  ||!Number.isSafeInteger(proof.depth)||proof.depth<(proof.basis==='deepestRangeAtLevelBirth'?0:1)||range?.trend!==expected
   // CHoCH-knownAt bezeichnet den ersten Trendbeleg, die Range kann bis zum erfassten Präfix weiterlaufen.
   ||![range.low,range.high].every(p=>object(p)&&positive(p.price)&&time(p.pivotTime)&&p.pivotTime<=asOf)
   ||range.low.price>=range.high.price||(proof.range&&proof.status!=='ready'))return fail();
