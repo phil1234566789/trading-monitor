@@ -1993,9 +1993,6 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
             TS1.1 · Short
           </ToggleButton>
-          <ToggleButton variant="menu" :class="{ active: showTs11Levels }" title="M5-Struktur ab dem D1-Anker als Zickzack: Wurzel, T1, T2, … bis zur aktuellen Ebene" @click="showTs11Levels = !showTs11Levels">
-            Struktur · Ebenen
-          </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showRScale }" :title="rScaleHint" @click="showRScale = !showRScale">
             R-Skala
           </ToggleButton>
@@ -2064,6 +2061,9 @@ watch(selectedTradingAccountId, () => {
           </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showM1Structure }" title="M1-Struktur nur mit Periode-5-Pivots, ab bestätigtem A, B und C; Styles wie M5-Struktur" @click="showM1Structure = !showM1Structure">
             M1-Struktur
+          </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showTs11Levels }" title="M5-Struktur ab dem D1-Anker als Zickzack: Wurzel, T1, T2, … bis zur aktuellen Ebene" @click="showTs11Levels = !showTs11Levels">
+            M5-Ebenen (Wurzel, T1 …)
           </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showM5TrendPhases }" @click="showM5TrendPhases = !showM5TrendPhases">
             M5-Trendphasen
