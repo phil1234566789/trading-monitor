@@ -23,8 +23,7 @@ import {useDebuggerTime} from '../composables/useDebuggerTime.js';
 import {ts11Point,ts11Price,ts11TrendText,ts11When} from '../tradeSetup11Explain.js';
 import ActionButton from './ui/ActionButton.vue';
 import {renderLowerStructure} from '../structureOverlay.js';
-import {barSecondsFor} from '../timeframes.js';
-import {dobEntryM1Structure} from '../dobEntryM1Structure.js';
+import {ts11StructureOverlay} from '../ts11StructureOverlay.js';
 import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
 
 // Nur Ansicht/Diagnose: Fälle sind Philips Pins zu TS1.1, neue Pins erscheinen beim nächsten Laden ohne Codeänderung.
@@ -82,7 +81,7 @@ watch([current,lead,tail],async([kase,l,n])=>{
 
 // Zeitbalken: Kette im Hauptthread (~6 ms), erklärte Diagnose im Worker; ein neuer Zeitpunkt bricht die laufende ab.
 const time=useDebuggerTime(300),{at}=time;
-const diagnosis=shallowRef(null),chain=shallowRef(null),changeTimes=ref(null),scanned=ref(0),diagnosing=ref(false);
+const diagnosis=shallowRef(null),chain=shallowRef(null),overlay=shallowRef(null),changeTimes=ref(null),scanned=ref(0),diagnosing=ref(false);
 const startDiagnosisWorker=(d,job)=>{
  const w=new Worker(new URL('../ts11DiagnosisWorker.js',import.meta.url),{type:'module'});
  w.postMessage({...job,kase:d.kase,m5:d.m5All,own:d.own.map(x=>toRaw(x)),located:d.located,policy:d.policy});
@@ -91,11 +90,11 @@ const startDiagnosisWorker=(d,job)=>{
 let diagnoseTimer=null,explainWorker=null;
 watch([data,at],([d,t])=>{
  clearTimeout(diagnoseTimer);explainWorker?.terminate();explainWorker=null;
- if(!d){diagnosis.value=chain.value=null;diagnosing.value=false;return;}
+ if(!d){diagnosis.value=chain.value=overlay.value=null;diagnosing.value=false;return;}
  diagnosing.value=true;
  diagnoseTimer=setTimeout(()=>{
   if(d!==data.value)return;
-  chain.value=ts11ChainAt(d.resolve,d.closeCache,t);
+  chain.value=ts11ChainAt(d.resolve,d.closeCache,t);overlay.value=ts11StructureOverlay(d.resolve(t),d.closeCache);
   const w=explainWorker=startDiagnosisWorker(d,{from:t,through:t,explain:true});
   w.onmessage=({data:m})=>{if(w!==explainWorker)return;if(m.error){error.value=`Diagnose: ${m.error}`;diagnosing.value=false;}else if(m.done){w.terminate();explainWorker=null;diagnosing.value=false;}else diagnosis.value=m.diagnosis;};
   w.onerror=e=>{if(w===explainWorker){error.value=`Diagnose: ${e.message}`;diagnosing.value=false;}};
@@ -201,7 +200,9 @@ function draw(){
  for(const c of d.candidates.filter(c=>!c.inSetup&&c.checks.every(x=>x.ok)))priceLines.push(series.createPriceLine({price:c.level.price,
   color:cssColor('tradeWin'),lineWidth:1,lineStyle:LineStyle.Dotted,title:`LS ${px(c.level.price)}`}));
  const sec=tf.value==='m1'?60:300,mark=Math.floor((at.value-300)/sec)*sec;
- markers.setMarkers(mark<=candles.at(-1).time&&mark>=candles[0].time?[{time:mark,position:'aboveBar',shape:'arrowDown',color:cssColor('tradeConfirmation'),text:'TS1.1-Prüfung'}]:[]);
+ const inChart=t=>t!=null&&t<=candles.at(-1).time&&t>=candles[0].time,start=overlay.value?.anchorTime;
+ markers.setMarkers([inChart(mark)&&{time:mark,position:'aboveBar',shape:'arrowDown',color:cssColor('tradeConfirmation'),text:'TS1.1-Prüfung'},
+  structure.value&&inChart(start)&&{time:Math.floor(start/sec)*sec,position:'belowBar',shape:'arrowUp',color:cssColor('tradeConfirmation'),text:`Strukturstart ${formatDatedTime(start)}`}].filter(Boolean));
  drawStructure();
  // Sicht nur bei neuem Fall/Zeitrahmen setzen; beim Drehen am Zeitbalken bleibt Philips Zoom stehen.
  if(!fitPending)return;
@@ -212,18 +213,17 @@ function draw(){
  // Statuszeile verschwindet im selben Tick: der Resize setzt das Fenster sonst rechtsbündig neu.
  requestAnimationFrame(()=>chart?.timeScale().setVisibleRange(range));
 }
-// Struktur wie in DOB-Entry M1 (dieselbe Berechnung); Anker = Fensterbeginn, also mindestens 24 h vor dem Fall.
+// Struktur = TS1.1-Kontext zu evaluatedAt (D1-Anker, M5-Pivots, Zustand); auf M1 dieselbe M5-Struktur.
 function drawStructure(){
  if(!series)return;
- const bar=tf.value==='m1'?'1m':'5m',candles=shownCandles(),instrument=data.value?.kase.instrument;
- const result=structure.value&&candles.length?dobEntryM1Structure(candles,bar,data.value.window.view.from,instrument):null;
+ const candles=shownCandles(),instrument=data.value?.kase.instrument,result=structure.value&&candles.length?overlay.value:null;
  renderLowerStructure(series,result,structurePrimitives,structureMarkers,candles,{symbol:instrument,replayUntil:candles.at(-1)?.time,
-  show:!!result,debug:!!result,barSeconds:barSecondsFor(bar),timeframe:bar});
+  show:!!result,debug:!!result,barSeconds:300,timeframe:'5m'});
 }
 watch(tf,()=>{fitPending=true;});
 // Kerzen folgen dem Regler sofort; die Prüf-Overlays ziehen nach, sobald die Diagnose da ist („Prüfe …“).
-watch([diagnosis,tf,at],()=>nextTick(draw));
-watch(structure,drawStructure);
+watch([diagnosis,tf,at,overlay],()=>nextTick(draw));
+watch(structure,()=>nextTick(draw));
 
 onMounted(async()=>{
  ({chart,candleSeries:series}=createPriceChart(chartEl.value,'XAUUSD'));symbol='XAUUSD';
@@ -268,6 +268,7 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
      <ul class="checks"><li v-for="(s,i) in diagnosis.steps" :key="i" :class="{bad:!s.ok}">{{ mark(s.ok) }} {{ s.label }}<span v-if="s.detail" class="detail"> · {{ s.detail }}</span><small v-if="s.code"> · {{ s.code }}</small></li></ul>
      <template v-if="chain">
       <h4>Prüfschritt Range-Kette (Stand evaluatedAt)</h4>
+      <p v-if="overlay" class="muted">Strukturstart {{ formatDatedTime(overlay.anchorTime) }} (D1-Anker, ab hier zählt TS1.1)</p>
       <p v-if="chain.status!=='ready'" class="muted">{{ chain.status }} · {{ chain.reason }}</p>
       <ul v-else class="checks">
        <li v-for="l in chain.links" :key="l.depth">Tiefe {{ l.depth }}{{ l.depth===0?' (Wurzel)':'' }} · {{ ts11TrendText(l.trend) }} · H {{ pt(l.high) }} · L {{ pt(l.low) }} · bestätigt</li>

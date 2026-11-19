@@ -10572,9 +10572,9 @@
     "semantic_hash": ""
   },
   "src/dobEntryM1Structure.js": {
-    "mtime": 1795038728.6836302,
-    "seen": 1795039048.8938112,
-    "ast_hash": "4c727672a4107b407a50ba85b4e06ed5",
+    "mtime": 1795080600.7322628,
+    "seen": 1795080682.785905,
+    "ast_hash": "3d2af2a1522e6606a5ec01864663e645",
     "semantic_hash": ""
   },
   "test/dobEntryM1Structure.test.js": {
@@ -10806,9 +10806,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetup11Section.vue": {
-    "mtime": 1795079579.0734737,
-    "seen": 1795079675.4737687,
-    "ast_hash": "2a3a4679b1d257989ef32786174c985e",
+    "mtime": 1795080600.7322628,
+    "seen": 1795080682.7634962,
+    "ast_hash": "96ba2a8cf73de236bc66e1c61aaf210b",
     "semantic_hash": ""
   },
   "src/tradeSetup11Debugger.js": {
@@ -11061,6 +11061,18 @@
     "mtime": 1795079590.0355642,
     "seen": 1795079675.7324522,
     "ast_hash": "7cc7989c3613b0dcb0f5e3da3c045951",
+    "semantic_hash": ""
+  },
+  "src/ts11StructureOverlay.js": {
+    "mtime": 1795080593.333815,
+    "seen": 1795080682.8508832,
+    "ast_hash": "6a0fe5637f2b499206753d871cad7a92",
+    "semantic_hash": ""
+  },
+  "test/ts11StructureOverlay.test.js": {
+    "mtime": 1795080609.5796223,
+    "seen": 1795080683.0238986,
+    "ast_hash": "d62a9c07ecf1f3cce6ec196f1fc1b6cf",
     "semantic_hash": ""
   }
 }

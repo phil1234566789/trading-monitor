@@ -5,7 +5,7 @@ import { barSecondsFor } from './timeframes.js';
 import { fmtDateTime } from './format.js';
 import { M1_STRUCTURE_PERIOD } from './m1StructureSettings.js';
 
-// Debug-Ansicht „Struktur“ der Chart-Debugger-Sektionen DOB-Entry M1 und TS1.1: dieselben Bausteine wie Dashboard-M5 (chartStructureCalculation.js,
+// Debug-Ansicht „Struktur“ der Chart-Debugger-Sektion DOB-Entry M1 (TS1.1 zeigt ihren eigenen Kontext, ts11StructureOverlay.js): dieselben Bausteine wie Dashboard-M5 (chartStructureCalculation.js,
 // P5/P2 mit Schlusskurs-Auswertung) bzw. Dashboard-M1 (buildM1Structure: nur P5, P2 lieferte auf M1 Fehlsignale).
 // Anker = Beginn des Sichtfensters statt 1h-Struktur/Setup-Sweep, weil die Sektion keine Erkennung mitbringt.
 const M5_PERIODS = [5, 2];
