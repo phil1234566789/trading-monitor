@@ -1,0 +1,359 @@
+{
+  "measurement": "dob-lab-root-bos-v1",
+  "git": "c8587eea",
+  "target": "3R",
+  "instruments": {
+    "XAUUSD": {
+      "Kante": {
+        "gesamt": {
+          "trades": 171,
+          "win": 50,
+          "loss": 121,
+          "winrate": 29.2,
+          "sumR": 29,
+          "avgR": 0.17
+        },
+        "mit Wurzel": {
+          "trades": 83,
+          "win": 19,
+          "loss": 64,
+          "winrate": 22.9,
+          "sumR": -7,
+          "avgR": -0.08
+        },
+        "gegen Wurzel mit BOS": {
+          "trades": 54,
+          "win": 18,
+          "loss": 36,
+          "winrate": 33.3,
+          "sumR": 18,
+          "avgR": 0.33
+        },
+        "gegen Wurzel ohne BOS": {
+          "trades": 6,
+          "win": 2,
+          "loss": 4,
+          "winrate": 33.3,
+          "sumR": 2,
+          "avgR": 0.33
+        },
+        "gegen Wurzel, Range nicht gegen Wurzel": {
+          "trades": 28,
+          "win": 11,
+          "loss": 17,
+          "winrate": 39.3,
+          "sumR": 16,
+          "avgR": 0.57
+        },
+        "unbekannt": {
+          "trades": 0,
+          "win": 0,
+          "loss": 0,
+          "winrate": null,
+          "sumR": 0,
+          "avgR": null
+        },
+        "BOS-Pflicht (ohne BOS raus)": {
+          "trades": 165,
+          "win": 48,
+          "loss": 117,
+          "winrate": 29.1,
+          "sumR": 27,
+          "avgR": 0.16
+        }
+      },
+      "Kante + Überlappung": {
+        "gesamt": {
+          "trades": 508,
+          "win": 141,
+          "loss": 364,
+          "winrate": 27.9,
+          "sumR": 59,
+          "avgR": 0.12
+        },
+        "mit Wurzel": {
+          "trades": 240,
+          "win": 50,
+          "loss": 187,
+          "winrate": 21.1,
+          "sumR": -37,
+          "avgR": -0.16
+        },
+        "gegen Wurzel mit BOS": {
+          "trades": 160,
+          "win": 52,
+          "loss": 108,
+          "winrate": 32.5,
+          "sumR": 48,
+          "avgR": 0.3
+        },
+        "gegen Wurzel ohne BOS": {
+          "trades": 22,
+          "win": 8,
+          "loss": 14,
+          "winrate": 36.4,
+          "sumR": 10,
+          "avgR": 0.45
+        },
+        "gegen Wurzel, Range nicht gegen Wurzel": {
+          "trades": 86,
+          "win": 31,
+          "loss": 55,
+          "winrate": 36,
+          "sumR": 38,
+          "avgR": 0.44
+        },
+        "unbekannt": {
+          "trades": 0,
+          "win": 0,
+          "loss": 0,
+          "winrate": null,
+          "sumR": 0,
+          "avgR": null
+        },
+        "BOS-Pflicht (ohne BOS raus)": {
+          "trades": 486,
+          "win": 133,
+          "loss": 350,
+          "winrate": 27.5,
+          "sumR": 49,
+          "avgR": 0.1
+        }
+      },
+      "alle": {
+        "gesamt": {
+          "trades": 537,
+          "win": 150,
+          "loss": 383,
+          "winrate": 28.1,
+          "sumR": 67,
+          "avgR": 0.13
+        },
+        "mit Wurzel": {
+          "trades": 251,
+          "win": 54,
+          "loss": 193,
+          "winrate": 21.9,
+          "sumR": -31,
+          "avgR": -0.13
+        },
+        "gegen Wurzel mit BOS": {
+          "trades": 169,
+          "win": 55,
+          "loss": 114,
+          "winrate": 32.5,
+          "sumR": 51,
+          "avgR": 0.3
+        },
+        "gegen Wurzel ohne BOS": {
+          "trades": 23,
+          "win": 9,
+          "loss": 14,
+          "winrate": 39.1,
+          "sumR": 13,
+          "avgR": 0.57
+        },
+        "gegen Wurzel, Range nicht gegen Wurzel": {
+          "trades": 94,
+          "win": 32,
+          "loss": 62,
+          "winrate": 34,
+          "sumR": 34,
+          "avgR": 0.36
+        },
+        "unbekannt": {
+          "trades": 0,
+          "win": 0,
+          "loss": 0,
+          "winrate": null,
+          "sumR": 0,
+          "avgR": null
+        },
+        "BOS-Pflicht (ohne BOS raus)": {
+          "trades": 514,
+          "win": 141,
+          "loss": 369,
+          "winrate": 27.6,
+          "sumR": 54,
+          "avgR": 0.11
+        }
+      }
+    },
+    "GBPUSD": {
+      "Kante": {
+        "gesamt": {
+          "trades": 353,
+          "win": 86,
+          "loss": 258,
+          "winrate": 25,
+          "sumR": 0,
+          "avgR": 0
+        },
+        "mit Wurzel": {
+          "trades": 148,
+          "win": 35,
+          "loss": 104,
+          "winrate": 25.2,
+          "sumR": 1,
+          "avgR": 0.01
+        },
+        "gegen Wurzel mit BOS": {
+          "trades": 122,
+          "win": 24,
+          "loss": 98,
+          "winrate": 19.7,
+          "sumR": -26,
+          "avgR": -0.21
+        },
+        "gegen Wurzel ohne BOS": {
+          "trades": 15,
+          "win": 3,
+          "loss": 12,
+          "winrate": 20,
+          "sumR": -3,
+          "avgR": -0.2
+        },
+        "gegen Wurzel, Range nicht gegen Wurzel": {
+          "trades": 68,
+          "win": 24,
+          "loss": 44,
+          "winrate": 35.3,
+          "sumR": 28,
+          "avgR": 0.41
+        },
+        "unbekannt": {
+          "trades": 0,
+          "win": 0,
+          "loss": 0,
+          "winrate": null,
+          "sumR": 0,
+          "avgR": null
+        },
+        "BOS-Pflicht (ohne BOS raus)": {
+          "trades": 338,
+          "win": 83,
+          "loss": 246,
+          "winrate": 25.2,
+          "sumR": 3,
+          "avgR": 0.01
+        }
+      },
+      "Kante + Überlappung": {
+        "gesamt": {
+          "trades": 755,
+          "win": 165,
+          "loss": 569,
+          "winrate": 22.5,
+          "sumR": -74,
+          "avgR": -0.1
+        },
+        "mit Wurzel": {
+          "trades": 310,
+          "win": 68,
+          "loss": 226,
+          "winrate": 23.1,
+          "sumR": -22,
+          "avgR": -0.07
+        },
+        "gegen Wurzel mit BOS": {
+          "trades": 264,
+          "win": 51,
+          "loss": 210,
+          "winrate": 19.5,
+          "sumR": -57,
+          "avgR": -0.22
+        },
+        "gegen Wurzel ohne BOS": {
+          "trades": 41,
+          "win": 5,
+          "loss": 35,
+          "winrate": 12.5,
+          "sumR": -20,
+          "avgR": -0.5
+        },
+        "gegen Wurzel, Range nicht gegen Wurzel": {
+          "trades": 138,
+          "win": 40,
+          "loss": 97,
+          "winrate": 29.2,
+          "sumR": 23,
+          "avgR": 0.17
+        },
+        "unbekannt": {
+          "trades": 2,
+          "win": 1,
+          "loss": 1,
+          "winrate": 50,
+          "sumR": 2,
+          "avgR": 1
+        },
+        "BOS-Pflicht (ohne BOS raus)": {
+          "trades": 714,
+          "win": 160,
+          "loss": 534,
+          "winrate": 23.1,
+          "sumR": -54,
+          "avgR": -0.08
+        }
+      },
+      "alle": {
+        "gesamt": {
+          "trades": 886,
+          "win": 198,
+          "loss": 660,
+          "winrate": 23.1,
+          "sumR": -66,
+          "avgR": -0.08
+        },
+        "mit Wurzel": {
+          "trades": 369,
+          "win": 79,
+          "loss": 270,
+          "winrate": 22.6,
+          "sumR": -33,
+          "avgR": -0.09
+        },
+        "gegen Wurzel mit BOS": {
+          "trades": 307,
+          "win": 63,
+          "loss": 238,
+          "winrate": 20.9,
+          "sumR": -49,
+          "avgR": -0.16
+        },
+        "gegen Wurzel ohne BOS": {
+          "trades": 54,
+          "win": 8,
+          "loss": 45,
+          "winrate": 15.1,
+          "sumR": -21,
+          "avgR": -0.4
+        },
+        "gegen Wurzel, Range nicht gegen Wurzel": {
+          "trades": 154,
+          "win": 47,
+          "loss": 106,
+          "winrate": 30.7,
+          "sumR": 35,
+          "avgR": 0.23
+        },
+        "unbekannt": {
+          "trades": 2,
+          "win": 1,
+          "loss": 1,
+          "winrate": 50,
+          "sumR": 2,
+          "avgR": 1
+        },
+        "BOS-Pflicht (ohne BOS raus)": {
+          "trades": 832,
+          "win": 190,
+          "loss": 615,
+          "winrate": 23.6,
+          "sumR": -45,
+          "avgR": -0.06
+        }
+      }
+    }
+  }
+}
