@@ -1,0 +1,118 @@
+[
+  {
+    "id": 1,
+    "fall": "Schenkel in Wurzelrichtung ohne eigene Ebene (P557)",
+    "instrument": "XAUUSD",
+    "zeitraum": "17.11.2026 16:40 → 18.11.2026 09:20, Bewertung 18.11. 11:05 (Berlin)",
+    "link": "https://phil1234566789.github.io/trading-monitor/#/chart-debugger?sektion=ts11&pin=557&struktur=1",
+    "engineSieht": [
+      "D1-Anker: High 4.148,51, Strukturstart 09.11. 21:00",
+      "Tiefe 0 (Wurzel): abwärts, H 4.148,51 (09.11. 21:25), L 3.757,31 (18.11. 09:20)",
+      "Keine Tiefe 1 bis zum Low: das High 3.890,9 (17.11. 16:40) ist nur einer von rund 250 Strukturpivots der Wurzel",
+      "Aktuelle Range: aufwärts, nur Close-CHoCH, H 3.772,85 (09:30), L 3.757,31 (09:20), erkannt 10:25"
+    ],
+    "frage": "Soll der Abwärtsschenkel 16:40 → 09:20 eine eigene Ebene unter der Wurzel sein, obwohl er in Wurzelrichtung läuft und das Wurzel-Low nur fortschreibt? Wenn ja: Was macht das High 16:40 zum Startpunkt dieser Ebene und nicht ein anderes LH der Woche?"
+  },
+  {
+    "id": 2,
+    "fall": "Gegen-Schenkel, der das äußere Extrem nicht bricht (P483)",
+    "instrument": "XAUUSD",
+    "zeitraum": "02.10.2026 17:55 → 05.10.2026 04:05, Bewertung 05.10. 09:00 (Berlin)",
+    "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A1%3A1791267600%3A1791270600%3Aa&instrument=XAUUSD&bar=5m&replay=1791183600",
+    "engineSieht": [
+      "D1-Anker: Low 4.110,69, Strukturstart 28.09. 16:00",
+      "Tiefe 0 (Wurzel): aufwärts, H 4.225,52 (02.10. 14:30), L 4.110,69 (28.09. 16:55)",
+      "Aktuelle Range: abwärts, nur Close-CHoCH, H 4.225,52 (02.10. 14:30), L 4.125,16 (02.10. 17:55)",
+      "Der Anstieg 17:55 → 05.10. 04:05 (bis 4.163,21) ist keine Ebene: kein Hoch über 4.225,52, keine bestätigte Aufwärtsstruktur",
+      "Link: Replay zum 05.10. 09:00; der DOB-Trade vom 06.10. dient nur als Träger für den Replay"
+    ],
+    "frage": "Wird ein Gegen-Schenkel innerhalb der Close-CHoCH-Range zur eigenen Ebene, sobald er ein HL und HH bildet, auch ohne das äußere High zu brechen? Reicht dafür eine P5-Struktur, oder braucht es eine Mindestgröße?"
+  },
+  {
+    "id": 3,
+    "fall": "Dritte Ebene in der Gegenbewegung (P483)",
+    "instrument": "XAUUSD",
+    "zeitraum": "05.10.2026 04:05 → 15:45, Bewertung 05.10. 17:15 (Berlin)",
+    "link": "https://phil1234566789.github.io/trading-monitor/#/chart-debugger?sektion=ts11&pin=483&struktur=1",
+    "engineSieht": [
+      "Tiefe 0 (Wurzel): aufwärts, H 4.225,52 (02.10. 14:30), L 4.110,69 (28.09. 16:55)",
+      "Aktuelle Range: unverändert die Close-CHoCH-Range abwärts H 4.225,52 / L 4.125,16 (02.10. 17:55)",
+      "Der Abwärtsschenkel 04:05 → 15:45 mit sauberen P5-LH/LL (Hochs 4.170,31 · 4.169,74 · 4.168,55 · 4.166,15; Tiefs bis 4.131,33 um 15:45) landet nur als Strukturpivots in der Wurzel",
+      "Das Pivot-Alter misst deshalb gegen 02.10. 17:55, nicht gegen 15:45"
+    ],
+    "frage": "Nach Philips Modell wären das Tiefe 1 (abwärts), Tiefe 2 (aufwärts 17:55 → 04:05) und Tiefe 3 (abwärts 04:05 → 15:45). Soll die innerste Ebene hier wirklich am Low 15:45 beginnen, und was passiert mit Ebene 3, wenn der Kurs danach über 4.163,21 (04:05) steigt?"
+  },
+  {
+    "id": 4,
+    "fall": "Schenkel bricht das äußere Extrem (Kontrollfall)",
+    "instrument": "XAUUSD",
+    "zeitraum": "07.10.2026 12:30 → 14:50, Bewertung 15:00 und 15:15 (Berlin)",
+    "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A1%3A1791353100%3A1791354600%3Aa&instrument=XAUUSD&bar=5m&replay=1791378900",
+    "engineSieht": [
+      "15:00: Tiefe 0 aufwärts H 4.225,52 (02.10. 14:30) / L 4.110,69 (28.09. 16:55); Tiefe 1 abwärts L 4.103,22 (06.10. 04:35); Tiefe 2 aufwärts H 4.179,51 (06.10. 14:10); Tiefe 3 abwärts L 4.109,11 (07.10. 12:30); Tiefe 4 aufwärts H 4.124,25 (14:00), aktuell Tiefe 4",
+      "15:15: Der Kurs bricht das Wurzel-Low, neues Low 4.066,33 (14:50); die Wurzel kippt auf abwärts H 4.225,52 / L 4.066,33",
+      "Alle inneren Ebenen fallen weg, es gibt keine aktuelle Range mehr (TS1.1: innerTrendUnknown)",
+      "Link: Replay zum 15:15; der DOB-Trade 09:06 dient nur als Träger"
+    ],
+    "frage": "Ist es richtig, dass beim Bruch des Wurzel-Extrems alle inneren Ebenen auf einmal verschwinden? Oder soll der Bruchschenkel sofort die neue innerste Ebene sein, damit TS1.1 direkt weiter einen aktuellen Trend hat?"
+  },
+  {
+    "id": 5,
+    "fall": "Kleiner Rücksetzer als eigene Ebene (Rauschen?)",
+    "instrument": "XAUUSD",
+    "zeitraum": "10.11.2026 19:45 → 20:40, Bewertung 21:00 (Berlin, NY)",
+    "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A-1%3A1794292800%3A1794294300%3Aa&instrument=XAUUSD&bar=5m&replay=1794340800",
+    "engineSieht": [
+      "Tiefe 0 aufwärts H 4.148,51 (09.11. 21:25) / L 3.870,03 (30.10. 20:45)",
+      "Tiefe 1 abwärts H 4.148,51 / L 4.013,55 (10.11. 17:45)",
+      "Tiefe 2 aufwärts H 4.033,24 (19:45) / L 4.013,55 (17:45)",
+      "Tiefe 3 abwärts H 4.033,24 (19:45) / L 4.024,30 (20:40), aktuell; Höhe 8,94 USD = 0,52 H1-ATR, 11 M5-Bars",
+      "Link: Replay zum 21:00; der DOB-Trade 09:19 dient nur als Träger"
+    ],
+    "frage": "Soll ein Rücksetzer von 9 USD (rund ein halber H1-ATR) über 55 Minuten eine eigene innerste Ebene sein, die für den LS zählt? Wenn nicht: Ab welcher Größe oder Dauer wird ein Schenkel zur Ebene?"
+  },
+  {
+    "id": 6,
+    "fall": "Close-CHoCH-Range gegen bestätigte Range",
+    "instrument": "GBPUSD",
+    "zeitraum": "20.10.2026 16:30 → 18:20, Bewertung 21.10. 10:00 (Berlin, London)",
+    "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-gbpusd-v1%3Adob%3AGBPUSD%3A1%3A1792458900%3A1792467300%3Aa&instrument=GBPUSD&bar=5m&replay=1792569600",
+    "engineSieht": [
+      "D1-Anker: Low 1,31367, Strukturstart 14.10. 17:00",
+      "Tiefe 0 (Wurzel): aufwärts bestätigt, H 1,34089 (20.10. 16:30), L 1,31367 (14.10. 17:10)",
+      "Aktuelle Range: abwärts, nur Close-CHoCH, H 1,34089 (16:30), L 1,33649 (18:20); sie gilt den ganzen 21.10. als aktueller Trend",
+      "Link: Replay zum 21.10. 10:00; der DOB-Trade vom 20.10. dient nur als Träger"
+    ],
+    "frage": "Darf ein einzelner Close-CHoCH (ein Schluss unter dem letzten HL) als innerster Trend gegen die bestätigte Aufwärts-Wurzel zählen? Oder braucht die Gegenbewegung erst LL plus LH, bevor sie den LS bestimmt?"
+  },
+  {
+    "id": 7,
+    "fall": "Wechsel des D1-Ankers mitten in einer Struktur",
+    "instrument": "XAUUSD",
+    "zeitraum": "16.03.2026 21:45 → 17.03.2026 08:00 (Berlin)",
+    "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A1%3A1773745500%3A1773749700%3Aa&instrument=XAUUSD&bar=5m&replay=1773730800",
+    "engineSieht": [
+      "16.03. 21:45, Strukturstart 03.03. 16:00: Tiefe 0 abwärts H 5.236,55 (10.03. 16:30) / L 4.967,25 (16.03. 00:20), darunter fünf Ebenen bis Tiefe 5 aufwärts H 5.021,58 (21:10) / L 4.973,88 (17:35)",
+      "17.03. 08:00: neuer D1-Anker High 5.238,64, Strukturstart 10.03. 16:00",
+      "Danach nur noch Tiefe 0 abwärts H 5.238,64 (10.03. 16:45) / L 4.967,25 und Tiefe 1 aufwärts H 5.042,09 (17.03. 05:40) / L 4.967,25, aktuell Tiefe 1",
+      "Die Ebenen 2 bis 5 vom 16.03. sind weg",
+      "Link: Replay zum 08:00; der DOB-Trade 14:03 dient nur als Träger"
+    ],
+    "frage": "Soll ein neuer D1-Anker die bestehende innere Struktur neu aufbauen (so wie heute: von 6 auf 2 Ebenen), oder nur die Wurzel tauschen und die inneren Ebenen behalten, die schon nach dem neuen Startpunkt liegen?"
+  },
+  {
+    "id": 8,
+    "fall": "Treppe aus Mini-Ebenen (passt in keine Kategorie)",
+    "instrument": "GBPUSD",
+    "zeitraum": "23.08.2026 22:45 → 25.08.2026 07:10, Bewertung 25.08. 08:00 (Berlin, London)",
+    "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-gbpusd-v1%3Adob%3AGBPUSD%3A-1%3A1787630400%3A1787636400%3Aa&instrument=GBPUSD&bar=5m&replay=1787637600",
+    "engineSieht": [
+      "Tiefe 0 aufwärts H 1,36753 (21.08. 11:10) / L 1,34738 (13.08. 08:30)",
+      "Tiefe 1 abwärts L 1,36162 (23.08. 22:45)",
+      "Danach sieben weitere abwechselnde Ebenen in einer Seitwärtsphase: H 1,36554 (24.08. 02:05) · L 1,36207 (10:55) · H 1,36493 (15:15) · L 1,36220 (23:05) · H 1,36397 (25.08. 02:00) · L 1,36233 (06:20)",
+      "Tiefe 8 (aktuell): aufwärts H 1,36284 (07:10) / L 1,36233 (06:20), 5,1 Pips = 0,55 H1-ATR",
+      "Link: Replay zum 08:00; der DOB-Trade 07:57 liegt direkt daneben"
+    ],
+    "frage": "In einer engen Seitwärtsphase entsteht eine Ebene nach der anderen, jede kleiner als die vorige. Welche davon ist für Philip der innerste Trend, oder ist so eine Phase ein eigener Zustand ohne Trend?"
+  }
+]
