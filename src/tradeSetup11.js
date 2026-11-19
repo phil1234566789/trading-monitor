@@ -8,7 +8,7 @@ import {confirmedOrderBlockSweepSource,evaluateSweepConfirmation,sweepSourceKey}
 import {obMinimum} from './instrumentConfig.js';
 import {reconstructTradeSetup11Projection} from './tradeSetup11Projection.js';
 
-export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v6';
+export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v7';
 
 function contextEntry(resolvers,input,symbol) {
  if(!resolvers.has(symbol))resolvers.set(symbol,{resolve:createTradeSetup11ContextResolver({...input,instrument:symbol}),closeReactionCache:createCloseReactionCache()});

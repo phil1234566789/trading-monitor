@@ -61,8 +61,10 @@ export function findTradeSetup11SourceOwner({setup,context,resolveContext,expect
   pivot:{price:level.price,pivotTime:level.pivotTime}});
  const youngest=birthContext.chain.at(-1),birthDepth=birthContext.chain.length-1;
  const members=state=>[state.currRange.low,state.currRange.high,...state.structurePivots,...state.innerStructurePivots];
- // Die Wurzel belegt die LS nur, wenn die Gegen-Range ein Close-CHoCH jünger als die LS ist (Philips Regel, Pin 557).
- const counterAfterLevel=current?.basis==='existingCloseReactionChoch'&&current.confirmation?.originTime>level.pivotTime;
+ // Die Wurzel belegt die LS, wenn die aktuelle Range gegen das Setup läuft und erst nach der LS beginnt, egal ob
+ // Close-CHoCH oder bestätigt (Philips Wurzel-Skizze: „short weiter runter traden … ab wurzel bis Low“, Pin 557).
+ const origin=(expectedTrend==='downtrend'?current?.low:current?.high)?.pivotTime;
+ const counterAfterLevel=!!current&&current.trend!==expectedTrend&&origin>level.pivotTime;
  if((birthDepth>0||counterAfterLevel)&&youngest.trend===expectedTrend&&members(youngest).some(p=>samePivot(p,level)))
   return proof(youngest,birthDepth,birthContext.stateKnownAt,'deepestRangeAtLevelBirth');
  const times=[...context.pivotsOuter.map(p=>knownAt(p,context.periods.outer)),
