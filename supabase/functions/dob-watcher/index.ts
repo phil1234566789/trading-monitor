@@ -175,6 +175,8 @@ async function reportError(client:any,instrument:string,error:unknown){
   return message;
 }
 
+const CANDLE_ARRIVAL_SECONDS=20;
+
 // Alle Instrumente nacheinander zur selben Minute; Fehler je Instrument landen in dessen Herzschlag und als Hinweis.
 async function tick(client:any,dry=false,probes:number[]=[]){
   const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={},budget={left:TS11_PER_TICK};
@@ -203,6 +205,10 @@ Deno.serve(async request=>{
         text:`🧪 DOB-Watcher ${INSTRUMENTS.join(', ')}: Testnachricht ${berlinDateStrFor(now)} ${formatBerlinTime(now)}. Ab jetzt kommen Alarme beim OB2-Retest und beim Entry (02:00–22:00).`});
       return json(await flushDobOutbox(client,env,now));
     }
+    // FXCM liefert die M1-Kerze erst ~14 s nach Schluss (10 s Abschlussabstand + Upload). Ohne Warten sieht der Lauf zu :00 sie nicht,
+    // und jeder Alarm kommt eine Minute zu spät.
+    const wait=CANDLE_ARRIVAL_SECONDS*1000-Date.now()%60000;
+    if(!body?.dry&&wait>0)await new Promise(resolve=>setTimeout(resolve,wait));
     return json(await tick(client,Boolean(body?.dry),Array.isArray(body?.probes)?body.probes.filter(Number.isFinite):[]));
   }catch(error){
     return json({error:error instanceof Error?error.message:String(error)},500);
