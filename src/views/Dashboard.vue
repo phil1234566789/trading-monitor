@@ -66,6 +66,7 @@ import { fetchObZones } from "../obZones.js";
 import { fetchTradeSetups } from "../tradeSetups.js";
 import { fetchLiquidityLevelsHtf } from "../liquidityLevels.js";
 import { fetchDailyStructurePivots } from "../dailyPivots.js";
+import { useDailyPivotStructureStart } from "../composables/useDailyPivotStructureStart.js";
 import { liquidityLevelNaturalKey } from "../liquidity.js";
 import { tradesVisible } from "../tradeVisibility.js";
 import { QUOTEN_HERKUNFT } from "../drQuoten.js";
@@ -1680,14 +1681,8 @@ async function refreshDashboardData() {
   ]);
   return results.every((result) => result.status === "fulfilled" && result.value !== false);
 }
-// Neuester Pivot mit aufgelöstem structure_start_time für currentSymbol — treibt sowohl den
-// "1D-Pivot"-Modus (Watcher unten) als auch dessen Read-only-Anzeige im Dropdown.
-const latestDailyPivotStructureStartTime = computed(() => {
-  const latest = dbDailyPivots.value
-    .filter((p) => p.instrument === currentSymbol.value && p.structureStartTime != null)
-    .sort((a, b) => b.pivotTime - a.pivotTime)[0];
-  return latest ? latest.structureStartTime : null;
-});
+// Treibt den "1D-Pivot"-Modus (Watcher unten) und dessen Read-only-Anzeige im Dropdown.
+const latestDailyPivotStructureStartTime = useDailyPivotStructureStart(dbDailyPivots, currentSymbol, replayUntil);
 const rangesPivotStartDisplay = computed(() =>
   latestDailyPivotStructureStartTime.value == null ? "" : toDatetimeLocal(latestDailyPivotStructureStartTime.value),
 );
@@ -2111,7 +2106,7 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton
             variant="menu"
             :class="{ active: rangesStartMode === 'pivot' }"
-            title="Automatisch: letzter persistierter 1D-Periode-4-Struktur-Pivot dieses Instruments (Default)"
+            title="Automatisch: letzter persistierter 1D-Periode-4-Struktur-Pivot dieses Instruments, im Replay der zum Replay-Zeitpunkt schon bekannte (Default)"
             @click="rangesStartMode = 'pivot'"
           >
             Start ab 1D-Pivot
@@ -2122,7 +2117,7 @@ watch(selectedTradingAccountId, () => {
             type="datetime-local"
             class="replay-input ranges-fixed-start-input"
             disabled
-            title="Automatisch aufgelöst aus dem letzten 1D-Periode-4-Pivot — nicht editierbar"
+            title="Automatisch aufgelöst aus dem letzten (im Replay: damals bekannten) 1D-Periode-4-Pivot — nicht editierbar"
           />
 
           <div class="toggle-dropdown-divider"></div>
