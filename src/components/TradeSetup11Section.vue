@@ -1,5 +1,5 @@
 <script setup>
-import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,watch} from 'vue';
+import {computed,nextTick,onBeforeUnmount,onMounted,ref,shallowRef,toRaw,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
 import {createSeriesMarkers,LineStyle} from 'lightweight-charts';
 import {createPriceChart,priceFormatFor} from '../priceChartSetup.js';
@@ -13,7 +13,7 @@ import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
 import {sessions} from '../sessions.js';
 import {loadTradeSetup11Context} from '../tradeSetup11ContextLoader.js';
-import {isTs11Pin,ts11CaseFromPin,locateTs11Case,diagnoseTs11Case,ts11CaseWindow,TS11_LEADS,TS11_TAILS,ts11LeadOf,ts11TailOf,ts11ChainAt,ts11ChangeTimes} from '../tradeSetup11Debugger.js';
+import {isTs11Pin,ts11CaseFromPin,locateTs11Case,ts11CaseWindow,TS11_LEADS,TS11_TAILS,ts11LeadOf,ts11TailOf,ts11ChainAt,ts11ChangeTimes} from '../tradeSetup11Debugger.js';
 import {createTradeSetup11ContextResolver} from '../tradeSetup11Ownership.js';
 import {createCloseReactionCache} from '../m5CloseReactionHistory.js';
 import {mergeCandles} from '../candleCache.js';
@@ -54,8 +54,8 @@ watch([pinId,tf,lead,tail,structure],([p,t,l,n,st])=>{
 watch(()=>route.query.pin,v=>{const id=Number(v);if(id&&cases.value.some(c=>c.id===id))pinId.value=id;});
 
 let request=0;
-watch([current,lead,tail],async([kase,l,n])=>{
- const mine=++request;data.value=null;status.value='';
+watch([current,lead,tail],async([kase,l,n],[prevCase])=>{
+ const mine=++request;scanWorker?.terminate();scanWorker=null;data.value=null;status.value='';
  if(!kase||kase.error)return;
  try{
   const w=ts11CaseWindow(kase,l,n),symbol=kase.instrument;
@@ -70,7 +70,8 @@ watch([current,lead,tail],async([kase,l,n])=>{
   const resolve=createTradeSetup11ContextResolver({m5Candles:mergeCandles(policy.m5??[],m5),h1Candles:policy.h1,d1Candles:policy.d1,
    settings:{},sessionConfigs:own,instrument:symbol});
   const range={from:Math.ceil(w.view.from/300)*300,through:Math.floor(w.view.to/300)*300};
-  at.value=Math.min(range.through,Math.max(range.from,located.evaluatedAt));
+  // Neuer Pin startet bei OB+10 min; ein geänderter Vor-/Nachlauf springt ans Fensterende, sonst zeigt er nichts Neues.
+  at.value=kase===prevCase?range.through:Math.min(range.through,Math.max(range.from,located.evaluatedAt));
   data.value={kase,window:w,range,own,policy,resolve,closeCache:createCloseReactionCache(),m5All:m5,
    m5:m5.filter(c=>c.time>=w.view.from&&c.time<=w.view.to),m1:m1.filter(c=>c.time>=w.view.from),located};
   status.value='';fitPending=true;
@@ -78,29 +79,52 @@ watch([current,lead,tail],async([kase,l,n])=>{
  }catch(e){if(mine===request){status.value='';error.value=e.message;}}
 });
 
-// Zeitbalken: Diagnose und Kette je Zeitpunkt; beim Ziehen nur den letzten Wert rechnen (~0,1–0,3 s je erklärter Diagnose).
-const at=ref(0),diagnosis=shallowRef(null),chain=shallowRef(null),changeTimes=ref(null),scanned=ref(0);
-const diagnoseAt=(d,t,explain=true)=>diagnoseTs11Case(d.kase,d.m5All,d.own,{...d.located,evaluatedAt:t},d.policy,{explain});
-let diagnoseTimer=null;
+// Zeitbalken: Kette im Hauptthread (~6 ms), erklärte Diagnose im Worker; ein neuer Zeitpunkt bricht die laufende ab.
+const at=ref(0),diagnosis=shallowRef(null),chain=shallowRef(null),changeTimes=ref(null),scanned=ref(0),diagnosing=ref(false);
+const startDiagnosisWorker=(d,job)=>{
+ const w=new Worker(new URL('../ts11DiagnosisWorker.js',import.meta.url),{type:'module'});
+ w.postMessage({...job,kase:d.kase,m5:d.m5All,own:d.own.map(x=>toRaw(x)),located:d.located,policy:d.policy});
+ return w;
+};
+let diagnoseTimer=null,explainWorker=null;
 watch([data,at],([d,t])=>{
- clearTimeout(diagnoseTimer);
- if(!d){diagnosis.value=chain.value=null;return;}
- diagnoseTimer=setTimeout(()=>{if(d!==data.value)return;diagnosis.value=diagnoseAt(d,t);chain.value=ts11ChainAt(d.resolve,d.closeCache,t);},30);
+ clearTimeout(diagnoseTimer);explainWorker?.terminate();explainWorker=null;
+ if(!d){diagnosis.value=chain.value=null;diagnosing.value=false;return;}
+ diagnosing.value=true;
+ diagnoseTimer=setTimeout(()=>{
+  if(d!==data.value)return;
+  chain.value=ts11ChainAt(d.resolve,d.closeCache,t);
+  const w=explainWorker=startDiagnosisWorker(d,{from:t,through:t,explain:true});
+  w.onmessage=({data:m})=>{if(w!==explainWorker)return;if(m.error){error.value=`Diagnose: ${m.error}`;diagnosing.value=false;}else if(m.done){w.terminate();explainWorker=null;diagnosing.value=false;}else diagnosis.value=m.diagnosis;};
+  w.onerror=e=>{if(w===explainWorker){error.value=`Diagnose: ${e.message}`;diagnosing.value=false;}};
+ },30);
 });
-// Änderung = TS1.1-Urteil oder Range-Kette; vor dem OB-Schluss steht das Urteil fest, dort reicht die billige Kette.
+// Änderung = TS1.1-Urteil oder Range-Kette. Die Kette (~6 ms je Schritt) läuft hier, das Urteil (~1 s je Schritt)
+// im Worker; die Sprungliste wächst mit, soweit beides vorliegt.
+let scanWorker=null;
 async function scanChanges(d,mine){
- changeTimes.value=null;scanned.value=0;
- const samples=[],{from,through}=d.range,obKnownAt=d.located.obKnownAt??Infinity;
+ scanWorker?.terminate();scanWorker=null;changeTimes.value=null;scanned.value=0;
+ const {from,through}=d.range,obKnownAt=d.located.obKnownAt??Infinity,chainKeys=new Map(),verdicts=new Map();
  for(let t=from;t<=through;t+=300){
-  const verdict=t<obKnownAt?'vor OB':diagnoseAt(d,t,false).verdict;
-  samples.push({at:t,key:verdict+ts11ChainAt(d.resolve,d.closeCache,t).key});
-  if(t>=obKnownAt||samples.length%12===0){
-   scanned.value=Math.round((t-from)/Math.max(1,through-from)*100);
-   await new Promise(r=>setTimeout(r));
-   if(mine!==request)return;
-  }
+  chainKeys.set(t,ts11ChainAt(d.resolve,d.closeCache,t).key);
+  if(chainKeys.size%24===0){await new Promise(r=>setTimeout(r));if(mine!==request)return;}
  }
- changeTimes.value=ts11ChangeTimes(samples);
+ const publish=()=>{
+  const samples=[];
+  for(const [t,key] of chainKeys){const v=t<obKnownAt?'vor OB':verdicts.get(t);if(v==null)break;samples.push({at:t,key:v+key});}
+  changeTimes.value=ts11ChangeTimes(samples);scanned.value=Math.round(samples.length/chainKeys.size*100);
+ };
+ publish();
+ const start=from+Math.ceil(Math.max(0,obKnownAt-from)/300)*300;
+ if(start>through)return;
+ scanWorker=startDiagnosisWorker(d,{from:start,through,explain:false});
+ scanWorker.onmessage=({data:m})=>{
+  if(mine!==request)return;
+  if(m.error){error.value=`Änderungssuche: ${m.error}`;return;}
+  if(m.done){scanWorker.terminate();scanWorker=null;}else verdicts.set(m.at,m.verdict);
+  publish();
+ };
+ scanWorker.onerror=e=>{if(mine===request)error.value=`Änderungssuche: ${e.message}`;};
 }
 
 // Kommentar wie DOB-Entry M1, aber direkt an Philips Pin dieses Falls.
@@ -139,7 +163,7 @@ function setInstrument(instrument){
 function shownCandles(){
  const d=data.value;if(!d)return [];
  const all=tf.value==='m1'?d.m1:d.m5;
- return diagnosis.value?closedChecklistCandles(all,tf.value==='m1'?'1m':'5m',diagnosis.value.evaluatedAt):all;
+ return closedChecklistCandles(all,tf.value==='m1'?'1m':'5m',at.value);
 }
 function draw(){
  if(!series||!data.value||!diagnosis.value)return;
@@ -174,7 +198,7 @@ function draw(){
  // Durchgefallene Kandidaten nur in der Liste rechts; im Chart lenken sie ab (Philip: „kann weg“).
  for(const c of d.candidates.filter(c=>!c.inSetup&&c.checks.every(x=>x.ok)))priceLines.push(series.createPriceLine({price:c.level.price,
   color:cssColor('tradeWin'),lineWidth:1,lineStyle:LineStyle.Dotted,title:`LS ${px(c.level.price)}`}));
- const sec=tf.value==='m1'?60:300,mark=Math.floor((d.evaluatedAt-300)/sec)*sec;
+ const sec=tf.value==='m1'?60:300,mark=Math.floor((at.value-300)/sec)*sec;
  markers.setMarkers(mark<=candles.at(-1).time&&mark>=candles[0].time?[{time:mark,position:'aboveBar',shape:'arrowDown',color:cssColor('tradeConfirmation'),text:'TS1.1-Prüfung'}]:[]);
  drawStructure();
  // Sicht nur bei neuem Fall/Zeitrahmen setzen; beim Drehen am Zeitbalken bleibt Philips Zoom stehen.
@@ -195,14 +219,15 @@ function drawStructure(){
   show:!!result,debug:!!result,barSeconds:barSecondsFor(bar),timeframe:bar});
 }
 watch(tf,()=>{fitPending=true;});
-watch([diagnosis,tf],()=>nextTick(draw));
+// Kerzen folgen dem Regler sofort; die Prüf-Overlays ziehen nach, sobald die Diagnose da ist („Prüfe …“).
+watch([diagnosis,tf,at],()=>nextTick(draw));
 watch(structure,drawStructure);
 
 onMounted(async()=>{
  ({chart,candleSeries:series}=createPriceChart(chartEl.value,'XAUUSD'));symbol='XAUUSD';
  chart.applyOptions({autoSize:true});chart.subscribeClick(insertChartPoint);markers=createSeriesMarkers(series,[]);drawing.create(series);
  try{await loadCases();}catch(e){error.value=e.message;}finally{loading.value=false;}});
-onBeforeUnmount(()=>{request++;clearTimeout(diagnoseTimer);clearTimeout(insertedTimer);clearTimeout(savedTimer);drawing.dispose();chart?.unsubscribeClick(insertChartPoint);chart?.remove();chart=series=null;});
+onBeforeUnmount(()=>{request++;scanWorker?.terminate();explainWorker?.terminate();clearTimeout(diagnoseTimer);clearTimeout(insertedTimer);clearTimeout(savedTimer);drawing.dispose();chart?.unsubscribeClick(insertChartPoint);chart?.remove();chart=series=null;});
 const mark=ok=>ok?'✓':'✗';
 const pt=p=>ts11Point(p,at.value,current.value?.instrument);
 const px=p=>ts11Price(p,current.value?.instrument);
@@ -223,7 +248,8 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
    <DebuggerTimeBar v-model="at" :from="data.range.from" :through="data.range.through" :step="300" step-label="M5-Kerze"
     change-hint="von TS1.1-Urteil oder Range-Kette" :change-times="changeTimes">
     <strong v-if="diagnosis" class="info">{{ diagnosis.verdict }}</strong>
-    <span v-if="!changeTimes" class="muted" role="status">Suche Änderungen … {{ scanned }} %</span>
+    <span v-if="diagnosing" class="muted" role="status">Prüfe …</span>
+    <span v-if="scanned<100" class="muted" role="status">Suche Änderungen … {{ scanned }} %</span>
    </DebuggerTimeBar>
   </div>
   <p v-if="error" class="err" role="alert">{{ error }}</p>
