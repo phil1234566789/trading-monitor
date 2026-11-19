@@ -165,6 +165,14 @@ export function ts11ChainAt(resolve,closeReactionCache,at){
   originTime:c.confirmation?.originTime??null,recognizedAt:c.confirmation?.recognizedAt??c.knownAt??null};
  return {status:'ready',links,current,key:JSON.stringify([links,current])};
 }
+// Alle Ebenen der Kette als Kästen (Wurzel = Tiefe 0); die aktuelle Range zeichnet der Debugger selbst.
+export function ts11LevelBoxes(chain,endTime,barSec){
+ if(chain?.status!=='ready')return [];
+ const same=(a,b)=>a?.high?.price===b?.high?.price&&a?.low?.price===b?.low?.price;
+ return chain.links.filter(l=>l.low&&l.high&&!same(l,chain.current)).map(l=>({depth:l.depth,trend:l.trend,top:l.high.price,bottom:l.low.price,
+  startTime:Math.floor(Math.min(l.low.pivotTime,l.high.pivotTime)/barSec)*barSec,endTime,
+  label:`T${l.depth} ${l.trend==='uptrend'?'↑':l.trend==='downtrend'?'↓':'?'}${l.depth===0?' Wurzel':''}`}));
+}
 // Zeitpunkte, an denen sich der Schlüssel (Urteil + Kette) gegenüber dem vorigen Schritt ändert.
 export const ts11ChangeTimes=samples=>samples.filter((s,i)=>i>0&&s.key!==samples[i-1].key).map(s=>s.at);
 const HOUR=3600;

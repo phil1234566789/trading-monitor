@@ -13,7 +13,7 @@ import {formatBerlinTime,formatDatedTime} from '../berlinTime.js';
 import {fmtPrice,pricePrecisionForInstrument} from '../format.js';
 import {sessions} from '../sessions.js';
 import {loadTradeSetup11Context} from '../tradeSetup11ContextLoader.js';
-import {isTs11Pin,ts11CaseFromPin,locateTs11Case,ts11CaseWindow,TS11_LEADS,TS11_TAILS,ts11LeadOf,ts11TailOf,ts11ChainAt,ts11ChangeTimes} from '../tradeSetup11Debugger.js';
+import {isTs11Pin,ts11CaseFromPin,locateTs11Case,ts11CaseWindow,TS11_LEADS,TS11_TAILS,ts11LeadOf,ts11TailOf,ts11ChainAt,ts11ChangeTimes,ts11LevelBoxes} from '../tradeSetup11Debugger.js';
 import {createTradeSetup11ContextResolver} from '../tradeSetup11Ownership.js';
 import {createCloseReactionCache} from '../m5CloseReactionHistory.js';
 import {mergeCandles} from '../candleCache.js';
@@ -31,7 +31,7 @@ import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
 // Nur Ansicht/Diagnose: Fälle sind Philips Pins zu TS1.1, neue Pins erscheinen beim nächsten Laden ohne Codeänderung.
 const route=useRoute(),router=useRouter();
 const cases=shallowRef([]),pinId=ref(Number(route.query.pin)||null),error=ref(''),loading=ref(true);
-const structure=ref(route.query.struktur==='1'),tf=ref(route.query.tf==='m1'?'m1':'m5'),lead=ref(ts11LeadOf(route.query.lead)),tail=ref(ts11TailOf(route.query.tail));
+const structure=ref(route.query.struktur==='1'),levels=ref(route.query.ebenen==='1'),tf=ref(route.query.tf==='m1'?'m1':'m5'),lead=ref(ts11LeadOf(route.query.lead)),tail=ref(ts11TailOf(route.query.tail));
 // Manueller Strukturstart = Simulation nur für diese Ansicht; Live-TS1.1 bleibt beim D1-Anker.
 const manualStart=ref(Number(route.query.start)||null);
 const current=computed(()=>cases.value.find(c=>c.id===pinId.value)??null);
@@ -49,9 +49,9 @@ async function loadCases(){
 }
 const optionText=c=>`${c.code} · ${(c.instrument??'?').replace('USD','')} ${c.dir===1?'Short':c.dir===-1?'Long':'?'} · ${c.anchorTime?formatDatedTime(c.anchorTime):'–'} · ${(c.pin.note??'').slice(0,60)}`;
 
-watch([pinId,tf,lead,tail,structure,manualStart],([p,t,l,n,st,ms])=>{
- const q={...route.query,sektion:'ts11',pin:p!=null?String(p):undefined,tf:t,lead:l,tail:n,struktur:st?'1':undefined,start:ms!=null?String(ms):undefined};
- if(['pin','tf','lead','tail','struktur','start'].some(k=>route.query[k]!==q[k]))router.replace({query:q});
+watch([pinId,tf,lead,tail,structure,manualStart,levels],([p,t,l,n,st,ms,lv])=>{
+ const q={...route.query,sektion:'ts11',pin:p!=null?String(p):undefined,tf:t,lead:l,tail:n,struktur:st?'1':undefined,ebenen:lv?'1':undefined,start:ms!=null?String(ms):undefined};
+ if(['pin','tf','lead','tail','struktur','ebenen','start'].some(k=>route.query[k]!==q[k]))router.replace({query:q});
 },{immediate:true});
 
 // Ein Link auf einen anderen Pin bei offener Sektion montiert nicht neu.
@@ -201,6 +201,10 @@ function draw(){
   {fillColor:cssColorScaled('tradeConfirmation',.08),borderColor:cssColor('tradeConfirmation'),textColor:cssColor('tradeConfirmation'),borderWidth:1,
    label:`Aktuelle Range · Tiefe ${cur.depth} · ${ts11TrendText(cur.trend)}`,forceLabel:true},candles);
   series.attachPrimitive(p);primitives.push(p);}
+ if(levels.value)for(const b of ts11LevelBoxes(chain.value,Math.floor((d.evaluatedAt-300)/sec5)*sec5,sec5)){
+  const c=b.trend==='uptrend'?'rangeLiveUptrend':'rangeLiveDowntrend';
+  const p=new OrderBlockPrimitive({...b,touched:true},{fillColor:cssColorScaled(c,.05),borderColor:cssColor(c),textColor:cssColor(c),borderWidth:1,label:b.label,forceLabel:true},candles);
+  series.attachPrimitive(p);primitives.push(p);}
  if(kase.lsPrice!=null)priceLines.push(series.createPriceLine({price:kase.lsPrice,color:cssColor('liquiditySweepM5'),lineWidth:1,lineStyle:LineStyle.Dashed,title:'Pin-LS'}));
  // Durchgefallene Kandidaten nur in der Liste rechts; im Chart lenken sie ab (Philip: „kann weg“).
  for(const c of d.candidates.filter(c=>!c.inSetup&&c.checks.every(x=>x.ok)))priceLines.push(series.createPriceLine({price:c.level.price,
@@ -229,7 +233,7 @@ function drawStructure(){
 watch(tf,()=>{fitPending=true;});
 // Kerzen folgen dem Regler sofort; die Prüf-Overlays ziehen nach, sobald die Diagnose da ist („Prüfe …“).
 watch([diagnosis,tf,at,overlay],()=>nextTick(draw));
-watch(structure,()=>nextTick(draw));
+watch([structure,levels],()=>nextTick(draw));
 
 onMounted(async()=>{
  ({chart,candleSeries:series}=createPriceChart(chartEl.value,'XAUUSD'));symbol='XAUUSD';
@@ -251,6 +255,7 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
    <select v-model="tail" title="Nachlauf ab OB/Level"><option v-for="[k,t] in TS11_TAILS" :key="k" :value="k">Nachlauf {{ t }}</option></select>
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m5">M5</option><option value="m1">M1</option></select>
    <label title="TS1.1-Marktstruktur (M5 P5/P2) ab dem Strukturstart, nach der TS1.1 entscheidet"><input v-model="structure" type="checkbox"> Struktur</label>
+   <label title="Alle TS1.1-Ebenen als Kästen: T0 Wurzel, T1, T2, … (aktuelle Range wie bisher)"><input v-model="levels" type="checkbox"> Ebenen</label>
    <ToggleButton variant="bordered" :class="{active:manualStart==null}" title="Wie Live-TS1.1: Struktur zählt ab dem D1-Anker" @click="manualStart=null">Start ab D1-Anker</ToggleButton>
    <ToggleButton variant="bordered" :class="{active:manualStart!=null}" title="Simulation: TS1.1 für diese Ansicht mit eigenem Strukturstart neu rechnen"
     @click="manualStart??=overlay?.anchorTime??data?.window.view.from??null">Start ab Datum</ToggleButton>
