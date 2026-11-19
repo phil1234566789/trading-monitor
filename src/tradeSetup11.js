@@ -8,7 +8,7 @@ import {confirmedOrderBlockSweepSource,evaluateSweepConfirmation,sweepSourceKey}
 import {obMinimum} from './instrumentConfig.js';
 import {reconstructTradeSetup11Projection} from './tradeSetup11Projection.js';
 
-export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v5';
+export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v6';
 
 function contextEntry(resolvers,input,symbol) {
  if(!resolvers.has(symbol))resolvers.set(symbol,{resolve:createTradeSetup11ContextResolver({...input,instrument:symbol}),closeReactionCache:createCloseReactionCache()});
@@ -72,8 +72,7 @@ function assessTradeSetup11Sources({setups=[],instrument,m5Candles=[],h1Candles=
   const counterOrigin=(expectedTrend==='downtrend'?current.low:current.high)?.pivotTime;
   const beforeOrigin=pivotTime=>Number.isFinite(counterOrigin)&&pivotTime<counterOrigin;
   const counterEvidence={currentRange:current,counterOrigin};
-  // Mit dem Trend nur bei bestätigter Struktur (HH+HL bzw. LL+LH); ein Close-CHoCH markiert nur den Beginn der Gegenbewegung (P556, #54967).
-  const withTrend=current.trend===expectedTrend&&current.basis==='confirmedNestedRange';
+  const withTrend=current.trend===expectedTrend;
   const owner=!withTrend||setup.ls.sourceKind==='orderBlock'?findTradeSetup11SourceOwner({setup,context,resolveContext,expectedTrend,current}):null;
   const ownerPivot=owner?.pivot?.pivotTime??setup.ls.pivotTime,sourceEvidence=owner?{...counterEvidence,sourceOwner:owner}:counterEvidence;
   if((withTrend||owner.status==='ready')&&!beforeOrigin(ownerPivot))finish('unmet','sourcePivotInCounterMove',sourceEvidence);
