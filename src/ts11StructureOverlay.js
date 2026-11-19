@@ -5,6 +5,6 @@ import {deriveM5CloseReaction} from './m5CloseReaction.js';
 export function ts11StructureOverlay(context,closeReactionCache){
  if(context?.status!=='ready')return null;
  const {state,pivotsOuter,pivotsInner,periods,candles,anchor}=context;
- return {state,pivotsOuter,pivotsInner,anchorTime:anchor.structureStartTime,
+ return {state,pivotsOuter,pivotsInner,anchorTime:anchor.structureStartTime,manual:!!anchor.manual,
   closeReaction:deriveM5CloseReaction(state,pivotsOuter,pivotsInner,periods.outer,periods.inner,candles,300,closeReactionCache)};
 }

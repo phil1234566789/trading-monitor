@@ -16,7 +16,7 @@ function contextEntry(resolvers,input,symbol) {
 }
 
 function assessTradeSetup11Sources({setups=[],instrument,m5Candles=[],h1Candles=[],d1Candles=[],
- evaluatedAt,settings={},sessionConfigs=[],contextResolvers}={}) {
+ evaluatedAt,settings={},sessionConfigs=[],structureStartTime,contextResolvers}={}) {
  const resolvers=contextResolvers??new Map(),assessments=[];
  for(const setup of setups){
   const symbol=instrument??setup?.instrument,times=tradeSetup11SourceTimes(setup);
@@ -43,7 +43,7 @@ function assessTradeSetup11Sources({setups=[],instrument,m5Candles=[],h1Candles=
    finish('unknown','sourceChronologyUnknown');continue;
   }
   if(times.sourceKnownAt>evaluatedAt){finish('unknown','sourceNotKnownYet');continue;}
-  const {resolve:resolveContext,closeReactionCache}=contextEntry(resolvers,{m5Candles,h1Candles,d1Candles,settings,sessionConfigs},symbol),context=resolveContext(times.nativeGeometryKnownAt);
+  const {resolve:resolveContext,closeReactionCache}=contextEntry(resolvers,{m5Candles,h1Candles,d1Candles,settings,sessionConfigs,structureStartTime},symbol),context=resolveContext(times.nativeGeometryKnownAt);
   if(context.status!=='ready'||context.stateKnownAt<times.nativeGeometryKnownAt){finish('unknown',context.reason??'m5ContextTailMissing');continue;}
   evidence.anchor=context.anchor;evidence.stateKnownAt=context.stateKnownAt;
   if(setup.ls.sourceKind==='orderBlock'){

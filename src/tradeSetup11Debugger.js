@@ -111,7 +111,7 @@ function candidateChecks(level,ob,ctx,kase,recognizedAt){
 
 // policy: {h1,d1,m5} aus loadTradeSetup11Context; m5 ist die längere Ankerhistorie wie im Chart.
 // explain=false spart die Einzelbewertung je Quelle (Änderungssuche des Zeitbalkens braucht nur das Urteil).
-export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true}={}){
+export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true,structureStartTime}={}){
  const {ob,evaluatedAt}=located,ctx=prepare(kase,m5,sessions,evaluatedAt),steps=[];
  if(!ob)return {evaluatedAt,steps:[check('Setup-OB vorhanden',false,located.obNote)],candidates:[],setup:null,verdict:'kein TS1-Setup'};
  // Zeitbalken: vor dem OB-Schluss gibt es kein Setup, auch wenn der OB aus dem späten Fenster schon feststeht.
@@ -138,7 +138,7 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true}=
  const forbidden=isForbiddenAt(sessions,ob.startTime,u=>berlinOffsetMinutes(u*1000));
  steps.push(check('OB nicht in verbotener Session',!forbidden,forbidden?'Chart blendet das Setup aus':''));
  const input={instrument:kase.instrument,m5Candles:mergeCandles(policy.m5??[],ctx.window),h1Candles:policy.h1,d1Candles:policy.d1,
-  settings:{},sessionConfigs:sessions,evaluatedAt,sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE};
+  settings:{},sessionConfigs:sessions,evaluatedAt,structureStartTime,sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE};
  const assessment=filterTradeSetup11Candidates({...input,setups:[{...setup,instrument:kase.instrument}]}).assessments[0];
  steps.push({...check('TS1.1-Trendregel',assessment.status==='passed',assessment.status==='passed'?'mindestens eine Quelle zählt'
   :assessment.status==='unknown'?'nicht entscheidbar':'keine Quelle zählt'),code:`${assessment.status} · ${assessment.reason}`});

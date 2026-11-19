@@ -32,6 +32,8 @@ import DropdownMenu from "../components/ui/DropdownMenu.vue";
 import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
 import ToggleButton from "../components/ui/ToggleButton.vue";
+import DateTimeInput from "../components/ui/DateTimeInput.vue";
+import { toDatetimeLocal } from "../datetimeLocal.js";
 import DataRefreshButton from "../components/DataRefreshButton.vue";
 import { syncNewsEvents } from "../newsEvents.js";
 import { selectedTradingAccountId, writableTradingAccountId, ALL_ACCOUNTS_ID } from "../tradingAccounts.js";
@@ -1488,21 +1490,8 @@ useTradeSetup2Route(() => route.query, {
   currentSymbol, currentBar, replayTime, replayActive,
 }, SYMBOLS);
 const dobTrade = useDobChartRoute(() => route.query, {currentSymbol, currentBar, showDoubleOrderBlocks, replayTime, replayActive}, SYMBOLS);
-function toDatetimeLocal(unixSeconds) {
-  const d = new Date(unixSeconds * 1000);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-// <input type="datetime-local"> liefert/erwartet "YYYY-MM-DDTHH:mm" in der Browser-Lokalzeit —
-// new Date(v) parst das wieder als Lokalzeit, der Roundtrip braucht also keine eigene TZ-Logik.
 const replayInputValue = useReplayInput(replayTime, toDatetimeLocal,
   () => [currentSymbol.value, currentBar.value, replayActive.value]);
-const rangesFixedStartInputValue = computed({
-  get: () => (rangesFixedStartDateInput.value == null ? "" : toDatetimeLocal(rangesFixedStartDateInput.value)),
-  set: (v) => {
-    rangesFixedStartDateInput.value = v ? Math.floor(new Date(v).getTime() / 1000) : null;
-  },
-});
 // "+1 Kerze"-Button: den Zeitpunkt der nächsten geladenen Kerze im aktuellen Timeframe holt
 // PriceChart.vue (kennt allCandles, siehe defineExpose dort) — replayTime/-Active gehören hierher,
 // nicht in die Kind-Komponente (fließt nur als Prop nach unten). Aus Live heraus (noch kein
@@ -2105,10 +2094,9 @@ watch(selectedTradingAccountId, () => {
           >
             Start ab Datum
           </ToggleButton>
-          <input
+          <DateTimeInput
             v-if="rangesStartMode === 'date'"
-            v-model="rangesFixedStartInputValue"
-            type="datetime-local"
+            v-model="rangesFixedStartDateInput"
             class="replay-input ranges-fixed-start-input"
             title="Ab diesem Zeitpunkt werden Structure-Pivots gezählt (beide Perioden)"
           />

@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1795038729.2072854,
-    "seen": 1795039048.8938112,
-    "ast_hash": "55d0bfc93303ba7879f2973db28c6070",
+    "mtime": 1795081280.5815198,
+    "seen": 1795081462.2639933,
+    "ast_hash": "4df01e4ae1cb1935e18066984f3ab332",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -9510,9 +9510,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup11.js": {
-    "mtime": 1795038729.0852857,
-    "seen": 1795039048.8938112,
-    "ast_hash": "3be1e7004add7461429c32ce8ca721f9",
+    "mtime": 1795081115.167822,
+    "seen": 1795081462.247995,
+    "ast_hash": "8455e0dc34f173b8a63ac0f64988bff5",
     "semantic_hash": ""
   },
   "src/tradeSetup11ChartWorker.js": {
@@ -9522,9 +9522,9 @@
     "semantic_hash": ""
   },
   "src/tradeSetup11Context.js": {
-    "mtime": 1795038729.087285,
-    "seen": 1795039048.8938112,
-    "ast_hash": "5a32d5bd7d6f5546c8cfcac9a7a2a56c",
+    "mtime": 1795081115.167822,
+    "seen": 1795081462.247995,
+    "ast_hash": "c673f9a6d59c5b02c187a93ee0c4e702",
     "semantic_hash": ""
   },
   "src/tradeSetup11ContextLoader.js": {
@@ -10806,15 +10806,15 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetup11Section.vue": {
-    "mtime": 1795080600.7322628,
-    "seen": 1795080682.7634962,
-    "ast_hash": "96ba2a8cf73de236bc66e1c61aaf210b",
+    "mtime": 1795081320.9584591,
+    "seen": 1795081462.1754596,
+    "ast_hash": "a0ffd563d9a9705655d185b5bfc7fa9a",
     "semantic_hash": ""
   },
   "src/tradeSetup11Debugger.js": {
-    "mtime": 1795039690.906803,
-    "seen": 1795039947.9378273,
-    "ast_hash": "632091175ab0aab08e477806bcdbf0be",
+    "mtime": 1795081115.1688218,
+    "seen": 1795081462.247995,
+    "ast_hash": "84b87c43e176c1133ea8afa8aac076c3",
     "semantic_hash": ""
   },
   "test/dobTradeRenderingLqSweep.test.js": {
@@ -11028,9 +11028,9 @@
     "semantic_hash": ""
   },
   "src/ts11DiagnosisWorker.js": {
-    "mtime": 1795078355.0105927,
-    "seen": 1795078500.7971976,
-    "ast_hash": "019bc46e1775316865ac1ecec9f1967f",
+    "mtime": 1795081314.8592532,
+    "seen": 1795081462.262996,
+    "ast_hash": "e6a9ccbb0c149596cf2fbefeb3aee33e",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5IdleBrake.ts": {
@@ -11064,15 +11064,33 @@
     "semantic_hash": ""
   },
   "src/ts11StructureOverlay.js": {
-    "mtime": 1795080593.333815,
-    "seen": 1795080682.8508832,
-    "ast_hash": "6a0fe5637f2b499206753d871cad7a92",
+    "mtime": 1795081314.8592532,
+    "seen": 1795081462.262996,
+    "ast_hash": "fb02ceb0dcef71fb1d7eabd53087cf28",
     "semantic_hash": ""
   },
   "test/ts11StructureOverlay.test.js": {
     "mtime": 1795080609.5796223,
     "seen": 1795080683.0238986,
     "ast_hash": "d62a9c07ecf1f3cce6ec196f1fc1b6cf",
+    "semantic_hash": ""
+  },
+  "src/components/ui/DateTimeInput.vue": {
+    "mtime": 1795081280.5120206,
+    "seen": 1795081462.1774638,
+    "ast_hash": "d6cb0a02ace2ac544369da9b75775a0a",
+    "semantic_hash": ""
+  },
+  "src/datetimeLocal.js": {
+    "mtime": 1795081274.149696,
+    "seen": 1795081462.195464,
+    "ast_hash": "a84465ffe6a70d953c7671836b916e76",
+    "semantic_hash": ""
+  },
+  "test/tradeSetup11StructureStart.test.js": {
+    "mtime": 1795081347.0535705,
+    "seen": 1795081462.4199579,
+    "ast_hash": "85d0e9928d5bb4999011173e77443727",
     "semantic_hash": ""
   }
 }

@@ -20,7 +20,8 @@ export function tradeSetup11SourceTimes(setup) {
  } catch {return unknown('invalidStoredFirstSeen');}
 }
 
-export function prepareTradeSetup11Context({instrument,m5Candles=[],h1Candles=[],d1Candles=[],settings={},sessionConfigs=[],evaluatedAt}={}) {
+// structureStartTime: nur Chart-Debugger-Simulation (manueller Strukturstart); ohne ihn gilt der D1-Anker unverändert.
+export function prepareTradeSetup11Context({instrument,m5Candles=[],h1Candles=[],d1Candles=[],settings={},sessionConfigs=[],evaluatedAt,structureStartTime}={}) {
  const base={version:TRADE_SETUP_11_CONTEXT_VERSION,evaluatedAt,stateKnownAt:null,anchor:null,state:null,chain:[]};
  const unknown=reason=>({...base,status:'unknown',reason});
  if(!instrument||!Number.isFinite(evaluatedAt)||evaluatedAt<=0)return unknown('invalidContext');
@@ -30,8 +31,9 @@ export function prepareTradeSetup11Context({instrument,m5Candles=[],h1Candles=[]
  const h1=closedChecklistCandles(h1Candles,'1h',evaluatedAt);
  const daily=closedChecklistCandles(d1Candles,'1D',evaluatedAt);
  if(!m5.length||!h1.length||!daily.length)return unknown('missingNativeContext');
- const anchor=buildHistoricalDailyAnchors(daily,h1).filter(a=>a.knownAt<=evaluatedAt)
+ const d1Anchor=buildHistoricalDailyAnchors(daily,h1).filter(a=>a.knownAt<=evaluatedAt)
   .sort((a,b)=>b.pivotTime-a.pivotTime)[0];
+ const anchor=Number.isFinite(structureStartTime)?{...d1Anchor,structureStartTime,manual:true}:d1Anchor;
  if(!anchor)return unknown('dailyAnchorUnknown');
  if(m5[0].time>anchor.structureStartTime)return {...unknown('m5AnchorHistoryMissing'),anchor};
  const configs=sessionConfigs.filter(s=>s.instrument===instrument);

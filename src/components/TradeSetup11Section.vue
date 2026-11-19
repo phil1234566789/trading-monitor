@@ -22,6 +22,8 @@ import DebuggerTimeBar from './DebuggerTimeBar.vue';
 import {useDebuggerTime} from '../composables/useDebuggerTime.js';
 import {ts11Point,ts11Price,ts11TrendText,ts11When} from '../tradeSetup11Explain.js';
 import ActionButton from './ui/ActionButton.vue';
+import ToggleButton from './ui/ToggleButton.vue';
+import DateTimeInput from './ui/DateTimeInput.vue';
 import {renderLowerStructure} from '../structureOverlay.js';
 import {ts11StructureOverlay} from '../ts11StructureOverlay.js';
 import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
@@ -30,6 +32,8 @@ import {closedChecklistCandles} from '../tradeSetupChecklistTimeBasis.js';
 const route=useRoute(),router=useRouter();
 const cases=shallowRef([]),pinId=ref(Number(route.query.pin)||null),error=ref(''),loading=ref(true);
 const structure=ref(route.query.struktur==='1'),tf=ref(route.query.tf==='m1'?'m1':'m5'),lead=ref(ts11LeadOf(route.query.lead)),tail=ref(ts11TailOf(route.query.tail));
+// Manueller Strukturstart = Simulation nur für diese Ansicht; Live-TS1.1 bleibt beim D1-Anker.
+const manualStart=ref(Number(route.query.start)||null);
 const current=computed(()=>cases.value.find(c=>c.id===pinId.value)??null);
 const data=shallowRef(null),status=ref('');
 const SETUP_COLUMNS='id, instrument, direction, source, detector_version, config_hash, input_set_id, fractal_price, fractal_pivot_time, ls_price, ls_pivot_time, ls_touched_time, ls_timeframe, ob_top, ob_bottom, ob_start_time, ob_fvg, created_at, invalidation, trade_setup_sweeps(price, pivot_time, touched_time, timeframe, is_primary)';
@@ -45,16 +49,18 @@ async function loadCases(){
 }
 const optionText=c=>`${c.code} · ${(c.instrument??'?').replace('USD','')} ${c.dir===1?'Short':c.dir===-1?'Long':'?'} · ${c.anchorTime?formatDatedTime(c.anchorTime):'–'} · ${(c.pin.note??'').slice(0,60)}`;
 
-watch([pinId,tf,lead,tail,structure],([p,t,l,n,st])=>{
- const q={...route.query,sektion:'ts11',pin:p!=null?String(p):undefined,tf:t,lead:l,tail:n,struktur:st?'1':undefined};
- if(['pin','tf','lead','tail','struktur'].some(k=>route.query[k]!==q[k]))router.replace({query:q});
+watch([pinId,tf,lead,tail,structure,manualStart],([p,t,l,n,st,ms])=>{
+ const q={...route.query,sektion:'ts11',pin:p!=null?String(p):undefined,tf:t,lead:l,tail:n,struktur:st?'1':undefined,start:ms!=null?String(ms):undefined};
+ if(['pin','tf','lead','tail','struktur','start'].some(k=>route.query[k]!==q[k]))router.replace({query:q});
 },{immediate:true});
 
 // Ein Link auf einen anderen Pin bei offener Sektion montiert nicht neu.
 watch(()=>route.query.pin,v=>{const id=Number(v);if(id&&cases.value.some(c=>c.id===id))pinId.value=id;});
 
 let request=0;
-watch([current,lead,tail],async([kase,l,n])=>{
+// Ein anderer Pin beginnt wieder mit dem echten D1-Anker.
+watch(pinId,(p,old)=>{if(old!=null&&p!==old)manualStart.value=null;});
+watch([current,lead,tail,manualStart],async([kase,l,n,structureStartTime])=>{
  const mine=++request;scanWorker?.terminate();scanWorker=null;data.value=null;status.value='';
  if(!kase||kase.error)return;
  try{
@@ -68,11 +74,11 @@ watch([current,lead,tail],async([kase,l,n])=>{
   const policy=await loadTradeSetup11Context({symbol,evaluatedAt:w.view.to});
   if(mine!==request)return;
   const resolve=createTradeSetup11ContextResolver({m5Candles:mergeCandles(policy.m5??[],m5),h1Candles:policy.h1,d1Candles:policy.d1,
-   settings:{},sessionConfigs:own,instrument:symbol});
+   settings:{},sessionConfigs:own,instrument:symbol,structureStartTime:structureStartTime??undefined});
   const range={from:Math.ceil(w.view.from/300)*300,through:Math.floor(w.view.to/300)*300};
   // Neuer Pin startet bei OB+10 min.
   time.show(kase.id,range,located.evaluatedAt);
-  data.value={kase,window:w,range,own,policy,resolve,closeCache:createCloseReactionCache(),m5All:m5,
+  data.value={kase,window:w,range,own,policy,resolve,structureStartTime:structureStartTime??undefined,closeCache:createCloseReactionCache(),m5All:m5,
    m5:m5.filter(c=>c.time>=w.view.from&&c.time<=w.view.to),m1:m1.filter(c=>c.time>=w.view.from),located};
   status.value='';fitPending=true;
   scanChanges(data.value,mine);
@@ -84,7 +90,7 @@ const time=useDebuggerTime(300),{at}=time;
 const diagnosis=shallowRef(null),chain=shallowRef(null),overlay=shallowRef(null),changeTimes=ref(null),scanned=ref(0),diagnosing=ref(false);
 const startDiagnosisWorker=(d,job)=>{
  const w=new Worker(new URL('../ts11DiagnosisWorker.js',import.meta.url),{type:'module'});
- w.postMessage({...job,kase:d.kase,m5:d.m5All,own:d.own.map(x=>toRaw(x)),located:d.located,policy:d.policy});
+ w.postMessage({...job,structureStartTime:d.structureStartTime,kase:d.kase,m5:d.m5All,own:d.own.map(x=>toRaw(x)),located:d.located,policy:d.policy});
  return w;
 };
 let diagnoseTimer=null,explainWorker=null;
@@ -244,8 +250,14 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
    <select v-model="lead" title="Vorlauf vor OB/Level"><option v-for="[k,t] in TS11_LEADS" :key="k" :value="k">Vorlauf {{ t }}</option></select>
    <select v-model="tail" title="Nachlauf ab OB/Level"><option v-for="[k,t] in TS11_TAILS" :key="k" :value="k">Nachlauf {{ t }}</option></select>
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m5">M5</option><option value="m1">M1</option></select>
-   <label title="Marktstruktur-Analyse wie in DOB-Entry M1 (M5 P5/P2, M1 P5), Anker = Fensterbeginn"><input v-model="structure" type="checkbox"> Struktur</label>
+   <label title="TS1.1-Marktstruktur (M5 P5/P2) ab dem Strukturstart, nach der TS1.1 entscheidet"><input v-model="structure" type="checkbox"> Struktur</label>
+   <ToggleButton variant="bordered" :class="{active:manualStart==null}" title="Wie Live-TS1.1: Struktur zählt ab dem D1-Anker" @click="manualStart=null">Start ab D1-Anker</ToggleButton>
+   <ToggleButton variant="bordered" :class="{active:manualStart!=null}" title="Simulation: TS1.1 für diese Ansicht mit eigenem Strukturstart neu rechnen"
+    @click="manualStart??=overlay?.anchorTime??data?.window.view.from??null">Start ab Datum</ToggleButton>
+   <DateTimeInput v-if="manualStart!=null" v-model="manualStart" title="Ab diesem Zeitpunkt zählt die simulierte TS1.1-Struktur (beide Perioden)"/>
   </div>
+  <p v-if="manualStart!=null" class="sim" role="status">Start manuell: {{ formatDatedTime(manualStart) }} · Live-TS1.1 nutzt D1
+   <ActionButton @click="manualStart=null">Zurück auf D1-Anker</ActionButton></p>
   <div v-if="data" class="bar">
    <DebuggerTimeBar v-model="at" :from="time.range.value.from" :through="time.range.value.through" :step="time.step" step-label="M5-Kerze"
     change-hint="von TS1.1-Urteil oder Range-Kette" :change-times="changeTimes">
@@ -268,7 +280,7 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
      <ul class="checks"><li v-for="(s,i) in diagnosis.steps" :key="i" :class="{bad:!s.ok}">{{ mark(s.ok) }} {{ s.label }}<span v-if="s.detail" class="detail"> · {{ s.detail }}</span><small v-if="s.code"> · {{ s.code }}</small></li></ul>
      <template v-if="chain">
       <h4>Prüfschritt Range-Kette (Stand evaluatedAt)</h4>
-      <p v-if="overlay" class="muted">Strukturstart {{ formatDatedTime(overlay.anchorTime) }} (D1-Anker, ab hier zählt TS1.1)</p>
+      <p v-if="overlay" class="muted">Strukturstart {{ formatDatedTime(overlay.anchorTime) }} ({{ overlay.manual?'manuell, Simulation':'D1-Anker, ab hier zählt TS1.1' }})</p>
       <p v-if="chain.status!=='ready'" class="muted">{{ chain.status }} · {{ chain.reason }}</p>
       <ul v-else class="checks">
        <li v-for="l in chain.links" :key="l.depth">Tiefe {{ l.depth }}{{ l.depth===0?' (Wurzel)':'' }} · {{ ts11TrendText(l.trend) }} · H {{ pt(l.high) }} · L {{ pt(l.low) }} · bestätigt</li>
@@ -302,6 +314,8 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
 <style scoped>
 .ts11{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px}
 .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* Simulation fällt auf wie der scharfe Chart-Modus: Urteil und Kette gelten nicht für Live-TS1.1. */
+.sim{display:flex;align-items:center;gap:8px;margin:0;color:rgba(255,179,0,.9)}
 .bar select:first-child{max-width:520px}
 .info{font-variant-numeric:tabular-nums}
 .main{flex:1;display:flex;gap:8px;min-height:300px}
