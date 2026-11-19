@@ -36,6 +36,11 @@ const RUNS = Object.fromEntries([
 RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`] = { label: 'v0 · TS1.1 an OB1/OB2',
   description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (TS1.1 wie im Chart, mit Trend-Policy; Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
   sort: 10, version: 'dob-lq-sweep-v0', poiType: 'lq_sweep', pick: r => r.setups, poiOptions: { match: 'adjacent' }, counterDob: true };
+// LQ-Sweep v1: Konfiguration wie v0, nur mit dem TS1.1-Stand nach Philips Wurzel-Skizze (Pivot-Alter + Wurzel als Quelle, v7).
+// v0 bleibt als Vergleich stehen und kanonisch (dobCanonicalRunId).
+const lqV0 = RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`];
+RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v1' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v1`] = { ...lqV0, label: 'v1 · TS1.1 (Wurzel-Skizze)',
+  description: `${lqV0.description}; TS1.1 mit Pivot-Alter-Regel und Wurzel als LS-Quelle nach Philips Skizze`, sort: 11, version: 'dob-lq-sweep-v1' };
 const RUN_ID = flag('--run') ?? runId('v0');
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
