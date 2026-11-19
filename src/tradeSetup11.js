@@ -67,11 +67,19 @@ function assessTradeSetup11Sources({setups=[],instrument,m5Candles=[],h1Candles=
   }
   const current=currentTradeSetup11Range(context,closeReactionCache),expectedTrend=setup.dir===-1?'uptrend':'downtrend';
   if(!current){finish('unknown','innerTrendUnknown');continue;}
-  // Mit dem Trend nur bei bestätigter Struktur (HH+HL bzw. LL+LH); ein Close-CHoCH markiert nur den Beginn der Gegenbewegung (P556/P544).
-  if(current.trend===expectedTrend&&current.basis==='confirmedNestedRange'){finish('passed','currentTrendDirection',{currentRange:current});continue;}
+  // Läuft die aktuelle Range gegen das Setup, beginnt die Gegenbewegung an ihrem Ursprung (Low bei Short, High bei Long).
+  // Ein LS-Pivot ab dort zählt auf keinem Quellenpfad, auch nicht über eine tiefere Range (P557 10:40).
+  // Im Trend nicht: dort ist der Sweep des HL/LH nach dem Extrem genau das Setup (P489 „long im trend“).
+  const counter=current.trend!==expectedTrend,counterOrigin=counter?(expectedTrend==='downtrend'?current.low:current.high)?.pivotTime:null;
+  const beforeCounter=pivotTime=>!counter||Number.isFinite(counterOrigin)&&pivotTime<counterOrigin;
+  const counterEvidence={currentRange:current,counterOrigin};
+  // Mit dem Trend nur bei bestätigter Struktur (HH+HL bzw. LL+LH); ein Close-CHoCH markiert nur den Beginn der Gegenbewegung (P556, #54967).
+  if(current.trend===expectedTrend&&current.basis==='confirmedNestedRange'){finish('passed','currentTrendDirection',counterEvidence);continue;}
   const owner=findTradeSetup11SourceOwner({setup,context,resolveContext,expectedTrend,current});
-  if(owner.status==='ready')finish('passed','sourceRangeDirection',{currentRange:current,sourceOwner:owner});
-  else finish(owner.status==='unknown'?'unknown':'unmet',owner.reason,{currentRange:current,sourceOwner:owner});
+  const ownerPivot=owner.pivot?.pivotTime??setup.ls.pivotTime;
+  if(owner.status==='ready'&&!beforeCounter(ownerPivot))finish('unmet','sourcePivotInCounterMove',{...counterEvidence,sourceOwner:owner});
+  else if(owner.status==='ready')finish('passed','sourceRangeDirection',{...counterEvidence,sourceOwner:owner});
+  else finish(owner.status==='unknown'?'unknown':'unmet',owner.reason,{...counterEvidence,sourceOwner:owner});
  }
  const counts=Object.fromEntries(['passed','unmet','unknown'].map(status=>[status,assessments.filter(a=>a.status===status).length]));
  return {version:TRADE_SETUP_11_VERSION,status:counts.unknown?'unknown':'ready',counts,assessments,

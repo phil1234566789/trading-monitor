@@ -26,10 +26,12 @@ it.each([479,483])('does not accept a future or impossible source chronology eve
  }
 });
 it.each([479,483])('allows a finer native touch inside the already closed M5 sweep bucket for pin %s',pin=>{
- const setup=nativeSetupFor(fixture.references.find(r=>r.pin===pin)),at=setup.obStartTime+600;
+ const ref=fixture.references.find(r=>r.pin===pin),setup=nativeSetupFor(ref),at=setup.obStartTime+600;
  const result=filterTradeSetup11Candidates({...nativeInput,setups:[{...setup,
   ls:{...setup.ls,fineTouchedTime:setup.ls.touchedTime+240}}],evaluatedAt:at});
- expect(result.assessments[0].status).toBe('passed');
+ // Der feinere Touch darf das Urteil nicht ändern. P483 ist seit Philips Go ✗ (Range nur Close-CHoCH):
+ // „der short geht an sich auf, aber den kann man eh nicht traden. von daher halb so wild wenn der wegfällt“.
+ expect(result.assessments[0].status).toBe(expectedFor(ref)==='reject'?'unmet':'passed');
 });
 it.each(['uptrend','downtrend'])('does not use the root or an opposite source owner as %s proof',expectedTrend=>{
  const level={pivotTime:300,price:10,touchedTime:3000};
