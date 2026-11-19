@@ -20,8 +20,10 @@ const toggleAsset=a=>{assetFilter.value=assetFilter.value.includes(a)?assetFilte
 
 const rows=computed(()=>(props.candidates??[]).map(c=>({...c,asset:DOB_WATCHER_SHORT[c.instrument]??c.instrument,
  statusText:c.status==='blocked'?`⛔ ${c.blockLabel}`:STATUS_TEXT[c.status],clock:formatBerlinTime(c.time)})));
-const current=computed(()=>rows.value.filter(r=>r.status==='retest'||r.status==='entry'));
-const log=computed(()=>rows.value.filter(r=>r.status!=='retest'&&r.status!=='entry'));
+// Offene Trades bleiben unter Aktuell bis TP oder SL, nicht nur die 15 Minuten, in denen der Entry als frisch gilt.
+const CURRENT=new Set(['retest','entry','running']);
+const current=computed(()=>rows.value.filter(r=>CURRENT.has(r.status)));
+const log=computed(()=>rows.value.filter(r=>!CURRENT.has(r.status)));
 const visibleLog=computed(()=>log.value.filter(r=>assetFilter.value.includes(r.asset)));
 const toggleRow=key=>{openKey.value=openKey.value===key?null:key;};
 </script>
