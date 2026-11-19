@@ -19,6 +19,7 @@ import {createCloseReactionCache} from '../m5CloseReactionHistory.js';
 import {mergeCandles} from '../candleCache.js';
 import PinTypeChips from './PinTypeChips.vue';
 import DebuggerTimeBar from './DebuggerTimeBar.vue';
+import {useDebuggerTime} from '../composables/useDebuggerTime.js';
 import {ts11Point,ts11Price,ts11TrendText,ts11When} from '../tradeSetup11Explain.js';
 import ActionButton from './ui/ActionButton.vue';
 import {renderLowerStructure} from '../structureOverlay.js';
@@ -54,7 +55,7 @@ watch([pinId,tf,lead,tail,structure],([p,t,l,n,st])=>{
 watch(()=>route.query.pin,v=>{const id=Number(v);if(id&&cases.value.some(c=>c.id===id))pinId.value=id;});
 
 let request=0;
-watch([current,lead,tail],async([kase,l,n],[prevCase])=>{
+watch([current,lead,tail],async([kase,l,n])=>{
  const mine=++request;scanWorker?.terminate();scanWorker=null;data.value=null;status.value='';
  if(!kase||kase.error)return;
  try{
@@ -70,8 +71,8 @@ watch([current,lead,tail],async([kase,l,n],[prevCase])=>{
   const resolve=createTradeSetup11ContextResolver({m5Candles:mergeCandles(policy.m5??[],m5),h1Candles:policy.h1,d1Candles:policy.d1,
    settings:{},sessionConfigs:own,instrument:symbol});
   const range={from:Math.ceil(w.view.from/300)*300,through:Math.floor(w.view.to/300)*300};
-  // Neuer Pin startet bei OB+10 min; ein geänderter Vor-/Nachlauf springt ans Fensterende, sonst zeigt er nichts Neues.
-  at.value=kase===prevCase?range.through:Math.min(range.through,Math.max(range.from,located.evaluatedAt));
+  // Neuer Pin startet bei OB+10 min.
+  time.show(kase.id,range,located.evaluatedAt);
   data.value={kase,window:w,range,own,policy,resolve,closeCache:createCloseReactionCache(),m5All:m5,
    m5:m5.filter(c=>c.time>=w.view.from&&c.time<=w.view.to),m1:m1.filter(c=>c.time>=w.view.from),located};
   status.value='';fitPending=true;
@@ -80,7 +81,8 @@ watch([current,lead,tail],async([kase,l,n],[prevCase])=>{
 });
 
 // Zeitbalken: Kette im Hauptthread (~6 ms), erklärte Diagnose im Worker; ein neuer Zeitpunkt bricht die laufende ab.
-const at=ref(0),diagnosis=shallowRef(null),chain=shallowRef(null),changeTimes=ref(null),scanned=ref(0),diagnosing=ref(false);
+const time=useDebuggerTime(300),{at}=time;
+const diagnosis=shallowRef(null),chain=shallowRef(null),changeTimes=ref(null),scanned=ref(0),diagnosing=ref(false);
 const startDiagnosisWorker=(d,job)=>{
  const w=new Worker(new URL('../ts11DiagnosisWorker.js',import.meta.url),{type:'module'});
  w.postMessage({...job,kase:d.kase,m5:d.m5All,own:d.own.map(x=>toRaw(x)),located:d.located,policy:d.policy});
@@ -245,7 +247,7 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
    <label title="Marktstruktur-Analyse wie in DOB-Entry M1 (M5 P5/P2, M1 P5), Anker = Fensterbeginn"><input v-model="structure" type="checkbox"> Struktur</label>
   </div>
   <div v-if="data" class="bar">
-   <DebuggerTimeBar v-model="at" :from="data.range.from" :through="data.range.through" :step="300" step-label="M5-Kerze"
+   <DebuggerTimeBar v-model="at" :from="time.range.value.from" :through="time.range.value.through" :step="time.step" step-label="M5-Kerze"
     change-hint="von TS1.1-Urteil oder Range-Kette" :change-times="changeTimes">
     <strong v-if="diagnosis" class="info">{{ diagnosis.verdict }}</strong>
     <span v-if="diagnosing" class="muted" role="status">Prüfe …</span>

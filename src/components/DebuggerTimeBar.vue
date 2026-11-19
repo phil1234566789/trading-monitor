@@ -1,6 +1,7 @@
 <script setup>
 import {onBeforeUnmount,onMounted} from 'vue';
 import {formatDatedTime} from '../berlinTime.js';
+import {clampTime,jumpTarget as findJump} from '../composables/useDebuggerTime.js';
 
 // Zeitbalken aller Chart-Debugger-Sektionen; der Slot sitzt zwischen den Sprüngen und der evaluatedAt-Anzeige.
 const props=defineProps({modelValue:{type:Number,default:0},from:{type:Number,required:true},through:{type:Number,required:true},
@@ -11,9 +12,9 @@ const props=defineProps({modelValue:{type:Number,default:0},from:{type:Number,re
  active:{type:Boolean,default:true}});
 const emit=defineEmits(['update:modelValue']);
 
-const jumpTarget=delta=>{const at=props.modelValue,times=props.changeTimes??[];return delta>0?times.find(t=>t>at):times.findLast(t=>t<at);};
+const jumpTarget=delta=>findJump(props.changeTimes,props.modelValue,delta);
 const jump=delta=>{const target=jumpTarget(delta);if(target!=null)emit('update:modelValue',target);};
-const move=delta=>emit('update:modelValue',Math.min(props.through,Math.max(props.from,props.modelValue+delta*props.step)));
+const move=delta=>emit('update:modelValue',clampTime(props.modelValue+delta*props.step,props,props.step));
 function onKey(e){
  if(!props.active||e.target.tagName==='SELECT'||!['ArrowLeft','ArrowRight'].includes(e.key))return;
  // Sonst bewegt ein fokussierter Slider sich zusätzlich selbst.

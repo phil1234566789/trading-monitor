@@ -9942,9 +9942,9 @@
     "semantic_hash": ""
   },
   "src/views/ChartDebugger.vue": {
-    "mtime": 1795038729.2042842,
-    "seen": 1795039048.8938112,
-    "ast_hash": "0d29b0a2df4202ecbbdd84a157e5a43c",
+    "mtime": 1795079579.0734737,
+    "seen": 1795079675.563112,
+    "ast_hash": "7e04a72dd5ef582cea3970b4f19ea5fd",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5ExitPlanAlert.js": {
@@ -10806,9 +10806,9 @@
     "semantic_hash": ""
   },
   "src/components/TradeSetup11Section.vue": {
-    "mtime": 1795078355.01259,
-    "seen": 1795078500.7116797,
-    "ast_hash": "19bfd4c4203695dc2f10c332aeeffb98",
+    "mtime": 1795079579.0734737,
+    "seen": 1795079675.4737687,
+    "ast_hash": "2a3a4679b1d257989ef32786174c985e",
     "semantic_hash": ""
   },
   "src/tradeSetup11Debugger.js": {
@@ -10980,9 +10980,9 @@
     "semantic_hash": ""
   },
   "src/components/DebuggerTimeBar.vue": {
-    "mtime": 1795038728.4564822,
-    "seen": 1795039048.8938112,
-    "ast_hash": "9a732d0100eafc426c29455fb4f49dfb",
+    "mtime": 1795079579.072474,
+    "seen": 1795079675.459264,
+    "ast_hash": "ad9827c03904dc1621d3bfff1994490b",
     "semantic_hash": ""
   },
   "test/appVersion.test.js": {
@@ -11049,6 +11049,18 @@
     "mtime": 1795077820.798494,
     "seen": 1795078500.9150052,
     "ast_hash": "575e63c0fdbd6c182945d0de3e5dfd9d",
+    "semantic_hash": ""
+  },
+  "src/composables/useDebuggerTime.js": {
+    "mtime": 1795079565.8253524,
+    "seen": 1795079675.4787726,
+    "ast_hash": "b11e4cb25e21df5473b40ffbe67368a7",
+    "semantic_hash": ""
+  },
+  "test/useDebuggerTime.test.js": {
+    "mtime": 1795079590.0355642,
+    "seen": 1795079675.7324522,
+    "ast_hash": "7cc7989c3613b0dcb0f5e3da3c045951",
     "semantic_hash": ""
   }
 }

@@ -17,6 +17,7 @@ import {dobPairGraph,dobChangeTimes} from '../dobPairGraph.js';
 import DobEntryM1Section from '../components/DobEntryM1Section.vue';
 import TradeSetup11Section from '../components/TradeSetup11Section.vue';
 import DebuggerTimeBar from '../components/DebuggerTimeBar.vue';
+import {useDebuggerTime} from '../composables/useDebuggerTime.js';
 
 const route=useRoute(),router=useRouter();
 // Sektion DOB-Entry M1 ist eine reine Ansicht ohne Fixture; die Fall-Sektion bleibt per v-show montiert, ihr Chart braucht chartEl.
@@ -24,7 +25,9 @@ const section=ref(['dob-entry-m1','ts11'].includes(route.query.sektion)?route.qu
 watch(section,s=>router.replace({query:s==='cases'?{fall:caseId.value}:{sektion:s}}));
 const caseId=ref(CHART_DEBUGGER_CASES.some(c=>c.id===route.query.fall)?route.query.fall:CHART_DEBUGGER_CASES[0].id);
 const current=computed(()=>CHART_DEBUGGER_CASES.find(c=>c.id===caseId.value));
-const fixture=shallowRef(null),steps=ref({from:0,through:0}),evaluatedAt=ref(0),error=ref('');
+// Fall startet am Fensterende (M1-Raster).
+const time=useDebuggerTime(60),{at:evaluatedAt,range:steps}=time;
+const fixture=shallowRef(null),error=ref('');
 // Ablations-Schalter wie scripts/dobAblation.mjs, damit der Effekt von Near-Touch/Marktschluss je Fall sichtbar wird.
 const nearTouch=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.nearTouch),bridgeClosures=ref(DOUBLE_ORDER_BLOCK_DEFAULT_OPTIONS.bridgeClosures);
 const options=computed(()=>({nearTouch:nearTouch.value,bridgeClosures:bridgeClosures.value}));
@@ -72,7 +75,7 @@ watch(caseId,async id=>{
  try{
   const loaded=await loadCaseFixture(current.value);
   if(id!==caseId.value)return;
-  steps.value=caseSteps(current.value,loaded);evaluatedAt.value=steps.value.through;fixture.value=loaded;fitPending=true;
+  const range=caseSteps(current.value,loaded);time.show(id,range,range.through);fixture.value=loaded;fitPending=true;
  }catch(e){error.value=e.message;}
 },{immediate:true});
 
@@ -152,7 +155,7 @@ watch(tf,()=>{fitPending=true;draw();});
   <div v-show="section==='cases'" class="bar">
    <select v-model="caseId"><optgroup v-for="[group,cases] in CASE_GROUPS" :key="group" :label="group">
     <option v-for="c in cases" :key="c.id" :value="c.id">{{ c.label }} · erwartet: {{ expectedText(c) }}{{ checkMark(c.id) }}</option></optgroup></select>
-   <DebuggerTimeBar v-model="evaluatedAt" :from="steps.from" :through="steps.through" :change-times="changeTimes" :active="section==='cases'">
+   <DebuggerTimeBar v-model="evaluatedAt" :from="steps.from" :through="steps.through" :step="time.step" :change-times="changeTimes" :active="section==='cases'">
     <select v-model="tf" title="Chart-Zeitrahmen"><option value="m1">M1</option><option value="m5">M5</option></select>
     <label>Near-Touch <select v-model="nearTouch"><option value="none">aus</option><option value="second">OB2</option><option value="both">OB1+OB2</option></select></label>
     <label><input type="checkbox" v-model="bridgeClosures"> Marktschluss überbrücken</label>
