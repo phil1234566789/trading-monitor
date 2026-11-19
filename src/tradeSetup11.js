@@ -8,7 +8,7 @@ import {confirmedOrderBlockSweepSource,evaluateSweepConfirmation,sweepSourceKey}
 import {obMinimum} from './instrumentConfig.js';
 import {reconstructTradeSetup11Projection} from './tradeSetup11Projection.js';
 
-export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v3';
+export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v5';
 
 function contextEntry(resolvers,input,symbol) {
  if(!resolvers.has(symbol))resolvers.set(symbol,{resolve:createTradeSetup11ContextResolver({...input,instrument:symbol}),closeReactionCache:createCloseReactionCache()});
@@ -67,10 +67,19 @@ function assessTradeSetup11Sources({setups=[],instrument,m5Candles=[],h1Candles=
   }
   const current=currentTradeSetup11Range(context,closeReactionCache),expectedTrend=setup.dir===-1?'uptrend':'downtrend';
   if(!current){finish('unknown','innerTrendUnknown');continue;}
-  if(current.trend===expectedTrend){finish('passed','currentTrendDirection',{currentRange:current});continue;}
-  const owner=findTradeSetup11SourceOwner({setup,context,resolveContext,expectedTrend,current});
-  if(owner.status==='ready')finish('passed','sourceRangeDirection',{currentRange:current,sourceOwner:owner});
-  else finish(owner.status==='unknown'?'unknown':'unmet',owner.reason,{currentRange:current,sourceOwner:owner});
+  // Ein LS-Pivot muss älter sein als das Extrem der aktuellen Range, an dem die Bewegung zum Sweep beginnt (Low bei Short, High bei Long),
+  // auch im Trend: Philip zu P493 „nach meiner Regel ist das kein richtiger LS“ (LS 08:50 nach Low 08:35); P489 fällt damit bewusst weg.
+  const counterOrigin=(expectedTrend==='downtrend'?current.low:current.high)?.pivotTime;
+  const beforeOrigin=pivotTime=>Number.isFinite(counterOrigin)&&pivotTime<counterOrigin;
+  const counterEvidence={currentRange:current,counterOrigin};
+  // Mit dem Trend nur bei bestätigter Struktur (HH+HL bzw. LL+LH); ein Close-CHoCH markiert nur den Beginn der Gegenbewegung (P556, #54967).
+  const withTrend=current.trend===expectedTrend&&current.basis==='confirmedNestedRange';
+  const owner=!withTrend||setup.ls.sourceKind==='orderBlock'?findTradeSetup11SourceOwner({setup,context,resolveContext,expectedTrend,current}):null;
+  const ownerPivot=owner?.pivot?.pivotTime??setup.ls.pivotTime,sourceEvidence=owner?{...counterEvidence,sourceOwner:owner}:counterEvidence;
+  if((withTrend||owner.status==='ready')&&!beforeOrigin(ownerPivot))finish('unmet','sourcePivotInCounterMove',sourceEvidence);
+  else if(withTrend)finish('passed','currentTrendDirection',sourceEvidence);
+  else if(owner.status==='ready')finish('passed','sourceRangeDirection',sourceEvidence);
+  else finish(owner.status==='unknown'?'unknown':'unmet',owner.reason,{...counterEvidence,sourceOwner:owner});
  }
  const counts=Object.fromEntries(['passed','unmet','unknown'].map(status=>[status,assessments.filter(a=>a.status===status).length]));
  return {version:TRADE_SETUP_11_VERSION,status:counts.unknown?'unknown':'ready',counts,assessments,

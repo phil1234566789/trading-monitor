@@ -15,7 +15,8 @@ export function explainTs11Source({assessment,source,dir,evaluatedAt,instrument}
  const expected=dir===1?'Abwärts':'Aufwärts',isOb=source.level.sourceKind==='orderBlock';
  const pivot=owner?.pivot?.pivotTime??source.level.pivotTime;
  const prefix=isOb&&owner?.pivot?`OB-Quelle über Ursprungspivot ${ts11Price(owner.pivot.price,instrument)} (${w(owner.pivot.pivotTime)}): `:'';
- const counter=cur?.basis==='existingCloseReactionChoch'?cur.confirmation?.originTime:null;
+ // Nur eine Gegen-Range hat einen Ursprung, an dem die Gegenbewegung beginnt; im Trend wäre der Satz falsch (P483).
+ const counter=ev.counterOrigin??(cur?.basis==='existingCloseReactionChoch'&&cur.trend!==(dir===1?'downtrend':'uptrend')?cur.confirmation?.originTime:null);
  const extreme=cur?.trend==='uptrend'?'Range-Low':'Range-High';
  const range=owner?.range&&`${ts11TrendText(owner.range.trend)}-${owner.depth===0?'Wurzel':`Range Tiefe ${owner.depth}`}`;
  let text;
@@ -34,6 +35,8 @@ export function explainTs11Source({assessment,source,dir,evaluatedAt,instrument}
     ?`LS-Pivot ${w(pivot)} liegt nach dem ${extreme} ${w(counter)} und gehört damit zur Gegenbewegung → zählt nicht`
     :`LS-Pivot ${w(pivot)} gehört weder bei seiner Entstehung noch vor dem Sweep zu einer ${expected}-Range unter der Wurzel → zählt nicht`;
    break;
+  case 'sourcePivotInCounterMove':
+   text=`LS-Pivot ${w(pivot)} liegt nicht vor dem ${dir===1?'Range-Low':'Range-High'} ${w(ev.counterOrigin)}, an dem die Bewegung zum Sweep beginnt → zählt nicht`;break;
   case 'orderBlockSourceRangeNotAssociated':
    text=`kein erkannter Ursprungspivot dieses OB gehört zu einer ${expected}-Range → zählt nicht`;break;
   default:text=assessment.status==='passed'?'zählt':assessment.status==='unknown'?'nicht entscheidbar':'zählt nicht';
