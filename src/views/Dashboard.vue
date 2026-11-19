@@ -44,7 +44,6 @@ import {useDoubleOrderBlockConfirmations} from '../composables/useDoubleOrderBlo
 import {toggleIndicatorGroup} from '../indicatorGroupToggle.js';
 import { useTscRange } from "../composables/useTscRange.js";
 import { useReplayInput } from '../composables/useReplayInput.js';
-import { useReplayStructureDefaults } from "../composables/useReplayStructureDefaults.js";
 import { useTradeSetup2Route } from "../composables/useTradeSetup2Route.js";
 import { useSnapshotVisitToggle } from "../composables/useSnapshotVisitToggle.js";
 import { isTradeSetup2SnapshotView } from "../tradeSetup2Snapshot.js";
@@ -1481,11 +1480,6 @@ watch([currentSymbol, currentBar], () => {
   currentBar.value = selection.bar;
   replayTime.value = selection.replayTime;
 }, { immediate: true, flush: 'sync' });
-useReplayStructureDefaults(replayActive, {
-  startMode: rangesStartMode,
-  lookbackHours: rangesLookbackHours,
-  innerLookbackHours: ranges2LookbackHours,
-});
 useTradeSetup2Route(() => route.query, {
   showTradeSetup2, showTradeSetupChecklist, tradeSetup2Variant,
   currentSymbol, currentBar, replayTime, replayActive,
