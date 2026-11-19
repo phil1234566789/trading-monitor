@@ -70,8 +70,8 @@ watch([current,lead,tail],async([kase,l,n],[prevCase])=>{
   const resolve=createTradeSetup11ContextResolver({m5Candles:mergeCandles(policy.m5??[],m5),h1Candles:policy.h1,d1Candles:policy.d1,
    settings:{},sessionConfigs:own,instrument:symbol});
   const range={from:Math.ceil(w.view.from/300)*300,through:Math.floor(w.view.to/300)*300};
-  // Neuer Pin startet bei OB+10 min; ein geänderter Vor-/Nachlauf springt ans Fensterende, sonst zeigt er nichts Neues.
-  at.value=kase===prevCase?range.through:Math.min(range.through,Math.max(range.from,located.evaluatedAt));
+  // Neuer Pin startet bei OB+10 min; ein geänderter Vor-/Nachlauf lässt den Zeitbalken stehen (nur ins neue Fenster geklemmt).
+  at.value=Math.min(range.through,Math.max(range.from,kase===prevCase?at.value:located.evaluatedAt));
   data.value={kase,window:w,range,own,policy,resolve,closeCache:createCloseReactionCache(),m5All:m5,
    m5:m5.filter(c=>c.time>=w.view.from&&c.time<=w.view.to),m1:m1.filter(c=>c.time>=w.view.from),located};
   status.value='';fitPending=true;
