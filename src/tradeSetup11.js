@@ -7,6 +7,7 @@ import {detectSetupObs,TRADE_SETUP_OB_SWEEP_PROFILE} from './tradeSetup.js';
 import {confirmedOrderBlockSweepSource,evaluateSweepConfirmation,sweepSourceKey} from './tradeSetupSweepSources.js';
 import {obMinimum} from './instrumentConfig.js';
 import {reconstructTradeSetup11Projection} from './tradeSetup11Projection.js';
+import {ts11ChainAt} from './ts11Chain.js';
 
 export const TRADE_SETUP_11_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v7';
 
@@ -123,7 +124,9 @@ export function filterTradeSetup11Candidates(input={}) {
    sourceAssessments:rows.map(r=>({sourceKey:r.setup?.ls?sweepSourceKey(r.setup.ls,r.setup.sweeps?.[0]?.timeframe):null,status:r.status,reason:r.reason}))}};
  });
  const counts=Object.fromEntries(['passed','unmet','unknown'].map(status=>[status,assessments.filter(a=>a.status===status).length]));
- return {version:TRADE_SETUP_11_VERSION,status:counts.unknown?'unknown':'ready',counts,assessments,
+ const entry=input.includeChain&&input.instrument&&Number.isFinite(input.evaluatedAt)?contextEntry(contextResolvers,input,input.instrument):null;
+ const chain=entry?ts11ChainAt(entry.resolve,entry.closeReactionCache,input.evaluatedAt):null;
+ return {version:TRADE_SETUP_11_VERSION,status:counts.unknown?'unknown':'ready',counts,assessments,chain,
   setups:assessments.filter(a=>a.status==='passed').map(a=>({...a.setup,...(a.evaluatedSetupProjection?{evaluatedSetupProjection:a.evaluatedSetupProjection}:{}),trendEvaluationVersion:TRADE_SETUP_11_VERSION,
    ...(a.trendEvidence.sourceProfile?{trendEvaluationSourceProfile:a.trendEvidence.sourceProfile}:{}),trendEvidence:a.trendEvidence}))};
 }

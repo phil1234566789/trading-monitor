@@ -12,7 +12,6 @@ import {isForbiddenAt} from './sessions.js';
 import {evaluateSweepConfirmation} from './tradeSetupSweepSources.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {filterTradeSetup11Candidates} from './tradeSetup11.js';
-import {currentTradeSetup11Range} from './tradeSetup11Ownership.js';
 import {explainTs11Source,ts11Price} from './tradeSetup11Explain.js';
 import {mergeCandles} from './candleCache.js';
 import {TRADE_SETUP_M5_CANDLE_COUNT,TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
@@ -155,24 +154,7 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true,s
 }
 
 // Range-Kette der TS1.1-Policy zum Zeitpunkt at, inklusive der aktuellen Range (auch per Close-CHoCH wie bei Pin 557).
-export function ts11ChainAt(resolve,closeReactionCache,at){
- const context=resolve(at);
- if(context.status!=='ready')return {status:context.status,reason:context.reason,links:[],current:null,key:`${context.status}:${context.reason}`};
- const point=p=>p&&{price:p.price,pivotTime:p.pivotTime};
- const links=context.chain.map((s,depth)=>({depth,trend:s.trend,low:point(s.currRange.low),high:point(s.currRange.high)}));
- const c=currentTradeSetup11Range(context,closeReactionCache);
- const current=c&&{depth:c.depth,trend:c.trend,basis:c.basis??null,low:point(c.low),high:point(c.high),
-  originTime:c.confirmation?.originTime??null,recognizedAt:c.confirmation?.recognizedAt??c.knownAt??null};
- return {status:'ready',links,current,key:JSON.stringify([links,current])};
-}
-// Alle Ebenen der Kette als Kästen (Wurzel = Tiefe 0); die aktuelle Range zeichnet der Debugger selbst.
-export function ts11LevelBoxes(chain,endTime,barSec){
- if(chain?.status!=='ready')return [];
- const same=(a,b)=>a?.high?.price===b?.high?.price&&a?.low?.price===b?.low?.price;
- return chain.links.filter(l=>l.low&&l.high&&!same(l,chain.current)).map(l=>({depth:l.depth,trend:l.trend,top:l.high.price,bottom:l.low.price,
-  startTime:Math.floor(Math.min(l.low.pivotTime,l.high.pivotTime)/barSec)*barSec,endTime,
-  label:`T${l.depth} ${l.trend==='uptrend'?'↑':l.trend==='downtrend'?'↓':'?'}${l.depth===0?' Wurzel':''}`}));
-}
+export {ts11ChainAt,ts11LevelLegs} from './ts11Chain.js';
 // Zeitpunkte, an denen sich der Schlüssel (Urteil + Kette) gegenüber dem vorigen Schritt ändert.
 export const ts11ChangeTimes=samples=>samples.filter((s,i)=>i>0&&s.key!==samples[i-1].key).map(s=>s.at);
 const HOUR=3600;

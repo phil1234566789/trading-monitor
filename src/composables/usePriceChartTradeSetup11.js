@@ -11,15 +11,15 @@ import {restoreTradeSetupSourceReferences} from '../../supabase/functions/_share
 export {TRADE_SETUP_11_CONTEXT_COUNTS} from '../tradeSetup11ContextLoader.js';
 
 export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onUpdate}={}) {
-  const status=ref('TS1.1: Trendkontext noch nicht geladen.'),assessments=ref([]);
+  const status=ref('TS1.1: Trendkontext noch nicht geladen.'),assessments=ref([]),chain=ref(null);
   let context={symbol:null,h1:[],d1:[]},revision=0,evaluation=0,disposed=false,loadState='idle',loadError=null,pendingInput=null;
   const base=usePriceChartTradeSetups({sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE,onEvaluated:onUpdate,async evaluateCandidates(setups,input){
     const request=++evaluation;
     status.value='TS1.1: Trend-Policy wird im Hintergrund geprüft …';
     try {
-    const result=await worker.run({setups,...input,sessionConfigs:sessions.filter(s=>s.instrument===input.instrument)});
+    const result=await worker.run({setups,...input,includeChain:true,sessionConfigs:sessions.filter(s=>s.instrument===input.instrument)});
     if(disposed||request!==evaluation)return [];
-    assessments.value=result.assessments;
+    assessments.value=result.assessments;chain.value=result.chain??null;
     const {passed,unmet,unknown}=result.counts;
     status.value=`TS1.1: ${passed} passend · ${unmet} verworfen`+(unknown?` · ${unknown} Trenddaten unbekannt`:'');
     if(result.status==='unknown'&&!unknown)status.value+=' · Trendkontext unvollständig';
@@ -83,5 +83,5 @@ export function usePriceChartTradeSetup11({worker=createTradeSetup11Worker(),onU
     return request===revision?result:{ok:true,applied:false};
   }
   function dispose(){disposed=true;revision++;evaluation++;base.invalidate();worker.dispose();}
-  return {...base,computeTradeSetups,fetchM5Candles,status,assessments,dispose};
+  return {...base,computeTradeSetups,fetchM5Candles,status,assessments,chain,dispose};
 }

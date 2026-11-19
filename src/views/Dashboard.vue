@@ -194,6 +194,7 @@ const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
 // dadurch automatisch nur noch das jüngste SICHTBARE Setup).
 const showTradeSetupsLong = useLocalStorageRef("showTradeSetupsLong", true);
 const showTradeSetupsShort = useLocalStorageRef("showTradeSetupsShort", true);
+const showTs11Levels = useLocalStorageRef("showTs11Levels", false);
 // R-Skala (2-10 R ab der nahen OB-Kante, siehe rScale.js) — eigener Toggle neben den
 // Richtungs-Schaltern: bei großer Setup-Historie sind das neun zusätzliche Marken PRO Setup.
 const showRScale = useLocalStorageRef("showRScale", true);
@@ -1992,6 +1993,9 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
             TS1.1 · Short
           </ToggleButton>
+          <ToggleButton variant="menu" :class="{ active: showTs11Levels }" title="M5-Struktur ab dem D1-Anker als Zickzack: Wurzel, T1, T2, … bis zur aktuellen Ebene" @click="showTs11Levels = !showTs11Levels">
+            Struktur · Ebenen
+          </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showRScale }" :title="rScaleHint" @click="showRScale = !showRScale">
             R-Skala
           </ToggleButton>
@@ -2367,6 +2371,7 @@ watch(selectedTradingAccountId, () => {
     :trade-setup-history-count="tradeSetupHistoryCount"
     :show-trade-setups-long="showTradeSetupsLong"
     :show-trade-setups-short="showTradeSetupsShort"
+    :show-ts11-levels="showTs11Levels"
     :show-r-scale="showRScale"
     :show-pip-scale="showPipScale"
     :journal-liquidity-categories="journalLiquidityCategories"

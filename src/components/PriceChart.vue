@@ -103,6 +103,7 @@ import { supabase } from "../supabaseClient.js";
 import { usePriceChartTradeSetupDrawing } from "../composables/usePriceChartTradeSetupDrawing.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
+import { usePriceChartTs11Levels } from "../composables/usePriceChartTs11Levels.js";
 import {
   fetchInitialCandles as fetchInitialForexCandles,
   fetchRecentCandles as fetchRecentForexCandles,
@@ -255,6 +256,7 @@ const props = defineProps({
   // dann gar nicht erst).
   showTradeSetupsLong: { type: Boolean, default: true },
   showTradeSetupsShort: { type: Boolean, default: true },
+  showTs11Levels: { type: Boolean, default: false },
   // R-/Pip-Skala an jeder Setup-Box (siehe rScale.js, pipScale.js) — je ein eigener Toggle, weil
   // bei einer tradeSetupHistoryCount > 1 schnell viele waagrechte Linien gleichzeitig im Chart
   // stehen.
@@ -466,6 +468,7 @@ const {
   computeTradeSetups: computeTradeSetupsPure,
   fetchM5Candles: fetchTradeSetupM5Candles,
   status:tradeSetup11Status,
+  chain:ts11Chain,
   dispose:disposeTradeSetup11,
 } = usePriceChartTradeSetup11({onUpdate:()=>{
   if(!chart)return;
@@ -1791,7 +1794,10 @@ function renderTradeSetupsInternal() {
     replayUntil: props.replayUntil,
     symbol: props.symbol,
   });
+  ts11Levels.render(candleSeries, { chain: ts11Chain.value, candles: clipReplay(allCandles),
+    show: props.showTs11Levels, barSeconds: barSecondsFor(props.currentBar) });
 }
+const ts11Levels = usePriceChartTs11Levels();
 
 // EMA-/RSI-/Divergenz-Zeichenlogik lebt seit Phase 6b des Große-Dateien-Refactorings in
 // usePriceChartRsi.js (siehe dort, inkl. der EMA/RSI-Series-Anlage aus onMounted und den
@@ -2350,6 +2356,7 @@ onUnmounted(() => {
   // per Guard erkennen, dass der Chart schon disposed ist, statt lightweight-charts'
   // "Object is disposed" auszulösen.
   chart = null;
+  ts11Levels.clear();
   candleSeries = null;
   priceChartRsi.dispose();
 });
@@ -2454,7 +2461,7 @@ watch(() => props.dbTradeSetups, () => {
 // Nur Re-Render, kein computeTradeSetups() — currentTradeSetups bleibt unabhängig von diesem
 // Toggle vollständig (siehe computeTradeSetups), die TSC-Karte bekommt also KEIN eigenes
 // Refresh hier (sie ignoriert diesen Toggle bewusst, siehe Chat 2026-07-19).
-watch([() => props.showTradeSetupsLong, () => props.showTradeSetupsShort, () => props.showRScale, () => props.showPipScale], renderTradeSetupsInternal);
+watch([() => props.showTradeSetupsLong, () => props.showTradeSetupsShort, () => props.showTs11Levels, () => props.showRScale, () => props.showPipScale], renderTradeSetupsInternal);
 watch(() => props.showRanges, () => {
   refreshRangesPollingState();
   refreshRangesMarkersInternal(); // sofort reagieren, nicht erst beim nächsten refreshChart()
