@@ -16,7 +16,7 @@ const ADD_PIN_SCHEMA = {
         kind: z.enum(["ob_zone", "trade_setup", "liquidity_level", "m5_ob", "m5_liquidity_level", "rsi_divergence", "double_order_block"]),
         dobSnapshot:z.record(z.unknown()).optional().describe("Bei kind='double_order_block': vollständiger double-order-block-pin-v1 Snapshot. Beide M5-OBs müssen gleichgerichtet sein und zum Paar-Orderflow passen; nicht aus Nachbarboxen erraten."),
         note: z.string().optional(),
-        pinType: z.enum(["observation","bug"]).nullable().optional().describe("Expliziter Pin-Typ; weggelassen bleibt ein bestehender Typ erhalten, null bedeutet ungeordnet. Beobachtung erteilt keinen Änderungsauftrag."),
+        pinType: z.enum(["observation","bug","model"]).nullable().optional().describe("Expliziter Pin-Typ; weggelassen bleibt ein bestehender Typ erhalten, null bedeutet ungeordnet. Beobachtung erteilt keinen Änderungsauftrag."),
         refId: z.number().optional().describe("Pflicht bei kind='ob_zone'|'trade_setup'|'liquidity_level' — die echte DB-id."),
         m5Ob: z
           .object({
@@ -67,7 +67,7 @@ export function registerPinTools(server: McpServer) {
       title: "Pin-Kontext",
       description:
         "DOB-Pins kind='double_order_block' enthalten dob_context als eingefrorenen Paar-Snapshot: beide ursprünglichen M5-OBs mit obZoneId, Richtung, Zonen und Startzeiten, Entry/Outcome, Engineversion, sichtbarer As-of/View und geladene Datenabdeckung. Rot bedeutet Outcome Loss, nicht Short. Nicht zwei benachbarte DOB-Labels als Paar interpretieren; ausschließlich snapshot.pair.firstOrderBlock/secondOrderBlock gehören zusammen. Der Snapshot ist kein neuer Live-OHLC-Beleg. " +
-        "pin_type ist observation (Beobachtung), bug oder null (Typ fehlt). Beobachtung ist KEIN Fix- oder Änderungsauftrag ohne ausdrücklichen Nutzerauftrag, auch bei möglichen Verbesserungen. Bug bedeutet prüfen und priorisieren, keine bewiesene Ursache; verwandte Fälle bündeln, vorhandene Tasks prüfen, keinen Task automatisch pro Pin erstellen. Alt-Pins ohne Typ nicht anhand Kommentar als Bug erraten. " +
+        "pin_type ist observation (Beobachtung), bug, model (Mustertrade: Philips Referenz-Trade, der bei Algo-Änderungen nicht rausfallen darf) oder null (Typ fehlt). Beobachtung ist KEIN Fix- oder Änderungsauftrag ohne ausdrücklichen Nutzerauftrag, auch bei möglichen Verbesserungen. Bug bedeutet prüfen und priorisieren, keine bewiesene Ursache; verwandte Fälle bündeln, vorhandene Tasks prüfen, keinen Task automatisch pro Pin erstellen. Alt-Pins ohne Typ nicht anhand Kommentar als Bug erraten. " +
         "Auch Statistik-Pins: kind='simulation_dr', 'simulation_checkpoint', 'simulation_entry'. " +
         "simulation_context enthält den eingefrorenen Lauf-, Regel- und Entry Pattern-Stand, DR-Verlauf, " +
         "Checkpoint-Werte und Belege oder beide SL-Ergebnisse, Zeiten in Berlin und UTC sowie Chart-Link. " +

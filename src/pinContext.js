@@ -39,7 +39,7 @@ const REF_COLUMN = {
 };
 
 const ROW_COLUMNS =
-  "id, kind, dob_pin_key, dob_context, dob_trade_key, dob_trade_context, trade_setup_source_snapshot_id, trade_setup_source_snapshots(payload), trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
+  "id, kind, dob_pin_key, dob_context, dob_trade_key, dob_trade_context, dealing_range_id, trade_setup_source_snapshot_id, trade_setup_source_snapshots(payload), trade_position_id, ob_zone_id, trade_setup_id, trade_confirmation_id, liquidity_level_id, " +
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
@@ -67,6 +67,7 @@ function toEntry(row) {
     dobPinKey:row.dob_pin_key??null,
     dobTradeKey:row.dob_trade_key??null,
     dobTradeContext:row.dob_trade_context??null,
+    dealingRangeId:row.dealing_range_id??null,
     pinType: row.pin_type ?? null,
     simulationRunId: row.simulation_run_id,
     liveEventId: row.live_event_id,

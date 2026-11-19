@@ -36,7 +36,7 @@ describe('pin classification persistence',()=>{
   it('accepts both explicit types and null, and leaves omitted types untouched in both runtimes',()=>{
     for(const fields of [pinTypeFields,serverFields]) {
       expect(fields(undefined)).toEqual({});expect(fields(null)).toEqual({pin_type:null});
-      for(const type of ['observation','bug'])expect(fields(type)).toEqual({pin_type:type});
+      for(const type of ['observation','bug','model'])expect(fields(type)).toEqual({pin_type:type});
       expect(()=>fields('improvement')).toThrow('Pin-Typ');
     }
     expect(pinTypeLabel(null)).toBe('Typ fehlt');expect(pinTypeLabel('observation')).toBe('Beobachtung');

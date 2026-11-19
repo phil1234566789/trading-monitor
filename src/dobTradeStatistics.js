@@ -75,6 +75,13 @@ export function matchDobTradePins(pins,rows){
  }
  return matched;
 }
+// Mustertrades (Pin-Typ model) müssen jeden Neulauf derselben POI-Art im gerechneten Zeitraum überleben; fehlende stoppen das Schreiben.
+export const dobRunPoiType=runId=>runId.includes('lq-sweep')?'lq_sweep':'htf_ob';
+export function missingDobModelTrades(pins,rows,{poiType,fromSec=0}){
+ const matched=new Set(matchDobTradePins(pins,rows).values());
+ return pins.filter(p=>p.pinType==='model'&&p.dobTradeContext&&dobRunPoiType(p.dobTradeContext.run_id)===poiType
+  &&p.dobTradeContext.entry_time>=fromSec&&!matched.has(p));
+}
 // Max R: höchste Stufe vor dem SL (dobMaxR, vom Fill-Skript gespeichert). Filter wählt genaue Stufen, mehrere = ODER;
 // „≥“-Stufen wären bei Mehrfachauswahl immer nur die kleinste gewählte. Alles unter 2R ist ein Loss und eine Stufe.
 export const DOB_MAX_R_FILTERS=['<2','2','2.5','3','3.5','4','4.5','5'];
