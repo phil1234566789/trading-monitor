@@ -1,5 +1,6 @@
 import { fetchForexCandles } from "../forexCandles.ts";
 import { getObZones } from "../db.ts";
+import { dropLowerTimeframeDuplicates, isWatchedObTimeframe } from "../../_shared/obTimeframes.js";
 import { PIP_SIZE } from "../../_shared/pipConfig.js";
 
 // Pendant zu nearRelevantLiquidityLevels.ts, nur für OB-Zonen (Task "schlankes Schritt-5-Tool",
@@ -12,7 +13,7 @@ import { PIP_SIZE } from "../../_shared/pipConfig.js";
 // - offene Zonen: relevant, wenn ihre Preisspanne [bottom, top] innerhalb von rangePips um den
 //   Referenzpreis liegt ODER der Referenzpreis selbst innerhalb der Zone liegt — ein Band-Test
 //   statt reiner Punkt-Distanz, weil eine OB-Zone (anders als ein Liquidity-Level) eine Breite hat.
-// Nur 1H/4H (wie die bestehende Liquidity-Variante) — 5M-Zonen sind extrem kleinteilig/viele
+// Nur die von poi-watcher gepflegten Zeitebenen (WATCHED_OB_TIMEFRAMES: 4H/1H/15M) — 5M-Zonen sind extrem kleinteilig/viele
 // Near-Duplikate pro Kerze, das widerspricht "schlank"; 5M bleibt get_data_exports Live-Recompute
 // vorbehalten (m5ObZones dort).
 const DEFAULT_LOOKBACK_HOURS = 7 * 24;
@@ -35,13 +36,9 @@ export interface NearRelevantObZonesArgs {
   nearestPerDirection?: number;
 }
 
-// 4H gewinnt vor 1H bei (praktisch) identischer Preisspanne — analog zu dropLowerTfDuplicates
-// (db.ts), nur auf top/bottom statt eines einzelnen price-Werts.
+// Analog zu dropLowerTfDuplicates (db.ts), nur auf top/bottom statt eines einzelnen price-Werts.
 function dropLowerTfDuplicateZones<T extends { top: number; bottom: number; timeframe: string }>(zones: T[]): T[] {
-  const htf = zones.filter((z) => z.timeframe === "4H");
-  return zones.filter(
-    (z) => z.timeframe !== "1H" || !htf.some((h) => Math.abs(h.top - z.top) <= SAME_PRICE_EPSILON && Math.abs(h.bottom - z.bottom) <= SAME_PRICE_EPSILON),
-  );
+  return dropLowerTimeframeDuplicates(zones, SAME_PRICE_EPSILON) as T[];
 }
 
 export interface ObZoneRow {
@@ -143,11 +140,11 @@ export async function buildNearRelevantObZones({ instrument, fromSec, toSec, ran
   // includeAll:true + asOfSec:effectiveToSec — wie buildNearRelevantLiquidityLevels: der volle,
   // Replay-konsistent zurückgerechnete Zeilensatz, der SQL-seitige !includeAll-Filter würde bei
   // aktivem asOfSec ohnehin übersprungen (siehe getObZones/db.ts).
-  const [rows1h4h, priceCandles] = await Promise.all([
+  const [rowsAll, priceCandles] = await Promise.all([
     getObZones(instrument, undefined, true, effectiveToSec),
     fetchForexCandles(instrument, "5m", { count: 1, toMs: effectiveToSec * 1000 }),
   ]);
-  const rows = rows1h4h.filter((z) => z.timeframe === "1H" || z.timeframe === "4H");
+  const rows = rowsAll.filter((z) => isWatchedObTimeframe(z.timeframe));
 
   const referencePrice = priceCandles[priceCandles.length - 1]?.close ?? null;
 

@@ -1,4 +1,5 @@
 import { barSecondsFor } from "../trading-monitor-mcp/timeframes.ts";
+import { WATCHED_OB_TIMEFRAMES } from "./obTimeframes.js";
 
 // end_time enthält bei Altzeilen nur das letzte Ereignis. Touch und Invalidierung
 // deshalb aus dem gemeinsamen FXCM-Archiv getrennt rekonstruieren, nie auseinander erraten.
@@ -8,7 +9,7 @@ type Row = { timeframe: string; direction: string; top: number; bottom: number;
 export async function reconstructObLifecycle<T extends Row>(rows: T[], asOf: number,
   read: (bar: string, from: number, until: number) => Promise<Candle[]>): Promise<T[]> {
   const states = new Map<T, T>();
-  await Promise.all(["1H", "4H"].map(async tf => {
+  await Promise.all(WATCHED_OB_TIMEFRAMES.map(async tf => {
     const duration = barSecondsFor(tf);
     const group = rows.filter(r => r.timeframe === tf);
     if (!group.length) return;

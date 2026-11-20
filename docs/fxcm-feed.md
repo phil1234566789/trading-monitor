@@ -12,7 +12,7 @@ XAUUSD verwendet denselben Zugang mit einem getrennten Gold-Collector. Details u
 
 - Container `fxcm-gold-collector`, Image `fxcm-gold:20260927b`, Daten unter
   `/opt/fxcm/gold-data`; Secret-Mount wie beim bestehenden Collector, keine zweite Secret-Kopie.
-- Startargumente `--instruments XAUUSD --bars 1m,3m,5m,1h,4h,1D`; ohne `--instruments`
+- Startargumente `--instruments XAUUSD --bars 1m,3m,5m,15m,1h,4h,1D` (15m für die M15-OBs); ohne `--instruments`
   bleiben GBPUSD/EURUSD der Collector-Standard. Keine parallelen Schreiber auf denselben SQLite-Puffer.
 - Watchdog `fxcm-gold-watchdog.timer`/`.service`; 384 MiB RAM, 0,5 CPU, 96 PIDs,
   keine veröffentlichten Ports, übrige Schutzoptionen wie beim Forex-Collector.
@@ -24,7 +24,7 @@ XAUUSD verwendet denselben Zugang mit einem getrennten Gold-Collector. Details u
   ausgefiltert. Drei bereits gespeicherte Platzhalter bleiben unverändert in der Rohdatenbank.
 - Bei Störungen nur den Gold-Watchdog und Gold-Container stoppen. GBP/EUR weiterlaufen lassen.
   Für einen Gold-Backfill dieselben Gold-Mounts verwenden, vorher Gold pausieren, danach starten.
-  Beispielargumente: `--instruments XAUUSD --backfill --start 2026-01-01 --end 2026-09-27 --bars 1m,3m,5m,1h,4h,1D`.
+  Beispielargumente: `--instruments XAUUSD --backfill --start 2026-01-01 --end 2026-09-27 --bars 1m,3m,5m,15m,1h,4h,1D`.
 - Bei Zugangserneuerung beide Container berücksichtigen: Sie lesen dieselbe Secret-Datei.
   Bei Sicherungen auch `gold-data` konsistent sichern. Das Demokonto hat weiterhin keine
   garantierte Laufzeit; derselbe Notfallablauf unten gilt auch für Gold.

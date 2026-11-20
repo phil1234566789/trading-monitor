@@ -24,6 +24,7 @@ import TradeSetup11Status from './TradeSetup11Status.vue';
 import {tradeSetupSourceDetails,tradeSetupInteractionRows} from '../tradeSetupSourcePresentation.js';
 import ChartIndicatorStatusStack from './ChartIndicatorStatusStack.vue';
 import { goldNativeZones } from '../priceChartObZones.js';
+import { WATCHED_OB_TIMEFRAMES } from '../../supabase/functions/_shared/obTimeframes.js';
 import M5CandleClock from "./M5CandleClock.vue";
 import { createPriceChart } from "../priceChartSetup.js";
 import { historicalEvidenceHint } from "../tradeEvidence";
@@ -235,6 +236,7 @@ const props = defineProps({
   dobPositions:{type:Object,default:null},
   hoveredDoubleOrderBlockPin:{type:Object,default:null},
   showObs1h: { type: Boolean, default: true },
+  showObs15m: { type: Boolean, default: false },
   showObs4h: { type: Boolean, default: true },
   showHistoricalObs: { type: Boolean, default: false },
   showLiquidity: { type: Boolean, default: true },
@@ -1241,7 +1243,7 @@ function refreshDrawingsInternal() {
 // Nachlade-Requests widersprechen dem 4D-Prinzip): die Box korrigiert sich von selbst, sobald aus
 // einem anderen Grund (normales Zurückscrollen) genug Kerzen geladen sind.
 const { candles: goldNativeCandles, error: goldHistoryError, load: reloadGoldHistory } = useGoldChartHistory(() => props.symbol, refreshPoiZonesInternal);
-const goldNativeObZones = computed(() => ['1H', '4H'].flatMap(tf =>
+const goldNativeObZones = computed(() => WATCHED_OB_TIMEFRAMES.flatMap(tf =>
   goldNativeZones(markHtfObCandles(goldNativeCandles.value[tf], props.symbol), tf, props.replayUntil)));
 
 function refreshPoiZonesInternal() {
@@ -1249,6 +1251,7 @@ function refreshPoiZonesInternal() {
   const zones = collectObsZones({
     showObs4h: props.showObs4h,
     showObs1h: props.showObs1h,
+    showObs15m: props.showObs15m,
     showObsM1: props.showObsM1,
     showObsM5: props.showObsM5,
     ...obZoneCtx(),
@@ -2414,6 +2417,7 @@ watch(() => props.annotations, refreshDrawingsInternal);
 // live auf tradeSetupM5Candles, das ohnehin immer geladen ist. Alle drei Toggles daher einheitlich
 // nur ein Neuzeichnen.
 watch(() => props.showObs1h, refreshPoiZonesInternal);
+watch(() => props.showObs15m, refreshPoiZonesInternal);
 watch(() => props.showObs4h, refreshPoiZonesInternal);
 watch(() => props.showObsM1, refreshPoiZonesInternal);
 watch(() => props.showObsM5, refreshPoiZonesInternal);

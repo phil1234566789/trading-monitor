@@ -145,7 +145,10 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
   }));
   // Wie bei htfLiquidity: touched live gegen die M5-Kerzen, nicht aus der DB — ein erst
   // nachträglich erkannter 1H/4H-OB bekommt von poi-watcher keine rückwirkende Touch-Prüfung.
+  // 15M bewusst nicht im Ziel-/Anti-Confluence-/Kraft-Pool: die Kandidatenlogik ist auf 1H/4H
+  // kalibriert (analysis/dr-reichweite), M15 käme dort ungeprüft als neue Zielklasse hinzu.
   const htfOb = obZones
+    .filter((z) => z.timeframe !== "15M")
     .map((z) => ({
       id: z.id,
       dir: z.direction === "long" ? 1 : -1,

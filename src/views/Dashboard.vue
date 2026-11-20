@@ -160,6 +160,7 @@ const showObsM1 = useLocalStorageRef("showObsM1", false);
 const showObsM5 = useLocalStorageRef("showObsM5", false);
 const showDoubleOrderBlocks = useLocalStorageRef('showDoubleOrderBlocks',false);
 const showObs1h = useLocalStorageRef("showObs1h", true);
+const showObs15m = useLocalStorageRef("showObs15m", false);
 const showObs4h = useLocalStorageRef("showObs4h", true);
 const showLiquidity = useLocalStorageRef("showLiquidity", true);
 // Debug-Hilfsmittel für die Trend-Indikator-Entwicklung: Preise an den Pivot-Linien
@@ -1539,7 +1540,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs1h, showObs4h, showHistoricalObs, showObsM1,showDoubleOrderBlocks];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs15m, showObs1h, showObs4h, showHistoricalObs, showObsM1,showDoubleOrderBlocks];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 // War bis 2026-08-30 eine reine JS-Variable (nicht in localStorage) — ein Reload zwischen
 // Ausblenden und Wieder-Einblenden (z.B. Tab zu/wieder auf am nächsten Handelstag) verlor den
@@ -1559,6 +1560,7 @@ function toggleIndikatoren() {
     showSweptLiquidity.value = false;
     showObsM1.value = false;
     showObsM5.value = false;
+    showObs15m.value = false;
     showObs1h.value = true;
     showObs4h.value = true;
     showHistoricalObs.value = false;
@@ -1569,13 +1571,14 @@ function toggleIndikatoren() {
 // Muster wie toggleIndikatoren oben, nur eine Ebene tiefer (nur die drei Timeframe-Schalter, nicht
 // showHistoricalObs — der bleibt unabhängig vom Ein-/Ausschalten aller OBs bestehen, wie bisher).
 // obsSavedState ebenfalls in localStorage (2026-08-30, gleicher Reload-Bug wie indikatorenSavedState).
-const OBS_REFS = [showObsM5, showObs1h, showObs4h, showObsM1,showDoubleOrderBlocks];
+const OBS_REFS = [showObsM5, showObs15m, showObs1h, showObs4h, showObsM1,showDoubleOrderBlocks];
 const obsActive = computed(() => OBS_REFS.some((r) => r.value));
 const obsSavedState = useLocalStorageRef("obsSavedState", null);
 function toggleObs() {
   if (!toggleIndicatorGroup(OBS_REFS,obsSavedState)) {
     showObsM1.value = false;
     showObsM5.value = false;
+    showObs15m.value = false;
     showObs1h.value = true;
     showObs4h.value = true;
     showDoubleOrderBlocks.value = false;
@@ -1946,6 +1949,9 @@ watch(selectedTradingAccountId, () => {
                 M5
               </ToggleButton>
               <ToggleButton variant="menu" :class="{active:showDoubleOrderBlocks}" :aria-pressed="showDoubleOrderBlocks" @click="showDoubleOrderBlocks=!showDoubleOrderBlocks">Doppelter Orderblock · DOB</ToggleButton>
+              <ToggleButton variant="menu" :class="{ active: showObs15m }" :aria-pressed="showObs15m" @click="showObs15m = !showObs15m">
+                15M
+              </ToggleButton>
               <ToggleButton variant="menu" :class="{ active: showObs1h }" @click="showObs1h = !showObs1h">
                 1H
               </ToggleButton>
@@ -2358,6 +2364,7 @@ watch(selectedTradingAccountId, () => {
     :hovered-double-order-block-pin="hoveredDoubleOrderBlockPin"
     :show-obs-m1="showObsM1"
     :show-obs-1h="showObs1h"
+    :show-obs-15m="showObs15m"
     :show-obs-4h="showObs4h"
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"

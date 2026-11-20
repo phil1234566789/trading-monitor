@@ -1,12 +1,13 @@
-// 4H/1H-Zonen und M5-Setups aus geschlossenen FXCM-Bid-Kerzen.
+// 4H/1H/15M-Zonen und M5-Setups aus geschlossenen FXCM-Bid-Kerzen.
 // Alarmfenster und Telegram-Schalter bleiben in der Datenbank konfiguriert.
-import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { detectOrderBlocks, type Candle } from "../_shared/orderBlocks.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { detectOrderBlocks } from "../_shared/orderBlocks.ts";
 import { obMinimum, strategyDistance } from '../_shared/instrumentConfig.js';
 import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity.ts";
 import { unprocessedTimeframes } from "./fxcmRefresh.js";
 import { fetchAllRows } from "../_shared/fetchAllRows.ts";
-import { readFxcmCandles } from "../_shared/fxcmCandles.ts";
+import { WATCHED_OB_TIMEFRAMES } from "../_shared/obTimeframes.js";
+import { fetchForexBatch, FOREX_H1_LOOKBACK_CANDLES, TRADE_SETUP_M5_CANDLE_LIMIT } from "./forexBatch.ts";
 import {
   detectSetupObs,
   detectTradeSetup,
@@ -24,27 +25,13 @@ import { markIgnored, withoutIgnored, fetchIgnoreLiquiditySessions, markHtfObCan
 import {
   findLevelTouch,
   findZoneTouch,
-  LIVE_TOUCH_WINDOW_SEC,
   levelTouchPrice,
   recentCandles,
   zoneTouchPrice,
 } from "./liveTouch.ts";
 
-const TIMEFRAMES: { label: "4H" | "1H" }[] = [{ label: "4H" }, { label: "1H" }];
-// 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
-// denselben Kerzensatz mitnutzen) im Blick zu behalten — Philip tradet von Ziel zu Ziel und
-// braucht dafür ein paar unberührte Level ober-/unterhalb des Kurses, auch wenn die schon
-// Wochen/Monate alt sind. Bug-Report 2026-08-02: ein 45 Tage alter, nie erneut erkannter Pivot
-// (1,15297, 18.06.) fehlte deshalb komplett in liquidity_levels. 3000h (~125 Tage) statt 300h —
-const FOREX_H1_LOOKBACK_CANDLES = 3000;
-// Bug-Report Philip 2026-08-23: eine 4H-OB-Zone vom 12.05. (start_time außerhalb des alten
-// CANDLE_LIMIT=300-Fensters, ~50 Tage) wurde real getouched+invalidated (Kerzen-Vollarchiv-
-// Neuberechnung bestätigt: 19.08. ~13:00 UTC), blieb in der DB aber für immer touched=false —
-// derselbe Fensterblindfleck wie oben bei FOREX_H1_LOOKBACK_CANDLES, nur diesmal beim 4H-Fetch, der
-// bis dahin bei den alten 300 Kerzen (~50 Tage) belassen wurde. Auf dieselbe Größenordnung wie 1H
-// angehoben (3000 4H-Kerzen = ~500 Tage) — das Archiv liefert die geschlossenen Kerzen ohne
-// zusätzlichen Broker-Abruf.
-const FOREX_H4_LOOKBACK_CANDLES = 3000;
+// Liquidity bleibt bei 4H/1H; die OB-Schleife läuft über WATCHED_OB_TIMEFRAMES (inkl. 15M).
+const LIQUIDITY_TIMEFRAMES = ["4H", "1H"];
 const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
 
 // Trade-Setup-Tuning-Parameter (Liquidity Sweep + Protected M5-Fraktal + M5-OB) jetzt in
@@ -52,7 +39,6 @@ const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceCh
 // TRADE_SETUP_H1_FRACTAL_PERIOD) — dieselben Werte, die get_data_snapshot (trading-monitor-mcp)
 // für die Live-Erkennung braucht, DRY statt zweiter Kopie (Task "Live-Trade-Setup-Erkennung
 // serverseitig für Lana", 2026-09-05).
-const TRADE_SETUP_M5_CANDLE_LIMIT = 300; // ~25h M5-Historie, deutlich mehr als der Lookback (siehe DEFAULT_TRADE_SETUP_PARAMS.maxLookbackSec)
 
 // Explizit typisiert statt auf die select-String-Typinferenz von supabase-js zu vertrauen —
 // die kollabiert bei einem untypisierten Client (kein Database-Generic bei createClient) ab
@@ -123,36 +109,6 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 const TELEGRAM_CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID")!;
 const DRY_RUN = (Deno.env.get("DRY_RUN") ?? "false").toLowerCase() === "true";
-// FXCM-H4 folgt dem New-York-Handelstag. Archiv-Lesen pro Tick vermeidet
-// starre UTC-Grenzen und verpasst auch verspätet eingetroffene Kerzen nicht.
-async function fetchForexBatch(
-  db: SupabaseClient, symbol: string, h4LastProcessed: number | null,
-): Promise<{ currentPrice: number; stale: boolean; h4LastTime: number; candlesByTf: Map<string, Candle[]> }> {
-  const [m5, h1, h4Probe] = await Promise.all([
-    readFxcmCandles(db, symbol, "5m", TRADE_SETUP_M5_CANDLE_LIMIT),
-    readFxcmCandles(db, symbol, "1h", FOREX_H1_LOOKBACK_CANDLES),
-    readFxcmCandles(db, symbol, "4h", 1),
-  ]);
-  if (!m5.length || !h1.length || !h4Probe.length) throw new Error(`FXCM history missing: ${symbol}`);
-  // Das volle 4H-Fenster kostet 3 Roundtrips fuer 3000 Zeilen, aendern kann sich daran aber nur
-  // beim Schluss einer neuen 4H-Kerze — also alle 48 Laeufe einmal. Die Probe (1 Zeile) beantwortet
-  // genau das; ohne neue Kerze laeuft 4H in den Skip-Pfad, der ohnehin nur den DB-Stand gegen die
-  // juengsten M5-Kerzen prueft. 1H bleibt jedes Mal noetig (Trade-Setup-Fraktale, candles1hForSetup).
-  const h4LastTime = h4Probe[0].time;
-  const h4 = h4LastTime === h4LastProcessed
-    ? null
-    : await readFxcmCandles(db, symbol, "4h", FOREX_H4_LOOKBACK_CANDLES);
-  const results = [m5, h1];
-  const specs = [{ key: "M5" }, { key: "1H" }];
-  if (h4) { specs.push({ key: "4H" }); results.push(h4); }
-  const latest = results[0][results[0].length - 1];
-  // An LIVE_TOUCH_WINDOW_SEC gekoppelt, nicht zufaellig gleich: haengt der Feed weiter zurueck als
-  // das Touch-Fenster reicht, faellt jede geladene Kerze aus dem Fenster und recentCandles liefert
-  // leer — der Lauf pruefte dann still ueberhaupt keinen Touch mehr.
-  const stale = Date.now() / 1000 - latest.time > LIVE_TOUCH_WINDOW_SEC;
-  return { currentPrice: latest.close, stale, h4LastTime, candlesByTf: new Map(specs.map((s, i) => [s.key, results[i]])) };
-}
-
 async function sendTelegram(text: string) {
   if (DRY_RUN) {
     console.log("[DRY_RUN] Telegram-Nachricht (nicht gesendet):", text);
@@ -347,7 +303,7 @@ Deno.serve(async (req) => {
       const alarmWindows = alarmWindowsByInstrument.get(cfg.instrument);
       const imAlarmfenster = isInWindows(now, alarmWindows);
       const { data: checkpoint, error: checkpointError } = await supabase.from("forex_h1_cache")
-        .select("h1_last_time,h4_last_time").eq("instrument", cfg.instrument).maybeSingle();
+        .select("h1_last_time,h4_last_time,m15_last_time").eq("instrument", cfg.instrument).maybeSingle();
       if (checkpointError) throw checkpointError;
       const forexBatch = await fetchForexBatch(supabase, cfg.instrument, checkpoint?.h4_last_time ?? null);
       // Keine frischen M5-Kerzen ist ausserhalb des Alarmfensters der Normalfall (Wochenende,
@@ -369,10 +325,13 @@ Deno.serve(async (req) => {
         }
       }
       const h1CandlesForSetup = forexBatch.candlesByTf.get("1H")!;
-      // Nur noch 1H: ueber 4H hat schon fetchForexBatch entschieden (ohne neue Kerze gar nicht
+      // Vor dem Filtern merken: der Checkpoint unten braucht den M15-Stand auch an Ticks ohne neue M15.
+      const m15LastTime = forexBatch.candlesByTf.get("15M")?.at(-1)?.time ?? null;
+      // 1H/15M per Checkpoint: ueber 4H hat schon fetchForexBatch entschieden (ohne neue Kerze gar nicht
       // erst geladen), ein geladenes 4H ist per Definition frisch.
       forexBatch.candlesByTf = unprocessedTimeframes(forexBatch.candlesByTf, {
         "1H": checkpoint?.h1_last_time,
+        "15M": checkpoint?.m15_last_time,
       });
       const currentPrice = forexBatch.currentPrice;
       // Touch-Fenster für die 1H/4H-Objekte weiter unten (siehe liveTouch.ts): dieselben
@@ -392,16 +351,16 @@ Deno.serve(async (req) => {
       shouldSendByInstrument[cfg.instrument] = shouldSend;
       const instrumentSummary: Record<string, unknown> = {};
 
-      for (const tf of TIMEFRAMES) {
+      for (const tf of WATCHED_OB_TIMEFRAMES) {
         // z.B. "ob_zone_4h"/"ob_zone_1h" — je Timeframe einzeln umschaltbar.
-        const alarmActive = shouldSend && isAlarmOn(`ob_zone_${tf.label.toLowerCase()}`);
-        const candles = forexBatch.candlesByTf.get(tf.label);
+        const alarmActive = shouldSend && isAlarmOn(`ob_zone_${tf.toLowerCase()}`);
+        const candles = forexBatch.candlesByTf.get(tf);
 
         const existingRows = await fetchAllRows<ObZoneRow>((from, to) => supabase
           .from("ob_zones")
           .select("start_time, direction, touched, notified, notified_at, alert_price, top, bottom, invalidated")
           .eq("instrument", cfg.instrument)
-          .eq("timeframe", tf.label)
+          .eq("timeframe", tf)
           .order("id").range(from, to).returns<ObZoneRow[]>());
 
         let notifiedCount = 0;
@@ -410,10 +369,10 @@ Deno.serve(async (req) => {
           // Voller Durchlauf: Zonen frisch aus den Kerzen erkennen (structural touched/
           // invalidated ändert sich nur, wenn neue Kerzen dazukommen) und mit dem DB-Stand
           // mergen. Beide Timeframes werden aus dem aktuellen FXCM-Archiv gelesen.
-          // tf.label ("4H"/"1H") explizit mitgeben statt implizit undefined (Chat 2026-07-29) —
+          // tf ("4H"/"1H") explizit mitgeben statt implizit undefined (Chat 2026-07-29) —
           // beides bleibt HTF-Verhalten (nur "1m"/"3m"/"5m" gelten als Lower-TF), aber so ist
           // derselbe Aufrufer-Stil wie bei detectSetupObs (immer explizites Timeframe-Label).
-          const zones = detectOrderBlocks(markHtfObCandles(candles, highLowSessionsByInstrument.get(cfg.instrument) ?? []), tf.label, true, obMinimum(cfg.instrument, tf.label));
+          const zones = detectOrderBlocks(markHtfObCandles(candles, highLowSessionsByInstrument.get(cfg.instrument) ?? []), tf, true, obMinimum(cfg.instrument, tf));
           const existingMap = new Map(
             (existingRows ?? []).map((r) => [
               `${r.direction}_${Math.floor(new Date(r.start_time).getTime() / 1000)}`,
@@ -451,7 +410,7 @@ Deno.serve(async (req) => {
             pendingRows.push(
               {
                 instrument: cfg.instrument,
-                timeframe: tf.label,
+                timeframe: tf,
                 direction,
                 top: z.top,
                 bottom: z.bottom,
@@ -486,7 +445,7 @@ Deno.serve(async (req) => {
               notifiedCount++;
               const label = direction === "long" ? "Bullish" : "Bearish";
               pendingAlerts.push(
-                `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
+                `📍 ${cfg.instrument} ${tf} ${label} OB erreicht\n` +
                   `Zone: ${fmt(z.bottom, cfg.pricePrecision)} – ${fmt(z.top, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
@@ -527,7 +486,7 @@ Deno.serve(async (req) => {
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
-              .eq("timeframe", tf.label)
+              .eq("timeframe", tf)
               .eq("direction", row.direction)
               .eq("start_time", row.start_time);
             if (updateOffWindowError) throw updateOffWindowError;
@@ -536,14 +495,14 @@ Deno.serve(async (req) => {
               notifiedCount++;
               const label = row.direction === "long" ? "Bullish" : "Bearish";
               await sendTelegram(
-                `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
+                `📍 ${cfg.instrument} ${tf} ${label} OB erreicht\n` +
                   `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
-          instrumentSummary[tf.label] = { zonesSeen: zones.length, notified: notifiedCount };
+          instrumentSummary[tf] = { zonesSeen: zones.length, notified: notifiedCount };
         } else {
           // 4H außerhalb eines neuen H4-Kerzen: keine frischen Kerzen (siehe
           // unprocessedTimeframes) — zwischen zwei 4H-Kerzenschlüssen kann sich die
@@ -566,7 +525,7 @@ Deno.serve(async (req) => {
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
-              .eq("timeframe", tf.label)
+              .eq("timeframe", tf)
               .eq("direction", row.direction)
               .eq("start_time", row.start_time);
             if (updateError) throw updateError;
@@ -575,14 +534,14 @@ Deno.serve(async (req) => {
               notifiedCount++;
               const label = row.direction === "long" ? "Bullish" : "Bearish";
               await sendTelegram(
-                `📍 ${cfg.instrument} ${tf.label} ${label} OB erreicht\n` +
+                `📍 ${cfg.instrument} ${tf} ${label} OB erreicht\n` +
                   `Zone: ${fmt(row.bottom, cfg.pricePrecision)} – ${fmt(row.top, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
-          instrumentSummary[tf.label] = { zonesSeen: (existingRows ?? []).length, notified: notifiedCount, cached: true };
+          instrumentSummary[tf] = { zonesSeen: (existingRows ?? []).length, notified: notifiedCount, cached: true };
         }
       }
 
@@ -595,15 +554,15 @@ Deno.serve(async (req) => {
       // oben bei den OB-Zonen (die Datenquelle liefert nur geschlossene Kerzen, sonst bis zu 59min
       // Verzoegerung bis zum Alarm; gegen die Kerzen statt gegen den Tick-Preis, siehe
       // liveTouch.ts).
-      for (const tf of TIMEFRAMES) {
-        const alarmActive = shouldSend && isAlarmOn(`liquidity_${tf.label.toLowerCase()}`);
-        const candlesForTf = forexBatch.candlesByTf.get(tf.label);
+      for (const tf of LIQUIDITY_TIMEFRAMES) {
+        const alarmActive = shouldSend && isAlarmOn(`liquidity_${tf.toLowerCase()}`);
+        const candlesForTf = forexBatch.candlesByTf.get(tf);
 
         const existingLiqRows = await fetchAllRows<LiquidityLevelRow>((from, to) => supabase
           .from("liquidity_levels")
           .select("pivot_time, direction, price, touched, notified, notified_at, end_time, alert_price")
           .eq("instrument", cfg.instrument)
-          .eq("timeframe", tf.label)
+          .eq("timeframe", tf)
           .order("id").range(from, to).returns<LiquidityLevelRow[]>());
 
         let liqNotifiedCount = 0;
@@ -657,7 +616,7 @@ Deno.serve(async (req) => {
             pendingRows.push(
               {
                 instrument: cfg.instrument,
-                timeframe: tf.label,
+                timeframe: tf,
                 direction: lvl.direction,
                 price: lvl.price,
                 pivot_time: new Date(lvl.pivotTime * 1000).toISOString(),
@@ -675,7 +634,7 @@ Deno.serve(async (req) => {
               liqNotifiedCount++;
               const label = lvl.direction === "high" ? "Hoch" : "Tief";
               pendingAlerts.push(
-                `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
+                `💧 ${cfg.instrument} ${tf} Liquiditäts-Level (${label}) angetestet\n` +
                   `Level: ${fmt(lvl.price, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
@@ -721,7 +680,7 @@ Deno.serve(async (req) => {
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
-              .eq("timeframe", tf.label)
+              .eq("timeframe", tf)
               .eq("direction", row.direction)
               .eq("pivot_time", row.pivot_time);
             if (updateOffWindowLiqError) throw updateOffWindowLiqError;
@@ -730,14 +689,14 @@ Deno.serve(async (req) => {
               liqNotifiedCount++;
               const label = row.direction === "high" ? "Hoch" : "Tief";
               await sendTelegram(
-                `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
+                `💧 ${cfg.instrument} ${tf} Liquiditäts-Level (${label}) angetestet\n` +
                   `Level: ${fmt(row.price, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
-          instrumentSummary[`${tf.label}_liquidity`] = { levelsSeen: levels.length, notified: liqNotifiedCount };
+          instrumentSummary[`${tf}_liquidity`] = { levelsSeen: levels.length, notified: liqNotifiedCount };
         } else {
           // Skip-Tick (siehe unprocessedTimeframes/unprocessedTimeframes oben): keine frischen Kerzen für
           // diesen Timeframe, also auch keine neuen Fraktale möglich — nur den DB-Stand gegen die
@@ -758,7 +717,7 @@ Deno.serve(async (req) => {
                 notified_at: alarmActive ? new Date().toISOString() : row.notified_at ?? null,
               })
               .eq("instrument", cfg.instrument)
-              .eq("timeframe", tf.label)
+              .eq("timeframe", tf)
               .eq("direction", row.direction)
               .eq("pivot_time", row.pivot_time);
             if (updateLiqError) throw updateLiqError;
@@ -767,14 +726,14 @@ Deno.serve(async (req) => {
               liqNotifiedCount++;
               const label = row.direction === "high" ? "Hoch" : "Tief";
               await sendTelegram(
-                `💧 ${cfg.instrument} ${tf.label} Liquiditäts-Level (${label}) angetestet\n` +
+                `💧 ${cfg.instrument} ${tf} Liquiditäts-Level (${label}) angetestet\n` +
                   `Level: ${fmt(row.price, cfg.pricePrecision)}\n` +
                   `Preis: ${fmt(alertPrice, cfg.pricePrecision)}`,
               );
             }
           }
 
-          instrumentSummary[`${tf.label}_liquidity`] = { levelsSeen: (existingLiqRows ?? []).length, notified: liqNotifiedCount, cached: true };
+          instrumentSummary[`${tf}_liquidity`] = { levelsSeen: (existingLiqRows ?? []).length, notified: liqNotifiedCount, cached: true };
         }
       }
 
@@ -1024,11 +983,12 @@ Deno.serve(async (req) => {
       }
 
       // Erst nach einem vollständigen Lauf markieren; ein Fehler muss erneut versucht werden.
-      if (forexBatch.candlesByTf.has("1H") || forexBatch.candlesByTf.has("4H")) {
+      if (WATCHED_OB_TIMEFRAMES.some((tf) => forexBatch.candlesByTf.has(tf))) {
         const { error } = await supabase.from("forex_h1_cache").upsert({
           instrument: cfg.instrument,
           h1_last_time: h1CandlesForSetup.at(-1)!.time,
           h4_last_time: forexBatch.h4LastTime,
+          m15_last_time: m15LastTime,
         });
         if (error) throw error;
       }

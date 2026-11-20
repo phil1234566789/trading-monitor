@@ -234,9 +234,9 @@ export class OrderBlockPrimitive {
   }
 }
 
-// M5/1H/4H haben seit Chat 2026-07-30 eigene Farb-/Breiten-Keys (Bug-Report Philip: "die ganzen OBs
+// M5/15M/1H/4H haben seit Chat 2026-07-30 eigene Farb-/Breiten-Keys (Bug-Report Philip: "die ganzen OBs
 // lassen sich schwierig unterscheiden") statt EINES gemeinsamen Satzes mit fest verdrahtetem
-// 1H-Dimm-Faktor — z.timeframe ist immer "1H"/"4H"/"5M" (siehe PriceChart.vue: collectObsZones).
+// 1H-Dimm-Faktor — z.timeframe ist immer "1H"/"4H"/"15M"/"5M" (siehe PriceChart.vue: collectObsZones).
 // Explizite Literale statt String-Konkatenation ("obBull" + suffix) — chartColors.test.js scannt
 // den Quelltext nach genau diesen Key-Strings, eine dynamisch zusammengesetzte "obBullM5" käme im
 // Scan nie als Literal vor und der Test würde den Key fälschlich als verwaist melden.
@@ -248,6 +248,10 @@ const OB_ZONE_KEYS = {
   "4H": {
     bull: "obBull4h", bear: "obBear4h", inactive: "obInactive4h",
     bullBorder: "obBull4hBorder", bearBorder: "obBear4hBorder", inactiveBorder: "obInactive4hBorder",
+  },
+  "15M": {
+    bull: "obBull15m", bear: "obBear15m", inactive: "obInactive15m",
+    bullBorder: "obBull15mBorder", bearBorder: "obBear15mBorder", inactiveBorder: "obInactive15mBorder",
   },
   "5M": {
     bull: "obBullM5", bear: "obBearM5", inactive: "obInactiveM5",

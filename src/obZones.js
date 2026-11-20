@@ -3,11 +3,12 @@ import { fetchAllRows } from "./dbReadPaging.js";
 import { applyAsOfZones } from "../supabase/functions/trading-monitor-mcp/replayAsOf.ts";
 
 import { reconstructObLifecycle } from "../supabase/functions/_shared/obReplayLifecycle.ts";
+import { WATCHED_OB_TIMEFRAMES } from "../supabase/functions/_shared/obTimeframes.js";
 
 async function fetchReplayZones(instrument, asOfSec) {
   // Im Replay gelten weder der heutige Status noch der Live-Deckel der jüngsten 500 Touches.
   const { data, error } = await fetchAllRows((from, to) => supabase.from("ob_zones").select(SPALTEN)
-    .eq("instrument", instrument).in("timeframe", ["1H", "4H"])
+    .eq("instrument", instrument).in("timeframe", WATCHED_OB_TIMEFRAMES)
     .lte("start_time", new Date(asOfSec * 1000).toISOString())
     .order("id", { ascending: true }).range(from, to));
   if (error) throw error;
@@ -54,7 +55,7 @@ const SPALTEN = "instrument, timeframe, direction, top, bottom, touched, invalid
 // Auch invalidierte Zonen können touched=false sein: nach dem FXCM-Backfill waren es 1250 Zeilen.
 function fetchUntouchedZones(instrument) {
   return fetchAllRows((from, to) => supabase.from("ob_zones").select(SPALTEN)
-    .eq("instrument", instrument).in("timeframe", ["1H", "4H"]).eq("touched", false)
+    .eq("instrument", instrument).in("timeframe", WATCHED_OB_TIMEFRAMES).eq("touched", false)
     .order("id", { ascending: true }).range(from, to));
 }
 
@@ -62,7 +63,7 @@ export async function fetchObZones(instrument, asOfSec = null) {
   if (asOfSec != null) return fetchReplayZones(instrument, asOfSec);
   const [unberuehrt, beruehrt] = await Promise.all([
     fetchUntouchedZones(instrument),
-    supabase.from("ob_zones").select(SPALTEN).eq("instrument", instrument).in("timeframe", ["1H", "4H"]).eq("touched", true)
+    supabase.from("ob_zones").select(SPALTEN).eq("instrument", instrument).in("timeframe", WATCHED_OB_TIMEFRAMES).eq("touched", true)
       .order("start_time", { ascending: false }).limit(MAX_BERUEHRTE),
   ]);
   const error = unberuehrt.error ?? beruehrt.error;

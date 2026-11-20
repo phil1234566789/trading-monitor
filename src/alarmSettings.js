@@ -22,6 +22,11 @@ export const ALARM_TYPES = [
     description: "Preis erreicht eine erkannte 1H-Order-Block-Zone (GBPUSD/EURUSD).",
   },
   {
+    key: "ob_zone_15m",
+    label: "15M Order-Block erreicht",
+    description: "Preis erreicht eine erkannte 15M-Order-Block-Zone (GBPUSD/EURUSD). Startet ausgeschaltet.",
+  },
+  {
     key: "liquidity_1h",
     label: "1H Liquiditäts-Level geswept",
     description: "Ein 1H-Fraktal-Level (Hoch/Tief) wird angetestet/durchbrochen (GBPUSD/EURUSD).",

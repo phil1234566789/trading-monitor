@@ -6,7 +6,7 @@ Setups) hängen nicht am Alarmfenster — nur der Telegram-Versand tut das. Fehl
 (Wochenende, Feiertag), überspringt der Lauf das Instrument still; innerhalb des Alarmfensters
 bricht derselbe Zustand als Feed-Ausfall ab.
 
-M5 wird jedes Mal ausgewertet. H1/H4 werden nur neu erkannt, wenn ihre letzte archivierte
+M5 wird jedes Mal ausgewertet. H1/H4/M15 werden nur neu erkannt, wenn ihre letzte archivierte
 Kerzenzeit vom erfolgreich verarbeiteten Stand in `forex_h1_cache` abweicht. Entscheidend ist
 die native FXCM-Kerzenzeit, keine feste UTC-H4-Grenze. Der Cache wird erst nach einem vollständig
 erfolgreichen Lauf aktualisiert.
@@ -15,6 +15,10 @@ Die HTF-Touch-Prüfung verwendet auch zwischen H1/H4-Schlüssen die jüngsten ge
 M5-Kerzen (`liveTouch.ts`), damit zwischenzeitliche Dochte erfasst werden. Bestandslesungen sind
 paginiert, neue Zonen/Level werden gebündelt gespeichert. Telegram-Nachrichten folgen erst nach
 erfolgreicher Speicherung; Alarm-Schalter und Session-Gates bleiben wirksam.
+
+OB-Zonen pflegt der Watcher für `WATCHED_OB_TIMEFRAMES` (`_shared/obTimeframes.js`: 4H/1H/15M),
+Liquiditäts-Level nur für 4H/1H. M15 ist optional: fehlen 15m-Kerzen eines Instruments, läuft der
+Rest normal weiter. Der Alarm `ob_zone_15m` startet ausgeschaltet.
 
 Betrieb, historische Abdeckung und Wiederherstellung: [FXCM-Feed](fxcm-feed.md).
 

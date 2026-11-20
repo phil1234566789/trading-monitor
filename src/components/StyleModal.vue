@@ -83,6 +83,17 @@ const GROUPS = [
     ],
   },
   {
+    title: "Order-Blocks — 15M",
+    fields: [
+      { key: "obBull15m", label: "Bullish" },
+      { key: "obBear15m", label: "Bearish" },
+      { key: "obInactive15m", label: "Inaktiv" },
+      { key: "obBull15mBorder", label: "Umrandung (Bullish)" },
+      { key: "obBear15mBorder", label: "Umrandung (Bearish)" },
+      { key: "obInactive15mBorder", label: "Umrandung (Inaktiv)" },
+    ],
+  },
+  {
     title: "Order-Blocks — 1H",
     fields: [
       { key: "obBull1h", label: "Bullish" },

@@ -1,6 +1,7 @@
 import { fetchForexCandles, type Candle } from "../forexCandles.ts";
 import { berlinDayRangeUtcMs, berlinDateStrFor, berlinDateTimeStrFor, berlinOffsetMinutes } from "../../_shared/berlinTime.ts";
 import { getObZones, getLiquidityLevels, getSessions, getLatestDailyStructureStartTime } from "../db.ts";
+import { isWatchedObTimeframe } from "../../_shared/obTimeframes.js";
 // Reine Trend-Mathematik (siehe CLAUDE.md "MCP-Server") — seit dem Split von marketStructureAnalysis.ts
 // (Chat 2026-07-31, Rendering lebt jetzt separat in marketStructureRendering.ts) frei von Browser-
 // Abhängigkeiten und direkt aus dem Frontend-Quellbaum importierbar, kein dritter Algorithmus-Port.
@@ -498,7 +499,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
   // danach für die Antwort in zwei saubere Felder gesplittet (Philip 2026-08-30: "Orderblöcke
   // sollen sauber aufgeteilt werden in M5, 1h und 4h").
   const obZonesRelevant = filterRelevantObZoneRows(
-    obZonesRaw.filter((z) => z.timeframe === "1H" || z.timeframe === "4H"),
+    obZonesRaw.filter((z) => isWatchedObTimeframe(z.timeframe)),
     { referencePrice: obZonesReferencePrice, fromSec: currentTimeSec - M5_DETECTION_LOOKBACK_HOURS * 3600, toSec: currentTimeSec },
   );
   // Kuratierte Form statt roher DB-Zeile (dieselbe Auswahl wie buildNearRelevantObZones' zones —
@@ -528,6 +529,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
       endTime,
     };
   }
+  const obZones15m = obZonesRelevant.filter((z) => z.timeframe === "15M").map(curateObZoneRow);
   const obZones1h = obZonesRelevant.filter((z) => z.timeframe === "1H").map(curateObZoneRow);
   const obZones4h = obZonesRelevant.filter((z) => z.timeframe === "4H").map(curateObZoneRow);
 
@@ -600,6 +602,7 @@ export async function buildDataExport({ instrument, dateStr, replayUntilSec, str
     m5Structure,
     liquidityLevels1h,
     liquidityLevels4h,
+    obZones15m,
     obZones1h,
     obZones4h,
     // Live erkannt, 7-Tage-Lookback (siehe m5CandlesForDetection oben) — nicht aus der DB, es gibt

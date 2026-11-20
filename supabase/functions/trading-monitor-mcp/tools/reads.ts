@@ -21,6 +21,7 @@ import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
 import { computeEma } from "../ema.js";
 import { resolveDayWindow, fetchM5WithWarmup, isWithinDayWindow } from "../indicatorWindow.ts";
 import { json } from "../jsonResponse.ts";
+import { WATCHED_OB_TIMEFRAMES } from "../../_shared/obTimeframes.js";
 
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]).describe("Forex-Instrument");
 
@@ -82,7 +83,7 @@ export function registerReadTools(server: McpServer) {
         "RUFE DIESES TOOL ZUERST AUF, bevor du andere trading-monitor-Tools nutzt. Liefert in einem " +
         "Call: M5-Kerzen des Tages + Asia-Session-Range (nur rangeHigh/rangeLow, keine Kerzen), den " +
         "1H-Structure-Trend, sowie relevante Liquidity-Level und OB-Zonen — beide sauber getrennt " +
-        "nach Timeframe (liquidityLevels1h/liquidityLevels4h bzw. obZones1h/obZones4h, jeweils inkl. " +
+        "nach Timeframe (liquidityLevels1h/liquidityLevels4h bzw. obZones15m/obZones1h/obZones4h, jeweils inkl. " +
         "kontext-Feld: bei Liquidity-Leveln zusätzlich context wie 'asia high' und kontext wie " +
         "'Asia-High Major (26d)', bei OB-Zonen (und m5ObZones) kontext OHNE Session-Bonus, nur die " +
         "Alters-Tier-Formel wie '(7h)'/'Medium (1d 18h)') statt eines gemischten Felds ohne " +
@@ -153,7 +154,7 @@ export function registerReadTools(server: McpServer) {
       description: "Order-Block-Zonen aus der ob_zones-Tabelle (von poi-watcher alle 5min aktualisiert). Default: nur nicht-invalidierte, nicht-angetestete Zonen (wie der Live-Chart).",
       inputSchema: {
         instrument: INSTRUMENT,
-        timeframe: z.enum(["1H", "4H"]).optional(),
+        timeframe: z.enum(WATCHED_OB_TIMEFRAMES as [string, ...string[]]).optional(),
         includeAll: z.boolean().optional().describe("Auch invalidierte/angetestete Zonen mitliefern"),
         asOfSec: z.number().optional().describe("Unix-Sekunden für Backtest/Replay: Touched/Invalidated-Stand wird auf diesen Zeitpunkt zurückgerechnet statt des aktuellen Live-Stands geliefert"),
       },

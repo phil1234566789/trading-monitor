@@ -9,6 +9,7 @@ import { detectOrderBlocks, obZoneNaturalKey, orderBlockEndTime } from "./orderB
 import { PIP_SIZE } from "./pipConfig.js";
 import {isChartOrderBlockTimeframe} from './chartOrderBlockPin.js';
 import { obMinimum, strategyDistance } from './instrumentConfig.js';
+import { isWatchedObTimeframe } from '../supabase/functions/_shared/obTimeframes.js';
 
 // Historische Gold-Boxen enden beim ersten Touch, auch wenn eine spätere Invalidierung endTime ersetzt.
 export function goldDisplayZone(zone, candles) {
@@ -108,7 +109,7 @@ export function filterDbObZones(dbObZones, symbol, replayUntil, timeframe, price
 // ohnehin schon für andere Features geladen werden (m5Candles, bereits clipReplay-gefiltert vom
 // Aufrufer) — nur die tatsächlich referenzierte Teilmenge der M5-OBs wird persistiert (siehe
 // PLAN-chart-objekte-forex.md Abschnitt 5), das volle M5-Universum bleibt bewusst Live-Recompute.
-export function collectObsZones({ showObsM1, m1Candles = [], showObs4h, showObs1h, showObsM5, dbObZones, symbol, replayUntil, price, m5Candles, m5MinGap = obMinimum(symbol, '5m') }) {
+export function collectObsZones({ showObsM1, m1Candles = [], showObs4h, showObs1h, showObs15m, showObsM5, dbObZones, symbol, replayUntil, price, m5Candles, m5MinGap = obMinimum(symbol, '5m') }) {
   const zones = [];
   if(showObsM1){
     // Über eine Datenlücke ist der OB-Lebenslauf unbekannt; ältere Zonen nicht als weiterhin aktiv ausgeben.
@@ -118,6 +119,7 @@ export function collectObsZones({ showObsM1, m1Candles = [], showObs4h, showObs1
   }
   if (showObs4h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "4H", price));
   if (showObs1h) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "1H", price));
+  if (showObs15m) zones.push(...filterDbObZones(dbObZones, symbol, replayUntil, "15M", price));
   if (showObsM5) {
     zones.push(
       ...detectOrderBlocks(m5Candles, "5m", true, m5MinGap)
@@ -159,7 +161,7 @@ export function obBoxTouchState(item, candles, ctx) {
   const live = liveObZoneState(item, ctx);
   // DR104: M5-Overlap innerhalb der H4-Entstehung verkürzte nur das Journal-Highlight.
   // H1/H4 übernehmen exakt den Originalzustand; sichtbare Kerzen sind keine Touch-Quelle dafür.
-  const isHtf = item.timeframe === "1H" || item.timeframe === "4H";
+  const isHtf = isWatchedObTimeframe(item.timeframe);
   if (isHtf && live) return live;
   if (item.touchedTime != null) return { touched: true, endTime: item.touchedTime };
   if (isHtf) return { touched: false, endTime: candles.at(-1)?.time ?? item.sourceTime };
