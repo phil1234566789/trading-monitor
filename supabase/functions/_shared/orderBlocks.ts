@@ -19,7 +19,7 @@ const IRRELEVANT_PCT = 0.05;
 // aber auch von detectSetupObs (tradeSetup.ts) für M5 genutzt. Bei Änderungen hier IMMER auch
 // src/orderBlocks.js nachziehen (und umgekehrt).
 const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
-const LOWER_TF_MIN_GAP_PIPS: Record<string, number> = { "1m": 1, "3m": 1, "5m": 0.5 };
+const LOWER_TF_MIN_GAP_PIPS: Record<string, number> = { "1m": 1, "3m": 1, "5m": 0.4 };
 const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURUSD)
 
 // HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
