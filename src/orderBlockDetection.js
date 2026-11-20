@@ -13,6 +13,7 @@
 // supabase/functions/_shared/orderBlocks.ts (von poi-watcher/tradeSetup.ts genutzt). Bei
 // Änderungen an der Erkennungslogik selbst IMMER ALLE DREI nachziehen.
 import { PIP_SIZE } from "./pipConfig.js";
+import { applyPendingEdge, c1EdgeCandidate } from "../supabase/functions/_shared/obSessionEdge.js";
 
 export function candleTouchesOrderBlock(candle, zone) {
   return candle.low <= zone.top && candle.high >= zone.bottom;
@@ -57,22 +58,7 @@ const HTF_FOREX_MIN_GAP_PIPS = { "15M": 1, "1H": 1.5, "4H": 4 };
 // nicht von Rundungsrauschen ins "nicht relevant" kippt.
 const GAP_EPSILON = 1e-9;
 
-// HTF-Kante über die Kerze vor der Impulskerze (c1): ein Morning/Evening Star oder ein c1-Docht,
-// der zugleich Session-Extrem ist, macht diesen Docht zur echten OB-Kante, nicht erst c2 (Philip,
-// XAU H1 03.11.2026). Das Session-Extrem zählt erst, wenn die Session vor der Erkennungskerze endete.
-const STAR_MAX_BODY_RATIO = 0.3;
-const body = (c) => Math.abs(c.close - c.open);
-function isStar(a, s, b, dir) {
-  const mid = (a.open + a.close) / 2;
-  const opposite = dir === 1 ? a.close < a.open : a.close > a.open;
-  const impulse = dir === 1 ? b.close > b.open && b.close > mid : b.close < b.open && b.close < mid;
-  return opposite && impulse && body(s) <= STAR_MAX_BODY_RATIO * body(a);
-}
-function htfEdgeFromC1(a, s, b, cur, dir) {
-  const beyond = dir === 1 ? s.low < b.low : s.high > b.high;
-  const knownAt = dir === 1 ? s.sessionLowKnownAt : s.sessionHighKnownAt;
-  return beyond && (isStar(a, s, b, dir) || (knownAt != null && cur.time >= knownAt));
-}
+// Star-/Session-Kante an c1: siehe _shared/obSessionEdge.js (eine Quelle für alle drei Kopien).
 
 // FVG-Fenster über 4 Kerzen (c0..c2 + cur): bullisch, wenn cur.low über c1.high liegt (Gap),
 // bärisch symmetrisch. Zone = C1-Kante bis zur gegenüberliegenden Kante von C2 (inkl. Wick) — siehe
@@ -134,9 +120,9 @@ export function advanceOrderBlocks(candles,state,from) {
       // die Impuls-Kerze (c2) UND die 2 Kerzen davor mit ein (candles[i-3]/c1/c2), nimmt den
       // Extremwert. Die FVG-anknüpfende Kante (top hier) bleibt unverändert. HTF (15m/1h/4h/1D)
       // bleibt bei der alten, engen Box — Philip: "die sind eher, das bleibt so wie es ist" —
-      // außer bei Star/Session-Extrem an c1 (htfEdgeFromC1).
-      const fromC1 = !isLowerTf && htfEdgeFromC1(candles[i - 3], c1, c2, cur, 1);
-      const bottom = isLowerTf ? Math.min(candles[i - 3].low, c1.low, c2.low) : fromC1 ? c1.low : c2.low;
+      // außer bei Star/Session-Extrem an c1 (siehe _shared/obSessionEdge.js).
+      const edge = isLowerTf ? null : c1EdgeCandidate(candles[i - 3], c1, c2, 1);
+      const bottom = isLowerTf ? Math.min(candles[i - 3].low, c1.low, c2.low) : c2.low;
       zones.push({
         top: c1.high,
         bottom,
@@ -148,14 +134,14 @@ export function advanceOrderBlocks(candles,state,from) {
         retested: false,
         retestedAt: null,
         startTime: c2.time,
-        // Nur die Zeichnung beginnt an c1; Schlüssel und Erkennungszeit bleiben an c2.
-        ...(fromC1 ? { drawStartTime: c1.time } : {}),
+        // c1-Kante (Star sofort, Session-Extrem ab Session-Ende); Schlüssel bleibt an c2.
+        ...(edge ? { pendingEdge: edge } : {}),
         endTime: cur.time,
       });
     } else if (bearRelevant) {
       for (const z of zones) if (z.dir === -1 && z.active) z.active = false;
-      const fromC1 = !isLowerTf && htfEdgeFromC1(candles[i - 3], c1, c2, cur, -1);
-      const top = isLowerTf ? Math.max(candles[i - 3].high, c1.high, c2.high) : fromC1 ? c1.high : c2.high;
+      const edge = isLowerTf ? null : c1EdgeCandidate(candles[i - 3], c1, c2, -1);
+      const top = isLowerTf ? Math.max(candles[i - 3].high, c1.high, c2.high) : c2.high;
       zones.push({
         top,
         bottom: c1.low,
@@ -167,7 +153,7 @@ export function advanceOrderBlocks(candles,state,from) {
         retested: false,
         retestedAt: null,
         startTime: c2.time,
-        ...(fromC1 ? { drawStartTime: c1.time } : {}),
+        ...(edge ? { pendingEdge: edge } : {}),
         endTime: cur.time,
       });
     }
@@ -175,6 +161,7 @@ export function advanceOrderBlocks(candles,state,from) {
     // Gültigkeits-/Touched-Regeln laufen für alle bestehenden Zonen gegen die aktuelle Kerze.
     for (const z of zones) {
       if (z.invalidated) continue;
+      applyPendingEdge(z, cur.time);
       // Den ersten Kontakt separat erhalten: eine spätere Invalidierung darf das Zeichenende nicht ersetzen.
       if (z.touchedTime == null && candleTouchesOrderBlock(cur, z)) z.touchedTime = cur.time;
       const wasTouched = z.touched; // vor der Pruefung dieser Kerze festhalten
@@ -199,7 +186,7 @@ export function advanceOrderBlocks(candles,state,from) {
 }
 
 export function orderBlockSnapshot(candles,state) {
-  const {isLowerTf}=state,zones=state.zones.map(z=>({...z}));
+  const {isLowerTf}=state,zones=state.zones.map(({pendingEdge,...z})=>z);
   // "Retest bestätigt" (siehe orderblöcke.md#retest-status, Philip 05.09.2026) — nur für touched &&
   // !invalidated relevant. Lower-TF (M1/M3/M5): eine gleichgerichtete FVG entsteht NACH dem Touch
   // (z.endTime, das bei touched-Zonen auf den Touch-Zeitpunkt eingefroren ist) — die Reaktion hat

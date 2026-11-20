@@ -474,9 +474,9 @@
     "semantic_hash": ""
   },
   "src/orderBlockDetection.js": {
-    "mtime": 1795186681.6775715,
-    "seen": 1795187076.3719733,
-    "ast_hash": "dc2e750bbd890d8f17278121e042b2ac",
+    "mtime": 1795188456.553759,
+    "seen": 1795188812.6697226,
+    "ast_hash": "5e5548697096d8df34ad2c5296b9e87a",
     "semantic_hash": ""
   },
   "src/orderBlocks.js": {
@@ -534,9 +534,9 @@
     "semantic_hash": ""
   },
   "src/priceChartObZones.js": {
-    "mtime": 1795186828.6552281,
-    "seen": 1795187076.3719733,
-    "ast_hash": "f0812689873041438b940e282046eed0",
+    "mtime": 1795188663.740921,
+    "seen": 1795188812.6757226,
+    "ast_hash": "acdb41002404e398b4e430111d3d9b09",
     "semantic_hash": ""
   },
   "src/range.type.ts": {
@@ -720,9 +720,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/orderBlocks.ts": {
-    "mtime": 1795186673.6178482,
-    "seen": 1795187076.3729732,
-    "ast_hash": "abd3c3cb487a69e51954050707466b8b",
+    "mtime": 1795188456.5547576,
+    "seen": 1795188812.7324862,
+    "ast_hash": "ab258d2b4d4693784d2f4d5ba364f04d",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/resolveStructureStartTime.ts": {
@@ -834,9 +834,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/orderBlockDetection.js": {
-    "mtime": 1795186673.5488267,
-    "seen": 1795187076.3729732,
-    "ast_hash": "0d8b4115c1e977936a08358621c22db5",
+    "mtime": 1795188456.5557609,
+    "seen": 1795188812.7584858,
+    "ast_hash": "d9ab4d79a0d6901ea286f42cb10aa170",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/pretradeGates.ts": {
@@ -11175,6 +11175,24 @@
     "mtime": 1795186495.3055513,
     "seen": 1795187076.3739736,
     "ast_hash": "8d392627a8731f6c334b6189bef94916",
+    "semantic_hash": ""
+  },
+  "supabase/functions/_shared/obSessionEdge.js": {
+    "mtime": 1795188407.808249,
+    "seen": 1795188812.7324862,
+    "ast_hash": "5e31374fdc0f9d693a801853b21b08ee",
+    "semantic_hash": ""
+  },
+  "test/fixtures/pin603-eurusd-m15.json": {
+    "mtime": 1795188568.115231,
+    "seen": 1795188812.8235083,
+    "ast_hash": "ee526fc8ea7f0b9840a159fe46a9c8b7",
+    "semantic_hash": ""
+  },
+  "test/obSessionEdge.test.js": {
+    "mtime": 1795188664.5109463,
+    "seen": 1795188812.8783498,
+    "ast_hash": "15a4abe67ef0e0e5c8ff80d278711e29",
     "semantic_hash": ""
   }
 }

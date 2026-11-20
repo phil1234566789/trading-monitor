@@ -149,8 +149,11 @@ export function liveObZonesForTimeframe(timeframe, { m1Candles=[], m5Candles, db
 export function liveObZoneState(item, ctx) {
   if (item.timeframe == null || item.rangeLow == null || item.rangeHigh == null) return null;
   // Journal-Objekte bleiben auch außerhalb des Indikator-Distanzfilters referenziert.
-  const zone = liveObZonesForTimeframe(item.timeframe, { ...ctx, price: null }).find((z) =>
-    z.top === item.rangeHigh && z.bottom === item.rangeLow && (item.sourceTime == null || z.startTime === item.sourceTime));
+  // Mit sourceTime reicht eine gleiche Kante: die Session-Kante springt nachträglich (obSessionEdge.js),
+  // ältere Journal-Snapshots tragen noch die c2-Kante, die FVG-Seite bleibt gleich.
+  const zone = liveObZonesForTimeframe(item.timeframe, { ...ctx, price: null }).find((z) => item.sourceTime == null
+    ? z.top === item.rangeHigh && z.bottom === item.rangeLow
+    : z.startTime === item.sourceTime && (z.top === item.rangeHigh || z.bottom === item.rangeLow));
   return zone ? { touched: zone.touched, endTime: orderBlockEndTime(zone, zone.endTime) } : null;
 }
 
