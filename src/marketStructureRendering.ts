@@ -159,13 +159,6 @@ class RangeLineRenderer {
       }
       ctx.stroke();
       ctx.setLineDash([]);
-      if (this._options.label) {
-        const last = pts[pts.length - 1], up = last.y < pts[pts.length - 2].y;
-        ctx.fillStyle = this._options.color;
-        ctx.font = `600 ${12 * scope.verticalPixelRatio}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText(this._options.label, last.x * scope.horizontalPixelRatio, (last.y + (up ? -8 : 16)) * scope.verticalPixelRatio);
-      }
     });
   }
 }
@@ -202,7 +195,7 @@ class RangeLinePaneView {
 
 export class RangeLinePrimitive {
   pivots: Pivot[];
-  _options: { color: string; lineWidth?: number; dashed?: boolean; eventBarSeconds?: number; label?: string };
+  _options: { color: string; lineWidth?: number; dashed?: boolean; eventBarSeconds?: number };
   _candles: Candle[];
   _paneViews: RangeLinePaneView[];
   _chart: any;
@@ -211,7 +204,7 @@ export class RangeLinePrimitive {
   // pivots: mindestens 2 Punkte, in Zeichenreihenfolge (nicht zwingend chronologisch, siehe
   // ClosedRange: low->middle->high ist bei einem Uptrend-Archiv automatisch auch chronologisch,
   // müsste es aber nicht sein).
-  constructor(pivots: Pivot[], options: { color: string; lineWidth?: number; dashed?: boolean; eventBarSeconds?: number; label?: string }, candles: Candle[] = []) {
+  constructor(pivots: Pivot[], options: { color: string; lineWidth?: number; dashed?: boolean; eventBarSeconds?: number }, candles: Candle[] = []) {
     this.pivots = pivots;
     this._options = options;
     this._candles = candles;

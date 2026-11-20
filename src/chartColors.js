@@ -205,13 +205,9 @@ export const DEFAULT_CHART_COLORS = {
   m5RangeClosedDowntrend: { hex: "#ff7043", alpha: 0.57 },
   m5RangeChoch: { hex: "#ff7043", alpha: 0.57 },
   m5RangeFib: { hex: "#26c6da", alpha: 0.57 },
-  // M5-Trendphasen-Hintergrund (trendPhases.js) — flächig über die volle Panehöhe, daher sehr
-  // niedrige Alpha, sonst verschwinden die Kerzen dahinter.
-  m5TrendPhaseUp: { hex: "#26a69a", alpha: 0.08 },
-  m5TrendPhaseDown: { hex: "#ef5350", alpha: 0.08 },
-  // Vorstufe: CHoCH bestätigt, Haupttrend noch nicht gekippt — gleicher Ton, halbe Deckkraft.
-  m5TrendPhaseUpPre: { hex: "#26a69a", alpha: 0.035 },
-  m5TrendPhaseDownPre: { hex: "#ef5350", alpha: 0.035 },
+  // M5-Ebenen-Bänder (ts11Chain.js) — flächig über die volle Panehöhe, daher sehr niedrige Alpha.
+  m5LevelUp: { hex: "#26a69a", alpha: 0.08 },
+  m5LevelDown: { hex: "#ef5350", alpha: 0.08 },
 };
 
 // Eigene Kopien verhindern, dass M1-Farben beim Anpassen M5 oder H1 mitändern.

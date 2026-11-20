@@ -281,7 +281,6 @@ const props = defineProps({
   // M5-Struktur (PLAN-m5-trend.md) — zwei eigene Toggles, unabhängig vom 1h-showRanges.
   showM5Structure: { type: Boolean, default: false },
   showM1Structure: { type: Boolean, default: false },
-  showM5TrendPhases: { type: Boolean, default: false },
   m5StructurePeriod: { type: Number, default: 5 },
   m5Structure2Period: { type: Number, default: 2 },
   showEma: { type: Boolean, default: false },
@@ -1574,7 +1573,6 @@ function refreshM5StructureInternal() {
     symbol: props.symbol,
     replayUntil: props.replayUntil,
     showM5Structure: props.showM5Structure && !setup2.selected.value,
-    showM5TrendPhases: props.showM5TrendPhases && !setup2.selected.value,
     showLiquidityDebug: props.showLiquidityDebug,
     m5Period: props.m5StructurePeriod,
     m5Period2: props.m5Structure2Period,
@@ -1631,7 +1629,7 @@ async function loadRangesCandles({ refresh = true } = {}) {
 function rangesNeedsData() {
   if (snapshotView.value) return false;
   // M5-Struktur ankert am 1h-Outer-Cutoff, braucht also dieselben H1-Kerzen.
-  return props.showTradeSetup2 || props.showM1Structure || props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showM5TrendPhases;
+  return props.showTradeSetup2 || props.showM1Structure || props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showTs11Levels;
 }
 // An den H1-Kerzenschluss ausgerichtet statt festem Intervall (Chat 2026-07-20) — H1-Kerzen
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
@@ -1794,8 +1792,7 @@ function renderTradeSetupsInternal() {
     replayUntil: props.replayUntil,
     symbol: props.symbol,
   });
-  ts11Levels.render(candleSeries, { chain: ts11Chain.value, candles: clipReplay(allCandles),
-    show: props.showTs11Levels, barSeconds: barSecondsFor(props.currentBar) });
+  ts11Levels.render(candleSeries, { chain: ts11Chain.value, candles: clipReplay(allCandles), show: props.showTs11Levels });
 }
 const ts11Levels = usePriceChartTs11Levels();
 
@@ -2520,7 +2517,7 @@ watch(
     }
   },
 );
-watch([() => props.showM5Structure, () => props.showM5TrendPhases], () => {
+watch(() => props.showM5Structure, () => {
   refreshRangesPollingState();
   refreshM5StructureInternal();
 });

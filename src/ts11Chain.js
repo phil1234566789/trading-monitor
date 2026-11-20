@@ -12,12 +12,12 @@ export function ts11ChainAt(resolve,closeReactionCache,at){
  return {status:'ready',links,current,key:JSON.stringify([links,current])};
 }
 
-// Jede Ebene als Zickzack-Schenkel vom älteren zum jüngeren Grenzpivot (Philip: Linien statt Kästen).
-export function ts11LevelLegs(chain){
+// Jede Ebene als Zeitband ab ihrem älteren Grenzpivot bis zum Start der nächsten Ebene (Philip: Bänder wie in der Skizze).
+export function ts11LevelBands(chain,endTime){
  if(chain?.status!=='ready')return [];
  const same=(a,b)=>a?.high?.price===b?.high?.price&&a?.low?.price===b?.low?.price;
- const levels=[...chain.links.filter(l=>!same(l,chain.current)),...(chain.current?[{...chain.current,current:true}]:[])];
- return levels.filter(l=>l.low&&l.high).map(l=>({depth:l.depth,trend:l.trend,
-  points:[l.low,l.high].sort((a,b)=>a.pivotTime-b.pivotTime),
-  label:`T${l.depth} ${l.trend==='uptrend'?'↑':l.trend==='downtrend'?'↓':'?'}${l.depth===0?' Wurzel':''}${l.current?' aktuell':''}`}));
+ const levels=[...chain.links.filter(l=>!same(l,chain.current)),...(chain.current?[{...chain.current,current:true}]:[])]
+  .filter(l=>l.low&&l.high).map(l=>({...l,start:Math.min(l.low.pivotTime,l.high.pivotTime)}));
+ return levels.map((l,i)=>({depth:l.depth,trend:l.trend,from:l.start,to:Math.max(l.start,levels[i+1]?.start??endTime),
+  label:`${l.depth===0?'WURZEL':'T'+l.depth} ${l.trend==='uptrend'?'↑':l.trend==='downtrend'?'↓':'?'}${l.current?' · aktuell':''}`}));
 }

@@ -34,8 +34,7 @@ describe('M5 close levels through the shared chart renderer', () => {
     const refresh = async (now, replayUntil, choch, bos) => {
       clock.mockReturnValue(at(now) * 1000);
       await api.refreshM5Structure({ candles: archive.filter(c => c.time <= (replayUntil ?? at(now))),
-        m5CandlesClipped: archive, symbol: 'GBPUSD', replayUntil, showM5Structure: true,
-        showM5TrendPhases: false, showLiquidityDebug: false, m5Period: 5, m5Period2: 2 });
+        m5CandlesClipped: archive, symbol: 'GBPUSD', replayUntil, showM5Structure: true, showLiquidityDebug: false, m5Period: 5, m5Period2: 2 });
       for (const [type, price, confirmed] of [['CHoCH', 1.35576, choch], ['BOS', 1.35554, bos]]) {
         const matching = lines([...attached], type).filter(p => Math.abs(p.level.price-price) < 1e-8);
         expect(matching).toHaveLength(1);

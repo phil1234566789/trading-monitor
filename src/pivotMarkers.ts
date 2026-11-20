@@ -38,7 +38,7 @@ export interface PivotMarkerGroup {
 interface RenderOptions {
   showLabels: boolean;
   formatPrice?: (price: number) => string;
-  // Zusatztext hinter dem Preis, z.B. "was der Algo an diesem Pivot erkannt hat" (M5-Trendphasen).
+  // Zusatztext hinter dem Preis, z.B. "was der Algo an diesem Pivot erkannt hat" (M5-Struktur-Debug).
   extraLabel?: (p: Pivot) => string | null;
 }
 

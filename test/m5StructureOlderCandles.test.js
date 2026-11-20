@@ -20,7 +20,7 @@ describe("M5-Struktur lädt fehlende Kerzen bis zum Anker nach", () => {
     // setzt outerCutoff = anchor (fixer Start), ohne 1h-Kerzen gibt es keinen State -> Fallback greift
     ms.computeRangesPivotsAndMetadata(m5(anchor, 30), { rangesPeriod: 5, rangesLookbackHours: 1, ranges2Period: 2, ranges2LookbackHours: 1, replayUntil: anchor + 90000, rangesFixedStartActive: true, rangesFixedStartTime: anchor });
     const loaded = m5(anchor + 300 * 1000, 50); // beginnt 1000 Kerzen nach dem Anker
-    const args = { candles: loaded, m5CandlesClipped: loaded, symbol: "GBPUSD", replayUntil: null, showM5Structure: false, showM5TrendPhases: false, showLiquidityDebug: false, m5Period: 5, m5Period2: 2 };
+    const args = { candles: loaded, m5CandlesClipped: loaded, symbol: "GBPUSD", replayUntil: null, showM5Structure: false, showLiquidityDebug: false, m5Period: 5, m5Period2: 2 };
     await Promise.all([ms.refreshM5Structure(args), ms.refreshM5Structure(args)]);
     expect(fetchInitialCandles).toHaveBeenCalledTimes(1);
     expect(fetchInitialCandles).toHaveBeenCalledWith("GBPUSD", "5m", 1020, loaded[0].time * 1000);

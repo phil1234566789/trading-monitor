@@ -273,7 +273,6 @@ const showM1Structure = useLocalStorageRef("showM1Structure", false);
 // Blendet nur die 1h-Struktur aus (Linien + Debug-Punkte), damit die M5-Ebene allein prüfbar ist —
 // "Structure" bleibt der Hauptschalter, PriceChart bekommt das UND beider als showRanges.
 const showH1Structure = useLocalStorageRef("showH1Structure", true);
-const showM5TrendPhases = useLocalStorageRef("showM5TrendPhases", false);
 const m5StructurePeriod = useLocalStorageRef("m5StructurePeriod", 5);
 const m5Structure2Period = useLocalStorageRef("m5Structure2Period", 2);
 // EMA 50/200 auf M5 (siehe Chat: "Trend über EMA + Anzahl protected highs/lows") — ein Toggle für
@@ -2062,11 +2061,8 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showM1Structure }" title="M1-Struktur nur mit Periode-5-Pivots, ab bestätigtem A, B und C; Styles wie M5-Struktur" @click="showM1Structure = !showM1Structure">
             M1-Struktur
           </ToggleButton>
-          <ToggleButton variant="menu" :class="{ active: showTs11Levels }" title="M5-Struktur ab dem D1-Anker als Zickzack: Wurzel, T1, T2, … bis zur aktuellen Ebene" @click="showTs11Levels = !showTs11Levels">
-            M5-Ebenen (Wurzel, T1 …)
-          </ToggleButton>
-          <ToggleButton variant="menu" :class="{ active: showM5TrendPhases }" @click="showM5TrendPhases = !showM5TrendPhases">
-            M5-Trendphasen
+          <ToggleButton variant="menu" :class="{ active: showTs11Levels }" title="Struktur-Ebenen ab dem D1-Anker als Zeitbänder: Wurzel, T1, T2, … bis zur aktuellen Ebene" @click="showTs11Levels = !showTs11Levels">
+            M5-Ebenen (Bänder)
           </ToggleButton>
           <label class="ranges-period-field">
             M5-Periode
@@ -2387,7 +2383,6 @@ watch(selectedTradingAccountId, () => {
     :show-ranges-metadata="showRangesMetadata"
     :show-m5-structure="showM5Structure"
     :show-m1-structure="showM1Structure"
-    :show-m5-trend-phases="showM5TrendPhases"
     :m5-structure-period="m5StructurePeriod"
     :m5-structure2-period="m5Structure2Period"
     :show-ema="showEma"

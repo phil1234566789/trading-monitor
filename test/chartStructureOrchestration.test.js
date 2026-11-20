@@ -20,7 +20,7 @@ function setup() {
   api.computeRangesPivotsAndMetadata(h1, settings);
   const h1Args = { ...settings, candles: h1, h1CandlesClipped: h1, showRanges: false };
   const m5Args = { symbol: 'GBPUSD', candles: [], m5CandlesClipped: [], replayUntil: until,
-    m5Period: 5, m5Period2: 2, showM5Structure: false, showM5TrendPhases: false };
+    m5Period: 5, m5Period2: 2, showM5Structure: false };
   return { api, jobs, h1Args, m5Args };
 }
 describe('chart H1/M5 asynchronous orchestration', () => {

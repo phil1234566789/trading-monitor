@@ -160,10 +160,8 @@ const GROUPS = [
       { key: "m5RangeClosedDowntrend", label: "Abgeschlossene Range (Downtrend)" },
       { key: "m5RangeChoch", label: "CHoCH" },
       { key: "m5RangeFib", label: "Fibonacci 50%" },
-      { key: "m5TrendPhaseUp", label: "Trendphase Uptrend (Hintergrund)" },
-      { key: "m5TrendPhaseDown", label: "Trendphase Downtrend (Hintergrund)" },
-      { key: "m5TrendPhaseUpPre", label: "Trendphase Uptrend nach CHoCH (Vorstufe)" },
-      { key: "m5TrendPhaseDownPre", label: "Trendphase Downtrend nach CHoCH (Vorstufe)" },
+      { key: "m5LevelUp", label: "M5-Ebene aufwärts (Band)" },
+      { key: "m5LevelDown", label: "M5-Ebene abwärts (Band)" },
     ],
   },
   {

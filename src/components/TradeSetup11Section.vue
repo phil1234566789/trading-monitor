@@ -202,7 +202,7 @@ function draw(){
   {fillColor:cssColorScaled('tradeConfirmation',.08),borderColor:cssColor('tradeConfirmation'),textColor:cssColor('tradeConfirmation'),borderWidth:1,
    label:`Aktuelle Range · Tiefe ${cur.depth} · ${ts11TrendText(cur.trend)}`,forceLabel:true},candles);
   series.attachPrimitive(p);primitives.push(p);}
- if(levels.value)primitives.push(...drawTs11Levels(series,chain.value,candles,sec5));
+ if(levels.value)primitives.push(...drawTs11Levels(series,chain.value,candles));
  if(kase.lsPrice!=null)priceLines.push(series.createPriceLine({price:kase.lsPrice,color:cssColor('liquiditySweepM5'),lineWidth:1,lineStyle:LineStyle.Dashed,title:'Pin-LS'}));
  // Durchgefallene Kandidaten nur in der Liste rechts; im Chart lenken sie ab (Philip: „kann weg“).
  for(const c of d.candidates.filter(c=>!c.inSetup&&c.checks.every(x=>x.ok)))priceLines.push(series.createPriceLine({price:c.level.price,
@@ -253,7 +253,7 @@ const basisText=c=>c.basis==='existingCloseReactionChoch'?`Close-CHoCH · Urspru
    <select v-model="tail" title="Nachlauf ab OB/Level"><option v-for="[k,t] in TS11_TAILS" :key="k" :value="k">Nachlauf {{ t }}</option></select>
    <select v-model="tf" title="Chart-Zeitrahmen"><option value="m5">M5</option><option value="m1">M1</option></select>
    <label title="TS1.1-Marktstruktur (M5 P5/P2) ab dem Strukturstart, nach der TS1.1 entscheidet"><input v-model="structure" type="checkbox"> Struktur</label>
-   <label title="Alle TS1.1-Ebenen als Zickzack-Linien: T0 Wurzel, T1, T2, …"><input v-model="levels" type="checkbox"> Ebenen</label>
+   <label title="Struktur-Ebenen als Zeitbänder: Wurzel, T1, T2, … bis zur aktuellen Ebene"><input v-model="levels" type="checkbox"> Ebenen</label>
    <ToggleButton variant="bordered" :class="{active:manualStart==null}" title="Wie Live-TS1.1: Struktur zählt ab dem D1-Anker" @click="manualStart=null">Start ab D1-Anker</ToggleButton>
    <ToggleButton variant="bordered" :class="{active:manualStart!=null}" title="Simulation: TS1.1 für diese Ansicht mit eigenem Strukturstart neu rechnen"
     @click="manualStart??=overlay?.anchorTime??data?.window.view.from??null">Start ab Datum</ToggleButton>

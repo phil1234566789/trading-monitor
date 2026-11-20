@@ -154,7 +154,7 @@ export function diagnoseTs11Case(kase,m5,sessions,located,policy,{explain=true,s
 }
 
 // Range-Kette der TS1.1-Policy zum Zeitpunkt at, inklusive der aktuellen Range (auch per Close-CHoCH wie bei Pin 557).
-export {ts11ChainAt,ts11LevelLegs} from './ts11Chain.js';
+export {ts11ChainAt} from './ts11Chain.js';
 // Zeitpunkte, an denen sich der Schlüssel (Urteil + Kette) gegenüber dem vorigen Schritt ändert.
 export const ts11ChangeTimes=samples=>samples.filter((s,i)=>i>0&&s.key!==samples[i-1].key).map(s=>s.at);
 const HOUR=3600;

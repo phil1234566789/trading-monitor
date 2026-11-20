@@ -27,7 +27,6 @@ import { renderMarketStructureAnalysis, collectFibLevels } from "../marketStruct
 import { renderPivotMarkers } from "../pivotMarkers";
 import { cssColor } from "../chartColors.js";
 import { createChartStructureWorker } from '../chartStructureWorkerClient.js';
-import { renderTrendPhaseBands } from "../trendPhaseRendering.js";
 import { fmtPrice, fmtDateTime, pricePrecisionForInstrument } from "../format.js";
 
 import { withoutIgnored } from "../ignoredCandles.js";
@@ -50,7 +49,6 @@ export function usePriceChartMarketStructure() {
   let rangesMarkerPrimitives = [];
   let marketStructurePrimitives = [];
   let m5StructurePrimitives = [];
-  let m5TrendPhasePrimitives = [];
   let outerCutoff = null; // Start des 1h-Outer-Trends = M5-Anker-Fallback ohne Nested, siehe refreshM5Structure
   let m5Computed = { state: null, phases: [], events: [], pivotsOuter: null, pivotsInner: null };
   const h1Worker = createChartStructureWorker();
@@ -104,7 +102,6 @@ export function usePriceChartMarketStructure() {
     renderMarketStructureAnalysis(candleSeries, null, m5StructurePrimitives, []);
     renderPivotMarkers(candleSeries, [], rangesMarkerPrimitives, []);
     renderPivotMarkers(candleSeries, [], m5MarkerPrimitives, []);
-    renderTrendPhaseBands(candleSeries, [], m5TrendPhasePrimitives, []);
   }
 
   // H1-Fraktale im konfigurierten Lookback-Fenster — reine Pivot-Liste, noch keine weak/protected/
@@ -212,7 +209,7 @@ export function usePriceChartMarketStructure() {
       if (!applied && !h1Pending && h1AppliedRevision !== h1Revision) return false;
     }
     if (!candleSeries || revision !== m5Revision) return false;
-    const { candles, symbol, replayUntil, showM5Structure, showM5TrendPhases, showLiquidityDebug, m5Period, m5Period2 } = args;
+    const { candles, symbol, replayUntil, showM5Structure, showLiquidityDebug, m5Period, m5Period2 } = args;
     const anchor = innermostStructureStart(marketStructureState.value, outerCutoff);
     if (m5Older.symbol !== symbol) m5Older = { symbol, candles: [] };
     const loaded = args.m5CandlesClipped;
@@ -237,16 +234,9 @@ export function usePriceChartMarketStructure() {
       return false;
     }
     m5Trend.value = deriveTrendReaction(m5Computed.state);
-    const { phases } = m5Computed;
     renderLowerStructure(candleSeries, m5Computed, m5StructurePrimitives, m5MarkerPrimitives, candles, {
       symbol, replayUntil, show: showM5Structure,
-      debug: showLiquidityDebug && (showM5Structure || showM5TrendPhases), barSeconds: barSecondsFor("5m"),
-    });
-    renderTrendPhaseBands(candleSeries, showM5TrendPhases ? phases : [], m5TrendPhasePrimitives, candles, {
-      up: cssColor("m5TrendPhaseUp"),
-      upPre: cssColor("m5TrendPhaseUpPre"),
-      down: cssColor("m5TrendPhaseDown"),
-      downPre: cssColor("m5TrendPhaseDownPre"),
+      debug: showLiquidityDebug && showM5Structure, barSeconds: barSecondsFor("5m"),
     });
     return true;
   }
