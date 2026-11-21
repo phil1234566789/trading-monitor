@@ -288,7 +288,9 @@ export async function getPinContext() {
         // 20260823120000) dieselbe ob_zones(*)-Embed wie 1H/4H, kein Snapshot mehr.
         "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
         "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
-        "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi",
+        "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
+        // Generische Registry-Pins (kind='chart_object', src/chartObjectRegistry.js): Typ + eingefrorener Snapshot.
+        "chart_object_type, chart_object_key, chart_object_instrument, chart_object_timeframe, chart_object_snapshot",
     )
     .order("created_at", { ascending: true }).order('id').range(from, to));
   for(const row of rows){

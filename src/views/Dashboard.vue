@@ -73,6 +73,7 @@ import {
   fetchPinContext,
   addPinEntry,
   addPinChartObEntry,
+  addPinChartObject,
   addPinDoubleOrderBlock,
   addPinTscSetupEntry,
   addPinM5LiquidityEntry,
@@ -89,6 +90,7 @@ import {
 import { reportUiError } from "../composables/useHttpActivity.js";
 import {doubleOrderBlockPinLabel} from '../doubleOrderBlockPin.js';
 import { usePolledFetch } from "../composables/usePolledFetch.js";
+import { chartObjectLabel, chartObjectType } from "../chartObjectRegistry.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import {useDobRunOptions} from "../composables/usePriceChartDobPositions.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
@@ -982,6 +984,7 @@ const pinAddPopupError = ref(null);
 // dazu, damit jede Zeile eindeutig ist.
 function pinCandidateLabel(c) {
   if(c.kind==='double_order_block')return `${doubleOrderBlockPinLabel(c.dobContext)} · OB1 ${formatDatedTime(c.dobContext.pair.firstOrderBlock.startTime)} → OB2 ${formatDatedTime(c.dobContext.pair.secondOrderBlock.startTime)}`;
+  if (c.kind === "chart_object") return `${c.timeframe} ${chartObjectLabel(c.type, c.snapshot, c.instrument)}`;
   if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "chart_ob") return `${c.zone.timeframe.replace(/^(\d+)M$/, 'M$1')} ${c.zone.dirNum === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
@@ -1030,6 +1033,8 @@ async function onPinAddConfirm(note, pinType) {
         return;
       }
       saved = await addPinEntry("ob_zone", obZoneId, note, pinType);
+    } else if (target.kind === "chart_object") {
+      saved = await addPinChartObject(target, note, pinType);
     } else if (target.kind === "trade_setup") {
       // Kein Resolve nötig — trade_setups.id ist schon direkt bekannt (siehe PriceChart.vue:
       // refreshTradeSetupLinksInternal), anders als bei ob_zone.
@@ -1405,6 +1410,11 @@ function pinJumpMismatch(entry) {
     if (entry.m5Liquidity?.instrument !== currentSymbol.value) return `Erst zu ${entry.m5Liquidity?.instrument} wechseln.`;
     return entry.m5Liquidity?.timeframe !== currentBar.value ? `Erst zu ${entry.m5Liquidity?.timeframe} wechseln.` : null;
   }
+  if (entry.kind === "chart_object") {
+    const o = entry.chartObject;
+    if (o.instrument !== currentSymbol.value) return `Erst zu ${o.instrument} wechseln.`;
+    return o.timeframe !== currentBar.value ? `Erst zu ${o.timeframe} wechseln.` : null;
+  }
   if (entry.kind === "rsi_divergence") {
     return entry.rsiDivergence?.instrument !== currentSymbol.value ? `Erst zu ${entry.rsiDivergence?.instrument} wechseln.` : null;
   }
@@ -1437,6 +1447,9 @@ function onSelectPin(entry) {
     priceChartRef.value?.jumpToPin(toUnixSec(entry.liquidityLevel.pivotTime));
   } else if (entry.kind === "m5_liquidity_level") {
     priceChartRef.value?.jumpToPin(toUnixSec(entry.m5Liquidity.pivotTime));
+  } else if (entry.kind === "chart_object") {
+    const time = chartObjectType(entry.chartObject.type)?.time(entry.chartObject.snapshot);
+    if (time != null) priceChartRef.value?.jumpToPin(time);
   } else if (entry.kind === "rsi_divergence") {
     priceChartRef.value?.jumpToPin(toUnixSec(entry.rsiDivergence.fromTime), toUnixSec(entry.rsiDivergence.toTime));
   }

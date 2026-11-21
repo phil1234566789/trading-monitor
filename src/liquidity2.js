@@ -9,6 +9,8 @@
 import { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD } from "./liquidityDetection.js";
 import { wilderAtrValues } from "./atr.js";
 import { toPips } from "./pipConfig.js";
+import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
+import { registerChartObjectType } from "./chartObjectRegistry.js";
 
 // Startwert aus Philips Beispielen (M5), noch nicht gemessen. Ein später BOS heißt: kein impulsiver Abgang, dort
 // liegt keine SL-Häufung.
@@ -99,3 +101,17 @@ export function formatStrongLiquidityLabel(lvl, ageLabel) {
   parts.push(`${lvl.brokenSwings} ${lvl.brokenSwings === 1 ? "Swing" : "Swings"}`);
   return parts.join(" · ");
 }
+
+// Pinnbar über die generische Chartobjekt-Registry (kind='chart_object'). Der Snapshot friert die Erkennung zum
+// Pin-Zeitpunkt ein; algoVersion hochzählen, sobald sich die Auswahlregel oben ändert.
+registerChartObjectType("liquidity2_ls", {
+  algoVersion: "liquidity2-v1",
+  key: (lvl) => `${lvl.dir}|${lvl.pivotTime}`,
+  snapshot: (lvl) => ({
+    dir: lvl.dir, price: lvl.price, pivotTime: lvl.pivotTime, touched: lvl.touched ?? false, touchedTime: lvl.touchedTime ?? null,
+    structurePrice: lvl.structurePrice, structureTime: lvl.structureTime, bosTime: lvl.bosTime,
+    impulsePips: lvl.impulsePips, impulseAtr: lvl.impulseAtr, brokenSwings: lvl.brokenSwings,
+  }),
+  time: (s) => s.pivotTime,
+  label: (s, instrument) => `LS2 ${s.dir === 1 ? "Hoch" : "Tief"} ${fmtPrice(s.price, pricePrecisionForInstrument(instrument))}`,
+});

@@ -7,6 +7,7 @@ import {dobChartLink,DOB_OUTCOME_LABELS} from '../dobTradeStatistics.js';
 import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulationPinPresentation.js";
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import PinTypeChips from './PinTypeChips.vue';
+import { chartObjectLabel } from "../chartObjectRegistry.js";
 import {tradeSetupSourceDetails} from '../tradeSetupSourcePresentation.js';
 import {COPIED_FEEDBACK_MS} from '../priceChartConstants.js';
 
@@ -207,6 +208,14 @@ function onEntryClick(event, entry) {
           → {{ fmtPrice(row.entry.rsiDivergence.toPrice, pricePrecisionForInstrument(row.entry.rsiDivergence.instrument)) }}
           · RSI {{ row.entry.rsiDivergence.fromRsi?.toFixed(1) }} → {{ row.entry.rsiDivergence.toRsi?.toFixed(1) }}
         </div>
+      </template>
+      <template v-else-if="row.entry.kind === 'chart_object'">
+        <div class="pin-panel-entry-header">
+          {{ row.entry.chartObject.timeframe }} {{ chartObjectLabel(row.entry.chartObject.type, row.entry.chartObject.snapshot, row.entry.chartObject.instrument) }}
+          ({{ row.entry.chartObject.instrument }})
+          <button class="pin-panel-remove" title="Aus Pin-Kontext entfernen" @click="emit('remove', row.entry.id)">🗑</button>
+        </div>
+        <div class="pin-panel-entry-prices">Snapshot {{ row.entry.chartObject.snapshot?.algoVersion }}, kein Live-Status</div>
       </template>
       <template v-else-if="row.trade">
         <div class="pin-panel-entry-header">

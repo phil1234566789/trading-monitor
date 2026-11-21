@@ -520,6 +520,7 @@ const {
   liquidityMetadata,
   liquidityEarliestTime,
   liquidityPrimitives,
+  chartObjectPinSources,
   getCurrentLiquidityLevels,
   create: createLiquidity,
   dispose: disposeLiquidity,
@@ -2220,6 +2221,7 @@ onMounted(() => {
       tradeConfirmationLinkPrimitives,
       divergencePrimitives: priceChartRsi.divergencePriceLinePrimitives,
       tscSetupPrimitives,
+      chartObjectSources: chartObjectPinSources,
     };
   }
   function findNearbyPinCandidates(x, y) {

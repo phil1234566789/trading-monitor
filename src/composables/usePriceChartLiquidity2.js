@@ -39,5 +39,8 @@ export function usePriceChartLiquidity2() {
     }
   }
 
-  return { refresh, clear };
+  // Registry-Quelle fürs Pinnen: dasselbe Array, das gezeichnet wird (wird in-place geleert/befüllt).
+  const pinSource = { type: "liquidity2_ls", primitives, objectOf: (p) => p.level };
+
+  return { refresh, clear, pinSource };
 }
