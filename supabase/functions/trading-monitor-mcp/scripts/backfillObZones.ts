@@ -30,7 +30,9 @@
 //     supabase/functions/trading-monitor-mcp/scripts/backfillObZones.ts
 import { supabase } from "../supabaseClient.ts";
 import { detectOrderBlocks } from "../orderBlockDetection.js";
-import { markIgnored } from "../../_shared/ignoredCandles.ts";
+import { markIgnored, markHtfObCandles } from "../../_shared/ignoredCandles.ts";
+import { obMinimum } from "../../_shared/instrumentConfig.js";
+import { isWatchedObTimeframe } from "../../_shared/obTimeframes.js";
 import { getSessions } from "../db.ts";
 
 // forex_candles.bar ("5m"/"1h"/"4h", unsere eigene Konvention, siehe backfillForexCandles.ts) auf
@@ -217,8 +219,11 @@ async function backfillOne(instrument: string, bar: string) {
   }
   // Spread-Hour-Kerzen markieren, exakt wie poi-watcher es live tut — sonst laufen Simulation und
   // Produktion auseinander, und genau darauf beruht die Auswertung in analysis/dr-reichweite/.
-  const candles = markIgnored(rohKerzen, await getSessions(instrument));
-  const zones = detectOrderBlocks(candles, config.detectParam, true);
+  // HTF zusätzlich wie poi-watcher: Pausenkerzen weg, Session-Extreme markiert, Schwelle aus obMinimum.
+  const sessions = await getSessions(instrument);
+  const marked = markIgnored(rohKerzen, sessions);
+  const candles = isWatchedObTimeframe(config.dbTimeframe) ? markHtfObCandles(marked, sessions) : marked;
+  const zones = detectOrderBlocks(candles, config.detectParam, true, obMinimum(instrument, config.detectParam));
   const corrected = INSERT_ONLY ? 0 : await correctStaleZones(instrument, config.dbTimeframe, zones);
   await upsertZones(instrument, config.dbTimeframe, zones);
   console.log(

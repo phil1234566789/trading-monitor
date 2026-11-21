@@ -2,6 +2,7 @@
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { SESSION_ROW_COLUMNS, sessionFromRow } from '../src/sessionOccurrences.js';
 
 export function dobCandleCache({ outDir, symbol, refresh, defaultStartSec, startSec, fetchInitialCandles, supabase }) {
   const write = async (file, data) => {
@@ -25,13 +26,12 @@ export function dobCandleCache({ outDir, symbol, refresh, defaultStartSec, start
   };
   // Gleiche Ignore-Fenster wie markIgnored() im Dashboard.
   const sessions = async () => {
-    const file = path.join(outDir, `sessions-${symbol}.json`);
+    // v2: ältere Cache-Dateien haben kein highLowRelevant und würden die Session-Kante weiter still abschalten.
+    const file = path.join(outDir, `sessions-v2-${symbol}.json`);
     if (!refresh && existsSync(file)) return JSON.parse(await fs.readFile(file, 'utf8'));
-    const { data, error } = await supabase.from('sessions').select('label,danger,from_minutes,to_minutes,days,ignore_liquidity')
-      .eq('instrument', symbol).limit(200);
+    const { data, error } = await supabase.from('sessions').select(SESSION_ROW_COLUMNS).eq('instrument', symbol).limit(200);
     if (error) throw error;
-    const rows = data.map(r => ({ label: r.label, danger: r.danger, fromMinutes: r.from_minutes, toMinutes: r.to_minutes, days: r.days,
-      ignoreLiquidity: r.ignore_liquidity ?? false }));
+    const rows = data.map(sessionFromRow);
     await write(file, rows);
     return rows;
   };

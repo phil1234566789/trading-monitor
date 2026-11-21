@@ -86,7 +86,8 @@ describe('poi-watcher: M15-Checkpoint und optionaler Feed', () => {
     };
   }
   const row = (sec) => ({ time: new Date(sec * 1000).toISOString(), open: 1, high: 1, low: 1, close: 1, volume: 0 });
-  const now = Math.floor(Date.now() / 1000);
+  // Fester Mittwoch: am Wochenende verwirft isGoldWeekendPlaceholder die XAU-Testkerzen (O=H=L=C), Date.now() machte den Test samstags rot.
+  const now = Date.parse('2026-11-18T12:00:00Z') / 1000;
 
   it('fehlendes 15m (Gold-Collector) lässt 1H/M5 laufen, M15 fehlt nur in der Map', async () => {
     const batch = await fetchForexBatch(fakeDb({ '5m': [row(now - 60)], '1h': [row(now - 3600)], '4h': [row(now - 14400)] }), 'XAUUSD', now - 14400);

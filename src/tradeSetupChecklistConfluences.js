@@ -1,5 +1,6 @@
 import { detectRsiDivergenceHistory, DEFAULT_DIVERGENCE_FRACTAL_PERIOD, DEFAULT_RSI_PERIOD } from './rsi.js';
 import { detectOrderBlocks, candleTouchesOrderBlock } from './orderBlockDetection.js';
+import { obMinimum } from './instrumentConfig.js';
 import { closedChecklistCandles } from './tradeSetupChecklistTimeBasis.js';
 import { barSecondsForTimeframeCi } from './timeframes.js';
 import { formatDatedTime, formatBerlinTime } from './berlinTime.js';
@@ -125,8 +126,8 @@ export function evaluateChecklistConfluences({ evaluatedAt, direction, instrumen
         ? c.sweep.ageSeconds > main.sweep.ageSeconds : null, strengthComparison: 'unknown' }));
   }
   const obResults = [
-    detectChecklistOrderBlocks({ candles: h1Candles, timeframe: '1H', evaluatedAt, detectScanOrderBlocks, minGapOverride: minGapByTimeframe['1H'] }),
-    detectChecklistOrderBlocks({ candles: m5Candles, timeframe: '5m', evaluatedAt, detectScanOrderBlocks, minGapOverride: minGapByTimeframe['5m'] }),
+    detectChecklistOrderBlocks({ candles: h1Candles, timeframe: '1H', evaluatedAt, detectScanOrderBlocks, minGapOverride: minGapByTimeframe['1H'] ?? obMinimum(instrument, '1H') }),
+    detectChecklistOrderBlocks({ candles: m5Candles, timeframe: '5m', evaluatedAt, detectScanOrderBlocks, minGapOverride: minGapByTimeframe['5m'] ?? obMinimum(instrument, '5m') }),
   ];
   const obs = obResults.flatMap(r => r.candidates).filter(ob => !ob.invalidated);
   const orderBlockData = { '1H': obResults[0].status, '5m': obResults[1].status };

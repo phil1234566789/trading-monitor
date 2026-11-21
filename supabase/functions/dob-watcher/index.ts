@@ -1,7 +1,7 @@
 // DOB-Live-Watcher: jede Minute (pg_cron) checkDobTradeSetup() auf dem Fenster seit der letzten Tagespause, Alarm an Telegram
 // („Milky Land Alerts“, TELEGRAM_CHAT_ID). Erkennung und Texte kommen unverändert aus src/, damit Statistik und Alarm gleich rechnen.
 import {checkDobTradeSetup,dobDataAsOf,dobLiveWindowInput} from '../../../src/dobTradeSetup.js';
-import {markIgnoredCandles,htfObCandles} from '../../../src/sessionOccurrences.js';
+import {markIgnoredCandles,htfObCandles,SESSION_ROW_COLUMNS,sessionFromRow} from '../../../src/sessionOccurrences.js';
 import {berlinOffsetMinutes,berlinDateStrFor,formatBerlinTime} from '../../../src/berlinTime.js';
 import {insideEntryWindow} from '../../../src/orderBlockReaction.js';
 import {dobPoiTypeAlarmRuns,dobStaleAlarm} from '../../../src/dobAlarm.js';
@@ -120,8 +120,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const poiTypes=await Promise.all(configRows.map(async row=>{const guardrails=dobGuardrailsFromRow(row);
     return {poiType:row.poi_type,guardrails,blockStats:dry?row.blocked_stats:await blockStatsFor(client,instrument,row,guardrails)};}));
   if(!poiTypes.length){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'noConfig',error:null});return {skipped:'noConfig'};}
-  const sessions=(checked(await client.from('sessions').select('label,from_minutes,to_minutes,days,ignore_liquidity').eq('instrument',instrument).limit(200)) as any[])
-    .map(r=>({label:r.label,fromMinutes:r.from_minutes,toMinutes:r.to_minutes,days:r.days,ignoreLiquidity:r.ignore_liquidity??false}));
+  const sessions=(checked(await client.from('sessions').select(SESSION_ROW_COLUMNS).eq('instrument',instrument).limit(200)) as any[]).map(sessionFromRow);
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,instrument,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);

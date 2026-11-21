@@ -9,6 +9,8 @@
 // _shared importieren, aber diese Tools nicht). Bei Änderungen an der Erkennungslogik selbst
 // IMMER ALLE DREI Kopien nachziehen (src/orderBlockDetection.js, diese Datei, die MCP-lokale).
 import { applyPendingEdge, c1EdgeCandidate } from "./obSessionEdge.js";
+import { FOREX_MIN_FVG_PIPS as FOREX_MIN_FVG_PIPS_BY_TF } from "./instrumentConfig.js";
+const FOREX_MIN_FVG_PIPS: Record<string, number> = FOREX_MIN_FVG_PIPS_BY_TF;
 const IRRELEVANT_PCT = 0.05;
 
 // Lower-TF-Pip-Minimum aus src/orderBlocks.js portiert (Bug-Report Philip 2026-07-29: "egal
@@ -19,7 +21,6 @@ const IRRELEVANT_PCT = 0.05;
 // aber auch von detectSetupObs (tradeSetup.ts) für M5 genutzt. Bei Änderungen hier IMMER auch
 // src/orderBlocks.js nachziehen (und umgekehrt).
 const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
-const LOWER_TF_MIN_GAP_PIPS: Record<string, number> = { "1m": 1, "3m": 1, "5m": 0.4 };
 const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURUSD)
 
 // HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
@@ -28,7 +29,7 @@ const PIP_SIZE = 0.0001; // gilt für beide unterstützten FX-Paare (GBPUSD/EURU
 // Flag (Default true, da index.ts inzwischen ausschließlich Forex-Instrumente verarbeitet). Siehe
 // src/orderBlocks.js.
 const HTF_FOREX_LABELS = new Set(["15M", "1H", "4H"]);
-const HTF_FOREX_MIN_GAP_PIPS: Record<string, number> = { "15M": 1, "1H": 1, "4H": 4 }; // 1H von 4 über 1.5 auf 1, 4H von 8 auf 4 gesenkt, siehe src/orderBlockDetection.js
+// Werte in FOREX_MIN_FVG_PIPS (_shared/instrumentConfig.js), damit obMinimum und dieser Default nie auseinanderlaufen.
 
 // Float-Rundungs-Epsilon (Bug-Report Philip 2026-08-11), siehe src/orderBlockDetection.js für die
 // volle Herleitung: eine Gap, die real exakt der Pip-Schwelle entspricht, kann durch IEEE-754-
@@ -99,9 +100,9 @@ export function detectOrderBlocks(candles: Candle[], timeframe?: string, isForex
   const isHtfForexPip = isForex && timeframe != null && HTF_FOREX_LABELS.has(timeframe);
   // Gold-H1-Test: absoluter Preisabstand statt einer impliziten Forex-Pip-Umrechnung.
   const minGapAbs = minGapOverride ?? (isLowerTf
-    ? LOWER_TF_MIN_GAP_PIPS[timeframe!] * PIP_SIZE
+    ? FOREX_MIN_FVG_PIPS[timeframe!] * PIP_SIZE
     : isHtfForexPip
-      ? HTF_FOREX_MIN_GAP_PIPS[timeframe!] * PIP_SIZE
+      ? FOREX_MIN_FVG_PIPS[timeframe!] * PIP_SIZE
       : null);
 
   for (let i = 3; i < candles.length; i++) {

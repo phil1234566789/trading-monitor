@@ -169,6 +169,14 @@ export function sessionOccurrences(fromMinutes, toMinutes, rangeStartSec, rangeE
   return results;
 }
 
+// sessions-Zeile für die Kerzen-Markierung (Ignore-Fenster UND Session-Extreme). Ohne high_low_relevant markiert
+// htfObCandles keine Session-Kante, die HTF-OBs von dob-watcher und DOB-Läufen wichen so still von ob_zones ab.
+export const SESSION_ROW_COLUMNS = 'label,danger,from_minutes,to_minutes,days,ignore_liquidity,high_low_relevant';
+export function sessionFromRow(r) {
+  return { label: r.label, danger: r.danger, fromMinutes: r.from_minutes, toMinutes: r.to_minutes, days: r.days,
+    ignoreLiquidity: r.ignore_liquidity ?? false, highLowRelevant: r.high_low_relevant ?? false };
+}
+
 // Markiert die Kerzen, die in einer "Liquidität ignorieren"-Session liegen, mit `ignored: true` —
 // für die Spread Hour, deren breite Rollover-Dochte auf anderen Feeds gar nicht existieren und
 // deshalb weder ein Level erzeugen noch eines beenden sollen ("als ob die candles nicht da wären").

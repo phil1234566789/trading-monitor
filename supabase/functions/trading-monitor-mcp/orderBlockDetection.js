@@ -6,6 +6,7 @@
 // von hier und re-exportiert es, damit sich an dessen öffentlicher API nichts ändert.
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { applyPendingEdge, c1EdgeCandidate } from "../_shared/obSessionEdge.js";
+import { FOREX_MIN_FVG_PIPS } from "../_shared/instrumentConfig.js";
 
 export function candleTouchesOrderBlock(candle, zone) {
   return candle.low <= zone.top && candle.high >= zone.bottom;
@@ -26,7 +27,6 @@ const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone
 // M5 auf 0,5 Pip abgesenkt (Bug-Report Philip 2026-07-28: eine 0,7-Pip-FVG um 12:30 EURUSD wurde
 // vom 1-Pip-Minimum verschluckt) — M1/M3 bleiben bei 1 Pip, da nicht Anlass des Reports.
 const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
-const LOWER_TF_MIN_GAP_PIPS = { "1m": 1, "3m": 1, "5m": 0.4 };
 
 // HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei
 // EURUSD wurde von der 0,05%-Prozent-Schwelle verschluckt, ~5,7 Pip bei diesem Kurs nötig) — nicht
@@ -40,7 +40,7 @@ const HTF_FOREX_LABELS = new Set(["15M", "1H", "4H"]);
 // 07:00 wurde vom alten 4-Pip-Minimum verschluckt). 4H von 8 auf 4 gesenkt: 8 Pip lag sogar ueber
 // der abgeloesten Prozentschwelle (0,05% sind bei EURUSD ~5,7 Pip) und verschluckte tradebare
 // 4H-Zonen, zuletzt eine 6,1-Pip-FVG bei EURUSD.
-const HTF_FOREX_MIN_GAP_PIPS = { "15M": 1, "1H": 1, "4H": 4 };
+// Werte in FOREX_MIN_FVG_PIPS (_shared/instrumentConfig.js), damit obMinimum und dieser Default nie auseinanderlaufen.
 
 // Bug-Report Philip 2026-08-11, direkt im Anschluss an die 1,5-Pip-Absenkung oben: genau die Zone,
 // die die Absenkung freischalten sollte, blieb trotzdem verschluckt — ihre Gap ist real EXAKT 1,5
@@ -74,9 +74,9 @@ export function orderBlockState(timeframe,isForex,minGapOverride) {
   const isHtfForexPip = isForex && HTF_FOREX_LABELS.has(timeframe);
   // Gold-H1-Test: absoluter Preisabstand statt einer impliziten Forex-Pip-Umrechnung.
   const minGapAbs = minGapOverride ?? (isLowerTf
-    ? LOWER_TF_MIN_GAP_PIPS[timeframe] * PIP_SIZE
+    ? FOREX_MIN_FVG_PIPS[timeframe] * PIP_SIZE
     : isHtfForexPip
-      ? HTF_FOREX_MIN_GAP_PIPS[timeframe] * PIP_SIZE
+      ? FOREX_MIN_FVG_PIPS[timeframe] * PIP_SIZE
       : null);
 
   return {zones:[],isLowerTf,minGapAbs};

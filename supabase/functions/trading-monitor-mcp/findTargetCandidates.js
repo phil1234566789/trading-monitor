@@ -12,6 +12,7 @@ import { getLiquidityLevels, getObZones, getSessions } from "./db.ts";
 import { detectLiquidityLevels, filterRelevantLevels, LIQUIDITY_FRACTAL_PERIOD, LIQUIDITY_MAX_RELEVANT } from "../_shared/liquidityDetection.ts";
 import { markIgnored } from "../_shared/ignoredCandles.ts";
 import { detectOrderBlocks } from "./orderBlockDetection.js";
+import { obMinimum } from "../_shared/instrumentConfig.js";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { verifyLevelTouched, verifyZoneTouched } from "./verifyTouched.js";
 import { M5_DETECTION_LOOKBACK_HOURS, M5_DETECTION_CANDLE_BUFFER, M5_BAR_SECONDS, attachSessionContext } from "./tools/dataExport.ts";
@@ -129,7 +130,7 @@ export async function buildCandidatePool(instrument, currentTimeSec) {
   // ALLE live erkannten Zonen (auch invalidierte) — der !invalidated-Filter läuft weiter unten NACH
   // dem Merge, nicht hier, sonst hätte eine seither invalidierte Zone keinen Merge-Partner mehr und
   // der eingefrorene (falsche) DB-Stand würde unverändert durchrutschen (siehe Kommentar unten).
-  const m5ObAll = detectOrderBlocks(m5Candles, "5m", true).map((z) => ({
+  const m5ObAll = detectOrderBlocks(m5Candles, "5m", true, obMinimum(instrument, "5m")).map((z) => ({
     dir: z.dir,
     direction: z.dir === 1 ? "long" : "short",
     top: z.top,
