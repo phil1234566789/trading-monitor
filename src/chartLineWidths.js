@@ -25,6 +25,7 @@ export const DEFAULT_CHART_LINE_WIDTHS = {
   liquidityHighM5: 1,
   liquidityLowM5: 1,
   liquiditySweepM5: 1,
+  liquidityObSweepM5: 1,
   liquidityHigh1h: 1,
   liquidityLow1h: 1,
   liquiditySweep1h: 1,

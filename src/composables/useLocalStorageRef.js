@@ -12,7 +12,8 @@ const cache = new Map();
 // Persistiert einen ref-Wert in localStorage (JSON-serialisiert) — für die Dashboard-Toggles
 // (Historische OBs, Liquidität, Trendanalyse, ...), die ihren Zustand über Reloads hinweg
 // behalten sollen, statt bei jedem Neuladen auf die Default-Werte zurückzuspringen.
-export function useLocalStorageRef(key, defaultValue) {
+// legacyKey: alter Name eines umbenannten Toggles; sein Wert wird einmal übernommen, damit die Einstellung bleibt.
+export function useLocalStorageRef(key, defaultValue, { legacyKey } = {}) {
   const cached = cache.get(key);
   if (cached) return cached;
 
@@ -20,6 +21,11 @@ export function useLocalStorageRef(key, defaultValue) {
 
   let initial = defaultValue;
   try {
+    if (legacyKey && localStorage.getItem(storageKey) === null) {
+      const legacy = localStorage.getItem(STORAGE_PREFIX + legacyKey);
+      if (legacy !== null) localStorage.setItem(storageKey, legacy);
+      localStorage.removeItem(STORAGE_PREFIX + legacyKey);
+    }
     const raw = localStorage.getItem(storageKey);
     if (raw !== null) initial = JSON.parse(raw);
   } catch {

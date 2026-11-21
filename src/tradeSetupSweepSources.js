@@ -1,25 +1,15 @@
-import {liquidityTouch} from './liquidityDetection.js';
+// Sweep-Bestätigung/Supersession der Setup-Pipeline. Die Level selbst (Pivots und OB-Kanten) liefert der LQ-Algo
+// (liquidityDetection.js); hier wird nur geprüft, ob ein Sweep als LS gilt.
+import {liquidityTouch,detectOrderBlockLiquidityLevels} from './liquidityDetection.js';
 import {businessSecondsBetween} from './chartTimeUtils.js';
-import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
 import {tradeSetupSweepSourceKey as sweepSourceKey} from '../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
 export {sweepSourceKey};
 
-export function orderBlockSweepSources(obs,candles,dir,evaluatedAt) {
- const recognition=orderBlockRecognitionTimes(candles,'5m');
- return obs.filter(ob=>ob.dir===-dir&&recognition.get(ob.startTime)<=evaluatedAt).flatMap(ob=>{
-  const knownAt=recognition.get(ob.startTime),price=dir===1?ob.top:ob.bottom;
-  const touch=candles.find(c=>!c.ignored&&c.time>=knownAt&&c.time+300<=evaluatedAt&&liquidityTouch(c,price,dir));
-  return touch?[{sourceKind:'orderBlock',sourceStartTime:ob.startTime,sourceKnownAt:knownAt,
-   sourceDirection:ob.dir,sourceTop:ob.top,sourceBottom:ob.bottom,
-   price,dir,pivotTime:ob.startTime,touched:true,touchedTime:touch.time,endTime:touch.time}]:[];
- });
-}
-
 export function confirmedOrderBlockSweepSource(level,obs,candles,evaluatedAt) {
  const keys=['sourceKind','sourceStartTime','sourceKnownAt','sourceDirection','sourceTop','sourceBottom',
   'price','dir','pivotTime','touchedTime'];
- return orderBlockSweepSources(obs,candles,level.dir,evaluatedAt)
+ return detectOrderBlockLiquidityLevels(obs,candles,level.dir,evaluatedAt)
   .some(source=>keys.every(key=>source[key]===level[key]));
 }
 

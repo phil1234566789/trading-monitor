@@ -201,7 +201,7 @@ Noch nicht entschieden, nur skizziert:
 - **LQ-Levels, analoges Prinzip**: ein altes Level soll gezeichnet werden, wenn `indikator.liquidity`
   es AUCH erkannt/gezeichnet hätte, wären die nötigen Kerzen geladen gewesen — dieselbe
   Archiv-Nachlade-Logik wie bei OBs, kein eigenes Konzept.
-- **Notiert, nicht jetzt zu lösen**: der `showSweptLiquidity`-Toggle ("Indikator.liquidity.sweeps")
+- **Notiert, nicht jetzt zu lösen**: der `showPivotSweeps`-Toggle ("Indikator.liquidity.sweeps")
   zeigt laut Philip zu viele Linien an (aktuell ungefiltert, alle Pivots — siehe
   `PriceChart.vue:1485-1490`). Eigenes, separates Thema, hier nur geparkt.
 

@@ -3,7 +3,7 @@
 // Imports mit Endung. Vorher hatte jede Laufzeit ihre Kopie: das Backend nahm seit dem 28.07. noch
 // rohe H1-Fraktale (Periode 10) und nur das neueste Setup, der Chart die Marktstruktur-Pivots und
 // alle Setups — Chart und Telegram meldeten monatelang Verschiedenes (test/setup1ParityGuard.test.js).
-import { detectLiquidityLevels } from './liquidityDetection.js';
+import { detectLiquidityLevels, detectOrderBlockLiquidityLevels } from './liquidityDetection.js';
 import { detectSetupObs, detectTradeSetups } from './tradeSetup.js';
 import { tradeSetupParameters } from './tradeSetupParameters.js';
 import { obMinimum } from './instrumentConfig.js';
@@ -59,6 +59,14 @@ export function setup1Inputs(instrument, m5Candles, { sweepSourceProfile } = {})
   // Preis-Scans (Sweep-Bruch, Aufweiten aufs Extrem) lassen ignorierte Kerzen weg, die FVG-Erkennung nicht.
   return { params, minGap, m5Highs: highs, m5Lows: lows, setupObs: detectSetupObs(m5Candles, minGap),
     clean: m5Candles.filter((c) => !c.ignored), candles: m5Candles };
+}
+
+// OB-Kanten-Level mit denselben OBs und demselben Mindestabstand wie setup1Inputs, für den Chart-Toggle „OB Sweeps“.
+// evaluatedAt wie in detectTradeSetups: Schluss der letzten Kerze.
+export function setup1ObLiquidityLevels(instrument, m5Candles) {
+  if (!m5Candles.length) return [];
+  const obs = detectSetupObs(m5Candles, obMinimum(instrument, '5m')), evaluatedAt = m5Candles[m5Candles.length - 1].time + 300;
+  return [1, -1].flatMap((dir) => detectOrderBlockLiquidityLevels(obs, m5Candles, dir, evaluatedAt));
 }
 
 export function detectSetup1(inputs, h1Highs, h1Lows) {

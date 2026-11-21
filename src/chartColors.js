@@ -45,6 +45,8 @@ export const DEFAULT_CHART_COLORS = {
   liquidityHighM5: { hex: "#00e676", alpha: 0.9 },
   liquidityLowM5: { hex: "#ff9800", alpha: 0.9 },
   liquiditySweepM5: { hex: "#ffd700", alpha: 0.9 },
+  // OB Sweeps (gebrochene M5-OB-Kante, detectOrderBlockLiquidityLevels): eigene Farbe, damit sie neben den Pivot-Sweeps unterscheidbar sind.
+  liquidityObSweepM5: { hex: "#18ffff", alpha: 0.9 },
   liquidityHigh1h: { hex: "#00e676", alpha: 0.9 },
   liquidityLow1h: { hex: "#ff9800", alpha: 0.9 },
   liquiditySweep1h: { hex: "#ffd700", alpha: 0.9 },

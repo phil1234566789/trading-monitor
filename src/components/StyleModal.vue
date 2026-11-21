@@ -45,7 +45,8 @@ const GROUPS = [
     fields: [
       { key: "liquidityHighM5", label: "High-Level" },
       { key: "liquidityLowM5", label: "Low-Level" },
-      { key: "liquiditySweepM5", label: "Gesweept" },
+      { key: "liquiditySweepM5", label: "Pivot-Sweep" },
+      { key: "liquidityObSweepM5", label: "OB-Sweep" },
     ],
   },
   {
@@ -53,7 +54,7 @@ const GROUPS = [
     fields: [
       { key: "liquidityHigh1h", label: "High-Level" },
       { key: "liquidityLow1h", label: "Low-Level" },
-      { key: "liquiditySweep1h", label: "Gesweept" },
+      { key: "liquiditySweep1h", label: "Pivot-Sweep" },
     ],
   },
   {
@@ -61,7 +62,7 @@ const GROUPS = [
     fields: [
       { key: "liquidityHigh4h", label: "High-Level" },
       { key: "liquidityLow4h", label: "Low-Level" },
-      { key: "liquiditySweep4h", label: "Gesweept" },
+      { key: "liquiditySweep4h", label: "Pivot-Sweep" },
     ],
   },
   {

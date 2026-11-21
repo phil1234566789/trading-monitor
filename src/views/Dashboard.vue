@@ -169,7 +169,9 @@ const showLiquidity = useLocalStorageRef("showLiquidity", true);
 // einblenden und die aktuell ausgeblendeten (bereits gesweepten) Liquiditäts-Level
 // mitanzeigen. Beide default aus, um den Chart im Normalbetrieb nicht zuzumüllen.
 const showLiquidityDebug = useLocalStorageRef("showLiquidityDebug", false);
-const showSweptLiquidity = useLocalStorageRef("showSweptLiquidity", false);
+const showPivotSweeps = useLocalStorageRef("showPivotSweeps", false, { legacyKey: "showSweptLiquidity" });
+// Jede gebrochene M5-OB-Kante (LQ-Algo), auch ohne Setup.
+const showObSweeps = useLocalStorageRef("showObSweeps", false);
 // Liquidität 2.0: nur starke LS (liquidity2.js), eigener Toggle neben dem alten Algo für den Vorher/Nachher-Vergleich.
 const showLiquidity2 = useLocalStorageRef("showLiquidity2", false);
 const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
@@ -1527,7 +1529,7 @@ async function stepReplayForward() {
   }
 }
 
-// Toolbar wurde zu voll (siehe Chat) -> Liquidity-Sweeps unter "Liquidität", Periode/Lookback
+// Toolbar wurde zu voll (siehe Chat) -> Pivot/OB Sweeps unter "Liquidität", Periode/Lookback
 // unter "Structure" als Dropdown. Reiner UI-Zustand, bewusst NICHT in localStorage (anders als die
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
 const rsiMenuOpen = ref(false);
@@ -1551,7 +1553,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showLiquidity2, showObsM5, showObs15m, showObs1h, showObs4h, showHistoricalObs, showObsM1,showDoubleOrderBlocks];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showPivotSweeps, showObSweeps, showLiquidity2, showObsM5, showObs15m, showObs1h, showObs4h, showHistoricalObs, showObsM1,showDoubleOrderBlocks];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 // War bis 2026-08-30 eine reine JS-Variable (nicht in localStorage) — ein Reload zwischen
 // Ausblenden und Wieder-Einblenden (z.B. Tab zu/wieder auf am nächsten Handelstag) verlor den
@@ -1568,7 +1570,8 @@ function toggleIndikatoren() {
     showRsiDivergence.value = false;
     showRsiDivergenceHistory.value = false;
     showLiquidity.value = true;
-    showSweptLiquidity.value = false;
+    showPivotSweeps.value = false;
+    showObSweeps.value = false;
     showObsM1.value = false;
     showObsM5.value = false;
     showObs15m.value = false;
@@ -1931,8 +1934,11 @@ watch(selectedTradingAccountId, () => {
               ▾
             </ToggleButton>
             <div v-if="liquidityMenuOpen" class="toggle-dropdown">
-              <ToggleButton variant="menu" :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
-                Liquidity-Sweeps
+              <ToggleButton variant="menu" :class="{ active: showPivotSweeps }" @click="showPivotSweeps = !showPivotSweeps">
+                Pivot Sweeps
+              </ToggleButton>
+              <ToggleButton variant="menu" :class="{ active: showObSweeps }" title="Gebrochene M5-OB-Kanten, auch ohne Setup (nur im M5-Chart)" @click="showObSweeps = !showObSweeps">
+                OB Sweeps
               </ToggleButton>
             </div>
           </div>
@@ -2402,7 +2408,8 @@ watch(selectedTradingAccountId, () => {
     :show-obs-4h="showObs4h"
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
-    :show-swept-liquidity="showSweptLiquidity"
+    :show-pivot-sweeps="showPivotSweeps"
+    :show-ob-sweeps="showObSweeps"
     :show-liquidity2="showLiquidity2"
     :show-liquidity-debug="showLiquidityDebug"
     :show-trade-setups="showTradeSetups"

@@ -381,7 +381,8 @@ function levelOptions(lvl, { debugPrices, formatPrice, nowSec, inPinContext, isS
   const tfCategory = liquidityStyleTimeframe(lvl.timeframe);
   const isHtf = tfCategory !== "M5";
   const base = lvl.touched ? "liquiditySweep" : lvl.dir === 1 ? "liquidityHigh" : "liquidityLow";
-  const key = LIQUIDITY_STYLE_KEYS[tfCategory][base];
+  // OB-Kanten-Level gibt es nur auf M5 und nur gesweept, deshalb ein eigener Schlüssel statt eines Satzes je Timeframe.
+  const key = lvl.sourceKind === "orderBlock" ? "liquidityObSweepM5" : LIQUIDITY_STYLE_KEYS[tfCategory][base];
   // Das Level, an dem die Dealing-Range-Idee stirbt, trägt Farbe und 🚫 der Invalidierung statt
   // seiner normalen LQ-Farbe (Philip 22.09.2026) — sonst wäre am Chart nicht zu sehen, WELCHES der
   // sichtbaren Level die Invalidierung ist. Gleiches Präfix wie die Invalidierungs-Linie an einem
