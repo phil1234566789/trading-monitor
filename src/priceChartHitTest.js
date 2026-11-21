@@ -11,6 +11,7 @@
 // -Divergence dort.
 import { OrderBlockPrimitive, orderBlockEndTime } from "./orderBlocks.js";
 import {isChartOrderBlockTimeframe} from './chartOrderBlockPin.js';
+import { chartObjectPinCandidates, hasChartObjectPinCandidate } from "./chartObjectRegistry.js";
 
 // Trade-Modus-Klick-Hittest (Chat 2026-07-27) — testet gegen genau die Box, die
 // renderTradeSetupsInternal (PriceChart.vue) tatsächlich zeichnet (obTop/obBottom +
@@ -187,8 +188,10 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
     divergencePrimitives,
     tscSetupPrimitives,
     doubleOrderBlockCandidates=[],
+    chartObjectSources=[],
   } = primitives;
-  const candidates = [...doubleOrderBlockCandidates];
+  // Generische Registry-Objekte (kind='chart_object', siehe chartObjectRegistry.js) — neue Arten brauchen hier keinen Zweig.
+  const candidates = [...doubleOrderBlockCandidates, ...chartObjectPinCandidates(x, y, chartObjectSources, { symbol, currentBar }, radius)];
   for (const p of tradePrimitives) {
     const distance = p.distanceTo(x, y);
     if (distance <= radius) candidates.push({ kind: "trade_position", trade: p.trade, distance });
@@ -307,6 +310,7 @@ export function findNearbyPinCandidates(x, y, primitives, { symbol, currentBar }
   // Kandidat mehrfach in der Liste auf ("Short-Setup #105" zweimal).
   const candidateKey = (c) => {
     if(c.kind==='double_order_block')return `double_order_block:${c.dobContext.pair.id}`;
+    if (c.kind === "chart_object") return `chart_object:${c.type}:${c.key}`;
     if (c.kind === "trade_position") return `trade_position:${c.trade.id}`;
     if (c.kind === "ob_zone") return `ob_zone:${c.zone.timeframe}|${c.zone.dir}|${c.zone.startTime}`;
     if (c.kind === "chart_ob") return `chart_ob:${c.zone.timeframe}|${c.zone.dirNum}|${c.zone.top}|${c.zone.bottom}|${c.zone.startTime}`;
@@ -341,9 +345,11 @@ export function hasNearbyPinCandidate(x, y, primitives, radius = PIN_SEARCH_RADI
     divergencePrimitives,
     tscSetupPrimitives,
     doubleOrderBlockCandidates=[],
+    chartObjectSources=[],
   } = primitives;
   return (
     doubleOrderBlockCandidates.some(c=>c.distance<=radius)||
+    hasChartObjectPinCandidate(x, y, chartObjectSources, radius) ||
     tradePrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
     orderBlockPrimitives.some((p) => p.distanceTo(x, y) <= radius) ||
     tradeSetupLinkPrimitives.some((p) => p.distanceTo(x, y) <= radius) ||

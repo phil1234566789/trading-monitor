@@ -42,6 +42,8 @@ export function usePriceChartLiquidity() {
   const liquidityMetadata = ref(null);
   const liquidityEarliestTime = ref(null);
 
+  const chartObjectPinSources = [liquidity2.pinSource];
+
   function getCurrentLiquidityLevels() {
     return currentLiquidityLevels;
   }
@@ -151,6 +153,7 @@ export function usePriceChartLiquidity() {
     liquidityMetadata,
     liquidityEarliestTime,
     liquidityPrimitives,
+    chartObjectPinSources,
     getCurrentLiquidityLevels,
     create,
     dispose,

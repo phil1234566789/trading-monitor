@@ -43,6 +43,7 @@ const ROW_COLUMNS =
   "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
   "rsi_divergence_instrument, rsi_divergence_type, rsi_divergence_from_time, rsi_divergence_to_time, " +
   "rsi_divergence_from_price, rsi_divergence_to_price, rsi_divergence_from_rsi, rsi_divergence_to_rsi, " +
+  "chart_object_type, chart_object_key, chart_object_instrument, chart_object_timeframe, chart_object_snapshot, " +
   "live_snapshot_id, live_event_id, simulation_run_id, simulation_snapshot_id, simulation_entry_snapshot_id, simulation_checkpoint_key, simulation_variant, simulation_pin_key, simulation_context, pin_type, note, created_at, " +
   // end_time (Chat 2026-08-18, siehe Task "Pin-Kontext: gepinnte Objekte direkt rendern") — für die
   // Direkt-Rendering-Fallback-Box/-Linie eines gepinnten ob_zone/liquidity_level (siehe
@@ -121,6 +122,12 @@ function toEntry(row) {
             fromRsi: row.rsi_divergence_from_rsi,
             toRsi: row.rsi_divergence_to_rsi,
           }
+        : null,
+    // Generischer Registry-Pin (siehe chartObjectRegistry.js): Typ + eingefrorener Snapshot statt eigener Spalten.
+    chartObject:
+      row.kind === "chart_object"
+        ? { type: row.chart_object_type, key: row.chart_object_key, instrument: row.chart_object_instrument,
+            timeframe: row.chart_object_timeframe, snapshot: row.chart_object_snapshot }
         : null,
     obZone: row.ob_zones
       ? {
@@ -283,6 +290,22 @@ export async function addPinChartObEntry(zone, note, pinType) {
   });
   if (obZoneId == null) return null;
   return addPinEntry("ob_zone", obZoneId, note, pinType);
+}
+
+// Einziger Speicherweg für alle Registry-Chartobjekte (Kandidat aus chartObjectPinCandidates). Erneutes Pinnen
+// desselben Objekts aktualisiert Notiz, Typ und Snapshot statt einen zweiten Pin anzulegen.
+export async function addPinChartObject({ type, key, instrument, timeframe, snapshot }, note, pinType) {
+  const { data, error } = await supabase
+    .from("pin_context")
+    .upsert(
+      { kind: "chart_object", chart_object_type: type, chart_object_key: key, chart_object_instrument: instrument,
+        chart_object_timeframe: timeframe, chart_object_snapshot: snapshot, note: note || null, ...pinTypeFields(pinType) },
+      { onConflict: "chart_object_type,chart_object_key" },
+    )
+    .select(ROW_COLUMNS)
+    .single();
+  if (error) throw error;
+  return toEntry(data);
 }
 
 export async function addPinDoubleOrderBlock(snapshot,note,pinType) {
