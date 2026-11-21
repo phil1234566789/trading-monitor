@@ -69,7 +69,6 @@ export function detectSetup1(inputs, h1Highs, h1Lows) {
   };
 }
 
-export { TRADE_SETUP_TS11_SOURCE_VERSION } from '../supabase/functions/_shared/tradeSetupProvenance.js';
 
 // Alarmfähig ist nur, was höchstens maxLookbackSec alt ist; der Chart zeigt auch Älteres als Historie.
 export function setup1AlarmCandidates({ shorts, longs }, params) {

@@ -13,7 +13,8 @@ import { detectLiquidityLevels as frontendFractals } from '../src/liquidity.js';
 import { setup1Inputs, detectSetup1, TRADE_SETUP_M5_CANDLE_COUNT } from '../src/setup1Detection.js';
 import { TRADE_SETUP_OB_SWEEP_PROFILE } from '../src/tradeSetup.js';
 import { filterTradeSetup11Candidates } from '../src/tradeSetup11.js';
-import { tradeSetup11RowVerdicts } from '../src/tradeSetup11Rows.js';
+import { tradeSetupToRow } from '../src/tradeSetupRow.js';
+import { computeTs11Verdicts } from '../supabase/functions/_shared/ts11Verdicts.ts';
 import { detectLiveSetup1 } from '../supabase/functions/_shared/setup1Live.ts';
 import { markIgnored as backendMarkIgnored } from '../supabase/functions/_shared/ignoredCandles.ts';
 import { detectLiquidityLevels as backendFractals } from '../supabase/functions/_shared/liquidity.ts';
@@ -48,16 +49,6 @@ function chartH1Levels(f, h1, t, startSec) {
 
 const setupKey = (s) => ({ key: `${s.dir}:${s.obStartTime}`, ls: [s.ls.price, s.ls.pivotTime, s.ls.touchedTime],
   sweeps: s.sweeps.map((sw) => `${sw.timeframe}:${sw.level.price}:${sw.level.pivotTime}`), ob: [s.obTop, s.obBottom, s.obFvg] });
-
-// Wie poi-watcher die Zeile schreibt (trade_setups + trade_setup_sweeps), damit dob-watcher sie liest.
-const asRow = (instrument, s, id, createdAt) => {
-  const iso = (t) => new Date(t * 1000).toISOString();
-  return { id, instrument, direction: s.dir === 1 ? 'short' : 'long', fractal_price: s.fractal.price, fractal_pivot_time: iso(s.fractal.pivotTime),
-    ls_price: s.ls.price, ls_pivot_time: iso(s.ls.pivotTime), ls_touched_time: iso(s.ls.touchedTime), ls_timeframe: s.sweeps[0].timeframe,
-    ob_top: s.obTop, ob_bottom: s.obBottom, ob_fvg: s.obFvg, ob_start_time: iso(s.obStartTime), created_at: iso(createdAt),
-    trade_setup_sweeps: s.sweeps.map((sw, i) => ({ price: sw.level.price, timeframe: sw.timeframe, is_primary: i === 0,
-      pivot_time: iso(sw.level.pivotTime), touched_time: iso(sw.level.touchedTime) })) };
-};
 
 describe.each(fixtures)('$instrument 20.11.2026', (f) => {
   const sessionsFront = f.sessions.map((r) => ({ ...sessionFromRow(r), instrument: f.instrument }));
@@ -120,20 +111,30 @@ describe.each(fixtures)('$instrument 20.11.2026', (f) => {
     expect([...day.backend.values()].map(({ s }) => setupKey(s))).toEqual([...day.chart.values()].map(setupKey));
   });
 
-  it('TS1.1: jeder TS1.1-Kandidat des Charts steht als poi-watcher-Zeile und bekommt im dob-watcher dasselbe Urteil', () => {
-    const m5 = m5All.filter((c) => c.time + 300 <= f.evaluatedAt), h1 = h1All, d1 = rows(f.d1);
-    const sessionConfigs = f.sessions.map(sessionFromRow);
-    const input = { instrument: f.instrument, m5Candles: m5, h1Candles: h1, d1Candles: d1, evaluatedAt: f.evaluatedAt, settings: {}, sessionConfigs };
+  it('TS1.1: jeder TS1.1-Kandidat des Charts steht als poi-watcher-Zeile; dob-watcher, Protokoll und MCP urteilen wie der Chart', async () => {
+    const d1 = rows(f.d1), sessionConfigs = f.sessions.map(sessionFromRow);
+    // Kerzen-Loader wie dob-watcher/MCP: nur geschlossene Kerzen bis evaluatedAt, die letzten `count`.
+    const bySec = { '5m': [m5All, 300], '1h': [h1All, 3600], '1D': [d1, 86400] };
+    const load = async (bar, count) => bySec[bar][0].filter((c) => c.time + bySec[bar][1] <= f.evaluatedAt).slice(-count);
+    const judge = async (stored, createdAt) => {
+      const verdicts = await computeTs11Verdicts({ rows: stored.map((x, i) => tradeSetupToRow(x.s, { id: i, instrument: f.instrument, createdAt: createdAt(x) })),
+        instrument: f.instrument, evaluatedAt: f.evaluatedAt, sessionConfigs, load });
+      return new Map(stored.map(({ s }, i) => [`${s.dir}:${s.obStartTime}`, verdicts.get(i)?.status]));
+    };
     // Setup-1-Zeilen plus die TS1.1-only-Zeilen (OB-Sweep-Quellen), die poi-watcher seit 21.11.2026 mitspeichert.
     const stored = [...day.backend.values(), ...day.backendTs11.values()].filter(({ s }) => s.obStartTime >= f.dayStart);
-    const verdicts = tradeSetup11RowVerdicts({ ...input, rows: stored.map(({ s, t }, i) => asRow(f.instrument, s, i + 1, t)) });
-    const watcher = new Map(stored.map(({ s }, i) => [`${s.dir}:${s.obStartTime}`, verdicts.get(i + 1)?.status]));
-    const chart = filterTradeSetup11Candidates({ ...input, setups: [...day.chartTs11.values()], sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
+    const watcher = await judge(stored, ({ t }) => t); // created_at = erster poi-watcher-Lauf mit dem Setup
+    const snapshot = await judge(stored, ({ s }) => s.obStartTime + 600); // get_data_snapshot: frisch erkannt, ohne Zeile
+    const m5 = m5All.filter((c) => c.time + 300 <= f.evaluatedAt);
+    const chart = filterTradeSetup11Candidates({ instrument: f.instrument, m5Candles: m5, h1Candles: h1All, d1Candles: d1, evaluatedAt: f.evaluatedAt,
+      settings: {}, sessionConfigs, setups: [...day.chartTs11.values()], sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
     const chartStatus = new Map(chart.assessments.map((a) => [`${a.setup.dir}:${a.setup.obStartTime}`, a.status]));
     expect(chartStatus.size).toBeGreaterThan(0);
     // Jeder Chart-Kandidat muss gespeichert sein; umgekehrt gibt es keine Zeile, die der Chart nicht als TS1.1-Kandidat kennt.
     const keys = [...new Set([...chartStatus.keys(), ...watcher.keys()])].sort();
-    expect(keys.map((k) => [k, watcher.get(k) ?? 'nicht gespeichert'])).toEqual(keys.map((k) => [k, chartStatus.get(k) ?? 'nicht im Chart']));
+    const expected = keys.map((k) => [k, chartStatus.get(k) ?? 'nicht im Chart']);
+    expect(keys.map((k) => [k, watcher.get(k) ?? 'nicht gespeichert'])).toEqual(expected);
+    expect(keys.map((k) => [k, snapshot.get(k) ?? 'nicht gespeichert'])).toEqual(expected);
   });
 });
 
@@ -199,4 +200,13 @@ it('Chart-Hinweis "Struktur weicht vom Alarm ab" folgt derselben Konstante wie d
   const dashboard = readFileSync(join(ROOT, 'src/views/Dashboard.vue'), 'utf8');
   for (const key of Object.keys(SETUP1_STRUCTURE_SETTINGS))
     expect(dashboard, key).toContain(`useLocalStorageRef("${key}", SETUP1_STRUCTURE_SETTINGS.${key})`);
+});
+
+it('TS1.0 ist abgebaut: kein eigener Setup-1-Alarm, Setup-Listen zeigen nur TS1.1-Urteile', () => {
+  const src = Object.fromEntries(sources());
+  expect(src['src/alarmSettings.js']).not.toMatch(/key:\s*["']trade_setup["']/);
+  expect(src['supabase/functions/poi-watcher/index.ts']).not.toMatch(/isAlarmOn\(\s*["']trade_setup["']\s*\)/);
+  expect(src['src/alarmLog.js']).toMatch(/trade_setup_ts11_verdicts!inner[\s\S]*status["'],\s*["']passed/);
+  expect(src['supabase/functions/trading-monitor-mcp/tools/reads.ts']).toMatch(/getTs11TradeSetups\(/);
+  expect(src['supabase/functions/trading-monitor-mcp/tools/dataSnapshot.ts']).toMatch(/passedTs11Setups\(/);
 });

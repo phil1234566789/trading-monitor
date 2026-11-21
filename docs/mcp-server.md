@@ -65,10 +65,9 @@ dupliziert: `_shared/berlinTime.ts` (Berlin-Zeitzonen-Datumsmathe aus `dataExpor
 `validateAnnotations` (aus `src/annotations.js`s `validateAnnotationList`). Wird eines der
 Originale geändert, prüfen ob der Port hier denselben Fix braucht.
 
-`berlinTime.ts`/`sessionOccurrences.js`/`pipConfig.js` lagen bis 09/2026 direkt in diesem Ordner
-und liegen seitdem in `_shared/` — `poi-watcher` braucht dieselben Bausteine für sein
-Forbidden-Session-Gate, und `_shared/` ist die einzige Cross-Function-Grenze im Repo (eine dritte
-Kopie wäre die Alternative gewesen).
+`berlinTime.ts`/`sessionOccurrences.js`/`pipConfig.js` liegen in `_shared/`, weil mehrere Functions sie
+teilen. Erkennungscode (Setup 1/TS1.1, Fraktale) importieren die Functions direkt aus `src/` (siehe
+CLAUDE.md „Two runtimes, one detection“), statt eine weitere Kopie zu führen.
 
 ## Trade-Journal-Write-Tools (`tools/trades.ts`)
 

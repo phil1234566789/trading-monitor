@@ -73,3 +73,18 @@ export function tradeSetupFromRow(row) {
   };
 }
 
+
+// Gegenstück zu tradeSetupFromRow: die Erkennungsfelder einer trade_setups-Zeile (wie poi-watcher sie
+// schreibt) plus trade_setup_sweeps. Damit urteilt TS1.1 über ein frisch erkanntes Setup (get_data_snapshot)
+// mit derselben Funktion wie über eine gespeicherte Zeile (tradeSetup11RowVerdicts, dob-watcher).
+/** @param {any} setup @param {{ id?: any, instrument: string, createdAt?: number | null }} options */
+export function tradeSetupToRow(setup, { id = null, instrument, createdAt = null }) {
+  const iso = (t) => new Date(t * 1000).toISOString();
+  return { id, instrument, direction: setup.dir === 1 ? 'short' : 'long',
+    fractal_price: setup.fractal.price, fractal_pivot_time: iso(setup.fractal.pivotTime),
+    ls_price: setup.ls.price, ls_pivot_time: iso(setup.ls.pivotTime), ls_touched_time: iso(setup.ls.touchedTime),
+    ls_timeframe: setup.sweeps[0].timeframe, ob_top: setup.obTop, ob_bottom: setup.obBottom, ob_fvg: setup.obFvg,
+    ob_start_time: iso(setup.obStartTime), ...(createdAt == null ? {} : { created_at: iso(createdAt) }),
+    trade_setup_sweeps: strongestSetupSweeps(setup.sweeps).map((sw, i) => ({ price: sw.level.price, timeframe: sw.timeframe,
+      is_primary: i === 0, pivot_time: iso(sw.level.pivotTime), touched_time: iso(sw.level.touchedTime) })) };
+}

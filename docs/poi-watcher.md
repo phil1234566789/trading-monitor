@@ -22,19 +22,11 @@ Rest normal weiter. Der Alarm `ob_zone_15m` startet ausgeschaltet.
 
 Betrieb, historische Abdeckung und Wiederherstellung: [FXCM-Feed](fxcm-feed.md).
 
-## Forbidden-Session-Gate für Trade-Setup-Alarme
+## Trade-Setups: speichern, nicht alarmieren
 
-Der Chart versteckt Trade-Setups, deren bestätigender M5-OB in einer `danger='forbidden'`-Session
-entstanden ist (Asia, Spread Hour, Weekend Gap — Sessions-Modal). `poi-watcher` kannte die
-`sessions`-Tabelle lange nicht und alarmierte sie trotzdem: 40 von 432 alarmierten Zeilen im
-Bestand (22.09.2026), weil ein in Asia entstandenes Setup erst beim ersten Tick im Alarmfenster
-gemeldet wird — `ob_start_time` liegt dann im verbotenen Fenster, `notified_at` nicht.
-
-Seit 09/2026 gated `forbiddenSessionAt` (`_shared/forbiddenSession.ts`) den `alertNow`-Zweig über
-`ob_start_time`, exakt wie `notForbidden` in `usePriceChartTradeSetups.js`. Die `trade_setups`-Zeile
-entsteht weiterhin (`analysis/dr-reichweite/` wertet den Bestand aus, ein stilles Loch darin wäre
-schlimmer als ein stiller Alarm) — nur `notified` bleibt `false`. Das Run-Summary zählt die
-unterdrückten Setups unter `tradeSetups.forbiddenSession`.
-
-`caution` (MMM) zählt bewusst nicht als Sperre. Das Gate gilt nur für Trade-Setups, nicht für die
-`ob_zones`/`liquidity_levels`-Touch-Alarme — der Chart filtert dort ebenfalls nicht.
+`poi-watcher` erkennt Setups mit derselben Pipeline wie der Chart (`src/setup1Detection.js` über
+`_shared/setup1Live.ts`) und speichert sie in `trade_setups`: die Setup-1-Erkennung plus die
+TS1.1-Kandidaten, die erst die OB-Sweep-Quellen finden. Die Zeilen sind die Basis für TS1.1 (Chart,
+`dob-watcher`-LQ-Sweep-POI, MCP `get_trade_setups`/`get_data_snapshot`, Alarm-Protokoll). Einen
+eigenen Telegram für diese Setups gibt es nicht; das TS1.1-Urteil cacht `dob-watcher` in
+`trade_setup_ts11_verdicts`.

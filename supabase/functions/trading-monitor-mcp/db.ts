@@ -2,7 +2,6 @@ import { reconstructObLifecycle } from "../_shared/obReplayLifecycle.ts";
 import { pinTypeFields, type PinType } from './pinType.ts';
 import {persistDoubleOrderBlockPin,upsertM5ObZoneId} from '../_shared/doubleOrderBlockPinStore.js';
 import {assertTradeSetupSourceSnapshot} from '../_shared/tradeSetupSourceSnapshot.js';
-import { setup1RowsOnly } from '../_shared/tradeSetupProvenance.js';
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { berlinDayRangeUtcMs } from "../_shared/berlinTime.ts";
@@ -174,42 +173,6 @@ export async function getLatestDailyStructureStartTime(instrument: string, asOfS
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ? Math.floor(new Date(data.structure_start_time as string).getTime() / 1000) : null;
-}
-
-// Bug-Report Philip 2026-08-30: ein GBPUSD-Call lief ohne jede Eingrenzung über das Token-Limit
-// (143k Zeichen/4410 Zeilen, musste in eine Datei umgeleitet werden) — fromSec/limit analog zu
-// get_near_relevant_liquidity_levels. limit hat auch OHNE fromSec einen Default (50), damit der
-// Fall strukturell nicht wieder auftreten kann.
-// replayUntilSec (Bug-Report Philip 2026-08-30, GBPUSD-Backtest bis 08:45): das Tool war bis dahin
-// nicht replay-aware — Setups, deren `created_at` (poi-watcher-Erkennungszeitpunkt) weit NACH dem
-// Replay-Cutoff lag, kamen trotzdem zurück, weil nur nach dem Fraktal-Pivot gefiltert wurde
-// (ein Setup kann live erst Stunden nach seinem Fraktal-Pivot erkannt werden, sobald der
-// bestätigende OB entsteht). Filtert auf `created_at` — sonst sähe ein Replay-Snapshot ein Setup,
-// dessen bestätigender OB (und damit die ganze Zeile) erst nach dem simulierten Zeitpunkt
-// entstanden ist.
-// Default 2 (Philip 2026-08-30, Nachbesserung zum obigen Bug-Report): "sie braucht ja nicht die
-// letzten 100 setups, die letzten 2 reichen ja" — 50 war schon ein Fix gegen das Token-Limit, aber
-// für den Normalfall (kurzer Blick auf die juengsten Setups) weiterhin deutlich mehr als noetig. Ein
-// expliziter hoeherer limit-Wert bleibt fuer breitere Abfragen moeglich (max. 500), nur der Default sinkt.
-// Sortierung UND fromSec-Grenze gehen auf `ob_start_time`, nicht auf `fractal_pivot_time`
-// (Bug-Report Philip 2026-08-31, GBPUSD-Backtest 28.08.: ein frisches Setup ohne bestätigtes
-// Fraktal, dessen `fractal_pivot_time` = `ls_pivot_time` eines alten Hochs war, fiel aus den
-// "letzten N" raus, obwohl sein bestätigender OB erst Minuten alt war — siehe tradeSetup.ts:
-// `fractal` fällt dort auf `ls` zurück, dessen Pivot beliebig alt sein kann). `ob_start_time`
-// markiert dagegen immer den tatsächlichen Bestätigungszeitpunkt und ist seit 2026-09-20 auch
-// der natürliche Schlüssel der Tabelle.
-export async function getTradeSetups(instrument: string, fromSec?: number, limit = 2, replayUntilSec?: number) {
-  let query = setup1RowsOnly(supabase
-    .from("trade_setups")
-    .select("*")
-    .eq("instrument", instrument)
-    .order("ob_start_time", { ascending: false })
-    .limit(limit));
-  if (fromSec != null) query = query.gte("ob_start_time", new Date(fromSec * 1000).toISOString());
-  if (replayUntilSec != null) query = query.lte("created_at", new Date(replayUntilSec * 1000).toISOString());
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return data ?? [];
 }
 
 // get_data_snapshot (Task "Live-Trade-Setup-Erkennung serverseitig für Lana", 2026-09-05): seither

@@ -1,11 +1,5 @@
 const SOURCES = new Set(['live', 'backfill', 'rebuild', 'manual']);
 
-// detector_version der TS1.1-Kandidaten, die erst die OB-Sweep-Quellen finden: poi-watcher speichert sie für
-// dob-watcher mit (Philip 21.11.2026), sie sind aber kein Setup 1 — kein Setup-1-Alarm, nicht in Setup-1-Listen.
-export const TRADE_SETUP_TS11_SOURCE_VERSION = 'setup1-ts11-ob-sweep-sources-v1';
-// Setup-1-Lesern die TS1.1-only-Zeilen nehmen. Nicht .neq(): das verwirft auch Zeilen ohne detector_version.
-export const setup1RowsOnly = (query) => query.or(`detector_version.is.null,detector_version.neq.${TRADE_SETUP_TS11_SOURCE_VERSION}`);
-
 function canonical(value) {
   if (typeof value === 'number' && !Number.isFinite(value)) return { number: String(value) };
   if (Array.isArray(value)) return value.map(canonical);

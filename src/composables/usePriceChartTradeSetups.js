@@ -17,7 +17,7 @@
 // würde zirkuläre Abhängigkeiten zwischen den Composables erzeugen. scheduleNextTradeSetupM5Poll
 // bleibt aus demselben Grund ebenfalls dort (hängt an withPollRetries + chart-alive-Check).
 import { ref } from "vue";
-import { setup1Inputs, setup1H1Levels, detectSetup1, TRADE_SETUP_TS11_SOURCE_VERSION } from "../setup1Detection.js";
+import { setup1Inputs, setup1H1Levels, detectSetup1 } from "../setup1Detection.js";
 import { TRADE_SETUP_DETECTOR_VERSION, hasUninterruptedSweepReaction } from "../tradeSetup.js";
 import { setup1Configuration } from '../../supabase/functions/_shared/tradeSetupProvenance.js';
 import { mergeDbTradeSetups } from "../tradeSetups.js";
@@ -107,9 +107,7 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
     // tradeSetups.js) dazu, BEVOR keep/takeLast greifen — sonst wäre die Historie-Begrenzung
     // wirkungslos. Symbol-Filter, weil der Poll nach einem Symbolwechsel kurz noch die Setups des
     // vorherigen Instruments hält (gleicher Grund wie filterDbObZones).
-    // TS1.1-only-Zeilen (OB-Sweep-Quellen) gehören nur in die TS1.1-Ansicht, nicht zu Setup 1.
-    const ownRow = (s) => sweepSourceProfile || s.detectorVersion !== TRADE_SETUP_TS11_SOURCE_VERSION;
-    const dbFor = (dir) => dbTradeSetups.filter((s) => s.instrument === symbol && s.dir === dir && ownRow(s));
+    const dbFor = (dir) => dbTradeSetups.filter((s) => s.instrument === symbol && s.dir === dir);
     const merged = [
       ...mergeDbTradeSetups(shorts, dbFor(1)),
       ...mergeDbTradeSetups(longs, dbFor(-1)),

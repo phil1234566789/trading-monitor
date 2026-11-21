@@ -13,7 +13,7 @@ import {dobGuardrailsFromRow,dobEntryRule} from '../../../src/dobGuardrails.js';
 import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
 import {dobTs11FromRow} from '../../../src/dobLqSweepPoi.js';
-import {tradeSetup11RowVerdicts,tradeSetup11M5Start,TRADE_SETUP_11_VERSION} from '../../../src/tradeSetup11Rows.js';
+import {computeTs11Verdicts,TRADE_SETUP_11_VERSION} from '../_shared/ts11Verdicts.ts';
 import {secretMatches} from '../_shared/setup2Notifications.js';
 import {flushDobOutbox} from '../_shared/dobDelivery.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
@@ -27,7 +27,6 @@ const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
 const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
 const BAR_SECONDS: Record<string,number>={'1m':60,'5m':300,'1h':3600,'4h':14400,'1D':86400};
 // TS1.1-Trendkontext wie der Chart (tradeSetup11ContextLoader: 300 D1, M5 ab dem D1-Anker, höchstens 15000).
-const TS11_D1=300,TS11_MAX_M5=15000;
 // ponytail: ein neues TS1.1-Urteil je Tick über alle Instrumente (Edge-CPU-Limit); fehlende gelten bis dahin
 // nicht als TS1.1, d. h. ein LQ-Sweep-Alarm kommt höchstens ein paar Minuten später, nie fälschlich.
 const TS11_PER_TICK=1;
@@ -92,14 +91,12 @@ async function ts11Setups(client:any,instrument:string,evaluatedAt:number,h1:any
   const pending=rows.filter(r=>!status.has(r.id)),missing=budget.left>0?pending.slice(-budget.left):[];
   budget.left-=missing.length;
   if(missing.length){
-    const d1=await closedCandles(client,instrument,'1D',evaluatedAt,TS11_D1),from=tradeSetup11M5Start({rows:missing,h1Candles:h1,d1Candles:d1});
-    // Kalendergrenze überschätzt die Barzahl (Wochenenden), lädt also eher etwas mehr als nötig.
-    const m5=from==null?[]:await closedCandles(client,instrument,'5m',evaluatedAt,Math.min(TS11_MAX_M5,Math.ceil((evaluatedAt-from)/300)));
-    const verdicts=tradeSetup11RowVerdicts({rows:missing,instrument,m5Candles:m5,h1Candles:h1,d1Candles:d1,evaluatedAt,sessionConfigs:sessions});
+    const verdicts=await computeTs11Verdicts({rows:missing,instrument,evaluatedAt,sessionConfigs:sessions,h1,
+      load:(bar,count)=>closedCandles(client,instrument,bar,evaluatedAt,count)});
     // unknown erst nach 1 h endgültig: vorher kann der Kerzenstand bis zur Setup-Erkennung noch fehlen.
-    const final=missing.filter(r=>verdicts.get(r.id).status!=='unknown'||Date.parse(r.ob_start_time)/1000+3600<evaluatedAt);
+    const final=missing.filter(r=>verdicts.get(r.id)!.status!=='unknown'||Date.parse(r.ob_start_time)/1000+3600<evaluatedAt);
     if(!dry&&final.length)checked(await client.from('trade_setup_ts11_verdicts').upsert(final.map(r=>({trade_setup_id:r.id,version:TRADE_SETUP_11_VERSION,
-      status:verdicts.get(r.id).status,reason:verdicts.get(r.id).reason})),{onConflict:'trade_setup_id,version',ignoreDuplicates:true}));
+      status:verdicts.get(r.id)!.status,reason:verdicts.get(r.id)!.reason})),{onConflict:'trade_setup_id,version',ignoreDuplicates:true}));
     for(const [id,v] of verdicts)status.set(id,v.status);
   }
   return {setups:rows.filter(r=>status.get(r.id)==='passed').map(dobTs11FromRow),rows:rows.length,evaluated:missing.length,pending:pending.length-missing.length};

@@ -2,7 +2,6 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import {
   getObZones,
-  getTradeSetups,
   getJournal,
   getNewsEvents,
   getTradingSchedule,
@@ -20,6 +19,7 @@ import { buildNearRelevantLiquidityLevels, NEAR_RANGE_PIPS } from "./nearRelevan
 import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
 import { computeEma } from "../ema.js";
 import { resolveDayWindow, fetchM5WithWarmup, isWithinDayWindow } from "../indicatorWindow.ts";
+import { getTs11TradeSetups } from "../ts11TradeSetups.ts";
 import { json } from "../jsonResponse.ts";
 import { WATCHED_OB_TIMEFRAMES } from "../../_shared/obTimeframes.js";
 
@@ -196,21 +196,15 @@ export function registerReadTools(server: McpServer) {
   server.registerTool(
     "get_trade_setups",
     {
-      title: "Trade-Setups",
+      title: "TS1.1-Setups",
       description:
-        "Erkannte Trade-Setups (M5 Sweep + Fraktal + OB) aus der trade_setups-Tabelle. Bug-Report " +
-        "Philip 2026-08-30: ein GBPUSD-Call ohne Eingrenzung lief über das Token-Limit (143k " +
-        "Zeichen/4410 Zeilen) — limit hat deshalb einen Default (2, für den Normalfall 'die letzten " +
-        "paar Setups' völlig ausreichend), fromSec zusätzlich für ein explizites Zeitfenster, für " +
-        "eine breitere Abfrage limit explizit höher setzen (max. 500). Für 'nur das aktuellste " +
-        "Setup je Richtung' get_data_snapshot " +
-        "nutzen statt hier selbst zu filtern. replayUntilSec (seit 2026-08-30) filtert zusätzlich " +
-        "auf `created_at` (poi-watcher-Erkennungszeitpunkt) — OHNE dieses Feld liefert der Call bei " +
-        "einem Backtest/Replay auch Setups zurück, die zum simulierten Zeitpunkt live noch gar " +
-        "nicht existiert hätten (Bug-Report Philip 2026-08-30, GBPUSD-Backtest bis 08:45: Setups " +
-        "mit `created_at` Stunden nach dem Cutoff kamen unfiltered zurück und mussten manuell " +
-        "verworfen werden). IMMER setzen, sobald der Call für einen Replay/Backtest-Zeitpunkt " +
-        "gedacht ist, nicht nur für einen Live-Stand.",
+        "Gespeicherte Trade-Setups mit bestandenem TS1.1-Urteil (dieselbe Policy wie Chart und dob-watcher; " +
+        "TS1.0 als eigenes Produkt gibt es seit 21.11.2026 nicht mehr), neueste zuerst. Das Urteil kommt aus dem " +
+        "dob-watcher-Cache oder wird nachgerechnet. limit hat einen Default (2), weil ein ungefilterter Call das " +
+        "Token-Limit sprengte; für breitere Abfragen limit erhöhen (max. 500), fromSec grenzt nach ob_start_time ein. " +
+        "Für 'nur das aktuellste Setup je Richtung' get_data_snapshot nutzen. replayUntilSec filtert auf created_at " +
+        "(poi-watcher-Erkennungszeitpunkt) und urteilt zu diesem Zeitpunkt — IMMER setzen, sobald der Call für einen " +
+        "Replay/Backtest-Zeitpunkt gedacht ist, sonst kommen Setups, die damals noch nicht existierten.",
       inputSchema: {
         instrument: INSTRUMENT,
         fromSec: z.number().optional().describe("Unix-Sekunden, untere Grenze für ob_start_time (Bestätigungszeitpunkt des Setups)"),
@@ -218,7 +212,7 @@ export function registerReadTools(server: McpServer) {
         replayUntilSec: z.number().optional().describe("Unix-Sekunden — nur Setups, deren created_at (Erkennungszeitpunkt) bis zu diesem Zeitpunkt lag (Replay-Simulation)"),
       },
     },
-    async ({ instrument, fromSec, limit, replayUntilSec }) => json(await getTradeSetups(instrument, fromSec, limit, replayUntilSec)),
+    async ({ instrument, fromSec, limit, replayUntilSec }) => json(await getTs11TradeSetups(instrument, fromSec, limit, replayUntilSec)),
   );
 
   server.registerTool(

@@ -9,14 +9,12 @@ import { fetchAllRows } from "../_shared/fetchAllRows.ts";
 import { WATCHED_OB_TIMEFRAMES } from "../_shared/obTimeframes.js";
 import { fetchForexBatch, TRADE_SETUP_M5_CANDLE_LIMIT } from "./forexBatch.ts";
 import { TRADE_SETUP_DETECTOR_VERSION, TRADE_SETUP_OB_SWEEP_PROFILE } from "../_shared/tradeSetup.ts";
-import { setup1StructureWindow, TRADE_SETUP_M5_FRACTAL_PERIOD, TRADE_SETUP_TS11_SOURCE_VERSION } from "../../../src/setup1Detection.js";
+import { setup1StructureWindow, TRADE_SETUP_M5_FRACTAL_PERIOD } from "../../../src/setup1Detection.js";
+import { tradeSetupToRow } from "../../../src/tradeSetupRow.js";
 import { detectLiveSetup1 } from "../_shared/setup1Live.ts";
 import { LIQUIDITY_FRACTAL_PERIOD } from "../_shared/liquidityDetection.ts";
 import { setup1Configuration, tradeSetupProvenance } from '../_shared/tradeSetupProvenance.js';
-import { computeSweepAgeHours } from "../_shared/ageTier.ts";
-import { toPips } from "../_shared/pipConfig.js";
 import { persistTradeSetupSweeps } from "../_shared/tradeSetupSweeps.ts";
-import { forbiddenSessionAt, type SessionDangerConfig } from "../_shared/forbiddenSession.ts";
 import { markIgnored, withoutIgnored, fetchIgnoreLiquiditySessions, markHtfObCandles, fetchHighLowSessions } from "../_shared/ignoredCandles.ts";
 import {
   findLevelTouch,
@@ -264,26 +262,6 @@ Deno.serve(async (req) => {
     const alarmWindowsByInstrument = new Map<string, WeekdayWindows>(
       (scheduleRows ?? []).map((r) => [r.instrument, r.alarm_windows as WeekdayWindows]),
     );
-    // Chart-Sessions (Sessions-Modal), nur fürs Trade-Setup-Alarm-Gating unten gebraucht: der
-    // Chart versteckt Setups, deren M5-OB in einer 'forbidden'-Session entstanden ist, poi-watcher
-    // alarmierte sie bis 09/2026 trotzdem. Ein Select für alle Instrumente, wie bei den Schedules.
-    const { data: sessionRows, error: sessionSelectError } = await supabase
-      .from("sessions")
-      .select("instrument, label, from_minutes, to_minutes, danger, days")
-      .eq("danger", "forbidden");
-    if (sessionSelectError) throw sessionSelectError;
-    const forbiddenSessionsByInstrument = new Map<string, SessionDangerConfig[]>();
-    for (const r of sessionRows ?? []) {
-      const list = forbiddenSessionsByInstrument.get(r.instrument as string) ?? [];
-      list.push({
-        label: r.label as string | null,
-        fromMinutes: r.from_minutes as number,
-        toMinutes: r.to_minutes as number,
-        danger: r.danger as string | null,
-        days: r.days as number[] | null,
-      });
-      forbiddenSessionsByInstrument.set(r.instrument as string, list);
-    }
     const now = new Date();
     const summary: Record<string, unknown> = { dryRun: DRY_RUN, instruments: {} };
     // Für den Pin-Touch-Alarm-Durchlauf ganz unten (nach diesem Loop) — der braucht pro Instrument
@@ -738,148 +716,32 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Trade-Setup: Liquidity Sweep + Protected M5-Fraktal + M5-OB, in dieser Reihenfolge
-      // (siehe tv-indikator/src/tradesetup.pine, portiert nach src/tradeSetup.js).
-      // dir=1 (Short/Protected High) und dir=-1 (Long/Protected Low) laufen mit denselben
-      // Kerzen, nur gespiegelt (siehe checkShortSetup/checkLongSetup im Original).
+      // Trade-Setups speichern (Liquidity Sweep + M5-Fraktal + M5-OB, siehe src/setup1Detection.js): die Setup-1-Erkennung
+      // plus die TS1.1-Kandidaten, die erst die OB-Sweep-Quellen finden. Die Zeilen sind die Basis für TS1.1 (Chart,
+      // dob-watcher, MCP). Ein eigener Setup-1-Telegram existiert seit 21.11.2026 nicht mehr (TS1.0 abgebaut).
       {
-        const alarmActive = shouldSend && isAlarmOn("trade_setup");
         const m5Candles = forexBatch.candlesByTf.get("M5")!;
         const nowSec = Math.floor(Date.now() / 1000);
-        // H1-Level wie im Chart aus der H1-Marktstruktur ab dem letzten 1D-Strukturpivot, alle
-        // alarmfähigen Setups statt nur des neuesten je Richtung (siehe _shared/setup1Live.ts).
+        // H1-Level wie im Chart aus der H1-Marktstruktur ab dem letzten 1D-Strukturpivot (siehe _shared/setup1Live.ts).
         const structureStartSec = await latestStructureStartSec(supabase, cfg.instrument);
         const { detected: setup1, ts11Only, params: tradeSetupParams } = detectLiveSetup1({ instrument: cfg.instrument, m5Candles,
           h1Candles: h1CandlesForSetup, nowSec, structureStartSec, currentPrice });
-        const provenanceFor = (detectorVersion: string, sweepSourceProfile?: string) => tradeSetupProvenance({ source: 'live', detectorVersion,
+        const provenanceFor = (sweepSourceProfile?: string) => tradeSetupProvenance({ source: 'live', detectorVersion: TRADE_SETUP_DETECTOR_VERSION,
           configuration: setup1Configuration({ instrument: cfg.instrument, params: { ...tradeSetupParams, ...(sweepSourceProfile ? { sweepSourceProfile } : {}) },
             minGap: obMinimum(cfg.instrument, '5m'), sessions: ignoreSessions,
             m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD,
             m5Window: TRADE_SETUP_M5_CANDLE_LIMIT, h1Window: setup1StructureWindow(nowSec, structureStartSec).count,
             h1Source: 'marketStructurePivots' }) });
-        const setup1Provenance = await provenanceFor(TRADE_SETUP_DETECTOR_VERSION);
-        // TS1.1-only-Kandidaten werden gespeichert (dob-watcher), aber nie als Setup 1 alarmiert.
-        const ts11Provenance = ts11Only.length ? await provenanceFor(TRADE_SETUP_TS11_SOURCE_VERSION, TRADE_SETUP_OB_SWEEP_PROFILE) : null;
+        const setup1Provenance = await provenanceFor();
+        // Die Konfiguration (also config_hash) nennt das OB-Sweep-Profil, über das nur TS1.1 sie findet.
+        const ts11Provenance = ts11Only.length ? await provenanceFor(TRADE_SETUP_OB_SWEEP_PROFILE) : null;
         const ts11Keys = new Set(ts11Only.map((s) => `${s.dir}_${s.obStartTime}`));
-        const detected = [...setup1, ...ts11Only];
 
-        // Schlüssel ist seit 2026-09-20 der bestätigende OB, nicht mehr fractal_pivot_time — ein
-        // Setup ist durch ihn identifiziert, nicht durch den Pfad, über den es gefunden wurde
-        // (siehe detectTradeSetups). Der Unique-Index deckelt Duplikate damit schon in der DB; die
-        // frühere ob_zone_id-Alarmsperre ist dadurch ersatzlos entfallen.
-        //
-        // Gefragt wird NUR nach den gerade erkannten OBs, nicht nach dem ganzen
-        // Bestand: PostgREST deckelt eine Antwort server-seitig bei 1000 Zeilen, ohne Fehler (siehe
-        // CLAUDE.md). GBPUSD stand am 20.09. bei 930 Zeilen und wuchs ~4/Tag — ein Voll-Select
-        // hätte ab Anfang Oktober stillschweigend die JÜNGSTEN Zeilen verloren, und genau die
-        // entscheiden hier: fehlt eine, gilt ihr Setup als nie alarmiert und Telegram feuert ein
-        // zweites Mal.
-        const notifiedByKey = new Map<string, boolean>();
-        const hasAnySetupRow = { short: false, long: false };
-        if (detected.length > 0) {
-          const { data: existingSetupRows, error: setupSelectError } = await supabase
-            .from("trade_setups")
-            .select("direction, ob_start_time, notified")
-            .eq("instrument", cfg.instrument)
-            .in("ob_start_time", detected.map((s) => new Date(s.obStartTime * 1000).toISOString()));
-          if (setupSelectError) throw setupSelectError;
-          for (const r of existingSetupRows ?? []) {
-            notifiedByKey.set(`${r.direction}_${Math.floor(new Date(r.ob_start_time).getTime() / 1000)}`, r.notified as boolean);
-          }
-
-          // Existenzfrage je Richtung — fiel früher als Nebenprodukt des Voll-Selects ab, ist aber
-          // eine andere Frage als der Dedupe oben und braucht deshalb eine eigene Abfrage.
-          for (const richtung of ["short", "long"] as const) {
-            const { data: ersteZeile, error: ersteZeileError } = await supabase
-              .from("trade_setups")
-              .select("id")
-              .eq("instrument", cfg.instrument)
-              .eq("direction", richtung)
-              .limit(1);
-            if (ersteZeileError) throw ersteZeileError;
-            hasAnySetupRow[richtung] = (ersteZeile ?? []).length > 0;
-          }
-        }
-
-        let tradeSetupNotifiedCount = 0;
-        let tradeSetupForbiddenCount = 0;
-        const forbiddenSessions = forbiddenSessionsByInstrument.get(cfg.instrument) ?? [];
-        for (const setup of detected) {
+        for (const setup of [...setup1, ...ts11Only]) {
           const direction: "short" | "long" = setup.dir === 1 ? "short" : "long";
-          const key = `${direction}_${setup.obStartTime}`;
-          // Schon alarmiert = fertig. Eine vorhandene, aber NIE alarmierte Zeile bleibt dagegen
-          // alarmfähig: entsteht ein Setup außerhalb des Alarmfensters, soll es den Alarm beim
-          // ersten Tick im Fenster noch bekommen (früher kam der übers Path-A-Zwillingsexemplar
-          // ~10min später, das es jetzt nicht mehr gibt — im Abnahmelauf betraf das 5 Zonen, z.B.
-          // #175 um 04:50 stumm, #181 um 07:10 der echte Alarm). maxLookbackSec (6h) deckelt, wie
-          // lange ein Setup so nachalarmieren kann.
-          if (notifiedByKey.get(key) === true) continue;
-
-          // Erstes Setup überhaupt für dieses Instrument+Richtung (kein "existing" überhaupt)
-          // ist ein Alt-Bestand direkt nach Deploy, kein "gerade eben" — kein Alarm, analog zum
-          // ob_zones/liquidity_levels-Verhalten beim allerersten Lauf.
-          // Entstand der bestätigende M5-OB in einer 'forbidden'-Session (Asia/Spread Hour), zeigt
-          // der Chart das Setup gar nicht erst an — dann auch kein Telegram, sonst alarmiert
-          // poi-watcher auf etwas, das Philip nirgends nachschauen kann. obStartTime statt
-          // fractal.pivotTime, exakt wie notForbidden in usePriceChartTradeSetups.js (der OB ist
-          // der früheste plausible Entry-Zeitpunkt), sonst entsteht nur ein neues Gefälle.
-          // Die ZEILE entsteht trotzdem: analysis/dr-reichweite/ wertet den Bestand aus, ein
-          // stilles Loch darin wäre schlimmer als ein stiller Alarm.
-          const forbiddenLabel = forbiddenSessionAt(forbiddenSessions, setup.obStartTime);
-          if (forbiddenLabel) tradeSetupForbiddenCount++;
-          const isTs11Only = ts11Keys.has(`${setup.dir}_${setup.obStartTime}`);
-          const alertNow = !isTs11Only && hasAnySetupRow[direction] && alarmActive && !forbiddenLabel;
-          const setupProvenance = isTs11Only ? ts11Provenance! : setup1Provenance;
-          // Ferne OB-Kante = das von widenObForSweep aufgezogene Sweep-Extrem (siehe
-          // deriveSetupEntryInvalidation in der JS-Kopie) — in der DB die generierte Spalte
-          // trade_setups.invalidation, hier fürs Telegram nochmal direkt aus dem Setup.
-          const invalidation = direction === "short" ? setup.obTop : setup.obBottom;
-
-          // Herkunft und Alter des Sweeps — beides wird persistiert und geht in den Alarmtext,
-          // weil die Auswertung analysis/dr-reichweite/ (19.09.2026) beide als Qualitätsmerkmale
-          // belegt hat: 1H-Sweep Reichweiten-Median 28,7 vs. 11,3 Pips bei M5, und ein Level, das
-          // vor dem Sweep schon >=24h bestand, kommt auf ~29 statt 11,9. Den Timeframe vergibt
-          // seit dem Sammeln ALLER Sweeps die Erkennung selbst (SetupSweep, _shared/tradeSetup.ts)
-          // statt hier per includes() — dieselbe Zuordnung, nur nicht mehr je Schreiber nachgebaut.
-          const lsFromH1 = setup.sweeps[0].timeframe === "1H";
-          const sweepAgeHours = computeSweepAgeHours(setup.ls.touchedTime!, setup.ls.pivotTime);
-
-          // Läuft gerade eine Dealing Range der Gegenrichtung? Laut derselben Auswertung der
-          // schlechteste Zustand überhaupt — als schwächere Seite gegen eine lebende Gegen-DR
-          // kommt die Reichweite nur auf 7,4 statt 14,8 Pips Median, und 41% aller DRs entstehen
-          // in dieser Lage. "Lebend" heißt: früher entstanden und ihr Extrem-Fraktal seitdem nicht
-          // berührt (Philips Definition: eine Gegen-DR ist gefährlich, solange sie weder
-          // invalidiert noch am Ziel ist). Geprüft gegen die ohnehin geladenen M5-Kerzen.
-          const oppositeDir = direction === "short" ? "long" : "short";
-          const { data: oppRows, error: oppError } = await supabase
-            .from("trade_setups")
-            .select("invalidation, ob_start_time")
-            .eq("instrument", cfg.instrument)
-            .eq("direction", oppositeDir)
-            .gte("ob_start_time", new Date((setup.obStartTime - 24 * 3600) * 1000).toISOString())
-            .lt("ob_start_time", new Date(setup.obStartTime * 1000).toISOString())
-            .order("ob_start_time", { ascending: false })
-            .limit(20);
-          if (oppError) throw oppError;
-          const liveOpposite = (oppRows ?? []).some((o) => {
-            const fromSec = Math.floor(new Date(o.ob_start_time).getTime() / 1000);
-            const invalidiert = m5Candles.some(
-              (c) => c.time >= fromSec && (oppositeDir === "long" ? c.low <= o.invalidation : c.high >= o.invalidation),
-            );
-            return !invalidiert;
-          });
-
-          // Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren": das M5-OB, das
-          // dieses Setup bestätigt, wird jetzt zusätzlich als eigene ob_zones-Zeile referenziert
-          // (statt nur ob_top/ob_bottom/ob_start_time als Kopie zu führen) — direction entspricht
-          // hier exakt der Setup-Direction selbst (siehe Migration
-          // 20260822100000_trade_setups_confirmations_ob_zone_id.sql für die Herleitung dieser
-          // Äquivalenz). Nur die tatsächlich referenzierte Teilmenge der M5-OBs landet so in
-          // ob_zones, nicht das gesamte M5-Universum (bewusste Entscheidung, siehe Plan-Datei).
-          // Normaler Upsert statt ignoreDuplicates, damit .select() bei einem bereits vorhandenen
-          // Konflikt trotzdem die id zurückgibt (touched/invalidated bleiben hier bewusst auf
-          // Default false — dieses Referenz-Objekt wird nicht live nachverfolgt, das übernimmt
-          // weiterhin die Indikator-Overlay-Live-Erkennung).
+          const setupProvenance = ts11Keys.has(`${setup.dir}_${setup.obStartTime}`) ? ts11Provenance! : setup1Provenance;
+          // Das bestätigende M5-OB als eigene ob_zones-Zeile (Migration 20260822100000), nur die referenzierte
+          // Teilmenge. Normaler Upsert, damit .select() auch beim Konflikt die id liefert.
           const { data: setupObZone, error: obZoneUpsertError } = await supabase
             .from("ob_zones")
             .upsert(
@@ -897,69 +759,21 @@ Deno.serve(async (req) => {
             .single();
           if (obZoneUpsertError) throw obZoneUpsertError;
 
+          const { trade_setup_sweeps: _sweeps, id: _id, ...fields } = tradeSetupToRow(setup, { instrument: cfg.instrument });
           const { data: setupRow, error: setupUpsertError } = await supabase
             .from("trade_setups")
-            .upsert(
-              {
-                ...setupProvenance,
-                instrument: cfg.instrument,
-                direction,
-                fractal_price: setup.fractal.price,
-                fractal_pivot_time: new Date(setup.fractal.pivotTime * 1000).toISOString(),
-                ls_price: setup.ls.price,
-                ls_pivot_time: new Date(setup.ls.pivotTime * 1000).toISOString(),
-                ls_touched_time: new Date(setup.ls.touchedTime! * 1000).toISOString(),
-                ls_timeframe: lsFromH1 ? "1H" : "5M",
-                ob_top: setup.obTop,
-                ob_bottom: setup.obBottom,
-                ob_fvg: setup.obFvg,
-                ob_start_time: new Date(setup.obStartTime * 1000).toISOString(),
-                ob_zone_id: setupObZone.id,
-                alert_price: currentPrice,
-                notified: alertNow,
-                notified_at: alertNow ? new Date().toISOString() : null,
-              },
-              { onConflict: "instrument,direction,ob_start_time" },
-            )
+            .upsert({ ...setupProvenance, ...fields, ob_zone_id: setupObZone.id, alert_price: currentPrice },
+              { onConflict: "instrument,direction,ob_start_time" })
             .select("id")
             .single();
           if (setupUpsertError) throw setupUpsertError;
 
           // ALLE abgeräumten Level, nicht nur das entscheidende (Philip 21.09.2026: "Je mehr
-          // Bestätigungs-LQ-Sweeps desto besser") — 44 % der Setups haben mehr als eins, siehe
-          // Migration 20260921210000. Der entscheidende steht zusätzlich weiterhin in ls_*.
+          // Bestätigungs-LQ-Sweeps desto besser"), siehe Migration 20260921210000.
           await persistTradeSetupSweeps(supabase, setupRow.id as number, setup.sweeps);
-
-          if (alertNow) {
-            tradeSetupNotifiedCount++;
-            const label = direction === "short" ? "Short (Protected High)" : "Long (Protected Low)";
-            // Alter des Sweep-Levels gerundet: die Auswertung zeigt nur zwischen "<24h" und
-            // ">=24h" einen Unterschied, Major (>=120h) und Medium (24-120h) sind mit 29,2 vs.
-            // 29,3 Pips nicht unterscheidbar — eine feinere Angabe würde Genauigkeit vortäuschen.
-            const ageText = sweepAgeHours >= 24 ? `${Math.round(sweepAgeHours / 24)}d alt` : `${Math.round(sweepAgeHours)}h alt`;
-            // Mehrere abgeräumte Level sind mehrere Bestätigungen derselben Idee. Die Zahl hängt
-            // am entscheidenden Sweep statt in einer eigenen Zeile — der Text ist schon fünfzeilig.
-            const weitereSweeps = setup.sweeps.length > 1 ? `, +${setup.sweeps.length - 1} weitere` : "";
-            const warnung = liveOpposite ? `\n⚠️ Gegenläufige Dealing Range noch aktiv${lsFromH1 ? "" : " — und dieses Setup hat nur einen M5-Sweep"}` : "";
-            await sendTelegram(
-              `🎯 ${cfg.instrument} Trade-Setup: ${label}\n` +
-                // Seit 2026-09-20 die Invalidierung (ferne OB-Kante) statt fractal.price: ohne
-                // bestätigtes Protected-Pivot zeigte das aufs gesweepte Level statt aufs Extrem.
-                `Invalidierung: ${fmt(invalidation, cfg.pricePrecision)}\n` +
-                `LS-Sweep: ${fmt(setup.ls.price, cfg.pricePrecision)} (${lsFromH1 ? "1H" : "M5"}, ${ageText}${weitereSweeps})\n` +
-                // FVG an der OB-Zeile statt in einer eigenen (siehe weitereSweeps oben: der Text ist
-                // schon fuenfzeilig). Gemessen 23.09.2026 ueber 3282 Ranges: die Luecke trennt staerker
-                // als Sweep-Alter und Sweep-Herkunft, siehe PLAN-dr-statistik-ui.md "Die FVG-Groesse".
-                // Bewusst nur die Zahl, keine Trefferquote: die Baender liegen in src/drQuoten.js und
-                // damit in einer anderen Laufzeit — eine zweite Kopie hier wuerde davon wegdriften.
-                `M5-OB: ${fmt(setup.obBottom, cfg.pricePrecision)} – ${fmt(setup.obTop, cfg.pricePrecision)} (FVG ${toPips(setup.obFvg).toFixed(1)} P)\n` +
-                `Preis: ${fmt(currentPrice, cfg.pricePrecision)}` +
-                warnung,
-            );
-          }
         }
 
-        instrumentSummary["tradeSetups"] = { detected: detected.length, notified: tradeSetupNotifiedCount, forbiddenSession: tradeSetupForbiddenCount };
+        instrumentSummary["tradeSetups"] = { detected: setup1.length, ts11Only: ts11Only.length };
       }
 
       // Erst nach einem vollständigen Lauf markieren; ein Fehler muss erneut versucht werden.
