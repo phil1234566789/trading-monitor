@@ -211,3 +211,39 @@ it('TS1.0 ist abgebaut: kein eigener Setup-1-Alarm, Setup-Listen zeigen nur TS1.
   expect(src['supabase/functions/trading-monitor-mcp/tools/reads.ts']).toMatch(/getTs11TradeSetups\(/);
   expect(src['supabase/functions/trading-monitor-mcp/tools/dataSnapshot.ts']).toMatch(/passedTs11Setups\(/);
 });
+
+// get_trade_setups lief live in den 300-s-MCP-Timeout: fetchForexCandles hielt das Archiv am Wochenende für veraltet
+// und lud bis zu 15000 M5 von cTrader nach. Das TS1.1-Urteil darf nur geschlossene FXCM-Kerzen lesen (wie dob-watcher)
+// und muss seine Arbeit je Aufruf deckeln.
+it('TS1.1-Urteil im MCP: kein Live-Nachladen bei cTrader, Laufzeit gedeckelt', async () => {
+  const reach = (start) => {
+    const seen = new Set(), todo = [start];
+    while (todo.length) {
+      const rel = todo.pop();
+      if (seen.has(rel)) continue;
+      seen.add(rel);
+      const src = blankComments(readFileSync(join(ROOT, rel), 'utf8'));
+      for (const m of src.matchAll(/(?:from|import)\s*["'](\.{1,2}\/[^"']+)["']/g)) {
+        const target = join(rel, '..', m[1]).split('\\').join('/');
+        if (/\.(js|ts|mjs)$/.test(target)) todo.push(target);
+      }
+    }
+    return [...seen];
+  };
+  for (const entry of ['supabase/functions/trading-monitor-mcp/ts11TradeSetups.ts', 'supabase/functions/_shared/ts11Verdicts.ts']) {
+    const files = reach(entry);
+    expect(files.filter((f) => /forexCandles\.ts$|\/ctrader\//.test(f)), entry).toEqual([]);
+    const code = files.map((f) => blankComments(readFileSync(join(ROOT, f), 'utf8'))).join('\n');
+    expect(code, entry).not.toMatch(/\bfetchForexCandles\(|\bfetchLiveForexCandles\(|functions\/v1\/forex-candles/);
+  }
+  const mcp = blankComments(readFileSync(join(ROOT, 'supabase/functions/trading-monitor-mcp/ts11TradeSetups.ts'), 'utf8'));
+  expect(mcp).toMatch(/readClosedFxcmCandles\(/);
+  const cap = Number(mcp.match(/const MAX_COMPUTED = (\d+);/)?.[1]);
+  expect(cap).toBeGreaterThan(0);
+  expect(cap).toBeLessThanOrEqual(20);
+  expect(mcp).toMatch(/\.slice\(0, MAX_COMPUTED\)/);
+  expect(mcp).toMatch(/\.limit\(Math\.min\(500,/);
+  const { TS11_CONTEXT } = await import('../supabase/functions/_shared/ts11Verdicts.ts');
+  expect(TS11_CONTEXT.maxM5).toBeLessThanOrEqual(15000);
+  expect(TS11_CONTEXT.h1).toBeLessThanOrEqual(6000);
+});
