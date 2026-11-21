@@ -1,5 +1,7 @@
 import {expect,it} from 'vitest';
-import {orderBlockSweepSources,evaluateSweepConfirmation,confirmedOrderBlockSweepSource} from '../src/tradeSetupSweepSources.js';
+import {evaluateSweepConfirmation,confirmedOrderBlockSweepSource} from '../src/tradeSetupSweepSources.js';
+// OB-Kanten-Level liefert seit dem LQ-Umzug der LQ-Algo; die Spezifikation hier gilt unverändert.
+import {detectOrderBlockLiquidityLevels as orderBlockSweepSources} from '../src/liquidityDetection.js';
 import {filterTradeSetup11Candidates} from '../src/tradeSetup11.js';
 import {fixture,nativeInput,nativeSetupFor} from './helpers/tradeSetup11NativeFixture.js';
 import {findTradeSetup11SourceOwner} from '../src/tradeSetup11Ownership.js';

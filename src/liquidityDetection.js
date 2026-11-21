@@ -1,8 +1,7 @@
-// Reine Liquiditäts-Level-Erkennung (Williams-Fractal-Pivots), extrahiert aus liquidity.js (Chat
-// 2026-07-31) — bewusst OHNE jeden Import, damit dieses Modul auch außerhalb des Browsers (Deno,
-// supabase/functions/trading-monitor-mcp/) importierbar ist, ohne chartColors.js/supabaseClient.js
-// (localStorage/import.meta.env) mitzuschleppen. liquidity.js selbst importiert diese Funktionen
-// jetzt von hier und re-exportiert sie, damit sich an dessen öffentlicher API nichts ändert.
+// Liquiditäts-Level-Erkennung: Pivots (Williams-Fractal) und gebrochene M5-OB-Kanten, für Chart, Setup-Pipeline
+// und Backend (Deno importiert diese Datei über _shared/liquidityDetection.ts). Deshalb nur Deno-sichere Imports
+// mit Endung, nie chartColors.js/supabaseClient.js (localStorage/import.meta.env).
+import { orderBlockRecognitionTimes } from './orderBlockRecognitionTime.js';
 
 const RECENT_SWEEP_COUNT = 2; // siehe markTopKRecentTouches in liquidity.pine
 
@@ -122,6 +121,29 @@ export function advanceLiquidityTouches(levels, candle) {
     }
     level.endTime = level.touched ? level.touchedTime : candle.time;
   }
+}
+
+// OB-Kanten als Liquidität (sourceKind 'orderBlock'): die ferne Kante eines Gegen-OB, sobald eine Kerze nach seiner
+// Erkennung sie bricht. dir wie bei Pivot-Leveln (1 = High-Seite, braucht bärischen OB). Pivot-Level tragen kein
+// sourceKind; gespeicherte Quellen-Schlüssel nennen sie 'liquidity' (tradeSetupSourceSnapshot.js), deshalb bleibt das so.
+function firstIndexAtOrAfter(candles, time) {
+  let lo = 0, hi = candles.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (candles[mid].time < time) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+
+export function detectOrderBlockLiquidityLevels(obs, candles, dir, evaluatedAt) {
+  const recognition = orderBlockRecognitionTimes(candles, '5m');
+  return obs.filter((ob) => ob.dir === -dir && recognition.get(ob.startTime) <= evaluatedAt).flatMap((ob) => {
+    const knownAt = recognition.get(ob.startTime), price = dir === 1 ? ob.top : ob.bottom;
+    // Suche ab der Erkennungskerze statt ab Kerze 0: ohne OB-Mindestabstand (GBP) sind es Hunderte OBs je Lauf.
+    let touch = null;
+    for (let i = firstIndexAtOrAfter(candles, knownAt); i < candles.length && candles[i].time + 300 <= evaluatedAt; i++)
+      if (!candles[i].ignored && liquidityTouch(candles[i], price, dir)) { touch = candles[i]; break; }
+    return touch ? [{ sourceKind: 'orderBlock', sourceStartTime: ob.startTime, sourceKnownAt: knownAt,
+      sourceDirection: ob.dir, sourceTop: ob.top, sourceBottom: ob.bottom,
+      price, dir, pivotTime: ob.startTime, touched: true, touchedTime: touch.time, endTime: touch.time }] : [];
+  });
 }
 
 // Erkennt alle Hoch-/Tief-Liquiditäts-Level im geladenen `candles`-Fenster. Rückgabe

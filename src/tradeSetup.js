@@ -8,8 +8,8 @@
 // supabase/functions/_shared/tradeSetup.ts) mitziehen.
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
-import { liquidityTouch } from "./liquidityDetection.js";
-import {orderBlockSweepSources,evaluateSweepConfirmation,sweepSourceKey} from './tradeSetupSweepSources.js';
+import { liquidityTouch, detectOrderBlockLiquidityLevels } from "./liquidityDetection.js";
+import {evaluateSweepConfirmation,sweepSourceKey} from './tradeSetupSweepSources.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 
 // Bei Regeländerungen beide Detektorkopien versionieren; Herkunft bleibt beim ersten Insert.
@@ -279,7 +279,7 @@ export function detectTradeSetups(dir, fractalLevels, h1Levels, m5Levels, setupO
   const typedSweeps=params.sweepSourceProfile===TRADE_SETUP_OB_SWEEP_PROFILE;
   // Die FVG-Verfügbarkeit braucht dieselbe ungekürzte Kerzenfolge wie die OB-Erkennung.
   const confirmationTimes=typedSweeps?orderBlockRecognitionTimes(sourceCandles??[],'5m'):null;
-  if(typedSweeps)m5Levels=[...m5Levels,...orderBlockSweepSources(setupObs,sourceCandles??[],dir,params.nowTime+300)];
+  if(typedSweeps)m5Levels=[...m5Levels,...detectOrderBlockLiquidityLevels(setupObs,sourceCandles??[],dir,params.nowTime+300)];
   const obDir = dir === 1 ? -1 : 1;
   const byObStartTime = new Map();
 

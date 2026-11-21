@@ -15,6 +15,13 @@ export interface LiquidityLevel {
   endTime: number;
 }
 
+export interface OrderBlockLiquidityLevel extends LiquidityLevel {
+  sourceKind: "orderBlock"; sourceStartTime: number; sourceKnownAt: number; sourceDirection: 1 | -1;
+  sourceTop: number; sourceBottom: number;
+}
+type SourceOb = { dir: 1 | -1; top: number; bottom: number; startTime: number };
+
 export const liquidityTouch = core.liquidityTouch as (candle: Candle, price: number, dir: 1 | -1) => boolean;
 export const detectLiquidityLevels = core.detectLiquidityLevels as (rohKerzen: Candle[], period: number) => { highs: LiquidityLevel[]; lows: LiquidityLevel[] };
 export const filterRelevantLevels = core.filterRelevantLevels as (levels: LiquidityLevel[], maxRelevant: number, onlyRelevant: boolean) => LiquidityLevel[];
+export const detectOrderBlockLiquidityLevels = core.detectOrderBlockLiquidityLevels as (obs: SourceOb[], candles: Candle[], dir: 1 | -1, evaluatedAt: number) => OrderBlockLiquidityLevel[];

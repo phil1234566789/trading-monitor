@@ -24,6 +24,7 @@ import { createSessionBonusResolver } from "../sessionBonus.js";
 import { markIgnored } from "../ignoredCandles.js";
 import { ref } from "vue";
 import { usePriceChartLiquidity2 } from "./usePriceChartLiquidity2.js";
+import { setup1ObLiquidityLevels } from "../setup1Detection.js";
 
 export function usePriceChartLiquidity() {
   let candleSeries = null;
@@ -32,6 +33,8 @@ export function usePriceChartLiquidity() {
   // Aktuell gezeichnete Liquiditäts-Level — für den Zielmodus-Klick-Hittest (Chat 2026-07-27:
   // "Können wir die Linien klickbar machen?") gebraucht, siehe getCurrentLiquidityLevels() unten.
   let currentLiquidityLevels = [];
+  // OB Sweeps getrennt von liquidityPrimitives: die hängen am Pin-/Ziel-Hittest, der OB-Kanten noch nicht kennt.
+  const obSweepPrimitives = [];
 
   // Liquidität 2.0 hängt hier dran statt in PriceChart.vue, weil sie dieselbe Serie und dieselben Refresh-Anlässe
   // braucht; ihr eigener Toggle (showLiquidity2) ist unabhängig von showLiquidity.
@@ -48,6 +51,7 @@ export function usePriceChartLiquidity() {
   }
   function dispose() {
     liquidity2.clear(candleSeries);
+    renderLiquidityLevels(candleSeries, [], obSweepPrimitives, []);
     candleSeries = null;
   }
 
@@ -62,7 +66,7 @@ export function usePriceChartLiquidity() {
 
   // Liquiditäts-Level (Fractal-Pivots, siehe tv-indikator/src/liquidity.pine) gibt es bisher nicht
   // aus dem Backend — deshalb hier direkt aus den geladenen Kerzen des aktuellen Chart-Timeframes
-  // neu erkannt, analog zur OB-Erkennung. `showSweptLiquidity` zeigt ALLE erkannten M5-Pivots
+  // neu erkannt, analog zur OB-Erkennung. `showPivotSweeps` zeigt ALLE erkannten M5-Pivots
   // ungefiltert (kein filterRelevantLevels, keine maxRelevant-Deckelung) — auch längst berührte.
   // Für die Trendanalyse-Diskussion mit Philip: er braucht wirklich jeden Pivot sichtbar, nicht
   // nur die 10 neuesten je Richtung, die filterRelevantLevels selbst mit onlyRelevant=false noch
@@ -78,6 +82,10 @@ export function usePriceChartLiquidity() {
   // (nur für currentPriceEstimate gebraucht, siehe computeHtfLiquidityLevels).
   function refresh(candles, allCandles, ctx) {
     liquidity2.refresh(candleSeries, candles, { show: ctx.showLiquidity2, symbol: ctx.symbol, nowSec: ctx.replayUntil ?? Math.floor(Date.now() / 1000) });
+    // OB Sweeps nur auf M5: die Quelle sind M5-OBs, genau wie in der Setup-Pipeline (setup1ObLiquidityLevels).
+    const obSweeps = ctx.showLiquidity && ctx.showObSweeps && ctx.currentBar === "5m"
+      ? setup1ObLiquidityLevels(ctx.symbol, markIgnored(candles, ctx.symbol)).map((l) => ({ ...l, timeframe: "5m" })) : [];
+    renderLiquidityLevels(candleSeries, obSweeps, obSweepPrimitives, candles, { nowSec: ctx.replayUntil ?? Math.floor(Date.now() / 1000) });
     const { showLiquidity, pinnedLiquidityLevels, pinLiquidityLevelKeys, hoveredPinLiquidityLevelKey, journalLiquidityCategories, invalidationLiquidityKeys, symbol } = ctx;
     if (!showLiquidity) {
       // Kein db1h hier (mehr) — die relevanten 1H-Level sind seit 2026-08-23 an showLiquidity
@@ -96,14 +104,14 @@ export function usePriceChartLiquidity() {
       currentLiquidityLevels = [];
       return;
     }
-    const { showSweptLiquidity, dbLiquidityLevelsHtf, replayUntil, showLiquidityDebug, currentBar } = ctx;
+    const { showPivotSweeps, dbLiquidityLevelsHtf, replayUntil, showLiquidityDebug, currentBar } = ctx;
     // timeframe = der gerade angezeigte Chart-Timeframe (Task "Chart-Objekte..." Nachbesserung
     // 2026-08-23: M5/1H/4H-Chart-Style-Kategorien, siehe liquidity.js: liquidityStyleTimeframe) —
     // live erkannte Level tragen sonst kein eigenes Timeframe-Feld wie die persistierten HTF-Level.
     const { highs: rawHighs, lows: rawLows } = detectLiquidityLevels(markIgnored(candles, symbol), LIQUIDITY_FRACTAL_PERIOD);
     const highs = rawHighs.map((l) => ({ ...l, timeframe: currentBar }));
     const lows = rawLows.map((l) => ({ ...l, timeframe: currentBar }));
-    const liveRelevant = showSweptLiquidity
+    const liveRelevant = showPivotSweeps
       ? [...highs, ...lows]
       : [...filterRelevantLevels(highs, LIQUIDITY_MAX_RELEVANT, true), ...filterRelevantLevels(lows, LIQUIDITY_MAX_RELEVANT, true)];
     const htfLevels = computeHtfLiquidityLevels(candles, dbLiquidityLevelsHtf, symbol, replayUntil, currentPriceEstimate(allCandles), currentBar);
