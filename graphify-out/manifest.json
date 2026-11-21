@@ -96,8 +96,8 @@
     "semantic_hash": ""
   },
   "src/alarmLog.js": {
-    "mtime": 1795261099.765373,
-    "seen": 1795262609.2062125,
+    "mtime": 1795271351.5144582,
+    "seen": 1795271425.614224,
     "ast_hash": "53d9957b89c5309fc7d3e2fd07804bf9",
     "semantic_hash": ""
   },
@@ -324,8 +324,8 @@
     "semantic_hash": ""
   },
   "src/composables/usePriceChartTradeSetups.js": {
-    "mtime": 1795262482.6815212,
-    "seen": 1795262609.2062125,
+    "mtime": 1795271351.515458,
+    "seen": 1795271425.656227,
     "ast_hash": "5fc6d5666de642fa1ab537ce8f615e65",
     "semantic_hash": ""
   },
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1795262482.627493,
-    "seen": 1795262609.2072122,
-    "ast_hash": "514aa71c4706e65c747ef6b2820b92bf",
+    "mtime": 1795271353.6261177,
+    "seen": 1795271425.7371058,
+    "ast_hash": "db594aa7c99dab99051a99979f296bb1",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -768,8 +768,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/poi-watcher/index.ts": {
-    "mtime": 1795262482.687521,
-    "seen": 1795262609.2072122,
+    "mtime": 1795271351.520459,
+    "seen": 1795271425.7501106,
     "ast_hash": "8bd1e3bb3eff847fd9c5d623660e47c4",
     "semantic_hash": ""
   },
@@ -780,8 +780,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/db.ts": {
-    "mtime": 1795261100.1015792,
-    "seen": 1795262609.2072122,
+    "mtime": 1795271351.521459,
+    "seen": 1795271425.7521105,
     "ast_hash": "e18b0f8ff4045c2aeeb57d6c6662e74c",
     "semantic_hash": ""
   },
@@ -5574,8 +5574,8 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/tradeSetupProvenance.js": {
-    "mtime": 1795261100.0835738,
-    "seen": 1795262609.2072122,
+    "mtime": 1795271351.519458,
+    "seen": 1795271425.746111,
     "ast_hash": "bff389d4dcacdcc2bcf310509d728d78",
     "semantic_hash": ""
   },
@@ -11256,14 +11256,14 @@
     "semantic_hash": ""
   },
   "src/setup1Detection.js": {
-    "mtime": 1795262482.6815212,
-    "seen": 1795262609.2072122,
-    "ast_hash": "563cc763a10af04bdd2627a329fce04f",
+    "mtime": 1795271353.6251175,
+    "seen": 1795271425.706224,
+    "ast_hash": "7ad80b6a2b533500ff9f672875af3deb",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/setup1Live.ts": {
-    "mtime": 1795262482.6845205,
-    "seen": 1795262609.2072122,
+    "mtime": 1795271351.5184586,
+    "seen": 1795271425.7441108,
     "ast_hash": "603f8298f5de80533fa9eaa148e69973",
     "semantic_hash": ""
   },
@@ -11286,9 +11286,15 @@
     "semantic_hash": ""
   },
   "test/setup1ParityGuard.test.js": {
-    "mtime": 1795262482.6965213,
-    "seen": 1795262609.2082124,
-    "ast_hash": "bb69af3c7c534e791af8e3040854132d",
+    "mtime": 1795271353.6271186,
+    "seen": 1795271425.8842287,
+    "ast_hash": "533454bf8a9c3fb19387a416c68d47a6",
+    "semantic_hash": ""
+  },
+  "src/components/StructureAlarmHint.vue": {
+    "mtime": 1795271353.624117,
+    "seen": 1795271425.6402237,
+    "ast_hash": "f29130992a644bbba0a4e56739e7b955",
     "semantic_hash": ""
   }
 }

@@ -188,3 +188,15 @@ it('Fraktal-Kern und Setup-Konstanten gibt es nur einmal', () => {
   for (const name of ['TRADE_SETUP_M5_FRACTAL_PERIOD', 'LIQUIDITY_FRACTAL_PERIOD'])
     expect(Object.keys(count(new RegExp(`\\b(const|let)\\s+${name}\\s*[=:]`, 'g'))), name).toHaveLength(1);
 });
+
+it('Chart-Hinweis "Struktur weicht vom Alarm ab" folgt derselben Konstante wie der Alarm', async () => {
+  const { SETUP1_STRUCTURE_SETTINGS, SETUP1_H1_STRUCTURE, structureDeviatesFromAlarm } = await import('../src/setup1Detection.js');
+  expect(structureDeviatesFromAlarm({ ...SETUP1_STRUCTURE_SETTINGS })).toBe(false);
+  for (const [key, value] of Object.entries({ rangesPeriod: 4, ranges2Period: 3, rangesStartMode: 'days', rangesLookbackHours: 100, ranges2LookbackHours: 100 }))
+    expect(structureDeviatesFromAlarm({ ...SETUP1_STRUCTURE_SETTINGS, [key]: value }), key).toBe(true);
+  // Der Alarm rechnet mit genau diesen Perioden/dem Lookback (setup1H1Structure), keine zweite Kopie im Dashboard.
+  expect([SETUP1_STRUCTURE_SETTINGS.rangesPeriod, SETUP1_STRUCTURE_SETTINGS.ranges2Period]).toEqual([SETUP1_H1_STRUCTURE.periodOuter, SETUP1_H1_STRUCTURE.periodInner]);
+  const dashboard = readFileSync(join(ROOT, 'src/views/Dashboard.vue'), 'utf8');
+  for (const key of Object.keys(SETUP1_STRUCTURE_SETTINGS))
+    expect(dashboard, key).toContain(`useLocalStorageRef("${key}", SETUP1_STRUCTURE_SETTINGS.${key})`);
+});
