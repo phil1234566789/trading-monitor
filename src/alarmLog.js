@@ -1,5 +1,6 @@
 import { setup2AlarmRow } from "./algoWatcher.js";
 import { supabase } from "./supabaseClient.js";
+import { setup1RowsOnly } from "../supabase/functions/_shared/tradeSetupProvenance.js";
 import { fetchTouchedZones, MAX_PROTOKOLL_ZEILEN } from "./poiZones.js";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
 import { dobAlarmLogRows } from "./dobAlarmLog.js";
@@ -22,12 +23,12 @@ async function fetchTouchedLiquidityLevels(instrument) {
 // trade_setups hat keine touched-Spalte — sobald das Fraktal bricht, verschwindet die Zeile
 // nie wieder (siehe Migration), jede vorhandene Zeile ist also bereits ein "erreichtes" Setup.
 async function fetchTradeSetups(instrument) {
-  const { data, error } = await supabase
+  const { data, error } = await setup1RowsOnly(supabase
     .from("trade_setups")
     .select("*")
     .eq("instrument", instrument)
     .order("ls_touched_time", { ascending: false })
-    .limit(MAX_PROTOKOLL_ZEILEN);
+    .limit(MAX_PROTOKOLL_ZEILEN));
 
   if (error) throw error;
   return data;
