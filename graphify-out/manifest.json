@@ -2910,9 +2910,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/fxcmCandles.ts": {
-    "mtime": 1795261100.0725737,
-    "seen": 1795262609.2072122,
-    "ast_hash": "fb0aa02bec252f7f4a09efabd96c29f9",
+    "mtime": 1795273740.6488318,
+    "seen": 1795273984.7597623,
+    "ast_hash": "e35bc158cff5446189eb7912e78173b7",
     "semantic_hash": ""
   },
   "supabase/functions/fxcm-ingest/index.ts": {
@@ -10218,9 +10218,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/dob-watcher/index.ts": {
-    "mtime": 1795272630.788278,
-    "seen": 1795273052.7470918,
-    "ast_hash": "f8d6767bdbaf78423fcaa5c8b8cfa125",
+    "mtime": 1795273758.6172123,
+    "seen": 1795273984.7667618,
+    "ast_hash": "277c135ff2fe591a362024e45f8bbf7c",
     "semantic_hash": ""
   },
   "test/dobAlarm.test.js": {
@@ -11256,27 +11256,27 @@
     "semantic_hash": ""
   },
   "test/fixtures/setup1-parity/eurusd-2026-11-20.json": {
-    "mtime": 1795262482.690521,
-    "seen": 1795262609.2082124,
-    "ast_hash": "c08f1f8d463143fdc4c6ff5e81a71f74",
+    "mtime": 1795273782.8460321,
+    "seen": 1795273984.835073,
+    "ast_hash": "2f2d851742af0e0823914408ac5d794e",
     "semantic_hash": ""
   },
   "test/fixtures/setup1-parity/gbpusd-2026-11-20.json": {
-    "mtime": 1795262482.692529,
-    "seen": 1795262609.2082124,
-    "ast_hash": "2be2acf541d6345946fde59c918caedb",
+    "mtime": 1795273782.8330243,
+    "seen": 1795273984.835073,
+    "ast_hash": "23cf7271adc8b776450d67d71020e1f6",
     "semantic_hash": ""
   },
   "test/fixtures/setup1-parity/xauusd-2026-11-20.json": {
-    "mtime": 1795262482.6935208,
-    "seen": 1795262609.2082124,
-    "ast_hash": "dba70433d4546eeec9a2762dfb668ba8",
+    "mtime": 1795273782.859547,
+    "seen": 1795273984.835073,
+    "ast_hash": "dee5a79f4cb260832786492e83882886",
     "semantic_hash": ""
   },
   "test/setup1ParityGuard.test.js": {
-    "mtime": 1795272911.31581,
-    "seen": 1795273052.87715,
-    "ast_hash": "30c0143c140c36efb12a79e09f29dced",
+    "mtime": 1795273859.1394186,
+    "seen": 1795273984.894074,
+    "ast_hash": "f591a4bc19d2e587a1e77e54748a5218",
     "semantic_hash": ""
   },
   "src/components/StructureAlarmHint.vue": {
@@ -11292,9 +11292,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/ts11TradeSetups.ts": {
-    "mtime": 1795272827.3183978,
-    "seen": 1795273052.7696345,
-    "ast_hash": "4134c450965a464a9ae245c454cafd16",
+    "mtime": 1795273740.7124827,
+    "seen": 1795273984.7900748,
+    "ast_hash": "5391a129553929264d801c93f72a03d6",
     "semantic_hash": ""
   }
 }

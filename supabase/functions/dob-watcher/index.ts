@@ -9,6 +9,7 @@ import {dobBlockStats} from '../../../src/dobBlockStats.js';
 import {dobWatcherCandidates} from '../../../src/dobWatcherCandidates.js';
 import {dobCanonicalRunId} from '../../../src/dobPoiType.js';
 import {fetchAllRows} from '../_shared/fetchAllRows.ts';
+import {readClosedFxcmCandles} from '../_shared/fxcmCandles.ts';
 import {dobGuardrailsFromRow,dobEntryRule} from '../../../src/dobGuardrails.js';
 import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
@@ -25,7 +26,6 @@ const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
 // M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte POI-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
-const BAR_SECONDS: Record<string,number>={'1m':60,'5m':300,'1h':3600,'4h':14400,'1D':86400};
 // TS1.1-Trendkontext wie der Chart (tradeSetup11ContextLoader: 300 D1, M5 ab dem D1-Anker, höchstens 15000).
 // ponytail: ein neues TS1.1-Urteil je Tick über alle Instrumente (Edge-CPU-Limit); fehlende gelten bis dahin
 // nicht als TS1.1, d. h. ein LQ-Sweep-Alarm kommt höchstens ein paar Minuten später, nie fälschlich.
@@ -43,18 +43,9 @@ async function alarmPolicy(client:any,instrument:string){
   return {enabled,windows,decide:(at:number)=>!enabled?'alarmDisabled':isWithinTradingWindows(at,windows)?null:'outsideAlarmWindow'};
 }
 
-// Cursor über das tatsächlich zuletzt gelieferte Zeitfeld: PostgREST kappt Seiten still bei ~1000 Zeilen (CLAUDE.md).
-async function closedCandles(client:any,instrument:string,bar:string,evaluatedAt:number,count=COUNTS[bar]){
-  const rows:any[]=[];let cursor=new Date(evaluatedAt*1000).toISOString();
-  while(rows.length<count){
-    const page=checked(await client.from('fxcm_candles').select('time,open,high,low,close,volume').eq('instrument',instrument).eq('bar',bar)
-      .lt('time',cursor).order('time',{ascending:false}).limit(Math.min(1000,count-rows.length))) as any[];
-    if(!page.length)break;
-    rows.push(...page);cursor=page[page.length-1].time;
-  }
-  return rows.reverse().map(r=>({time:Date.parse(r.time)/1000,open:Number(r.open),high:Number(r.high),low:Number(r.low),close:Number(r.close),volume:Number(r.volume)}))
-    .filter(c=>c.time+BAR_SECONDS[bar]<=evaluatedAt);
-}
+// Geschlossene FXCM-Kerzen; dasselbe Lesen nutzt das MCP für das TS1.1-Urteil (_shared/fxcmCandles.ts).
+const closedCandles=(client:any,instrument:string,bar:string,evaluatedAt:number,count=COUNTS[bar])=>
+  readClosedFxcmCandles(client,instrument,bar,evaluatedAt,count);
 
 // Nur protokollieren; gesendet wird danach gesammelt (flushDobOutbox), damit ein hängendes Telegram die Erkennung nicht aufhält.
 // Gesperrt (Schalter aus, außerhalb des Fensters oder Sperre aus dob_guardrails): suppressed mit Grund, nie nachsenden (der

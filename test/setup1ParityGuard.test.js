@@ -129,7 +129,8 @@ describe.each(fixtures)('$instrument 20.11.2026', (f) => {
     const chart = filterTradeSetup11Candidates({ instrument: f.instrument, m5Candles: m5, h1Candles: h1All, d1Candles: d1, evaluatedAt: f.evaluatedAt,
       settings: {}, sessionConfigs, setups: [...day.chartTs11.values()], sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
     const chartStatus = new Map(chart.assessments.map((a) => [`${a.setup.dir}:${a.setup.obStartTime}`, a.status]));
-    expect(chartStatus.size).toBeGreaterThan(0);
+    // Fixture-M5 reicht bis vor den Strukturanker, sonst urteilt TS1.1 nur 'unknown' und der Vergleich wäre leer.
+    expect([...chartStatus.values()]).toContain('passed');
     // Jeder Chart-Kandidat muss gespeichert sein; umgekehrt gibt es keine Zeile, die der Chart nicht als TS1.1-Kandidat kennt.
     const keys = [...new Set([...chartStatus.keys(), ...watcher.keys()])].sort();
     const expected = keys.map((k) => [k, chartStatus.get(k) ?? 'nicht im Chart']);

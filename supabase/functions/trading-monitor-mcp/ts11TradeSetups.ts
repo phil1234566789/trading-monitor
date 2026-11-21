@@ -2,8 +2,7 @@
 // Gespeicherte Urteile kommen aus dem Cache des dob-watchers (trade_setup_ts11_verdicts), fehlende rechnet
 // computeTs11Verdicts nach — ohne zu speichern, das MCP liest nur (Anon-Key).
 import { supabase } from "./supabaseClient.ts";
-import { fetchForexCandles } from "./forexCandles.ts";
-import { barSecondsFor } from "./timeframes.ts";
+import { readClosedFxcmCandles } from "../_shared/fxcmCandles.ts";
 import { getSessions } from "./db.ts";
 import { computeTs11Verdicts, TRADE_SETUP_11_VERSION, type Ts11Verdict } from "../_shared/ts11Verdicts.ts";
 import type { DetectedTradeSetup } from "../_shared/tradeSetup.ts";
@@ -11,9 +10,12 @@ import { tradeSetupToRow } from "../../../src/tradeSetupRow.js";
 
 const SETUP_COLUMNS = "*, trade_setup_sweeps(price, pivot_time, touched_time, timeframe, is_primary)";
 
-// Nur geschlossene Kerzen bis evaluatedAt, wie der dob-watcher sie liest.
-const closedLoader = (instrument: string, evaluatedAt: number) => async (bar: "5m" | "1h" | "1D", count: number) =>
-  (await fetchForexCandles(instrument, bar, { count, toMs: evaluatedAt * 1000 })).filter((c) => c.time + barSecondsFor(bar) <= evaluatedAt);
+// Kerzen wie der dob-watcher (geschlossene FXCM-Kerzen). fetchForexCandles lud am Wochenende live von cTrader nach
+// und ließ get_trade_setups in den 300-s-Timeout laufen.
+const closedLoader = (instrument: string, evaluatedAt: number) => (bar: "5m" | "1h" | "1D", count: number) =>
+  readClosedFxcmCandles(supabase, instrument, bar, evaluatedAt, count);
+// Nachgerechnete Urteile je Aufruf (Edge-CPU); den Rest des Bestands urteilt der dob-watcher laufend vor.
+const MAX_COMPUTED = 12;
 
 async function verdictsFor(instrument: string, rows: Record<string, unknown>[], evaluatedAt: number, useCache: boolean) {
   const status = new Map<unknown, Ts11Verdict>();
@@ -23,7 +25,7 @@ async function verdictsFor(instrument: string, rows: Record<string, unknown>[], 
     if (error) throw new Error(error.message);
     for (const v of data ?? []) status.set(Number(v.trade_setup_id), { status: v.status, reason: v.reason ?? undefined });
   }
-  const missing = rows.filter((r) => !status.has(r.id));
+  const missing = rows.filter((r) => !status.has(r.id)).slice(0, MAX_COMPUTED);
   const computed = await computeTs11Verdicts({ rows: missing, instrument, evaluatedAt, sessionConfigs: await getSessions(instrument),
     load: closedLoader(instrument, evaluatedAt) });
   for (const [id, v] of computed) status.set(id, v);
