@@ -13,9 +13,20 @@ import { collectStructureLqLevels } from './structureLiquidityLevels.ts';
 
 export { TRADE_SETUP_M5_FRACTAL_PERIOD, TRADE_SETUP_M5_CANDLE_COUNT };
 
-// Standard des Charts (Dashboard.vue: rangesPeriod/ranges2Period/rangesLookbackHours). Der Chart
-// darf per localStorage abweichen, die Alarme kennen nur diesen Stand.
-export const SETUP1_H1_STRUCTURE = Object.freeze({ periodOuter: 5, periodInner: 2, lookbackHours: 7 * 24 });
+// Struktur-Einstellung der Alarme (Start ab 1D-Pivot, sonst rollierend). Der Chart darf per localStorage
+// abweichen; dann zeigt er den Hinweis aus structureDeviatesFromAlarm (Philip 21.11.2026: Übergangslösung).
+export const SETUP1_H1_STRUCTURE = Object.freeze({ periodOuter: 5, periodInner: 2, lookbackHours: 7 * 24, startMode: 'pivot' });
+
+// Dieselben Werte in den Namen der Dashboard-Einstellungen, für Vergleich und "zurück auf Standard".
+export const SETUP1_STRUCTURE_SETTINGS = Object.freeze({
+  rangesPeriod: SETUP1_H1_STRUCTURE.periodOuter, ranges2Period: SETUP1_H1_STRUCTURE.periodInner,
+  rangesLookbackHours: SETUP1_H1_STRUCTURE.lookbackHours, ranges2LookbackHours: SETUP1_H1_STRUCTURE.lookbackHours,
+  rangesStartMode: SETUP1_H1_STRUCTURE.startMode,
+});
+
+export function structureDeviatesFromAlarm(settings) {
+  return Object.entries(SETUP1_STRUCTURE_SETTINGS).some(([key, value]) => settings[key] !== value);
+}
 
 // Wie fetchRangesCandles/computeRangesPivotsFor im Chart: ab Strukturstart (1D-Pivot) oder rollierend.
 /** @param {number} nowSec @param {number | null} [structureStartSec] */

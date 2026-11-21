@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1795262482.627493,
-    "seen": 1795262609.2072122,
-    "ast_hash": "514aa71c4706e65c747ef6b2820b92bf",
+    "mtime": 1795271203.1544125,
+    "seen": 1795271314.643238,
+    "ast_hash": "db594aa7c99dab99051a99979f296bb1",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -11256,9 +11256,9 @@
     "semantic_hash": ""
   },
   "src/setup1Detection.js": {
-    "mtime": 1795270583.3816168,
-    "seen": 1795270859.5118093,
-    "ast_hash": "6e96e41fa6dd9915fc3870921d5cf5a4",
+    "mtime": 1795271087.4190753,
+    "seen": 1795271314.6132352,
+    "ast_hash": "f9b17843360267139a9bbd9ea606ca06",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/setup1Live.ts": {
@@ -11286,9 +11286,15 @@
     "semantic_hash": ""
   },
   "test/setup1ParityGuard.test.js": {
-    "mtime": 1795270473.8311749,
-    "seen": 1795270859.6893291,
-    "ast_hash": "d95ef201386e224c7a8bb71a3b0ee40a",
+    "mtime": 1795271117.5809374,
+    "seen": 1795271314.7844965,
+    "ast_hash": "652e4482ad1b4a6487b5e75a5055dd3c",
+    "semantic_hash": ""
+  },
+  "src/components/StructureAlarmHint.vue": {
+    "mtime": 1795271102.9923942,
+    "seen": 1795271314.5512347,
+    "ast_hash": "f29130992a644bbba0a4e56739e7b955",
     "semantic_hash": ""
   }
 }

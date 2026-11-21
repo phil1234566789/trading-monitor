@@ -32,6 +32,8 @@ import DropdownMenu from "../components/ui/DropdownMenu.vue";
 import PinAddPopup from "../components/PinAddPopup.vue";
 import PinPanel from "../components/PinPanel.vue";
 import ToggleButton from "../components/ui/ToggleButton.vue";
+import StructureAlarmHint from "../components/StructureAlarmHint.vue";
+import { SETUP1_STRUCTURE_SETTINGS } from "../setup1Detection.js";
 import DateTimeInput from "../components/ui/DateTimeInput.vue";
 import { toDatetimeLocal } from "../datetimeLocal.js";
 import DataRefreshButton from "../components/DataRefreshButton.vue";
@@ -225,8 +227,8 @@ const pipScaleHint =
 // 2026-07-20 "Structure" (passend zu src/marketStructureAnalysis.ts, vormals rangeAnalysis.ts).
 // Interne Namen (rangesPeriod, showRanges, ...) bewusst NICHT mitumbenannt, um keinen reinen
 // Textumbenennungs-Diff über viele Dateien zu erzeugen — nur die sichtbaren Strings ändern sich.
-const rangesPeriod = useLocalStorageRef("rangesPeriod", 5);
-const rangesLookbackHours = useLocalStorageRef("rangesLookbackHours", 7 * 24);
+const rangesPeriod = useLocalStorageRef("rangesPeriod", SETUP1_STRUCTURE_SETTINGS.rangesPeriod);
+const rangesLookbackHours = useLocalStorageRef("rangesLookbackHours", SETUP1_STRUCTURE_SETTINGS.rangesLookbackHours);
 const rangesLookbackDays = computed({
   get: () => rangesLookbackHours.value / 24,
   set: (days) => { rangesLookbackHours.value = Math.round(days * 24); },
@@ -235,8 +237,8 @@ const rangesLookbackDays = computed({
 // brauchen nen zweiten state ... mit periode 2" — schnellere Uptrend-Erkennung). Eigene Felder
 // statt die obigen umzubenennen, damit rangesLookbackHours/-Period (bereits persistiert) unangetastet
 // bleiben.
-const ranges2Period = useLocalStorageRef("ranges2Period", 2);
-const ranges2LookbackHours = useLocalStorageRef("ranges2LookbackHours", 7 * 24);
+const ranges2Period = useLocalStorageRef("ranges2Period", SETUP1_STRUCTURE_SETTINGS.ranges2Period);
+const ranges2LookbackHours = useLocalStorageRef("ranges2LookbackHours", SETUP1_STRUCTURE_SETTINGS.ranges2LookbackHours);
 const ranges2LookbackDays = computed({
   get: () => ranges2LookbackHours.value / 24,
   set: (days) => { ranges2LookbackHours.value = Math.round(days * 24); },
@@ -259,8 +261,14 @@ const ranges2LookbackDays = computed({
 // eingegebenen Wert nicht überschreibt.
 const rangesFixedStartActive = useLocalStorageRef("rangesFixedStartActive", false);
 const rangesFixedStartTime = useLocalStorageRef("rangesFixedStartTime", 1783011600);
-const rangesStartMode = useLocalStorageRef("rangesStartMode", "pivot"); // "date" | "days" | "pivot"
+const rangesStartMode = useLocalStorageRef("rangesStartMode", SETUP1_STRUCTURE_SETTINGS.rangesStartMode); // "date" | "days" | "pivot"
 const rangesFixedStartDateInput = useLocalStorageRef("rangesFixedStartDateInput", 1783011600); // Default = derselbe Testszenario-Start wie replayTime
+// Struktur-Einstellungen, die der Alarm fest kennt (SETUP1_STRUCTURE_SETTINGS) — Hinweis + Zurücksetzen.
+const alarmStructureRefs = { rangesPeriod, ranges2Period, rangesLookbackHours, ranges2LookbackHours, rangesStartMode };
+const structureSettings = computed(() => Object.fromEntries(Object.entries(alarmStructureRefs).map(([k, r]) => [k, r.value])));
+function resetStructureToAlarm() {
+  for (const [key, value] of Object.entries(SETUP1_STRUCTURE_SETTINGS)) alarmStructureRefs[key].value = value;
+}
 // showRanges (Punkt-Marker im Chart, siehe PriceChart.vue) und showRangesMetadata (JSON-Panel)
 // sind bewusst getrennte Toggles — Philip will Ranges anzeigen können, ohne dafür das
 // Metadaten-Panel offen zu haben (siehe Chat: "man kann ranges nicht einzelnd toggeln"). EIN
@@ -2079,6 +2087,7 @@ watch(selectedTradingAccountId, () => {
         >
           ▾
         </ToggleButton>
+        <StructureAlarmHint :settings="structureSettings" @reset="resetStructureToAlarm" />
         <div v-if="rangesMenuOpen" class="toggle-dropdown">
           <ToggleButton variant="menu" :class="{ active: showRangesMetadata }" @click="showRangesMetadata = !showRangesMetadata">
             Metadaten
