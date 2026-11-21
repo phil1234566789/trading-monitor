@@ -250,6 +250,7 @@ const props = defineProps({
   // (kein eigener Toggle), über alle Timeframes hinweg, siehe usePriceChartDailyPivots.js.
   dbDailyPivots: { type: Array, default: () => [] },
   showSweptLiquidity: { type: Boolean, default: false },
+  showLiquidity2: { type: Boolean, default: false },
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
   tradeSetupHistoryCount: { type: Number, default: 5 },
@@ -1473,7 +1474,7 @@ function refreshLiquidityInternal() {
     hoveredPinLiquidityLevelKey: props.hoveredPinLiquidityLevelKey ?? targetPickerHoveredLiquidityKey.value ?? antiConfluencePickerHoveredLiquidityKey.value,
     journalLiquidityCategories: props.journalLiquidityCategories,
     invalidationLiquidityKeys: props.invalidationLiquidityKeys,
-    showSweptLiquidity: props.showSweptLiquidity,
+    showSweptLiquidity: props.showSweptLiquidity, showLiquidity2: props.showLiquidity2 && !setup2.selected.value,
     dbLiquidityLevelsHtf: props.dbLiquidityLevelsHtf,
     symbol: props.symbol,
     replayUntil: props.replayUntil,
@@ -2426,10 +2427,9 @@ watch(()=>props.dobTrade,renderDobTradeOverlay);
 watch(()=>[props.dobPositions,props.showTradeSetups],dobPositions.refresh,{deep:true});
 watch(() => props.dbObZones, refreshPoiZonesInternal);
 watch(() => props.showHistoricalObs, refreshPoiZonesInternal);
-watch(() => props.showLiquidity, refreshLiquidityInternal);
+watch(() => [props.showLiquidity, props.showSweptLiquidity, props.showLiquidity2], refreshLiquidityInternal);
 watch(() => props.dbLiquidityLevelsHtf, refreshLiquidityInternal);
 watch(() => props.dbDailyPivots, refreshDailyPivotsInternal);
-watch(() => props.showSweptLiquidity, refreshLiquidityInternal);
 watch(() => props.showLiquidityDebug, () => {
   refreshLiquidityInternal();
   refreshRangesMarkersInternal();

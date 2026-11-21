@@ -168,6 +168,8 @@ const showLiquidity = useLocalStorageRef("showLiquidity", true);
 // mitanzeigen. Beide default aus, um den Chart im Normalbetrieb nicht zuzumüllen.
 const showLiquidityDebug = useLocalStorageRef("showLiquidityDebug", false);
 const showSweptLiquidity = useLocalStorageRef("showSweptLiquidity", false);
+// Liquidität 2.0: nur starke LS (liquidity2.js), eigener Toggle neben dem alten Algo für den Vorher/Nachher-Vergleich.
+const showLiquidity2 = useLocalStorageRef("showLiquidity2", false);
 const showTradeSetups = useLocalStorageRef("showTradeSetups", true);
 // Ein/Ausblenden der eigenen geloggten Trades (Entry/Exit-Marker, verlinkte M5-OB-Box, Target-
 // Linien) — Untermenü-Feinschalter unter dem übergeordneten "Trades"-Toggle (showTradeSetups),
@@ -1522,6 +1524,7 @@ async function stepReplayForward() {
 // Toggles selbst) — welches Dropdown gerade offen ist, ist keine Einstellung, die überdauern muss.
 const rsiMenuOpen = ref(false);
 const liquidityMenuOpen = ref(false);
+const liquidity2MenuOpen = ref(false);
 const obsMenuOpen = ref(false);
 const rangesMenuOpen = ref(false);
 const tradeSetupsMenuOpen = ref(false);
@@ -1540,7 +1543,7 @@ const indikatorenMenuOpen = ref(false);
 // Sessions seit Chat 2026-07-29 NICHT mehr dabei ("ich deaktiviere gerne Indikatoren um mehr zu
 // sehen, aber Sessions eig nie — die geben mir Orientierung zur Charthistorie") — eigener,
 // permanenter Toggle links neben News statt im Sammel-Dropdown, siehe Template.
-const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showObsM5, showObs15m, showObs1h, showObs4h, showHistoricalObs, showObsM1,showDoubleOrderBlocks];
+const INDIKATOREN_REFS = [showEma, showRsi, showRsiDivergence, showRsiDivergenceHistory, showLiquidity, showSweptLiquidity, showLiquidity2, showObsM5, showObs15m, showObs1h, showObs4h, showHistoricalObs, showObsM1,showDoubleOrderBlocks];
 const indikatorenActive = computed(() => INDIKATOREN_REFS.some((r) => r.value));
 // War bis 2026-08-30 eine reine JS-Variable (nicht in localStorage) — ein Reload zwischen
 // Ausblenden und Wieder-Einblenden (z.B. Tab zu/wieder auf am nächsten Handelstag) verlor den
@@ -1588,6 +1591,7 @@ function closeMenusOutside(e) {
   if (!e.target.closest?.(".toggle-group")) {
     rsiMenuOpen.value = false;
     liquidityMenuOpen.value = false;
+    liquidity2MenuOpen.value = false;
     obsMenuOpen.value = false;
     rangesMenuOpen.value = false;
     tradeSetupsMenuOpen.value = false;
@@ -1920,6 +1924,27 @@ watch(selectedTradingAccountId, () => {
             </ToggleButton>
             <div v-if="liquidityMenuOpen" class="toggle-dropdown">
               <ToggleButton variant="menu" :class="{ active: showSweptLiquidity }" @click="showSweptLiquidity = !showSweptLiquidity">
+                Liquidity-Sweeps
+              </ToggleButton>
+            </div>
+          </div>
+
+          <div class="toggle-dropdown-divider"></div>
+
+          <div class="toggle-group">
+            <ToggleButton variant="menu" :class="{ active: showLiquidity2 }" @click="showLiquidity2 = !showLiquidity2">
+              Liquidität 2.0
+            </ToggleButton>
+            <ToggleButton variant="caret" :class="{ open: liquidity2MenuOpen }" title="Untermenü" @click="liquidity2MenuOpen = !liquidity2MenuOpen">
+              ▾
+            </ToggleButton>
+            <div v-if="liquidity2MenuOpen" class="toggle-dropdown">
+              <ToggleButton
+                variant="menu"
+                :class="{ active: showLiquidity2 }"
+                title="Nur starke LS: Pivot nach LL/HH, BOS per Schlusskurs binnen 2h, aktiv bis zum Sweep"
+                @click="showLiquidity2 = !showLiquidity2"
+              >
                 Liquidity-Sweeps
               </ToggleButton>
             </div>
@@ -2369,6 +2394,7 @@ watch(selectedTradingAccountId, () => {
     :show-historical-obs="showHistoricalObs"
     :show-liquidity="showLiquidity"
     :show-swept-liquidity="showSweptLiquidity"
+    :show-liquidity2="showLiquidity2"
     :show-liquidity-debug="showLiquidityDebug"
     :show-trade-setups="showTradeSetups"
     :trade-setup-history-count="tradeSetupHistoryCount"

@@ -1,6 +1,7 @@
 import {detectOrderBlocks,candleInvalidatesOrderBlock,candleTouchesOrderBlock} from './orderBlockDetection.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 import {obMinimum,instrumentConfig} from './instrumentConfig.js';
+import {wilderAtrValues} from './atr.js';
 
 // POI v1 (Philip, Q15/Q16): aktive H1/H4-OB-Zone in Trade-Richtung, höchstens k H1-ATR(14) von OB1 entfernt.
 // k je Instrument in instrumentConfig (dobPoiMaxAtr); nur XAU ist gemessen (analysis/dob-setup/source-g-xau-2026.json),
@@ -32,13 +33,8 @@ export function dobPoiContext({htfCandles,m5Candles=[],instrument='XAUUSD'}){
     touches:touchEpisodes(zone,recognizedAt,h1,m5)});
   }
  }
- // ATR(14) nach Wilder über die gehandelten H1-Kerzen; im Repo gab es keine ATR-Funktion.
- const atr=[];
- for(let i=1,value=null,sum=0;i<h1.length;i++){
-  const c=h1[i],prev=h1[i-1].close,tr=Math.max(c.high-c.low,Math.abs(c.high-prev),Math.abs(c.low-prev));
-  if(i<=ATR_PERIOD){sum+=tr;if(i===ATR_PERIOD)value=sum/ATR_PERIOD;}else value=(value*(ATR_PERIOD-1)+tr)/ATR_PERIOD;
-  if(value!=null)atr.push({time:c.time+HOUR,value});
- }
+ // ATR(14) nach Wilder über die gehandelten H1-Kerzen, gültig ab Schluss der jeweiligen Stunde.
+ const atr=wilderAtrValues(h1,ATR_PERIOD).flatMap((value,i)=>value==null?[]:[{time:h1[i].time+HOUR,value}]);
  return {zones,atr};
 }
 

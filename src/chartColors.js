@@ -51,6 +51,10 @@ export const DEFAULT_CHART_COLORS = {
   liquidityHigh4h: { hex: "#00e676", alpha: 0.9 },
   liquidityLow4h: { hex: "#ff9800", alpha: 0.9 },
   liquiditySweep4h: { hex: "#ffd700", alpha: 0.9 },
+  // Liquidität 2.0 (liquidity2.js): bewusst andere Farben als der alte Algo, damit beide gleichzeitig unterscheidbar sind.
+  liquidity2High: { hex: "#00b0ff", alpha: 0.95 },
+  liquidity2Low: { hex: "#ff4081", alpha: 0.95 },
+  liquidity2Sweep: { hex: "#b388ff", alpha: 0.9 },
   // Aufgeteilt in M5/1H/4H (Chat 2026-07-30, Bug-Report Philip: "die ganzen OBs lassen sich
   // schwierig unterscheiden") — vorher EIN gemeinsamer Satz (obBull/obBear/obInactive) für alle
   // Timeframes, nur 1H bekam einen fest verdrahteten Dimm-Faktor (DIM_FACTOR_1H in orderBlocks.js,

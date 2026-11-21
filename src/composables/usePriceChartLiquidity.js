@@ -23,6 +23,7 @@ import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import { createSessionBonusResolver } from "../sessionBonus.js";
 import { markIgnored } from "../ignoredCandles.js";
 import { ref } from "vue";
+import { usePriceChartLiquidity2 } from "./usePriceChartLiquidity2.js";
 
 export function usePriceChartLiquidity() {
   let candleSeries = null;
@@ -32,6 +33,9 @@ export function usePriceChartLiquidity() {
   // "Können wir die Linien klickbar machen?") gebraucht, siehe getCurrentLiquidityLevels() unten.
   let currentLiquidityLevels = [];
 
+  // Liquidität 2.0 hängt hier dran statt in PriceChart.vue, weil sie dieselbe Serie und dieselben Refresh-Anlässe
+  // braucht; ihr eigener Toggle (showLiquidity2) ist unabhängig von showLiquidity.
+  const liquidity2 = usePriceChartLiquidity2();
   const liquidityMetadata = ref(null);
   const liquidityEarliestTime = ref(null);
 
@@ -43,6 +47,7 @@ export function usePriceChartLiquidity() {
     candleSeries = candleSeriesInstance;
   }
   function dispose() {
+    liquidity2.clear(candleSeries);
     candleSeries = null;
   }
 
@@ -72,6 +77,7 @@ export function usePriceChartLiquidity() {
   // candles = bereits clipReplay-gefiltertes allCandles, allCandles = das ungefilterte Original
   // (nur für currentPriceEstimate gebraucht, siehe computeHtfLiquidityLevels).
   function refresh(candles, allCandles, ctx) {
+    liquidity2.refresh(candleSeries, candles, { show: ctx.showLiquidity2, symbol: ctx.symbol, nowSec: ctx.replayUntil ?? Math.floor(Date.now() / 1000) });
     const { showLiquidity, pinnedLiquidityLevels, pinLiquidityLevelKeys, hoveredPinLiquidityLevelKey, journalLiquidityCategories, invalidationLiquidityKeys, symbol } = ctx;
     if (!showLiquidity) {
       // Kein db1h hier (mehr) — die relevanten 1H-Level sind seit 2026-08-23 an showLiquidity

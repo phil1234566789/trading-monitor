@@ -64,6 +64,14 @@ const GROUPS = [
       { key: "liquiditySweep4h", label: "Gesweept" },
     ],
   },
+  {
+    title: "Liquidität 2.0",
+    fields: [
+      { key: "liquidity2High", label: "Starker Short-LS (Hoch)" },
+      { key: "liquidity2Low", label: "Starker Long-LS (Tief)" },
+      { key: "liquidity2Sweep", label: "Gesweept" },
+    ],
+  },
   // Aufgeteilt nach Timeframe (Chat 2026-07-30, Bug-Report Philip: "die ganzen OBs lassen sich
   // schwierig unterscheiden") — vorher eine gemeinsame Gruppe für alle drei Timeframes, siehe
   // chartColors.js für die Default-Abstufung (4H kräftigsten, M5 am dezentesten).
