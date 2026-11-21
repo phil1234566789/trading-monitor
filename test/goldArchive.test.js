@@ -46,7 +46,9 @@ it('keeps Gold M1/M3 selections and clamps replay to the last closed bar', () =>
   const now = Date.parse('2026-09-24T21:02:30Z');
   expect(goldChartSelection('1m',1,now)).toMatchObject({bar:'1m',replayTime:Date.parse('2026-09-24T21:01:00Z')/1000});
   expect(goldChartSelection('3m',1,now)).toMatchObject({bar:'3m',replayTime:Date.parse('2026-09-24T20:57:00Z')/1000});
-  expect(goldChartSelection('15m',1,now).bar).toBe('5m');
+  // Seit Gold-M15 im FXCM-Archiv liegt (4d0b1e79) ist 15m ein nativer Gold-Timeframe; 30m gibt es nicht.
+  expect(goldChartSelection('15m',1,now).bar).toBe('15m');
+  expect(goldChartSelection('30m',1,now).bar).toBe('5m');
 });
 it('reads native Gold M3 from initial, scroll-back and next-candle archive paths', async () => {
   mock.pages=[{data:[row('18')],error:null}];

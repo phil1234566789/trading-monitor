@@ -2,7 +2,7 @@
 import { barSecondsFor } from './timeframes.js';
 
 export const isGoldInstrument = symbol => symbol === 'XAUUSD';
-export const GOLD_CHART_BARS = ['1m', '3m', '5m', '1h', '4h', '1D'];
+export const GOLD_CHART_BARS = ['1m', '3m', '5m', '15m', '1h', '4h', '1D'];
 export function goldChartSelection(bar, replayTime, now = Date.now()) {
   const selectedBar = GOLD_CHART_BARS.includes(bar) ? bar : '5m';
   const start = Date.parse('2026-01-01T00:00:00Z') / 1000;
