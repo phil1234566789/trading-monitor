@@ -2,6 +2,7 @@ import { reconstructObLifecycle } from "../_shared/obReplayLifecycle.ts";
 import { pinTypeFields, type PinType } from './pinType.ts';
 import {persistDoubleOrderBlockPin,upsertM5ObZoneId} from '../_shared/doubleOrderBlockPinStore.js';
 import {assertTradeSetupSourceSnapshot} from '../_shared/tradeSetupSourceSnapshot.js';
+import { setup1RowsOnly } from '../_shared/tradeSetupProvenance.js';
 import { supabase } from "./supabaseClient.ts";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { berlinDayRangeUtcMs } from "../_shared/berlinTime.ts";
@@ -198,12 +199,12 @@ export async function getLatestDailyStructureStartTime(instrument: string, asOfS
 // markiert dagegen immer den tatsächlichen Bestätigungszeitpunkt und ist seit 2026-09-20 auch
 // der natürliche Schlüssel der Tabelle.
 export async function getTradeSetups(instrument: string, fromSec?: number, limit = 2, replayUntilSec?: number) {
-  let query = supabase
+  let query = setup1RowsOnly(supabase
     .from("trade_setups")
     .select("*")
     .eq("instrument", instrument)
     .order("ob_start_time", { ascending: false })
-    .limit(limit);
+    .limit(limit));
   if (fromSec != null) query = query.gte("ob_start_time", new Date(fromSec * 1000).toISOString());
   if (replayUntilSec != null) query = query.lte("created_at", new Date(replayUntilSec * 1000).toISOString());
   const { data, error } = await query;

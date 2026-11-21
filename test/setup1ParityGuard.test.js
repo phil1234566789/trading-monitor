@@ -96,7 +96,7 @@ describe.each(fixtures)('$instrument 20.11.2026', (f) => {
 
   // Gemeinsam für Setup-1- und TS1.1-Vergleich: was beide Seiten über den Tag erstmals erkennen.
   const day = (() => {
-    const chart = new Map(), backend = new Map(), chartTs11 = new Map();
+    const chart = new Map(), backend = new Map(), backendTs11 = new Map(), chartTs11 = new Map();
     for (const t of ticks) {
       const { m5, h1, startSec } = at(t);
       const h1Front = chartH1Levels(f, markFront(h1), t, startSec);
@@ -110,8 +110,9 @@ describe.each(fixtures)('$instrument 20.11.2026', (f) => {
       const live = detectLiveSetup1({ instrument: f.instrument, m5Candles: backendMarkIgnored(m5, sessionsBack),
         h1Candles: backendMarkIgnored(h1, sessionsBack), nowSec: t, structureStartSec: startSec, currentPrice: null });
       for (const s of live.detected) if (!backend.has(`${s.dir}:${s.obStartTime}`)) backend.set(`${s.dir}:${s.obStartTime}`, { s, t });
+      for (const s of live.ts11Only) if (!backendTs11.has(`${s.dir}:${s.obStartTime}`)) backendTs11.set(`${s.dir}:${s.obStartTime}`, { s, t });
     }
-    return { chart, backend, chartTs11 };
+    return { chart, backend, backendTs11, chartTs11 };
   })();
 
   it('Setup 1: Chart und poi-watcher melden über den Tag dieselben Setups mit denselben Sweeps', () => {
@@ -119,21 +120,20 @@ describe.each(fixtures)('$instrument 20.11.2026', (f) => {
     expect([...day.backend.values()].map(({ s }) => setupKey(s))).toEqual([...day.chart.values()].map(setupKey));
   });
 
-  it('TS1.1: Urteil aus den poi-watcher-Zeilen (dob-watcher) = Urteil des Charts für dieselben Setups', () => {
+  it('TS1.1: jeder TS1.1-Kandidat des Charts steht als poi-watcher-Zeile und bekommt im dob-watcher dasselbe Urteil', () => {
     const m5 = m5All.filter((c) => c.time + 300 <= f.evaluatedAt), h1 = h1All, d1 = rows(f.d1);
     const sessionConfigs = f.sessions.map(sessionFromRow);
     const input = { instrument: f.instrument, m5Candles: m5, h1Candles: h1, d1Candles: d1, evaluatedAt: f.evaluatedAt, settings: {}, sessionConfigs };
-    const ofDay = [...day.backend.values()].filter(({ s }) => s.obStartTime >= f.dayStart);
-    const rowsOfDay = ofDay.map(({ s, t }, i) => asRow(f.instrument, s, i + 1, t));
-    const verdicts = tradeSetup11RowVerdicts({ ...input, rows: rowsOfDay });
-    const watcher = new Map(ofDay.map(({ s }, i) => [`${s.dir}:${s.obStartTime}`, verdicts.get(i + 1)?.status]));
+    // Setup-1-Zeilen plus die TS1.1-only-Zeilen (OB-Sweep-Quellen), die poi-watcher seit 21.11.2026 mitspeichert.
+    const stored = [...day.backend.values(), ...day.backendTs11.values()].filter(({ s }) => s.obStartTime >= f.dayStart);
+    const verdicts = tradeSetup11RowVerdicts({ ...input, rows: stored.map(({ s, t }, i) => asRow(f.instrument, s, i + 1, t)) });
+    const watcher = new Map(stored.map(({ s }, i) => [`${s.dir}:${s.obStartTime}`, verdicts.get(i + 1)?.status]));
     const chart = filterTradeSetup11Candidates({ ...input, setups: [...day.chartTs11.values()], sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
     const chartStatus = new Map(chart.assessments.map((a) => [`${a.setup.dir}:${a.setup.obStartTime}`, a.status]));
-    expect(watcher.size).toBeGreaterThan(0);
-    // Nur Setups, die beide Seiten kennen: Setups, die der Chart ausschließlich über OB-Sweep-Quellen findet,
-    // speichert poi-watcher gar nicht (offene Fachfrage, siehe Bericht 21.11.2026) — die stehen unten einzeln.
-    const shared = [...watcher.keys()].filter((k) => chartStatus.has(k));
-    expect(shared.map((k) => [k, watcher.get(k)])).toEqual(shared.map((k) => [k, chartStatus.get(k)]));
+    expect(chartStatus.size).toBeGreaterThan(0);
+    // Jeder Chart-Kandidat muss gespeichert sein; umgekehrt gibt es keine Zeile, die der Chart nicht als TS1.1-Kandidat kennt.
+    const keys = [...new Set([...chartStatus.keys(), ...watcher.keys()])].sort();
+    expect(keys.map((k) => [k, watcher.get(k) ?? 'nicht gespeichert'])).toEqual(keys.map((k) => [k, chartStatus.get(k) ?? 'nicht im Chart']));
   });
 });
 

@@ -8,8 +8,8 @@ import { unprocessedTimeframes } from "./fxcmRefresh.js";
 import { fetchAllRows } from "../_shared/fetchAllRows.ts";
 import { WATCHED_OB_TIMEFRAMES } from "../_shared/obTimeframes.js";
 import { fetchForexBatch, TRADE_SETUP_M5_CANDLE_LIMIT } from "./forexBatch.ts";
-import { TRADE_SETUP_DETECTOR_VERSION } from "../_shared/tradeSetup.ts";
-import { setup1StructureWindow, TRADE_SETUP_M5_FRACTAL_PERIOD } from "../../../src/setup1Detection.js";
+import { TRADE_SETUP_DETECTOR_VERSION, TRADE_SETUP_OB_SWEEP_PROFILE } from "../_shared/tradeSetup.ts";
+import { setup1StructureWindow, TRADE_SETUP_M5_FRACTAL_PERIOD, TRADE_SETUP_TS11_SOURCE_VERSION } from "../../../src/setup1Detection.js";
 import { detectLiveSetup1 } from "../_shared/setup1Live.ts";
 import { LIQUIDITY_FRACTAL_PERIOD } from "../_shared/liquidityDetection.ts";
 import { setup1Configuration, tradeSetupProvenance } from '../_shared/tradeSetupProvenance.js';
@@ -749,14 +749,19 @@ Deno.serve(async (req) => {
         // H1-Level wie im Chart aus der H1-Marktstruktur ab dem letzten 1D-Strukturpivot, alle
         // alarmfähigen Setups statt nur des neuesten je Richtung (siehe _shared/setup1Live.ts).
         const structureStartSec = await latestStructureStartSec(supabase, cfg.instrument);
-        const { detected, params: tradeSetupParams } = detectLiveSetup1({ instrument: cfg.instrument, m5Candles,
+        const { detected: setup1, ts11Only, params: tradeSetupParams } = detectLiveSetup1({ instrument: cfg.instrument, m5Candles,
           h1Candles: h1CandlesForSetup, nowSec, structureStartSec, currentPrice });
-        const setupProvenance = await tradeSetupProvenance({ source: 'live', detectorVersion: TRADE_SETUP_DETECTOR_VERSION,
-          configuration: setup1Configuration({ instrument: cfg.instrument, params: tradeSetupParams,
+        const provenanceFor = (detectorVersion: string, sweepSourceProfile?: string) => tradeSetupProvenance({ source: 'live', detectorVersion,
+          configuration: setup1Configuration({ instrument: cfg.instrument, params: { ...tradeSetupParams, ...(sweepSourceProfile ? { sweepSourceProfile } : {}) },
             minGap: obMinimum(cfg.instrument, '5m'), sessions: ignoreSessions,
             m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD,
             m5Window: TRADE_SETUP_M5_CANDLE_LIMIT, h1Window: setup1StructureWindow(nowSec, structureStartSec).count,
             h1Source: 'marketStructurePivots' }) });
+        const setup1Provenance = await provenanceFor(TRADE_SETUP_DETECTOR_VERSION);
+        // TS1.1-only-Kandidaten werden gespeichert (dob-watcher), aber nie als Setup 1 alarmiert.
+        const ts11Provenance = ts11Only.length ? await provenanceFor(TRADE_SETUP_TS11_SOURCE_VERSION, TRADE_SETUP_OB_SWEEP_PROFILE) : null;
+        const ts11Keys = new Set(ts11Only.map((s) => `${s.dir}_${s.obStartTime}`));
+        const detected = [...setup1, ...ts11Only];
 
         // Schlüssel ist seit 2026-09-20 der bestätigende OB, nicht mehr fractal_pivot_time — ein
         // Setup ist durch ihn identifiziert, nicht durch den Pfad, über den es gefunden wurde
@@ -822,7 +827,9 @@ Deno.serve(async (req) => {
           // stilles Loch darin wäre schlimmer als ein stiller Alarm.
           const forbiddenLabel = forbiddenSessionAt(forbiddenSessions, setup.obStartTime);
           if (forbiddenLabel) tradeSetupForbiddenCount++;
-          const alertNow = hasAnySetupRow[direction] && alarmActive && !forbiddenLabel;
+          const isTs11Only = ts11Keys.has(`${setup.dir}_${setup.obStartTime}`);
+          const alertNow = !isTs11Only && hasAnySetupRow[direction] && alarmActive && !forbiddenLabel;
+          const setupProvenance = isTs11Only ? ts11Provenance! : setup1Provenance;
           // Ferne OB-Kante = das von widenObForSweep aufgezogene Sweep-Extrem (siehe
           // deriveSetupEntryInvalidation in der JS-Kopie) — in der DB die generierte Spalte
           // trade_setups.invalidation, hier fürs Telegram nochmal direkt aus dem Setup.
