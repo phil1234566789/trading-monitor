@@ -1,0 +1,4825 @@
+{
+ "measurement": "lq2-reaktion-v1",
+ "git": "044c7af4",
+ "definition": {
+  "fenster": "3h",
+  "stark": "MFE ≥ 1.5 H1-ATR vor Re-Sweep",
+  "keine": "Re-Sweep vor 0.5 ATR",
+  "atr": "H1-ATR(14) zum Sweep-Zeitpunkt",
+  "mfe": "ab dem Touch, vom LS-Preis weg; Re-Sweep = Extrem der 30-min-Sweep-Zone danach überschritten",
+  "durchbruch": "kein M5-Schluss zurück hinter den LS in der Zone, nicht in der Grundgesamtheit",
+  "trennt": "|AUC−0,5| ≥ 0,05, p < 0,01 in H1 und H2, gleiche Richtung (stark vs. keine)"
+ },
+ "instruments": {
+  "GBPUSD": {
+   "n": 5985,
+   "H1": {
+    "n": 3245,
+    "stark": 457,
+    "mittel": 1669,
+    "keine": 1119
+   },
+   "H2": {
+    "n": 2740,
+    "stark": 456,
+    "mittel": 1417,
+    "keine": 867
+   },
+   "verteilung": {
+    "1h": {
+     "mfe": {
+      "q25": 0.33,
+      "med": 0.55,
+      "q75": 0.94,
+      "q90": 1.43
+     },
+     "maeMed": 0,
+     "resweep": 40.9,
+     "ab1_5": 8.9
+    },
+    "3h": {
+     "mfe": {
+      "q25": 0.35,
+      "med": 0.62,
+      "q75": 1.13,
+      "q90": 1.84
+     },
+     "maeMed": 0.07,
+     "resweep": 56.6,
+     "ab1_5": 15.3
+    },
+    "session": {
+     "mfe": {
+      "q25": 0.35,
+      "med": 0.62,
+      "q75": 1.16,
+      "q90": 1.99
+     },
+     "maeMed": 0.1,
+     "resweep": 58.7,
+     "ab1_5": 16.7
+    }
+   },
+   "merkmale": {
+    "ageHours": {
+     "H1": {
+      "auc": 0.602,
+      "p": 2.2e-10
+     },
+     "H2": {
+      "auc": 0.663,
+      "p": 2.2e-22
+     }
+    },
+    "impulsePips": {
+     "H1": {
+      "auc": 0.664,
+      "p": 1.4e-24
+     },
+     "H2": {
+      "auc": 0.69,
+      "p": 5.1e-30
+     }
+    },
+    "impulseAtr": {
+     "H1": {
+      "auc": 0.69,
+      "p": 3e-32
+     },
+     "H2": {
+      "auc": 0.721,
+      "p": 8.4e-40
+     }
+    },
+    "impulseMinutes": {
+     "H1": {
+      "auc": 0.6,
+      "p": 5.4e-10
+     },
+     "H2": {
+      "auc": 0.642,
+      "p": 1.6e-17
+     }
+    },
+    "brokenSwings": {
+     "H1": {
+      "auc": 0.593,
+      "p": 6.1e-9
+     },
+     "H2": {
+      "auc": 0.636,
+      "p": 3.7e-16
+     }
+    },
+    "bosMinutes": {
+     "H1": {
+      "auc": 0.544,
+      "p": 0.058
+     },
+     "H2": {
+      "auc": 0.579,
+      "p": 0.0012
+     }
+    },
+    "sweepDepthPips": {
+     "H1": {
+      "auc": 0.634,
+      "p": 6.9e-17
+     },
+     "H2": {
+      "auc": 0.669,
+      "p": 4.6e-24
+     }
+    },
+    "sweepDepthAtr": {
+     "H1": {
+      "auc": 0.644,
+      "p": 3.5e-19
+     },
+     "H2": {
+      "auc": 0.68,
+      "p": 6e-27
+     }
+    },
+    "rankRecency": {
+     "H1": {
+      "auc": 0.583,
+      "p": 2.5e-7
+     },
+     "H2": {
+      "auc": 0.62,
+      "p": 6.3e-13
+     }
+    },
+    "gapNextAtr": {
+     "H1": {
+      "auc": 0.528,
+      "p": 0.086
+     },
+     "H2": {
+      "auc": 0.503,
+      "p": 0.86
+     }
+    },
+    "sweepRangeAtr": {
+     "H1": {
+      "auc": 0.795,
+      "p": 1.5e-75
+     },
+     "H2": {
+      "auc": 0.833,
+      "p": 1.5e-88
+     }
+    },
+    "sweepRejection": {
+     "H1": {
+      "auc": 0.476,
+      "p": 0.14
+     },
+     "H2": {
+      "auc": 0.526,
+      "p": 0.12
+     }
+    },
+    "sweepBodyAtr": {
+     "H1": {
+      "auc": 0.723,
+      "p": 4.5e-44
+     },
+     "H2": {
+      "auc": 0.723,
+      "p": 8.7e-41
+     }
+    },
+    "zoneDepthAtr": {
+     "H1": {
+      "auc": 0.434,
+      "p": 0.000038
+     },
+     "H2": {
+      "auc": 0.494,
+      "p": 0.72
+     }
+    },
+    "hasAltPivot": {
+     "H1": {
+      "auc": 0.487,
+      "p": 0.43,
+      "anteil": 80.7,
+      "lift": 0.98
+     },
+     "H2": {
+      "auc": 0.511,
+      "p": 0.49,
+      "anteil": 83,
+      "lift": 1.02
+     }
+    },
+    "lhAfterLL": {
+     "H1": {
+      "auc": 0.5,
+      "p": 1,
+      "anteil": 39,
+      "lift": 1.01
+     },
+     "H2": {
+      "auc": 0.487,
+      "p": 0.46,
+      "anteil": 40.3,
+      "lift": 1.06
+     }
+    },
+    "isLH": {
+     "H1": {
+      "auc": 0.446,
+      "p": 0.0028,
+      "anteil": 42.1,
+      "lift": 0.86
+     },
+     "H2": {
+      "auc": 0.458,
+      "p": 0.022,
+      "anteil": 43.1,
+      "lift": 0.94
+     }
+    },
+    "bos2h": {
+     "H1": {
+      "auc": 0.531,
+      "p": 0.051,
+      "anteil": 15.5,
+      "lift": 1.36
+     },
+     "H2": {
+      "auc": 0.53,
+      "p": 0.069,
+      "anteil": 15.9,
+      "lift": 1.3
+     }
+    },
+    "bosBeforeSweep": {
+     "H1": {
+      "auc": 0.563,
+      "p": 0.000083,
+      "anteil": 42.4,
+      "lift": 1.23
+     },
+     "H2": {
+      "auc": 0.615,
+      "p": 5.3e-12,
+      "anteil": 42.5,
+      "lift": 1.37
+     }
+    },
+    "closedBack": {
+     "H1": {
+      "auc": 0.487,
+      "p": 0.41,
+      "anteil": 62.1,
+      "lift": 0.96
+     },
+     "H2": {
+      "auc": 0.5,
+      "p": 0.99,
+      "anteil": 62.7,
+      "lift": 1
+     }
+    },
+    "sessionExtreme": {
+     "H1": {
+      "auc": 0.557,
+      "p": 0.00037,
+      "anteil": 14.4,
+      "lift": 1.52
+     },
+     "H2": {
+      "auc": 0.574,
+      "p": 0.0000087,
+      "anteil": 15,
+      "lift": 1.65
+     }
+    },
+    "m5ObTick": {
+     "H1": {
+      "auc": 0.508,
+      "p": 0.63,
+      "anteil": 45.7,
+      "lift": 1.04
+     },
+     "H2": {
+      "auc": 0.534,
+      "p": 0.042,
+      "anteil": 48.2,
+      "lift": 1.07
+     }
+    },
+    "m5ObPip": {
+     "H1": {
+      "auc": 0.488,
+      "p": 0.45,
+      "anteil": 75,
+      "lift": 0.99
+     },
+     "H2": {
+      "auc": 0.499,
+      "p": 0.96,
+      "anteil": 81.1,
+      "lift": 1
+     }
+    },
+    "m15ObTick": {
+     "H1": {
+      "auc": 0.494,
+      "p": 0.69,
+      "anteil": 9.6,
+      "lift": 0.89
+     },
+     "H2": {
+      "auc": 0.491,
+      "p": 0.57,
+      "anteil": 9.5,
+      "lift": 0.81
+     }
+    },
+    "m15ObPip": {
+     "H1": {
+      "auc": 0.483,
+      "p": 0.3,
+      "anteil": 26,
+      "lift": 0.91
+     },
+     "H2": {
+      "auc": 0.479,
+      "p": 0.2,
+      "anteil": 27.4,
+      "lift": 0.9
+     }
+    },
+    "counterFvg": {
+     "H1": {
+      "auc": 0.619,
+      "p": 1.2e-13,
+      "anteil": 15.1,
+      "lift": 1.91
+     },
+     "H2": {
+      "auc": 0.652,
+      "p": 7.6e-20,
+      "anteil": 16.6,
+      "lift": 2.11
+     }
+    },
+    "withRoot": {
+     "H1": {
+      "auc": 0.479,
+      "p": 0.21,
+      "anteil": 47.2,
+      "lift": 0.92
+     },
+     "H2": {
+      "auc": 0.515,
+      "p": 0.37,
+      "anteil": 48.1,
+      "lift": 1.01
+     }
+    },
+    "withCurrent": {
+     "H1": {
+      "auc": 0.521,
+      "p": 0.22,
+      "anteil": 44.7,
+      "lift": 1.09
+     },
+     "H2": {
+      "auc": 0.47,
+      "p": 0.089,
+      "anteil": 43.8,
+      "lift": 0.97
+     }
+    },
+    "ls_Asia": {
+     "H1": {
+      "auc": 0.426,
+      "p": 0.0000044,
+      "anteil": 30.2,
+      "lift": 0.81
+     },
+     "H2": {
+      "auc": 0.426,
+      "p": 0.0000097,
+      "anteil": 29.6,
+      "lift": 0.84
+     }
+    },
+    "sweep_Asia": {
+     "H1": {
+      "auc": 0.36,
+      "p": 2e-18,
+      "anteil": 26.4,
+      "lift": 0.36
+     },
+     "H2": {
+      "auc": 0.335,
+      "p": 5.6e-23,
+      "anteil": 27.1,
+      "lift": 0.32
+     }
+    },
+    "ls_London": {
+     "H1": {
+      "auc": 0.527,
+      "p": 0.098,
+      "anteil": 14.8,
+      "lift": 1.17
+     },
+     "H2": {
+      "auc": 0.522,
+      "p": 0.18,
+      "anteil": 16.1,
+      "lift": 1.13
+     }
+    },
+    "sweep_London": {
+     "H1": {
+      "auc": 0.544,
+      "p": 0.0061,
+      "anteil": 19.5,
+      "lift": 1.31
+     },
+     "H2": {
+      "auc": 0.548,
+      "p": 0.004,
+      "anteil": 19.8,
+      "lift": 1.31
+     }
+    },
+    "ls_MMM": {
+     "H1": {
+      "auc": 0.513,
+      "p": 0.43,
+      "anteil": 10.8,
+      "lift": 1.05
+     },
+     "H2": {
+      "auc": 0.525,
+      "p": 0.14,
+      "anteil": 10.1,
+      "lift": 1.25
+     }
+    },
+    "sweep_MMM": {
+     "H1": {
+      "auc": 0.486,
+      "p": 0.38,
+      "anteil": 10.9,
+      "lift": 0.74
+     },
+     "H2": {
+      "auc": 0.494,
+      "p": 0.74,
+      "anteil": 11.3,
+      "lift": 0.74
+     }
+    },
+    "ls_NY": {
+     "H1": {
+      "auc": 0.504,
+      "p": 0.78,
+      "anteil": 33.7,
+      "lift": 0.97
+     },
+     "H2": {
+      "auc": 0.505,
+      "p": 0.78,
+      "anteil": 33.5,
+      "lift": 0.92
+     }
+    },
+    "sweep_NY": {
+     "H1": {
+      "auc": 0.622,
+      "p": 2.9e-14,
+      "anteil": 33.3,
+      "lift": 1.55
+     },
+     "H2": {
+      "auc": 0.626,
+      "p": 5.1e-14,
+      "anteil": 33.6,
+      "lift": 1.58
+     }
+    },
+    "ls_Sonstige": {
+     "H1": {
+      "auc": 0.525,
+      "p": 0.12,
+      "anteil": 8.9,
+      "lift": 1.37
+     },
+     "H2": {
+      "auc": 0.521,
+      "p": 0.21,
+      "anteil": 9.7,
+      "lift": 1.32
+     }
+    },
+    "sweep_Sonstige": {
+     "H1": {
+      "auc": 0.485,
+      "p": 0.35,
+      "anteil": 8.7,
+      "lift": 0.43
+     },
+     "H2": {
+      "auc": 0.493,
+      "p": 0.67,
+      "anteil": 7.4,
+      "lift": 0.41
+     }
+    }
+   },
+   "trenntInBeidenHalbjahren": [
+    "sweepRangeAtr",
+    "sweepBodyAtr",
+    "impulseAtr",
+    "impulsePips",
+    "sweepDepthAtr",
+    "sweep_Asia",
+    "sweepDepthPips",
+    "counterFvg",
+    "ageHours",
+    "sweep_NY",
+    "impulseMinutes",
+    "brokenSwings",
+    "rankRecency",
+    "bosBeforeSweep",
+    "ls_Asia",
+    "sessionExtreme"
+   ],
+   "regeln": {
+    "vorSweep": {
+     "bedingungen": [
+      "impulseAtr ≥ 1.75",
+      "nicht sweep_Asia"
+     ],
+     "H1": {
+      "n": 582,
+      "precision": 23.9,
+      "recall": 30.4,
+      "lift": 1.7,
+      "keineBehalten": 11.8,
+      "keinePrecision": 22.7
+     },
+     "H2": {
+      "n": 503,
+      "precision": 27.2,
+      "recall": 30,
+      "lift": 1.64,
+      "keineBehalten": 10.7,
+      "keinePrecision": 18.5
+     }
+    },
+    "mitSweepKerze": {
+     "bedingungen": [
+      "sweepRangeAtr ≥ 0.6",
+      "impulseAtr ≥ 1.12"
+     ],
+     "H1": {
+      "n": 422,
+      "precision": 32.9,
+      "recall": 30.4,
+      "lift": 2.34,
+      "keineBehalten": 2,
+      "keinePrecision": 5.2
+     },
+     "H2": {
+      "n": 403,
+      "precision": 39.5,
+      "recall": 34.9,
+      "lift": 2.37,
+      "keineBehalten": 1.6,
+      "keinePrecision": 3.5
+     }
+    }
+   },
+   "kandidaten": {
+    "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+     "H1": {
+      "n": 503,
+      "precision": 19.1,
+      "recall": 21,
+      "lift": 1.36,
+      "keineBehalten": 14.7,
+      "keinePrecision": 32.8
+     },
+     "H2": {
+      "n": 435,
+      "precision": 21.6,
+      "recall": 20.6,
+      "lift": 1.3,
+      "keineBehalten": 14.5,
+      "keinePrecision": 29
+     }
+    },
+    "LH nach LL": {
+     "H1": {
+      "n": 1264,
+      "precision": 14.2,
+      "recall": 39.4,
+      "lift": 1.01,
+      "keineBehalten": 40.7,
+      "keinePrecision": 36
+     },
+     "H2": {
+      "n": 1104,
+      "precision": 17.6,
+      "recall": 42.5,
+      "lift": 1.06,
+      "keineBehalten": 43.6,
+      "keinePrecision": 34.2
+     }
+    },
+    "Impuls ≥ 0,5 ATR": {
+     "H1": {
+      "n": 2644,
+      "precision": 16.1,
+      "recall": 93.2,
+      "lift": 1.14,
+      "keineBehalten": 76.2,
+      "keinePrecision": 32.3
+     },
+     "H2": {
+      "n": 2283,
+      "precision": 19.2,
+      "recall": 96.1,
+      "lift": 1.15,
+      "keineBehalten": 75.3,
+      "keinePrecision": 28.6
+     }
+    },
+    "Impuls ≥ 1 ATR": {
+     "H1": {
+      "n": 1496,
+      "precision": 19.3,
+      "recall": 63.2,
+      "lift": 1.37,
+      "keineBehalten": 36.3,
+      "keinePrecision": 27.1
+     },
+     "H2": {
+      "n": 1276,
+      "precision": 24.1,
+      "recall": 67.3,
+      "lift": 1.45,
+      "keineBehalten": 32.8,
+      "keinePrecision": 22.3
+     }
+    },
+    "Impuls ≥ 1,5 ATR": {
+     "H1": {
+      "n": 877,
+      "precision": 21.9,
+      "recall": 42,
+      "lift": 1.55,
+      "keineBehalten": 18.7,
+      "keinePrecision": 23.8
+     },
+     "H2": {
+      "n": 722,
+      "precision": 24.5,
+      "recall": 38.8,
+      "lift": 1.47,
+      "keineBehalten": 17,
+      "keinePrecision": 20.4
+     }
+    },
+    "Alter ≥ 2 h": {
+     "H1": {
+      "n": 1592,
+      "precision": 17,
+      "recall": 59.1,
+      "lift": 1.2,
+      "keineBehalten": 45.5,
+      "keinePrecision": 32
+     },
+     "H2": {
+      "n": 1376,
+      "precision": 21.4,
+      "recall": 64.7,
+      "lift": 1.29,
+      "keineBehalten": 42.3,
+      "keinePrecision": 26.7
+     }
+    },
+    "Alter ≥ 10 h": {
+     "H1": {
+      "n": 670,
+      "precision": 21.9,
+      "recall": 32.2,
+      "lift": 1.56,
+      "keineBehalten": 15.6,
+      "keinePrecision": 26.1
+     },
+     "H2": {
+      "n": 615,
+      "precision": 27.5,
+      "recall": 37.1,
+      "lift": 1.65,
+      "keineBehalten": 13.5,
+      "keinePrecision": 19
+     }
+    },
+    "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": {
+     "H1": {
+      "n": 816,
+      "precision": 17.5,
+      "recall": 31.3,
+      "lift": 1.24,
+      "keineBehalten": 23,
+      "keinePrecision": 31.5
+     },
+     "H2": {
+      "n": 739,
+      "precision": 22.3,
+      "recall": 36.2,
+      "lift": 1.34,
+      "keineBehalten": 24,
+      "keinePrecision": 28.1
+     }
+    },
+    "Impuls ≥ 1 ATR & ≥ 1 Swing": {
+     "H1": {
+      "n": 1138,
+      "precision": 19.4,
+      "recall": 48.4,
+      "lift": 1.38,
+      "keineBehalten": 28.4,
+      "keinePrecision": 27.9
+     },
+     "H2": {
+      "n": 967,
+      "precision": 25.5,
+      "recall": 54.2,
+      "lift": 1.53,
+      "keineBehalten": 24.2,
+      "keinePrecision": 21.7
+     }
+    },
+    "Impuls ≥ 1,5 ATR & Sweep nicht Asia": {
+     "H1": {
+      "n": 789,
+      "precision": 23.3,
+      "recall": 40.3,
+      "lift": 1.66,
+      "keineBehalten": 15.9,
+      "keinePrecision": 22.6
+     },
+     "H2": {
+      "n": 656,
+      "precision": 26.4,
+      "recall": 37.9,
+      "lift": 1.58,
+      "keineBehalten": 14.2,
+      "keinePrecision": 18.8
+     }
+    },
+    "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": {
+     "H1": {
+      "n": 999,
+      "precision": 21.6,
+      "recall": 47.3,
+      "lift": 1.54,
+      "keineBehalten": 23.3,
+      "keinePrecision": 26.1
+     },
+     "H2": {
+      "n": 836,
+      "precision": 27.8,
+      "recall": 50.9,
+      "lift": 1.67,
+      "keineBehalten": 18.6,
+      "keinePrecision": 19.3
+     }
+    },
+    "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 989,
+      "precision": 21.2,
+      "recall": 46,
+      "lift": 1.51,
+      "keineBehalten": 22.9,
+      "keinePrecision": 25.9
+     },
+     "H2": {
+      "n": 845,
+      "precision": 27.8,
+      "recall": 51.5,
+      "lift": 1.67,
+      "keineBehalten": 18.8,
+      "keinePrecision": 19.3
+     }
+    },
+    "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": {
+     "H1": {
+      "n": 1019,
+      "precision": 21.9,
+      "recall": 48.8,
+      "lift": 1.55,
+      "keineBehalten": 23.2,
+      "keinePrecision": 25.5
+     },
+     "H2": {
+      "n": 870,
+      "precision": 27.6,
+      "recall": 52.6,
+      "lift": 1.66,
+      "keineBehalten": 19.3,
+      "keinePrecision": 19.2
+     }
+    },
+    "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 455,
+      "precision": 19.8,
+      "recall": 19.7,
+      "lift": 1.4,
+      "keineBehalten": 10.9,
+      "keinePrecision": 26.8
+     },
+     "H2": {
+      "n": 384,
+      "precision": 27.6,
+      "recall": 23.2,
+      "lift": 1.66,
+      "keineBehalten": 9,
+      "keinePrecision": 20.3
+     }
+    },
+    "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 428,
+      "precision": 21.5,
+      "recall": 20.1,
+      "lift": 1.53,
+      "keineBehalten": 9.7,
+      "keinePrecision": 25.2
+     },
+     "H2": {
+      "n": 365,
+      "precision": 27.7,
+      "recall": 22.1,
+      "lift": 1.66,
+      "keineBehalten": 9.6,
+      "keinePrecision": 22.7
+     }
+    },
+    "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": {
+     "H1": {
+      "n": 568,
+      "precision": 20.2,
+      "recall": 25.2,
+      "lift": 1.44,
+      "keineBehalten": 13.1,
+      "keinePrecision": 25.9
+     },
+     "H2": {
+      "n": 500,
+      "precision": 27.2,
+      "recall": 29.8,
+      "lift": 1.63,
+      "keineBehalten": 13,
+      "keinePrecision": 22.6
+     }
+    }
+   }
+  },
+  "EURUSD": {
+   "n": 5890,
+   "H1": {
+    "n": 3229,
+    "stark": 456,
+    "mittel": 1730,
+    "keine": 1043
+   },
+   "H2": {
+    "n": 2661,
+    "stark": 390,
+    "mittel": 1412,
+    "keine": 859
+   },
+   "verteilung": {
+    "1h": {
+     "mfe": {
+      "q25": 0.33,
+      "med": 0.55,
+      "q75": 0.88,
+      "q90": 1.39
+     },
+     "maeMed": 0,
+     "resweep": 40.8,
+     "ab1_5": 7.8
+    },
+    "3h": {
+     "mfe": {
+      "q25": 0.35,
+      "med": 0.62,
+      "q75": 1.08,
+      "q90": 1.83
+     },
+     "maeMed": 0.08,
+     "resweep": 56.2,
+     "ab1_5": 14.4
+    },
+    "session": {
+     "mfe": {
+      "q25": 0.35,
+      "med": 0.62,
+      "q75": 1.11,
+      "q90": 1.96
+     },
+     "maeMed": 0.11,
+     "resweep": 58.3,
+     "ab1_5": 15.7
+    }
+   },
+   "merkmale": {
+    "ageHours": {
+     "H1": {
+      "auc": 0.605,
+      "p": 1.1e-10
+     },
+     "H2": {
+      "auc": 0.644,
+      "p": 2.7e-16
+     }
+    },
+    "impulsePips": {
+     "H1": {
+      "auc": 0.676,
+      "p": 1.7e-27
+     },
+     "H2": {
+      "auc": 0.694,
+      "p": 3.2e-28
+     }
+    },
+    "impulseAtr": {
+     "H1": {
+      "auc": 0.705,
+      "p": 9.9e-37
+     },
+     "H2": {
+      "auc": 0.721,
+      "p": 4.6e-36
+     }
+    },
+    "impulseMinutes": {
+     "H1": {
+      "auc": 0.583,
+      "p": 2.7e-7
+     },
+     "H2": {
+      "auc": 0.616,
+      "p": 5.8e-11
+     }
+    },
+    "brokenSwings": {
+     "H1": {
+      "auc": 0.611,
+      "p": 6.6e-12
+     },
+     "H2": {
+      "auc": 0.655,
+      "p": 1.9e-18
+     }
+    },
+    "bosMinutes": {
+     "H1": {
+      "auc": 0.562,
+      "p": 0.0096
+     },
+     "H2": {
+      "auc": 0.55,
+      "p": 0.049
+     }
+    },
+    "sweepDepthPips": {
+     "H1": {
+      "auc": 0.645,
+      "p": 3.3e-19
+     },
+     "H2": {
+      "auc": 0.67,
+      "p": 6.7e-22
+     }
+    },
+    "sweepDepthAtr": {
+     "H1": {
+      "auc": 0.65,
+      "p": 2.1e-20
+     },
+     "H2": {
+      "auc": 0.68,
+      "p": 2.3e-24
+     }
+    },
+    "rankRecency": {
+     "H1": {
+      "auc": 0.595,
+      "p": 4e-9
+     },
+     "H2": {
+      "auc": 0.593,
+      "p": 1.3e-7
+     }
+    },
+    "gapNextAtr": {
+     "H1": {
+      "auc": 0.512,
+      "p": 0.46
+     },
+     "H2": {
+      "auc": 0.524,
+      "p": 0.18
+     }
+    },
+    "sweepRangeAtr": {
+     "H1": {
+      "auc": 0.787,
+      "p": 7.2e-70
+     },
+     "H2": {
+      "auc": 0.809,
+      "p": 1.3e-68
+     }
+    },
+    "sweepRejection": {
+     "H1": {
+      "auc": 0.521,
+      "p": 0.2
+     },
+     "H2": {
+      "auc": 0.527,
+      "p": 0.12
+     }
+    },
+    "sweepBodyAtr": {
+     "H1": {
+      "auc": 0.709,
+      "p": 5.3e-38
+     },
+     "H2": {
+      "auc": 0.707,
+      "p": 1e-31
+     }
+    },
+    "zoneDepthAtr": {
+     "H1": {
+      "auc": 0.481,
+      "p": 0.24
+     },
+     "H2": {
+      "auc": 0.466,
+      "p": 0.053
+     }
+    },
+    "hasAltPivot": {
+     "H1": {
+      "auc": 0.518,
+      "p": 0.27,
+      "anteil": 80.5,
+      "lift": 1.02
+     },
+     "H2": {
+      "auc": 0.512,
+      "p": 0.48,
+      "anteil": 81.7,
+      "lift": 1.01
+     }
+    },
+    "lhAfterLL": {
+     "H1": {
+      "auc": 0.511,
+      "p": 0.55,
+      "anteil": 39.2,
+      "lift": 1.03
+     },
+     "H2": {
+      "auc": 0.509,
+      "p": 0.66,
+      "anteil": 39.7,
+      "lift": 1.08
+     }
+    },
+    "isLH": {
+     "H1": {
+      "auc": 0.492,
+      "p": 0.64,
+      "anteil": 40.8,
+      "lift": 1.02
+     },
+     "H2": {
+      "auc": 0.474,
+      "p": 0.18,
+      "anteil": 42,
+      "lift": 0.93
+     }
+    },
+    "bos2h": {
+     "H1": {
+      "auc": 0.527,
+      "p": 0.092,
+      "anteil": 15.8,
+      "lift": 1.21
+     },
+     "H2": {
+      "auc": 0.551,
+      "p": 0.0039,
+      "anteil": 17.1,
+      "lift": 1.44
+     }
+    },
+    "bosBeforeSweep": {
+     "H1": {
+      "auc": 0.603,
+      "p": 2.2e-10,
+      "anteil": 41.4,
+      "lift": 1.3
+     },
+     "H2": {
+      "auc": 0.61,
+      "p": 4.5e-10,
+      "anteil": 42.2,
+      "lift": 1.35
+     }
+    },
+    "closedBack": {
+     "H1": {
+      "auc": 0.494,
+      "p": 0.73,
+      "anteil": 60.9,
+      "lift": 0.98
+     },
+     "H2": {
+      "auc": 0.483,
+      "p": 0.34,
+      "anteil": 60.2,
+      "lift": 0.95
+     }
+    },
+    "sessionExtreme": {
+     "H1": {
+      "auc": 0.552,
+      "p": 0.0013,
+      "anteil": 14.4,
+      "lift": 1.4
+     },
+     "H2": {
+      "auc": 0.564,
+      "p": 0.00029,
+      "anteil": 14.3,
+      "lift": 1.58
+     }
+    },
+    "m5ObTick": {
+     "H1": {
+      "auc": 0.497,
+      "p": 0.83,
+      "anteil": 47.2,
+      "lift": 1
+     },
+     "H2": {
+      "auc": 0.495,
+      "p": 0.78,
+      "anteil": 48,
+      "lift": 0.96
+     }
+    },
+    "m5ObPip": {
+     "H1": {
+      "auc": 0.495,
+      "p": 0.74,
+      "anteil": 80.4,
+      "lift": 0.99
+     },
+     "H2": {
+      "auc": 0.49,
+      "p": 0.56,
+      "anteil": 83.5,
+      "lift": 0.97
+     }
+    },
+    "m15ObTick": {
+     "H1": {
+      "auc": 0.494,
+      "p": 0.73,
+      "anteil": 9.8,
+      "lift": 0.87
+     },
+     "H2": {
+      "auc": 0.512,
+      "p": 0.49,
+      "anteil": 9.2,
+      "lift": 1.23
+     }
+    },
+    "m15ObPip": {
+     "H1": {
+      "auc": 0.478,
+      "p": 0.17,
+      "anteil": 30.5,
+      "lift": 0.92
+     },
+     "H2": {
+      "auc": 0.53,
+      "p": 0.085,
+      "anteil": 31.1,
+      "lift": 1.19
+     }
+    },
+    "counterFvg": {
+     "H1": {
+      "auc": 0.605,
+      "p": 1.1e-10,
+      "anteil": 15.5,
+      "lift": 1.69
+     },
+     "H2": {
+      "auc": 0.649,
+      "p": 2.8e-17,
+      "anteil": 16.6,
+      "lift": 2.07
+     }
+    },
+    "withRoot": {
+     "H1": {
+      "auc": 0.522,
+      "p": 0.19,
+      "anteil": 48,
+      "lift": 1.01
+     },
+     "H2": {
+      "auc": 0.509,
+      "p": 0.61,
+      "anteil": 49.3,
+      "lift": 0.98
+     }
+    },
+    "withCurrent": {
+     "H1": {
+      "auc": 0.481,
+      "p": 0.27,
+      "anteil": 42.2,
+      "lift": 0.97
+     },
+     "H2": {
+      "auc": 0.467,
+      "p": 0.075,
+      "anteil": 44.8,
+      "lift": 0.9
+     }
+    },
+    "ls_Asia": {
+     "H1": {
+      "auc": 0.426,
+      "p": 0.0000056,
+      "anteil": 29.1,
+      "lift": 0.8
+     },
+     "H2": {
+      "auc": 0.426,
+      "p": 0.000027,
+      "anteil": 30.7,
+      "lift": 0.82
+     }
+    },
+    "sweep_Asia": {
+     "H1": {
+      "auc": 0.367,
+      "p": 1.9e-16,
+      "anteil": 25.4,
+      "lift": 0.44
+     },
+     "H2": {
+      "auc": 0.364,
+      "p": 1.1e-14,
+      "anteil": 28.6,
+      "lift": 0.53
+     }
+    },
+    "ls_London": {
+     "H1": {
+      "auc": 0.536,
+      "p": 0.028,
+      "anteil": 15.3,
+      "lift": 1.26
+     },
+     "H2": {
+      "auc": 0.519,
+      "p": 0.28,
+      "anteil": 14.5,
+      "lift": 1.04
+     }
+    },
+    "sweep_London": {
+     "H1": {
+      "auc": 0.538,
+      "p": 0.02,
+      "anteil": 19.3,
+      "lift": 1.28
+     },
+     "H2": {
+      "auc": 0.515,
+      "p": 0.4,
+      "anteil": 18.4,
+      "lift": 0.99
+     }
+    },
+    "ls_MMM": {
+     "H1": {
+      "auc": 0.516,
+      "p": 0.33,
+      "anteil": 10.3,
+      "lift": 1.1
+     },
+     "H2": {
+      "auc": 0.521,
+      "p": 0.23,
+      "anteil": 10.3,
+      "lift": 1.17
+     }
+    },
+    "sweep_MMM": {
+     "H1": {
+      "auc": 0.501,
+      "p": 0.93,
+      "anteil": 10.1,
+      "lift": 0.82
+     },
+     "H2": {
+      "auc": 0.486,
+      "p": 0.42,
+      "anteil": 11,
+      "lift": 0.65
+     }
+    },
+    "ls_NY": {
+     "H1": {
+      "auc": 0.515,
+      "p": 0.35,
+      "anteil": 35.1,
+      "lift": 0.99
+     },
+     "H2": {
+      "auc": 0.507,
+      "p": 0.67,
+      "anteil": 34.2,
+      "lift": 0.99
+     }
+    },
+    "sweep_NY": {
+     "H1": {
+      "auc": 0.608,
+      "p": 3.2e-11,
+      "anteil": 35.8,
+      "lift": 1.44
+     },
+     "H2": {
+      "auc": 0.652,
+      "p": 7.5e-18,
+      "anteil": 32.4,
+      "lift": 1.75
+     }
+    },
+    "ls_Sonstige": {
+     "H1": {
+      "auc": 0.507,
+      "p": 0.65,
+      "anteil": 8.8,
+      "lift": 1.15
+     },
+     "H2": {
+      "auc": 0.525,
+      "p": 0.15,
+      "anteil": 9.3,
+      "lift": 1.38
+     }
+    },
+    "sweep_Sonstige": {
+     "H1": {
+      "auc": 0.485,
+      "p": 0.37,
+      "anteil": 8.1,
+      "lift": 0.33
+     },
+     "H2": {
+      "auc": 0.486,
+      "p": 0.43,
+      "anteil": 8.7,
+      "lift": 0.32
+     }
+    }
+   },
+   "trenntInBeidenHalbjahren": [
+    "sweepRangeAtr",
+    "impulseAtr",
+    "sweepBodyAtr",
+    "impulsePips",
+    "sweepDepthAtr",
+    "sweepDepthPips",
+    "sweep_Asia",
+    "brokenSwings",
+    "sweep_NY",
+    "counterFvg",
+    "ageHours",
+    "bosBeforeSweep",
+    "impulseMinutes",
+    "rankRecency",
+    "ls_Asia",
+    "sessionExtreme"
+   ],
+   "regeln": {
+    "vorSweep": {
+     "bedingungen": [
+      "impulseAtr ≥ 1.72"
+     ],
+     "H1": {
+      "n": 645,
+      "precision": 22.2,
+      "recall": 31.4,
+      "lift": 1.57,
+      "keineBehalten": 12,
+      "keinePrecision": 19.4
+     },
+     "H2": {
+      "n": 515,
+      "precision": 26.2,
+      "recall": 34.6,
+      "lift": 1.79,
+      "keineBehalten": 12,
+      "keinePrecision": 20
+     }
+    },
+    "mitSweepKerze": {
+     "bedingungen": [
+      "sweepRangeAtr ≥ 0.63",
+      "brokenSwings ≥ 1",
+      "nicht sweep_Asia",
+      "nicht sweep_Sonstige"
+     ],
+     "H1": {
+      "n": 384,
+      "precision": 35.7,
+      "recall": 30,
+      "lift": 2.53,
+      "keineBehalten": 1.2,
+      "keinePrecision": 3.4
+     },
+     "H2": {
+      "n": 324,
+      "precision": 41.4,
+      "recall": 34.4,
+      "lift": 2.82,
+      "keineBehalten": 2.1,
+      "keinePrecision": 5.6
+     }
+    }
+   },
+   "kandidaten": {
+    "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+     "H1": {
+      "n": 511,
+      "precision": 17,
+      "recall": 19.1,
+      "lift": 1.21,
+      "keineBehalten": 13.6,
+      "keinePrecision": 27.8
+     },
+     "H2": {
+      "n": 454,
+      "precision": 21.1,
+      "recall": 24.6,
+      "lift": 1.44,
+      "keineBehalten": 14.4,
+      "keinePrecision": 27.3
+     }
+    },
+    "LH nach LL": {
+     "H1": {
+      "n": 1266,
+      "precision": 14.6,
+      "recall": 40.6,
+      "lift": 1.03,
+      "keineBehalten": 37.1,
+      "keinePrecision": 30.6
+     },
+     "H2": {
+      "n": 1056,
+      "precision": 15.8,
+      "recall": 42.8,
+      "lift": 1.08,
+      "keineBehalten": 40.2,
+      "keinePrecision": 32.7
+     }
+    },
+    "Impuls ≥ 0,5 ATR": {
+     "H1": {
+      "n": 2651,
+      "precision": 16.3,
+      "recall": 95,
+      "lift": 1.16,
+      "keineBehalten": 73.3,
+      "keinePrecision": 28.8
+     },
+     "H2": {
+      "n": 2184,
+      "precision": 16.9,
+      "recall": 94.6,
+      "lift": 1.15,
+      "keineBehalten": 75.4,
+      "keinePrecision": 29.7
+     }
+    },
+    "Impuls ≥ 1 ATR": {
+     "H1": {
+      "n": 1490,
+      "precision": 19.1,
+      "recall": 62.5,
+      "lift": 1.35,
+      "keineBehalten": 33.4,
+      "keinePrecision": 23.4
+     },
+     "H2": {
+      "n": 1233,
+      "precision": 21.3,
+      "recall": 67.4,
+      "lift": 1.46,
+      "keineBehalten": 35.5,
+      "keinePrecision": 24.7
+     }
+    },
+    "Impuls ≥ 1,5 ATR": {
+     "H1": {
+      "n": 813,
+      "precision": 21.3,
+      "recall": 37.9,
+      "lift": 1.51,
+      "keineBehalten": 15.5,
+      "keinePrecision": 19.9
+     },
+     "H2": {
+      "n": 664,
+      "precision": 24.1,
+      "recall": 41,
+      "lift": 1.64,
+      "keineBehalten": 16.1,
+      "keinePrecision": 20.8
+     }
+    },
+    "Alter ≥ 2 h": {
+     "H1": {
+      "n": 1564,
+      "precision": 16.7,
+      "recall": 57.2,
+      "lift": 1.18,
+      "keineBehalten": 42.1,
+      "keinePrecision": 28.1
+     },
+     "H2": {
+      "n": 1303,
+      "precision": 18.5,
+      "recall": 61.8,
+      "lift": 1.26,
+      "keineBehalten": 43.4,
+      "keinePrecision": 28.6
+     }
+    },
+    "Alter ≥ 10 h": {
+     "H1": {
+      "n": 650,
+      "precision": 18.9,
+      "recall": 27,
+      "lift": 1.34,
+      "keineBehalten": 13.6,
+      "keinePrecision": 21.8
+     },
+     "H2": {
+      "n": 575,
+      "precision": 24.9,
+      "recall": 36.7,
+      "lift": 1.7,
+      "keineBehalten": 13.6,
+      "keinePrecision": 20.3
+     }
+    },
+    "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": {
+     "H1": {
+      "n": 805,
+      "precision": 17,
+      "recall": 30,
+      "lift": 1.21,
+      "keineBehalten": 19.8,
+      "keinePrecision": 25.6
+     },
+     "H2": {
+      "n": 712,
+      "precision": 19.8,
+      "recall": 36.2,
+      "lift": 1.35,
+      "keineBehalten": 23.5,
+      "keinePrecision": 28.4
+     }
+    },
+    "Impuls ≥ 1 ATR & ≥ 1 Swing": {
+     "H1": {
+      "n": 1131,
+      "precision": 19.9,
+      "recall": 49.3,
+      "lift": 1.41,
+      "keineBehalten": 24.7,
+      "keinePrecision": 22.8
+     },
+     "H2": {
+      "n": 942,
+      "precision": 24.3,
+      "recall": 58.7,
+      "lift": 1.66,
+      "keineBehalten": 26.1,
+      "keinePrecision": 23.8
+     }
+    },
+    "Impuls ≥ 1,5 ATR & Sweep nicht Asia": {
+     "H1": {
+      "n": 729,
+      "precision": 22.4,
+      "recall": 35.7,
+      "lift": 1.58,
+      "keineBehalten": 13.8,
+      "keinePrecision": 19.8
+     },
+     "H2": {
+      "n": 580,
+      "precision": 25.5,
+      "recall": 37.9,
+      "lift": 1.74,
+      "keineBehalten": 12.9,
+      "keinePrecision": 19.1
+     }
+    },
+    "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": {
+     "H1": {
+      "n": 1001,
+      "precision": 20.6,
+      "recall": 45.2,
+      "lift": 1.46,
+      "keineBehalten": 21.4,
+      "keinePrecision": 22.3
+     },
+     "H2": {
+      "n": 786,
+      "precision": 24.4,
+      "recall": 49.2,
+      "lift": 1.67,
+      "keineBehalten": 19.9,
+      "keinePrecision": 21.8
+     }
+    },
+    "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 996,
+      "precision": 21.1,
+      "recall": 46.1,
+      "lift": 1.49,
+      "keineBehalten": 20.5,
+      "keinePrecision": 21.5
+     },
+     "H2": {
+      "n": 800,
+      "precision": 26,
+      "recall": 53.3,
+      "lift": 1.77,
+      "keineBehalten": 19.4,
+      "keinePrecision": 20.9
+     }
+    },
+    "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": {
+     "H1": {
+      "n": 1026,
+      "precision": 21.2,
+      "recall": 47.6,
+      "lift": 1.5,
+      "keineBehalten": 21.1,
+      "keinePrecision": 21.4
+     },
+     "H2": {
+      "n": 813,
+      "precision": 25.8,
+      "recall": 53.8,
+      "lift": 1.76,
+      "keineBehalten": 19.9,
+      "keinePrecision": 21
+     }
+    },
+    "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 464,
+      "precision": 20.9,
+      "recall": 21.3,
+      "lift": 1.48,
+      "keineBehalten": 10.1,
+      "keinePrecision": 22.6
+     },
+     "H2": {
+      "n": 379,
+      "precision": 24,
+      "recall": 23.3,
+      "lift": 1.64,
+      "keineBehalten": 9.7,
+      "keinePrecision": 21.9
+     }
+    },
+    "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 420,
+      "precision": 21.4,
+      "recall": 19.7,
+      "lift": 1.52,
+      "keineBehalten": 8.1,
+      "keinePrecision": 20.2
+     },
+     "H2": {
+      "n": 385,
+      "precision": 26.2,
+      "recall": 25.9,
+      "lift": 1.79,
+      "keineBehalten": 9.9,
+      "keinePrecision": 22.1
+     }
+    },
+    "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": {
+     "H1": {
+      "n": 561,
+      "precision": 20.1,
+      "recall": 24.8,
+      "lift": 1.43,
+      "keineBehalten": 10.9,
+      "keinePrecision": 20.3
+     },
+     "H2": {
+      "n": 490,
+      "precision": 23.7,
+      "recall": 29.7,
+      "lift": 1.62,
+      "keineBehalten": 13.2,
+      "keinePrecision": 23.1
+     }
+    }
+   }
+  },
+  "XAUUSD": {
+   "n": 5876,
+   "H1": {
+    "n": 3241,
+    "stark": 475,
+    "mittel": 1768,
+    "keine": 998
+   },
+   "H2": {
+    "n": 2635,
+    "stark": 434,
+    "mittel": 1334,
+    "keine": 867
+   },
+   "verteilung": {
+    "1h": {
+     "mfe": {
+      "q25": 0.34,
+      "med": 0.55,
+      "q75": 0.9,
+      "q90": 1.37
+     },
+     "maeMed": 0,
+     "resweep": 39.1,
+     "ab1_5": 7.8
+    },
+    "3h": {
+     "mfe": {
+      "q25": 0.36,
+      "med": 0.62,
+      "q75": 1.11,
+      "q90": 1.87
+     },
+     "maeMed": 0.07,
+     "resweep": 55,
+     "ab1_5": 15.5
+    },
+    "session": {
+     "mfe": {
+      "q25": 0.36,
+      "med": 0.62,
+      "q75": 1.15,
+      "q90": 2.01
+     },
+     "maeMed": 0.11,
+     "resweep": 57.5,
+     "ab1_5": 16.8
+    }
+   },
+   "merkmale": {
+    "ageHours": {
+     "H1": {
+      "auc": 0.694,
+      "p": 1.9e-33
+     },
+     "H2": {
+      "auc": 0.656,
+      "p": 4.5e-20
+     }
+    },
+    "impulsePips": {
+     "H1": {
+      "auc": 0.659,
+      "p": 6.7e-23
+     },
+     "H2": {
+      "auc": 0.655,
+      "p": 5.7e-20
+     }
+    },
+    "impulseAtr": {
+     "H1": {
+      "auc": 0.706,
+      "p": 2e-37
+     },
+     "H2": {
+      "auc": 0.682,
+      "p": 8.4e-27
+     }
+    },
+    "impulseMinutes": {
+     "H1": {
+      "auc": 0.645,
+      "p": 1.9e-19
+     },
+     "H2": {
+      "auc": 0.626,
+      "p": 1.2e-13
+     }
+    },
+    "brokenSwings": {
+     "H1": {
+      "auc": 0.645,
+      "p": 1.7e-19
+     },
+     "H2": {
+      "auc": 0.621,
+      "p": 1.2e-12
+     }
+    },
+    "bosMinutes": {
+     "H1": {
+      "auc": 0.59,
+      "p": 0.00014
+     },
+     "H2": {
+      "auc": 0.543,
+      "p": 0.084
+     }
+    },
+    "sweepDepthPips": {
+     "H1": {
+      "auc": 0.622,
+      "p": 3.7e-14
+     },
+     "H2": {
+      "auc": 0.639,
+      "p": 3.3e-16
+     }
+    },
+    "sweepDepthAtr": {
+     "H1": {
+      "auc": 0.639,
+      "p": 7.7e-18
+     },
+     "H2": {
+      "auc": 0.65,
+      "p": 9.6e-19
+     }
+    },
+    "rankRecency": {
+     "H1": {
+      "auc": 0.613,
+      "p": 1.9e-12
+     },
+     "H2": {
+      "auc": 0.617,
+      "p": 6.2e-12
+     }
+    },
+    "gapNextAtr": {
+     "H1": {
+      "auc": 0.497,
+      "p": 0.84
+     },
+     "H2": {
+      "auc": 0.481,
+      "p": 0.27
+     }
+    },
+    "sweepRangeAtr": {
+     "H1": {
+      "auc": 0.802,
+      "p": 1.3e-78
+     },
+     "H2": {
+      "auc": 0.802,
+      "p": 6.3e-71
+     }
+    },
+    "sweepRejection": {
+     "H1": {
+      "auc": 0.524,
+      "p": 0.13
+     },
+     "H2": {
+      "auc": 0.521,
+      "p": 0.21
+     }
+    },
+    "sweepBodyAtr": {
+     "H1": {
+      "auc": 0.702,
+      "p": 5.5e-36
+     },
+     "H2": {
+      "auc": 0.695,
+      "p": 2e-30
+     }
+    },
+    "zoneDepthAtr": {
+     "H1": {
+      "auc": 0.462,
+      "p": 0.018
+     },
+     "H2": {
+      "auc": 0.472,
+      "p": 0.1
+     }
+    },
+    "hasAltPivot": {
+     "H1": {
+      "auc": 0.512,
+      "p": 0.45,
+      "anteil": 82,
+      "lift": 1.03
+     },
+     "H2": {
+      "auc": 0.511,
+      "p": 0.51,
+      "anteil": 81.3,
+      "lift": 1.02
+     }
+    },
+    "lhAfterLL": {
+     "H1": {
+      "auc": 0.48,
+      "p": 0.26,
+      "anteil": 39.4,
+      "lift": 0.99
+     },
+     "H2": {
+      "auc": 0.488,
+      "p": 0.53,
+      "anteil": 39.5,
+      "lift": 0.99
+     }
+    },
+    "isLH": {
+     "H1": {
+      "auc": 0.449,
+      "p": 0.004,
+      "anteil": 43.2,
+      "lift": 0.89
+     },
+     "H2": {
+      "auc": 0.488,
+      "p": 0.53,
+      "anteil": 42,
+      "lift": 1.02
+     }
+    },
+    "bos2h": {
+     "H1": {
+      "auc": 0.543,
+      "p": 0.0076,
+      "anteil": 15.7,
+      "lift": 1.42
+     },
+     "H2": {
+      "auc": 0.524,
+      "p": 0.16,
+      "anteil": 16.5,
+      "lift": 1.18
+     }
+    },
+    "bosBeforeSweep": {
+     "H1": {
+      "auc": 0.629,
+      "p": 1.2e-15,
+      "anteil": 41.8,
+      "lift": 1.4
+     },
+     "H2": {
+      "auc": 0.608,
+      "p": 2.4e-10,
+      "anteil": 42.8,
+      "lift": 1.31
+     }
+    },
+    "closedBack": {
+     "H1": {
+      "auc": 0.517,
+      "p": 0.28,
+      "anteil": 62.5,
+      "lift": 1.05
+     },
+     "H2": {
+      "auc": 0.498,
+      "p": 0.93,
+      "anteil": 63.3,
+      "lift": 1.03
+     }
+    },
+    "sessionExtreme": {
+     "H1": {
+      "auc": 0.574,
+      "p": 0.0000045,
+      "anteil": 13.9,
+      "lift": 1.71
+     },
+     "H2": {
+      "auc": 0.554,
+      "p": 0.0016,
+      "anteil": 14.8,
+      "lift": 1.45
+     }
+    },
+    "m5ObTick": {
+     "H1": {
+      "auc": 0.529,
+      "p": 0.076,
+      "anteil": 40.8,
+      "lift": 1.07
+     },
+     "H2": {
+      "auc": 0.512,
+      "p": 0.46,
+      "anteil": 46,
+      "lift": 1.01
+     }
+    },
+    "m5ObPip": {
+     "H1": {
+      "auc": 0.521,
+      "p": 0.19,
+      "anteil": 54,
+      "lift": 1.02
+     },
+     "H2": {
+      "auc": 0.51,
+      "p": 0.56,
+      "anteil": 61.4,
+      "lift": 1.02
+     }
+    },
+    "m15ObTick": {
+     "H1": {
+      "auc": 0.507,
+      "p": 0.67,
+      "anteil": 5.1,
+      "lift": 1.16
+     },
+     "H2": {
+      "auc": 0.511,
+      "p": 0.5,
+      "anteil": 5.2,
+      "lift": 1.15
+     }
+    },
+    "m15ObPip": {
+     "H1": {
+      "auc": 0.497,
+      "p": 0.84,
+      "anteil": 9.5,
+      "lift": 0.97
+     },
+     "H2": {
+      "auc": 0.505,
+      "p": 0.79,
+      "anteil": 10.6,
+      "lift": 1.05
+     }
+    },
+    "counterFvg": {
+     "H1": {
+      "auc": 0.621,
+      "p": 4.8e-14,
+      "anteil": 19.9,
+      "lift": 1.49
+     },
+     "H2": {
+      "auc": 0.619,
+      "p": 2.8e-12,
+      "anteil": 17.7,
+      "lift": 1.68
+     }
+    },
+    "withRoot": {
+     "H1": {
+      "auc": 0.546,
+      "p": 0.0093,
+      "anteil": 42.8,
+      "lift": 1.08
+     },
+     "H2": {
+      "auc": 0.504,
+      "p": 0.81,
+      "anteil": 49.8,
+      "lift": 0.96
+     }
+    },
+    "withCurrent": {
+     "H1": {
+      "auc": 0.464,
+      "p": 0.057,
+      "anteil": 38,
+      "lift": 0.84
+     },
+     "H2": {
+      "auc": 0.503,
+      "p": 0.86,
+      "anteil": 47.1,
+      "lift": 1.01
+     }
+    },
+    "ls_Asia": {
+     "H1": {
+      "auc": 0.484,
+      "p": 0.31,
+      "anteil": 30.3,
+      "lift": 1.07
+     },
+     "H2": {
+      "auc": 0.503,
+      "p": 0.85,
+      "anteil": 30.7,
+      "lift": 1.08
+     }
+    },
+    "sweep_Asia": {
+     "H1": {
+      "auc": 0.48,
+      "p": 0.21,
+      "anteil": 30,
+      "lift": 1.11
+     },
+     "H2": {
+      "auc": 0.476,
+      "p": 0.16,
+      "anteil": 31,
+      "lift": 1
+     }
+    },
+    "ls_London": {
+     "H1": {
+      "auc": 0.474,
+      "p": 0.1,
+      "anteil": 15.5,
+      "lift": 0.61
+     },
+     "H2": {
+      "auc": 0.476,
+      "p": 0.16,
+      "anteil": 15.8,
+      "lift": 0.71
+     }
+    },
+    "sweep_London": {
+     "H1": {
+      "auc": 0.461,
+      "p": 0.016,
+      "anteil": 15.1,
+      "lift": 0.51
+     },
+     "H2": {
+      "auc": 0.443,
+      "p": 0.00077,
+      "anteil": 16.1,
+      "lift": 0.49
+     }
+    },
+    "ls_MMM": {
+     "H1": {
+      "auc": 0.499,
+      "p": 0.96,
+      "anteil": 12.5,
+      "lift": 0.91
+     },
+     "H2": {
+      "auc": 0.51,
+      "p": 0.57,
+      "anteil": 10.9,
+      "lift": 1.08
+     }
+    },
+    "sweep_MMM": {
+     "H1": {
+      "auc": 0.483,
+      "p": 0.28,
+      "anteil": 11,
+      "lift": 0.59
+     },
+     "H2": {
+      "auc": 0.452,
+      "p": 0.0048,
+      "anteil": 9.1,
+      "lift": 0.08
+     }
+    },
+    "ls_NY": {
+     "H1": {
+      "auc": 0.52,
+      "p": 0.23,
+      "anteil": 34.1,
+      "lift": 1.04
+     },
+     "H2": {
+      "auc": 0.5,
+      "p": 0.99,
+      "anteil": 35.1,
+      "lift": 0.97
+     }
+    },
+    "sweep_NY": {
+     "H1": {
+      "auc": 0.591,
+      "p": 1.3e-8,
+      "anteil": 35.8,
+      "lift": 1.37
+     },
+     "H2": {
+      "auc": 0.644,
+      "p": 2.5e-17,
+      "anteil": 37.1,
+      "lift": 1.55
+     }
+    },
+    "ls_Sonstige": {
+     "H1": {
+      "auc": 0.524,
+      "p": 0.14,
+      "anteil": 7.6,
+      "lift": 1.5
+     },
+     "H2": {
+      "auc": 0.511,
+      "p": 0.52,
+      "anteil": 7.6,
+      "lift": 1.31
+     }
+    },
+    "sweep_Sonstige": {
+     "H1": {
+      "auc": 0.485,
+      "p": 0.34,
+      "anteil": 8,
+      "lift": 0.4
+     },
+     "H2": {
+      "auc": 0.485,
+      "p": 0.38,
+      "anteil": 6.8,
+      "lift": 0.41
+     }
+    }
+   },
+   "trenntInBeidenHalbjahren": [
+    "sweepRangeAtr",
+    "sweepBodyAtr",
+    "impulseAtr",
+    "ageHours",
+    "impulsePips",
+    "sweepDepthAtr",
+    "impulseMinutes",
+    "brokenSwings",
+    "sweepDepthPips",
+    "counterFvg",
+    "bosBeforeSweep",
+    "sweep_NY",
+    "rankRecency",
+    "sessionExtreme"
+   ],
+   "regeln": {
+    "vorSweep": {
+     "bedingungen": [
+      "ageHours ≥ 9.67",
+      "bosMinutes ≥ 20"
+     ],
+     "H1": {
+      "n": 484,
+      "precision": 30.2,
+      "recall": 30.7,
+      "lift": 2.06,
+      "keineBehalten": 7.5,
+      "keinePrecision": 15.5
+     },
+     "H2": {
+      "n": 441,
+      "precision": 27.4,
+      "recall": 27.9,
+      "lift": 1.67,
+      "keineBehalten": 10,
+      "keinePrecision": 19.7
+     }
+    },
+    "mitSweepKerze": {
+     "bedingungen": [
+      "sweepRangeAtr ≥ 0.67",
+      "ageHours ≥ 2.75",
+      "brokenSwings ≥ 1",
+      "nicht sweep_London"
+     ],
+     "H1": {
+      "n": 377,
+      "precision": 39.3,
+      "recall": 31.2,
+      "lift": 2.68,
+      "keineBehalten": 0.6,
+      "keinePrecision": 1.6
+     },
+     "H2": {
+      "n": 313,
+      "precision": 40.9,
+      "recall": 29.5,
+      "lift": 2.48,
+      "keineBehalten": 1.3,
+      "keinePrecision": 3.5
+     }
+    }
+   },
+   "kandidaten": {
+    "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+     "H1": {
+      "n": 509,
+      "precision": 20.8,
+      "recall": 22.3,
+      "lift": 1.42,
+      "keineBehalten": 13.7,
+      "keinePrecision": 26.9
+     },
+     "H2": {
+      "n": 436,
+      "precision": 19.5,
+      "recall": 19.6,
+      "lift": 1.18,
+      "keineBehalten": 14.8,
+      "keinePrecision": 29.4
+     }
+    },
+    "LH nach LL": {
+     "H1": {
+      "n": 1276,
+      "precision": 14.5,
+      "recall": 38.9,
+      "lift": 0.99,
+      "keineBehalten": 41.1,
+      "keinePrecision": 32.1
+     },
+     "H2": {
+      "n": 1040,
+      "precision": 16.3,
+      "recall": 38.9,
+      "lift": 0.99,
+      "keineBehalten": 39.8,
+      "keinePrecision": 33.2
+     }
+    },
+    "Impuls ≥ 0,5 ATR": {
+     "H1": {
+      "n": 2648,
+      "precision": 16.6,
+      "recall": 92.4,
+      "lift": 1.13,
+      "keineBehalten": 76.6,
+      "keinePrecision": 28.9
+     },
+     "H2": {
+      "n": 2213,
+      "precision": 18.3,
+      "recall": 93.1,
+      "lift": 1.11,
+      "keineBehalten": 78.1,
+      "keinePrecision": 30.6
+     }
+    },
+    "Impuls ≥ 1 ATR": {
+     "H1": {
+      "n": 1396,
+      "precision": 21.3,
+      "recall": 62.5,
+      "lift": 1.45,
+      "keineBehalten": 31.3,
+      "keinePrecision": 22.3
+     },
+     "H2": {
+      "n": 1216,
+      "precision": 22.2,
+      "recall": 62.2,
+      "lift": 1.35,
+      "keineBehalten": 34.9,
+      "keinePrecision": 24.9
+     }
+    },
+    "Impuls ≥ 1,5 ATR": {
+     "H1": {
+      "n": 746,
+      "precision": 23.3,
+      "recall": 36.6,
+      "lift": 1.59,
+      "keineBehalten": 14.5,
+      "keinePrecision": 19.4
+     },
+     "H2": {
+      "n": 740,
+      "precision": 23.6,
+      "recall": 40.3,
+      "lift": 1.44,
+      "keineBehalten": 19.1,
+      "keinePrecision": 22.4
+     }
+    },
+    "Alter ≥ 2 h": {
+     "H1": {
+      "n": 1553,
+      "precision": 20.5,
+      "recall": 67.2,
+      "lift": 1.4,
+      "keineBehalten": 37.1,
+      "keinePrecision": 23.8
+     },
+     "H2": {
+      "n": 1324,
+      "precision": 20.6,
+      "recall": 62.9,
+      "lift": 1.25,
+      "keineBehalten": 41.9,
+      "keinePrecision": 27.4
+     }
+    },
+    "Alter ≥ 10 h": {
+     "H1": {
+      "n": 638,
+      "precision": 28.2,
+      "recall": 37.9,
+      "lift": 1.93,
+      "keineBehalten": 10.1,
+      "keinePrecision": 15.8
+     },
+     "H2": {
+      "n": 603,
+      "precision": 26.4,
+      "recall": 36.6,
+      "lift": 1.6,
+      "keineBehalten": 13.5,
+      "keinePrecision": 19.4
+     }
+    },
+    "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": {
+     "H1": {
+      "n": 804,
+      "precision": 19,
+      "recall": 32.2,
+      "lift": 1.3,
+      "keineBehalten": 21.9,
+      "keinePrecision": 27.2
+     },
+     "H2": {
+      "n": 693,
+      "precision": 20.2,
+      "recall": 32.3,
+      "lift": 1.23,
+      "keineBehalten": 22.6,
+      "keinePrecision": 28.3
+     }
+    },
+    "Impuls ≥ 1 ATR & ≥ 1 Swing": {
+     "H1": {
+      "n": 1064,
+      "precision": 23.3,
+      "recall": 52.2,
+      "lift": 1.59,
+      "keineBehalten": 22.6,
+      "keinePrecision": 21.2
+     },
+     "H2": {
+      "n": 976,
+      "precision": 23.2,
+      "recall": 52.1,
+      "lift": 1.41,
+      "keineBehalten": 27.3,
+      "keinePrecision": 24.3
+     }
+    },
+    "Impuls ≥ 1,5 ATR & Sweep nicht Asia": {
+     "H1": {
+      "n": 532,
+      "precision": 23.1,
+      "recall": 25.9,
+      "lift": 1.58,
+      "keineBehalten": 8.8,
+      "keinePrecision": 16.5
+     },
+     "H2": {
+      "n": 551,
+      "precision": 25,
+      "recall": 31.8,
+      "lift": 1.52,
+      "keineBehalten": 13.3,
+      "keinePrecision": 20.9
+     }
+    },
+    "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": {
+     "H1": {
+      "n": 802,
+      "precision": 22.1,
+      "recall": 37.3,
+      "lift": 1.51,
+      "keineBehalten": 13.8,
+      "keinePrecision": 17.2
+     },
+     "H2": {
+      "n": 706,
+      "precision": 23.2,
+      "recall": 37.8,
+      "lift": 1.41,
+      "keineBehalten": 18.9,
+      "keinePrecision": 23.2
+     }
+    },
+    "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 757,
+      "precision": 22.2,
+      "recall": 35.4,
+      "lift": 1.51,
+      "keineBehalten": 13.4,
+      "keinePrecision": 17.7
+     },
+     "H2": {
+      "n": 706,
+      "precision": 23.9,
+      "recall": 38.9,
+      "lift": 1.45,
+      "keineBehalten": 18.8,
+      "keinePrecision": 23.1
+     }
+    },
+    "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": {
+     "H1": {
+      "n": 777,
+      "precision": 22.1,
+      "recall": 36.2,
+      "lift": 1.51,
+      "keineBehalten": 13.8,
+      "keinePrecision": 17.8
+     },
+     "H2": {
+      "n": 720,
+      "precision": 23.8,
+      "recall": 39.4,
+      "lift": 1.44,
+      "keineBehalten": 18.9,
+      "keinePrecision": 22.8
+     }
+    },
+    "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 360,
+      "precision": 20,
+      "recall": 15.2,
+      "lift": 1.36,
+      "keineBehalten": 6.7,
+      "keinePrecision": 18.6
+     },
+     "H2": {
+      "n": 308,
+      "precision": 25,
+      "recall": 17.7,
+      "lift": 1.52,
+      "keineBehalten": 8.8,
+      "keinePrecision": 24.7
+     }
+    },
+    "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 323,
+      "precision": 23.8,
+      "recall": 16.2,
+      "lift": 1.63,
+      "keineBehalten": 6.3,
+      "keinePrecision": 19.5
+     },
+     "H2": {
+      "n": 317,
+      "precision": 22.4,
+      "recall": 16.4,
+      "lift": 1.36,
+      "keineBehalten": 9.3,
+      "keinePrecision": 25.6
+     }
+    },
+    "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": {
+     "H1": {
+      "n": 440,
+      "precision": 20.2,
+      "recall": 18.7,
+      "lift": 1.38,
+      "keineBehalten": 9.9,
+      "keinePrecision": 22.5
+     },
+     "H2": {
+      "n": 391,
+      "precision": 22,
+      "recall": 19.8,
+      "lift": 1.34,
+      "keineBehalten": 11.2,
+      "keinePrecision": 24.8
+     }
+    }
+   }
+  },
+  "ALLE": {
+   "n": 17751,
+   "H1": {
+    "n": 9715,
+    "stark": 1388,
+    "mittel": 5167,
+    "keine": 3160
+   },
+   "H2": {
+    "n": 8036,
+    "stark": 1280,
+    "mittel": 4163,
+    "keine": 2593
+   },
+   "verteilung": {
+    "1h": {
+     "mfe": {
+      "q25": 0.33,
+      "med": 0.55,
+      "q75": 0.91,
+      "q90": 1.39
+     },
+     "maeMed": 0,
+     "resweep": 40.3,
+     "ab1_5": 8.2
+    },
+    "3h": {
+     "mfe": {
+      "q25": 0.35,
+      "med": 0.62,
+      "q75": 1.11,
+      "q90": 1.85
+     },
+     "maeMed": 0.07,
+     "resweep": 55.9,
+     "ab1_5": 15
+    },
+    "session": {
+     "mfe": {
+      "q25": 0.35,
+      "med": 0.62,
+      "q75": 1.14,
+      "q90": 1.98
+     },
+     "maeMed": 0.11,
+     "resweep": 58.2,
+     "ab1_5": 16.4
+    }
+   },
+   "merkmale": {
+    "ageHours": {
+     "H1": {
+      "auc": 0.634,
+      "p": 7.6e-47
+     },
+     "H2": {
+      "auc": 0.655,
+      "p": 2.1e-55
+     }
+    },
+    "impulsePips": {
+     "H1": {
+      "auc": 0.604,
+      "p": 5.5e-29
+     },
+     "H2": {
+      "auc": 0.605,
+      "p": 1.9e-26
+     }
+    },
+    "impulseAtr": {
+     "H1": {
+      "auc": 0.7,
+      "p": 1.9e-102
+     },
+     "H2": {
+      "auc": 0.708,
+      "p": 2.9e-98
+     }
+    },
+    "impulseMinutes": {
+     "H1": {
+      "auc": 0.609,
+      "p": 1.3e-31
+     },
+     "H2": {
+      "auc": 0.629,
+      "p": 7.7e-39
+     }
+    },
+    "brokenSwings": {
+     "H1": {
+      "auc": 0.616,
+      "p": 1.6e-35
+     },
+     "H2": {
+      "auc": 0.637,
+      "p": 1e-43
+     }
+    },
+    "bosMinutes": {
+     "H1": {
+      "auc": 0.564,
+      "p": 0.0000026
+     },
+     "H2": {
+      "auc": 0.557,
+      "p": 0.000067
+     }
+    },
+    "sweepDepthPips": {
+     "H1": {
+      "auc": 0.592,
+      "p": 5.1e-23
+     },
+     "H2": {
+      "auc": 0.596,
+      "p": 1.9e-22
+     }
+    },
+    "sweepDepthAtr": {
+     "H1": {
+      "auc": 0.645,
+      "p": 4.4e-55
+     },
+     "H2": {
+      "auc": 0.669,
+      "p": 3.9e-66
+     }
+    },
+    "rankRecency": {
+     "H1": {
+      "auc": 0.597,
+      "p": 1.5e-25
+     },
+     "H2": {
+      "auc": 0.611,
+      "p": 3.5e-29
+     }
+    },
+    "gapNextAtr": {
+     "H1": {
+      "auc": 0.512,
+      "p": 0.19
+     },
+     "H2": {
+      "auc": 0.503,
+      "p": 0.78
+     }
+    },
+    "sweepRangeAtr": {
+     "H1": {
+      "auc": 0.794,
+      "p": 4.4e-220
+     },
+     "H2": {
+      "auc": 0.815,
+      "p": 1e-223
+     }
+    },
+    "sweepRejection": {
+     "H1": {
+      "auc": 0.508,
+      "p": 0.41
+     },
+     "H2": {
+      "auc": 0.525,
+      "p": 0.01
+     }
+    },
+    "sweepBodyAtr": {
+     "H1": {
+      "auc": 0.712,
+      "p": 6.3e-115
+     },
+     "H2": {
+      "auc": 0.708,
+      "p": 3.9e-99
+     }
+    },
+    "zoneDepthAtr": {
+     "H1": {
+      "auc": 0.46,
+      "p": 0.000016
+     },
+     "H2": {
+      "auc": 0.478,
+      "p": 0.025
+     }
+    },
+    "hasAltPivot": {
+     "H1": {
+      "auc": 0.506,
+      "p": 0.53,
+      "anteil": 81.1,
+      "lift": 1.01
+     },
+     "H2": {
+      "auc": 0.512,
+      "p": 0.23,
+      "anteil": 82,
+      "lift": 1.02
+     }
+    },
+    "lhAfterLL": {
+     "H1": {
+      "auc": 0.496,
+      "p": 0.73,
+      "anteil": 39.2,
+      "lift": 1.01
+     },
+     "H2": {
+      "auc": 0.494,
+      "p": 0.59,
+      "anteil": 39.8,
+      "lift": 1.04
+     }
+    },
+    "isLH": {
+     "H1": {
+      "auc": 0.462,
+      "p": 0.00023,
+      "anteil": 42,
+      "lift": 0.92
+     },
+     "H2": {
+      "auc": 0.473,
+      "p": 0.014,
+      "anteil": 42.4,
+      "lift": 0.96
+     }
+    },
+    "bos2h": {
+     "H1": {
+      "auc": 0.534,
+      "p": 0.00027,
+      "anteil": 15.7,
+      "lift": 1.33
+     },
+     "H2": {
+      "auc": 0.535,
+      "p": 0.00046,
+      "anteil": 16.5,
+      "lift": 1.3
+     }
+    },
+    "bosBeforeSweep": {
+     "H1": {
+      "auc": 0.598,
+      "p": 7.2e-26,
+      "anteil": 41.9,
+      "lift": 1.31
+     },
+     "H2": {
+      "auc": 0.611,
+      "p": 2.2e-29,
+      "anteil": 42.5,
+      "lift": 1.34
+     }
+    },
+    "closedBack": {
+     "H1": {
+      "auc": 0.5,
+      "p": 0.98,
+      "anteil": 61.8,
+      "lift": 1
+     },
+     "H2": {
+      "auc": 0.495,
+      "p": 0.59,
+      "anteil": 62.1,
+      "lift": 1
+     }
+    },
+    "sessionExtreme": {
+     "H1": {
+      "auc": 0.561,
+      "p": 5.4e-11,
+      "anteil": 14.2,
+      "lift": 1.54
+     },
+     "H2": {
+      "auc": 0.564,
+      "p": 7.9e-11,
+      "anteil": 14.7,
+      "lift": 1.56
+     }
+    },
+    "m5ObTick": {
+     "H1": {
+      "auc": 0.51,
+      "p": 0.28,
+      "anteil": 44.5,
+      "lift": 1.04
+     },
+     "H2": {
+      "auc": 0.514,
+      "p": 0.14,
+      "anteil": 47.4,
+      "lift": 1.02
+     }
+    },
+    "m5ObPip": {
+     "H1": {
+      "auc": 0.498,
+      "p": 0.84,
+      "anteil": 69.8,
+      "lift": 1
+     },
+     "H2": {
+      "auc": 0.499,
+      "p": 0.93,
+      "anteil": 75.4,
+      "lift": 0.99
+     }
+    },
+    "m15ObTick": {
+     "H1": {
+      "auc": 0.498,
+      "p": 0.8,
+      "anteil": 8.2,
+      "lift": 0.94
+     },
+     "H2": {
+      "auc": 0.504,
+      "p": 0.67,
+      "anteil": 8,
+      "lift": 1.03
+     }
+    },
+    "m15ObPip": {
+     "H1": {
+      "auc": 0.484,
+      "p": 0.081,
+      "anteil": 22,
+      "lift": 0.92
+     },
+     "H2": {
+      "auc": 0.502,
+      "p": 0.8,
+      "anteil": 23.1,
+      "lift": 1.03
+     }
+    },
+    "counterFvg": {
+     "H1": {
+      "auc": 0.615,
+      "p": 3.4e-35,
+      "anteil": 16.8,
+      "lift": 1.68
+     },
+     "H2": {
+      "auc": 0.64,
+      "p": 1.1e-45,
+      "anteil": 17,
+      "lift": 1.95
+     }
+    },
+    "withRoot": {
+     "H1": {
+      "auc": 0.514,
+      "p": 0.14,
+      "anteil": 46,
+      "lift": 1
+     },
+     "H2": {
+      "auc": 0.509,
+      "p": 0.35,
+      "anteil": 49,
+      "lift": 0.98
+     }
+    },
+    "withCurrent": {
+     "H1": {
+      "auc": 0.49,
+      "p": 0.33,
+      "anteil": 41.6,
+      "lift": 0.97
+     },
+     "H2": {
+      "auc": 0.481,
+      "p": 0.061,
+      "anteil": 45.2,
+      "lift": 0.96
+     }
+    },
+    "ls_Asia": {
+     "H1": {
+      "auc": 0.446,
+      "p": 4.8e-9,
+      "anteil": 29.9,
+      "lift": 0.9
+     },
+     "H2": {
+      "auc": 0.452,
+      "p": 0.0000011,
+      "anteil": 30.3,
+      "lift": 0.92
+     }
+    },
+    "sweep_Asia": {
+     "H1": {
+      "auc": 0.403,
+      "p": 1.9e-25,
+      "anteil": 27.3,
+      "lift": 0.67
+     },
+     "H2": {
+      "auc": 0.391,
+      "p": 3.6e-28,
+      "anteil": 28.9,
+      "lift": 0.63
+     }
+    },
+    "ls_London": {
+     "H1": {
+      "auc": 0.512,
+      "p": 0.2,
+      "anteil": 15.2,
+      "lift": 1
+     },
+     "H2": {
+      "auc": 0.506,
+      "p": 0.53,
+      "anteil": 15.5,
+      "lift": 0.96
+     }
+    },
+    "sweep_London": {
+     "H1": {
+      "auc": 0.513,
+      "p": 0.15,
+      "anteil": 18,
+      "lift": 1.07
+     },
+     "H2": {
+      "auc": 0.502,
+      "p": 0.8,
+      "anteil": 18.1,
+      "lift": 0.96
+     }
+    },
+    "ls_MMM": {
+     "H1": {
+      "auc": 0.509,
+      "p": 0.31,
+      "anteil": 11.2,
+      "lift": 1.01
+     },
+     "H2": {
+      "auc": 0.519,
+      "p": 0.058,
+      "anteil": 10.4,
+      "lift": 1.17
+     }
+    },
+    "sweep_MMM": {
+     "H1": {
+      "auc": 0.49,
+      "p": 0.27,
+      "anteil": 10.7,
+      "lift": 0.71
+     },
+     "H2": {
+      "auc": 0.477,
+      "p": 0.022,
+      "anteil": 10.5,
+      "lift": 0.52
+     }
+    },
+    "ls_NY": {
+     "H1": {
+      "auc": 0.513,
+      "p": 0.16,
+      "anteil": 34.3,
+      "lift": 1
+     },
+     "H2": {
+      "auc": 0.504,
+      "p": 0.71,
+      "anteil": 34.2,
+      "lift": 0.96
+     }
+    },
+    "sweep_NY": {
+     "H1": {
+      "auc": 0.607,
+      "p": 9e-31,
+      "anteil": 35,
+      "lift": 1.45
+     },
+     "H2": {
+      "auc": 0.64,
+      "p": 9.3e-46,
+      "anteil": 34.4,
+      "lift": 1.62
+     }
+    },
+    "ls_Sonstige": {
+     "H1": {
+      "auc": 0.519,
+      "p": 0.044,
+      "anteil": 8.4,
+      "lift": 1.33
+     },
+     "H2": {
+      "auc": 0.519,
+      "p": 0.056,
+      "anteil": 8.9,
+      "lift": 1.33
+     }
+    },
+    "sweep_Sonstige": {
+     "H1": {
+      "auc": 0.485,
+      "p": 0.11,
+      "anteil": 8.3,
+      "lift": 0.38
+     },
+     "H2": {
+      "auc": 0.488,
+      "p": 0.23,
+      "anteil": 7.6,
+      "lift": 0.38
+     }
+    }
+   },
+   "trenntInBeidenHalbjahren": [
+    "sweepRangeAtr",
+    "sweepBodyAtr",
+    "impulseAtr",
+    "sweepDepthAtr",
+    "ageHours",
+    "counterFvg",
+    "brokenSwings",
+    "sweep_NY",
+    "impulseMinutes",
+    "impulsePips",
+    "bosBeforeSweep",
+    "rankRecency",
+    "sweep_Asia",
+    "sweepDepthPips",
+    "sessionExtreme",
+    "bosMinutes",
+    "ls_Asia"
+   ],
+   "regeln": {
+    "vorSweep": {
+     "bedingungen": [
+      "ageHours ≥ 10.17"
+     ],
+     "H1": {
+      "n": 1931,
+      "precision": 23,
+      "recall": 32.1,
+      "lift": 1.61,
+      "keineBehalten": 12.9,
+      "keinePrecision": 21.2
+     },
+     "H2": {
+      "n": 1775,
+      "precision": 26.1,
+      "recall": 36.3,
+      "lift": 1.64,
+      "keineBehalten": 13.4,
+      "keinePrecision": 19.6
+     }
+    },
+    "mitSweepKerze": {
+     "bedingungen": [
+      "sweepRangeAtr ≥ 0.64",
+      "impulseAtr ≥ 1.1",
+      "nicht sweep_Sonstige"
+     ],
+     "H1": {
+      "n": 1254,
+      "precision": 34.3,
+      "recall": 31,
+      "lift": 2.4,
+      "keineBehalten": 1.7,
+      "keinePrecision": 4.3
+     },
+     "H2": {
+      "n": 1089,
+      "precision": 39.7,
+      "recall": 33.8,
+      "lift": 2.49,
+      "keineBehalten": 1.9,
+      "keinePrecision": 4.5
+     }
+    }
+   },
+   "kandidaten": {
+    "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+     "H1": {
+      "n": 1523,
+      "precision": 19,
+      "recall": 20.8,
+      "lift": 1.33,
+      "keineBehalten": 14.1,
+      "keinePrecision": 29.2
+     },
+     "H2": {
+      "n": 1325,
+      "precision": 20.8,
+      "recall": 21.5,
+      "lift": 1.3,
+      "keineBehalten": 14.6,
+      "keinePrecision": 28.5
+     }
+    },
+    "LH nach LL": {
+     "H1": {
+      "n": 3806,
+      "precision": 14.5,
+      "recall": 39.6,
+      "lift": 1.01,
+      "keineBehalten": 39.6,
+      "keinePrecision": 32.9
+     },
+     "H2": {
+      "n": 3200,
+      "precision": 16.6,
+      "recall": 41.4,
+      "lift": 1.04,
+      "keineBehalten": 41.2,
+      "keinePrecision": 33.4
+     }
+    },
+    "Impuls ≥ 0,5 ATR": {
+     "H1": {
+      "n": 7943,
+      "precision": 16.3,
+      "recall": 93.5,
+      "lift": 1.14,
+      "keineBehalten": 75.3,
+      "keinePrecision": 30
+     },
+     "H2": {
+      "n": 6680,
+      "precision": 18.1,
+      "recall": 94.6,
+      "lift": 1.14,
+      "keineBehalten": 76.3,
+      "keinePrecision": 29.6
+     }
+    },
+    "Impuls ≥ 1 ATR": {
+     "H1": {
+      "n": 4382,
+      "precision": 19.9,
+      "recall": 62.8,
+      "lift": 1.39,
+      "keineBehalten": 33.7,
+      "keinePrecision": 24.3
+     },
+     "H2": {
+      "n": 3725,
+      "precision": 22.6,
+      "recall": 65.6,
+      "lift": 1.42,
+      "keineBehalten": 34.4,
+      "keinePrecision": 23.9
+     }
+    },
+    "Impuls ≥ 1,5 ATR": {
+     "H1": {
+      "n": 2436,
+      "precision": 22.1,
+      "recall": 38.8,
+      "lift": 1.55,
+      "keineBehalten": 16.3,
+      "keinePrecision": 21.2
+     },
+     "H2": {
+      "n": 2126,
+      "precision": 24.1,
+      "recall": 40,
+      "lift": 1.51,
+      "keineBehalten": 17.4,
+      "keinePrecision": 21.2
+     }
+    },
+    "Alter ≥ 2 h": {
+     "H1": {
+      "n": 4709,
+      "precision": 18.1,
+      "recall": 61.2,
+      "lift": 1.26,
+      "keineBehalten": 41.7,
+      "keinePrecision": 28
+     },
+     "H2": {
+      "n": 4003,
+      "precision": 20.2,
+      "recall": 63.2,
+      "lift": 1.27,
+      "keineBehalten": 42.5,
+      "keinePrecision": 27.6
+     }
+    },
+    "Alter ≥ 10 h": {
+     "H1": {
+      "n": 1958,
+      "precision": 23,
+      "recall": 32.4,
+      "lift": 1.61,
+      "keineBehalten": 13.2,
+      "keinePrecision": 21.3
+     },
+     "H2": {
+      "n": 1793,
+      "precision": 26.3,
+      "recall": 36.8,
+      "lift": 1.65,
+      "keineBehalten": 13.5,
+      "keinePrecision": 19.6
+     }
+    },
+    "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": {
+     "H1": {
+      "n": 2425,
+      "precision": 17.9,
+      "recall": 31.2,
+      "lift": 1.25,
+      "keineBehalten": 21.6,
+      "keinePrecision": 28.1
+     },
+     "H2": {
+      "n": 2144,
+      "precision": 20.8,
+      "recall": 34.8,
+      "lift": 1.31,
+      "keineBehalten": 23.4,
+      "keinePrecision": 28.3
+     }
+    },
+    "Impuls ≥ 1 ATR & ≥ 1 Swing": {
+     "H1": {
+      "n": 3333,
+      "precision": 20.8,
+      "recall": 50,
+      "lift": 1.46,
+      "keineBehalten": 25.4,
+      "keinePrecision": 24.1
+     },
+     "H2": {
+      "n": 2885,
+      "precision": 24.3,
+      "recall": 54.8,
+      "lift": 1.53,
+      "keineBehalten": 25.9,
+      "keinePrecision": 23.3
+     }
+    },
+    "Impuls ≥ 1,5 ATR & Sweep nicht Asia": {
+     "H1": {
+      "n": 2050,
+      "precision": 22.9,
+      "recall": 33.9,
+      "lift": 1.6,
+      "keineBehalten": 13,
+      "keinePrecision": 20
+     },
+     "H2": {
+      "n": 1787,
+      "precision": 25.7,
+      "recall": 35.9,
+      "lift": 1.61,
+      "keineBehalten": 13.5,
+      "keinePrecision": 19.5
+     }
+    },
+    "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": {
+     "H1": {
+      "n": 2802,
+      "precision": 21.4,
+      "recall": 43.2,
+      "lift": 1.5,
+      "keineBehalten": 19.7,
+      "keinePrecision": 22.2
+     },
+     "H2": {
+      "n": 2328,
+      "precision": 25.3,
+      "recall": 45.9,
+      "lift": 1.59,
+      "keineBehalten": 19.1,
+      "keinePrecision": 21.3
+     }
+    },
+    "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 2742,
+      "precision": 21.4,
+      "recall": 42.4,
+      "lift": 1.5,
+      "keineBehalten": 19.1,
+      "keinePrecision": 22
+     },
+     "H2": {
+      "n": 2351,
+      "precision": 26,
+      "recall": 47.8,
+      "lift": 1.63,
+      "keineBehalten": 19,
+      "keinePrecision": 21
+     }
+    },
+    "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": {
+     "H1": {
+      "n": 2822,
+      "precision": 21.7,
+      "recall": 44.1,
+      "lift": 1.52,
+      "keineBehalten": 19.6,
+      "keinePrecision": 21.9
+     },
+     "H2": {
+      "n": 2403,
+      "precision": 25.8,
+      "recall": 48.5,
+      "lift": 1.62,
+      "keineBehalten": 19.4,
+      "keinePrecision": 20.9
+     }
+    },
+    "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 1279,
+      "precision": 20.3,
+      "recall": 18.7,
+      "lift": 1.42,
+      "keineBehalten": 9.3,
+      "keinePrecision": 23
+     },
+     "H2": {
+      "n": 1071,
+      "precision": 25.6,
+      "recall": 21.4,
+      "lift": 1.61,
+      "keineBehalten": 9.1,
+      "keinePrecision": 22.1
+     }
+    },
+    "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": {
+     "H1": {
+      "n": 1171,
+      "precision": 22.1,
+      "recall": 18.7,
+      "lift": 1.55,
+      "keineBehalten": 8.1,
+      "keinePrecision": 21.9
+     },
+     "H2": {
+      "n": 1067,
+      "precision": 25.6,
+      "recall": 21.3,
+      "lift": 1.61,
+      "keineBehalten": 9.6,
+      "keinePrecision": 23.3
+     }
+    },
+    "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": {
+     "H1": {
+      "n": 1569,
+      "precision": 20.2,
+      "recall": 22.8,
+      "lift": 1.41,
+      "keineBehalten": 11.4,
+      "keinePrecision": 22.9
+     },
+     "H2": {
+      "n": 1381,
+      "precision": 24.5,
+      "recall": 26.4,
+      "lift": 1.54,
+      "keineBehalten": 12.5,
+      "keinePrecision": 23.4
+     }
+    }
+   }
+  }
+ },
+ "durchbrueche": {
+  "GBPUSD": 1605,
+  "EURUSD": 1638,
+  "XAUUSD": 1500
+ },
+ "gegenprobe": {
+  "faelle": [
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 610",
+    "instrument": "GBPUSD",
+    "berlin": "2026-11-04 03:15",
+    "klasse": "mittel",
+    "mfe3h": 0.82,
+    "mfeSession": 0.82,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 611",
+    "instrument": "GBPUSD",
+    "berlin": "2026-10-28 13:00",
+    "klasse": "stark",
+    "mfe3h": 1.54,
+    "mfeSession": 1.54,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 612",
+    "instrument": "GBPUSD",
+    "berlin": "2026-10-27 08:30",
+    "klasse": "mittel",
+    "mfe3h": 0.56,
+    "mfeSession": 0.56,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": true,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 613",
+    "instrument": "GBPUSD",
+    "berlin": "2026-10-08 16:35",
+    "klasse": "mittel",
+    "mfe3h": 1.42,
+    "mfeSession": 1.42,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 614",
+    "instrument": "GBPUSD",
+    "berlin": "2026-10-01 09:55",
+    "klasse": "mittel",
+    "mfe3h": 0.91,
+    "mfeSession": 0.91,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 615",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-23 10:40",
+    "klasse": "stark",
+    "mfe3h": 2.85,
+    "mfeSession": 3.72,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": true,
+    "mitKerzeInstrument": true,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 616",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-29 06:30",
+    "klasse": "mittel",
+    "mfe3h": 1.34,
+    "mfeSession": 1.34,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 617",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-28 03:10",
+    "klasse": "stark",
+    "mfe3h": 3.73,
+    "mfeSession": 3.73,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Alter ≥ 2 h",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 618",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-23 20:00",
+    "klasse": "mittel",
+    "mfe3h": 1.43,
+    "mfeSession": 1.43,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 619",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-23 06:20",
+    "klasse": "stark",
+    "mfe3h": 2.57,
+    "mfeSession": 2.57,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "pin",
+    "group": "pos",
+    "ref": "Pin 620",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-22 12:35",
+    "klasse": "stark",
+    "mfe3h": 2.57,
+    "mfeSession": 3.75,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-evidence",
+    "group": "pos",
+    "ref": "DR #94",
+    "instrument": "EURUSD",
+    "berlin": "2026-09-22 10:50",
+    "klasse": "mittel",
+    "mfe3h": 0.51,
+    "mfeSession": 0.51,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": true,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #97",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-15 15:55",
+    "klasse": "stark",
+    "mfe3h": 3.12,
+    "mfeSession": 3.12,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": true,
+    "mitKerzeInstrument": true,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #99",
+    "instrument": "GBPUSD",
+    "berlin": "2026-08-28 01:50",
+    "klasse": "stark",
+    "mfe3h": 7.57,
+    "mfeSession": 7.81,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "neg",
+    "ref": "DR #104",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-24 06:00",
+    "klasse": "stark",
+    "mfe3h": 1.64,
+    "mfeSession": 1.64,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #105",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-23 20:00",
+    "klasse": "mittel",
+    "mfe3h": 1.43,
+    "mfeSession": 1.43,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #106",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-24 13:25",
+    "klasse": "stark",
+    "mfe3h": 1.51,
+    "mfeSession": 1.51,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": true,
+    "source": "journal-setup",
+    "group": "neg",
+    "ref": "DR #108",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-25 03:10",
+    "klasse": "mittel",
+    "mfe3h": 0.53,
+    "mfeSession": 0.53,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "neg",
+    "ref": "DR #110",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-25 13:35",
+    "klasse": "stark",
+    "mfe3h": 2.41,
+    "mfeSession": 2.41,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-evidence",
+    "group": "neg",
+    "ref": "DR #111",
+    "instrument": "XAUUSD",
+    "berlin": "2026-09-23 15:30",
+    "klasse": "mittel",
+    "mfe3h": 0.86,
+    "mfeSession": 0.86,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "neg",
+    "ref": "DR #116",
+    "instrument": "GBPUSD",
+    "berlin": "2026-09-28 08:30",
+    "klasse": "mittel",
+    "mfe3h": 1.16,
+    "mfeSession": 1.16,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #117",
+    "instrument": "GBPUSD",
+    "berlin": "2026-10-01 09:55",
+    "klasse": "mittel",
+    "mfe3h": 0.91,
+    "mfeSession": 0.91,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #118",
+    "instrument": "GBPUSD",
+    "berlin": "2026-10-05 12:55",
+    "klasse": "mittel",
+    "mfe3h": 0.87,
+    "mfeSession": 0.87,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-evidence",
+    "group": "pos",
+    "ref": "DR #119",
+    "instrument": "XAUUSD",
+    "berlin": "2026-09-16 08:35",
+    "klasse": "mittel",
+    "mfe3h": 0.92,
+    "mfeSession": 0.92,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-evidence",
+    "group": "pos",
+    "ref": "DR #121",
+    "instrument": "XAUUSD",
+    "berlin": "2026-10-29 10:05",
+    "klasse": "mittel",
+    "mfe3h": 1.29,
+    "mfeSession": 1.29,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)"
+    ]
+   },
+   {
+    "breakout": true,
+    "source": "journal-evidence",
+    "group": "pos",
+    "ref": "DR #125",
+    "instrument": "XAUUSD",
+    "berlin": "2026-09-21 06:20",
+    "klasse": "mittel",
+    "mfe3h": 0.96,
+    "mfeSession": 0.96,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-evidence",
+    "group": "pos",
+    "ref": "DR #125",
+    "instrument": "XAUUSD",
+    "berlin": "2026-09-21 05:40",
+    "klasse": "mittel",
+    "mfe3h": 1.15,
+    "mfeSession": 1.15,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #126",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-05 10:05",
+    "klasse": "mittel",
+    "mfe3h": 0.51,
+    "mfeSession": 0.51,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-evidence",
+    "group": "pos",
+    "ref": "DR #127",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-06 17:40",
+    "klasse": "mittel",
+    "mfe3h": 1.15,
+    "mfeSession": 1.15,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #128",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-05 16:05",
+    "klasse": "mittel",
+    "mfe3h": 1.22,
+    "mfeSession": 1.22,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #129",
+    "instrument": "XAUUSD",
+    "berlin": "2026-10-27 06:35",
+    "klasse": "stark",
+    "mfe3h": 1.81,
+    "mfeSession": 1.81,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #130",
+    "instrument": "XAUUSD",
+    "berlin": "2026-10-19 17:25",
+    "klasse": "stark",
+    "mfe3h": 2.52,
+    "mfeSession": 2.52,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": true,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #132",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-13 08:50",
+    "klasse": "mittel",
+    "mfe3h": 1.1,
+    "mfeSession": 1.1,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #133",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-11 06:30",
+    "klasse": "mittel",
+    "mfe3h": 1.22,
+    "mfeSession": 1.22,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #135",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-05 14:05",
+    "klasse": "keine",
+    "mfe3h": 0.28,
+    "mfeSession": 0.28,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #137",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-02 02:15",
+    "klasse": "mittel",
+    "mfe3h": 0.54,
+    "mfeSession": 0.54,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #138",
+    "instrument": "XAUUSD",
+    "berlin": "2026-10-26 09:50",
+    "klasse": "mittel",
+    "mfe3h": 1.32,
+    "mfeSession": 1.32,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Alter ≥ 2 h"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #139",
+    "instrument": "XAUUSD",
+    "berlin": "2026-10-22 06:55",
+    "klasse": "mittel",
+    "mfe3h": 0.76,
+    "mfeSession": 0.76,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #141",
+    "instrument": "XAUUSD",
+    "berlin": "2026-10-12 10:40",
+    "klasse": "mittel",
+    "mfe3h": 0.91,
+    "mfeSession": 0.91,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #142",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-17 10:45",
+    "klasse": "mittel",
+    "mfe3h": 1.01,
+    "mfeSession": 1.01,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #143",
+    "instrument": "XAUUSD",
+    "berlin": "2026-06-04 01:40",
+    "klasse": "stark",
+    "mfe3h": 1.79,
+    "mfeSession": 2.18,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-evidence",
+    "group": "pos",
+    "ref": "DR #145",
+    "instrument": "GBPUSD",
+    "berlin": "2026-11-18 14:50",
+    "klasse": "stark",
+    "mfe3h": 1.51,
+    "mfeSession": 1.51,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-evidence",
+    "group": "pos",
+    "ref": "DR #145",
+    "instrument": "GBPUSD",
+    "berlin": "2026-11-18 15:45",
+    "klasse": "mittel",
+    "mfe3h": 1.28,
+    "mfeSession": 1.28,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "journal-setup",
+    "group": "pos",
+    "ref": "DR #146",
+    "instrument": "EURUSD",
+    "berlin": "2026-11-12 17:00",
+    "klasse": "mittel",
+    "mfe3h": 1.23,
+    "mfeSession": 1.23,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": true,
+    "mitKerzeInstrument": true,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "muster",
+    "group": "pos",
+    "ref": "DR #145 LS 15:45",
+    "instrument": "GBPUSD",
+    "berlin": "2026-11-18 15:45",
+    "klasse": "mittel",
+    "mfe3h": 1.28,
+    "mfeSession": 1.28,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": true,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Impuls ≥ 1,5 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "muster",
+    "group": "pos",
+    "ref": "P557 LS 07:45",
+    "instrument": "XAUUSD",
+    "berlin": "2026-11-18 07:45",
+    "klasse": "stark",
+    "mfe3h": 1.51,
+    "mfeSession": 1.51,
+    "vorSweepAlle": false,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)",
+     "LH nach LL",
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Alter ≥ 2 h",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia"
+    ]
+   },
+   {
+    "breakout": false,
+    "source": "muster",
+    "group": "neg",
+    "ref": "DR #145 popeliger LS 19:40",
+    "instrument": "GBPUSD",
+    "berlin": "2026-11-18 19:40",
+    "klasse": "mittel",
+    "mfe3h": 0.91,
+    "mfeSession": 0.91,
+    "vorSweepAlle": true,
+    "vorSweepInstrument": false,
+    "mitKerzeAlle": false,
+    "mitKerzeInstrument": false,
+    "kandidaten": [
+     "Impuls ≥ 0,5 ATR",
+     "Impuls ≥ 1 ATR",
+     "Alter ≥ 2 h",
+     "Alter ≥ 10 h",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia"
+    ]
+   }
+  ],
+  "summe": {
+   "Pins": {
+    "vorSweepAlle": "3/11",
+    "vorSweepInstrument": "4/11",
+    "mitKerzeAlle": "1/11",
+    "mitKerzeInstrument": "2/11",
+    "kandidaten": {
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": "5/11",
+     "LH nach LL": "7/11",
+     "Impuls ≥ 0,5 ATR": "11/11",
+     "Impuls ≥ 1 ATR": "8/11",
+     "Impuls ≥ 1,5 ATR": "5/11",
+     "Alter ≥ 2 h": "8/11",
+     "Alter ≥ 10 h": "3/11",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": "6/11",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing": "6/11",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia": "4/11",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": "6/11",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "5/11",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": "6/11",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "4/11",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "4/11",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": "4/11"
+    },
+    "klasseStark": "5/11",
+    "klasseKeine": "0/11"
+   },
+   "Journal-Gewinner": {
+    "vorSweepAlle": "7/28",
+    "vorSweepInstrument": "5/28",
+    "mitKerzeAlle": "3/28",
+    "mitKerzeInstrument": "3/28",
+    "kandidaten": {
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": "12/28",
+     "LH nach LL": "16/28",
+     "Impuls ≥ 0,5 ATR": "28/28",
+     "Impuls ≥ 1 ATR": "12/28",
+     "Impuls ≥ 1,5 ATR": "7/28",
+     "Alter ≥ 2 h": "16/28",
+     "Alter ≥ 10 h": "7/28",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": "13/28",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing": "10/28",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia": "7/28",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": "7/28",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "9/28",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": "9/28",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "8/28",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "8/28",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": "9/28"
+    },
+    "klasseStark": "7/28",
+    "klasseKeine": "1/28"
+   },
+   "Journal-Verlierer": {
+    "vorSweepAlle": "2/5",
+    "vorSweepInstrument": "1/5",
+    "mitKerzeAlle": "0/5",
+    "mitKerzeInstrument": "0/5",
+    "kandidaten": {
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": "1/5",
+     "LH nach LL": "3/5",
+     "Impuls ≥ 0,5 ATR": "5/5",
+     "Impuls ≥ 1 ATR": "2/5",
+     "Impuls ≥ 1,5 ATR": "2/5",
+     "Alter ≥ 2 h": "3/5",
+     "Alter ≥ 10 h": "2/5",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": "2/5",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing": "2/5",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia": "2/5",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": "2/5",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "2/5",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": "2/5",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "1/5",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "1/5",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": "1/5"
+    },
+    "klasseStark": "2/5",
+    "klasseKeine": "0/5"
+   },
+   "Muster +": {
+    "vorSweepAlle": "1/2",
+    "vorSweepInstrument": "1/2",
+    "mitKerzeAlle": "0/2",
+    "mitKerzeInstrument": "0/2",
+    "kandidaten": {
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": "2/2",
+     "LH nach LL": "2/2",
+     "Impuls ≥ 0,5 ATR": "2/2",
+     "Impuls ≥ 1 ATR": "2/2",
+     "Impuls ≥ 1,5 ATR": "1/2",
+     "Alter ≥ 2 h": "2/2",
+     "Alter ≥ 10 h": "1/2",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": "2/2",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing": "2/2",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia": "1/2",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": "2/2",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "2/2",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": "2/2",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "2/2",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "2/2",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": "2/2"
+    },
+    "klasseStark": "1/2",
+    "klasseKeine": "0/2"
+   },
+   "Muster − (19:40)": {
+    "vorSweepAlle": "1/1",
+    "vorSweepInstrument": "0/1",
+    "mitKerzeAlle": "0/1",
+    "mitKerzeInstrument": "0/1",
+    "kandidaten": {
+     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": "0/1",
+     "LH nach LL": "0/1",
+     "Impuls ≥ 0,5 ATR": "1/1",
+     "Impuls ≥ 1 ATR": "1/1",
+     "Impuls ≥ 1,5 ATR": "0/1",
+     "Alter ≥ 2 h": "1/1",
+     "Alter ≥ 10 h": "1/1",
+     "LH nach LL & (Impuls ≥ 1 ATR | Alter ≥ 2 h)": "0/1",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing": "1/1",
+     "Impuls ≥ 1,5 ATR & Sweep nicht Asia": "0/1",
+     "Impuls ≥ 1 ATR & Alter ≥ 2 h & Sweep nicht Asia": "1/1",
+     "Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "1/1",
+     "Impuls ≥ 1 ATR & (≥ 1 Swing | Alter ≥ 10 h) & Sweep nicht Asia": "1/1",
+     "LS ist LH & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "0/1",
+     "LH nach LL & Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia": "0/1",
+     "LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia": "0/1"
+    },
+    "klasseStark": "0/1",
+    "klasseKeine": "0/1"
+   }
+  }
+ }
+}

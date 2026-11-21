@@ -1,119 +1,126 @@
 # LQ 2.0: Was macht einen guten Liquiditäts-Sweep aus?
 
-Stand 21.11.2026, git siehe `ergebnis.json`. Reine Analyse: kein Produktivcode, keine DB-Schreibzugriffe.
-Grundgesamtheit sind alle gesweepten LQ-1.0-Level (M5, Fraktal P5, Spread Hour ignoriert) aus `fxcm_candles`
-vom 05.01. bis 21.11.2026. Alle Zeiten Berlin.
+Stand 21.11.2026. Reine Analyse: kein Produktivcode, keine DB-Schreibzugriffe. Alle Zeiten Berlin.
+Grundgesamtheit: alle gesweepten LQ-1.0-Level 2026 (M5, Fraktal P5, Spread Hour ignoriert) aus `fxcm_candles`,
+05.01. bis 21.11.2026, GBPUSD, EURUSD und XAUUSD. Halbjahre: H1 = Jan–Jun, H2 = Jul–Nov (Berliner Monat).
 
-Reproduktion: `node analysis/lq2-sweeps/sammle.mjs` (liest DB paginiert und Kerzen einmal je Instrument in
-`local-data/lq2-sweeps/`), danach `node analysis/lq2-sweeps/auswerte.mjs` (offline, ~20 s, Seed 20261121).
+Reproduktion (Rohdaten in `local-data/lq2-sweeps/`, nicht eingecheckt):
+1. `node analysis/lq2-sweeps/sammle.mjs`: DB paginiert lesen, M5-Kerzen einmal je Instrument.
+2. `node analysis/lq2-sweeps/elternTrend.mjs <INSTRUMENT> <DOB-Cache-Ordner>`: TS1.1-Kette (Wurzel und aktuelle Ebene),
+   stündlich aus vorhandenen DOB-Kerzen-Caches. Keine DB, ca. 45 s je Instrument.
+3. `node analysis/lq2-sweeps/reaktion.mjs` → `reaktion.json` (Hauptergebnis) und `node analysis/lq2-sweeps/auswerte.mjs`
+   → `ergebnis.json` (Trade-Ebene und Positiv/Zufall). Die gemeinsame Merkmalsberechnung steht in `merkmale.mjs`.
 
 ## Kurzfassung
 
-1. **Kein LS-Merkmal verbessert die Winrate der DOB-LQ-Sweep-Läufe belastbar.** Gewinner- und Verlierer-LS
-   sehen gleich aus: Alter, Impuls, Swings, BOS, Sweep-Tiefe, Session und OB-Kante liegen bei AUC 0,43–0,55.
-   Hinweise gibt es nur bei GBP („LH nach LL“, „Wechselpivot überhaupt“), und EUR und XAU bestätigen sie nicht (unten). Die heutige LQ-2.0-Regel (LH nach LL + BOS ≤ 2 h) ändert die
-   Winrate in keinem Instrument.
-2. **Die heutige LQ-2.0-Regel ist zu streng für Philips Pins.** Sie behält nur 5 der 11 Pins, wirft aber 83 % der
-   Zufalls-Sweeps raus. Das passt zu „noch kein Erfolg“.
-3. **Was Pins von Zufall trennt** (n = 11, also nur Hinweise): größerer Impuls in H1-ATR, älterer LS, mehr Abstand
-   zum nächsten Kandidaten, Sweep häufiger in London.
-4. Was „Positiv gegen Zufall“ in den Läufen trennt (LH nach LL, Rückschluss, Abstand zum nächsten Kandidaten), steckt
-   genauso in den Verlierern. Das ist die TS1.1-Vorauswahl des LS, keine Sweep-Qualität.
+1. **Die Trade-Winrate taugt nicht als Zielgröße.** Über alle 5 LQ-Sweep-Läufe (4043 Trades mit M5-LS) trennt kein
+   LS-Merkmal Gewinner von Verlierern in beiden Halbjahren. Entry, SL und DOB überdecken die Sweep-Qualität.
+2. **Die Reaktion nach dem Sweep taugt.** Das sind 17.751 Sweeps mit Rückschluss. Mehrere Merkmale, die vor dem Sweep
+   feststehen, sagen eine starke Reaktion in beiden Halbjahren und allen drei Instrumenten vorher: **Impuls in H1-ATR**
+   (AUC 0,70/0,71), **Alter des LS** (0,63/0,66), **gebrochene Swings** (0,62/0,64) und **Sweep in NY statt Asia**.
+3. **Philips Auswahl bestätigt die Zielgröße.** Von 11 Pins hat keiner „keine Reaktion“, bei den Journal-Gewinnern ist
+   es 1 von 28. Im Durchschnitt aller Sweeps sind es 32 %.
+4. **Was nicht trennt:** „LH nach LL“ (Lift 1,0), die Richtung der Elternebene (Wurzel und aktuelle Ebene, Lift 1,0),
+   die M5/M15-OB-Kante (1,0) und der Abstand zum nächsten Kandidaten. Die heutige LQ-2.0-Regel ist nur schwach
+   (Lift 1,3, behält 21 % der starken Reaktionen).
 
-## Mengen
+## Zielgröße „Reaktion“
 
-| Herkunft | GBPUSD | EURUSD | XAUUSD |
+- **Sweep-Zone:** 30 min ab dem ersten Touch. Ein Sweep läuft oft über mehrere Kerzen. Bei DR #145 berührt die
+  11:40-Kerze den LS, schließt aber sofort zurück, und 11:45 sticht noch 3 Pips höher. Das Zonen-Extrem ist deshalb die
+  Re-Sweep-Grenze.
+- **Durchbruch:** kein M5-Schluss zurück hinter den LS innerhalb der Zone. Das ist kein Sweep und gehört nicht zur
+  Grundgesamtheit (GBP 1605, EUR 1638, XAU 1500).
+- **MFE:** ab dem Touch, vom LS weg, in H1-ATR zum Sweep-Zeitpunkt, bis zum Re-Sweep. **Stark:** MFE ≥ 1,5 ATR in 3 h.
+  **Keine:** Re-Sweep, bevor 0,5 ATR erreicht sind. Dazwischen liegt „mittel“.
+
+| | n | stark H1 / H2 | keine H1 / H2 |
 |---|---|---|---|
-| Pins 610–620 („taugt als LQ-Sweep Kraft“) | 11 | – | – |
-| Journal, DR gewonnen (Setup-LS oder 5M-Pivot-Evidence) | 8 | 2 | 18 |
-| Journal, DR verloren | 4 | 0 | 1 |
-| Lauf-LS, erster Trade gewonnen (v0 ∪ v1, eindeutig) | 190 | 156 | 168 |
-| Lauf-LS, erster Trade verloren | 332 | 290 | 279 |
-| Muster (DR #145 LS 15:45 +, LS 19:40 −; P557 LS 07:45 +) | 1 + / 1 − | – | 1 + |
-| **Positiv gesamt / Negativ gesamt** (eindeutig, Konflikte raus) | **192 / 327** | **157 / 289** | **167 / 267** |
-| Zufall (aus allen gesweepten LQ-1.0-Leveln) | 3000 | 3000 | 3000 |
+| GBPUSD | 5985 | 14,1 / 16,6 % | 34,5 / 31,6 % |
+| EURUSD | 5890 | 14,1 / 14,7 % | 32,3 / 32,3 % |
+| XAUUSD | 5876 | 14,7 / 16,5 % | 30,8 / 32,9 % |
 
-- Lauf-LS je Lauf (5M, erster Trade je TS1.1-POI): GBP v0 462, GBP v1 321, EUR v0 447, XAU v0 398, XAU v1 268.
-  Pro Lauf 14–26 LS mit H1-Zeitrahmen ausgelassen. v0 und v1 teilen viele LS, sind also nicht unabhängig.
-- Konflikte (dieselbe LS einmal gewonnen, einmal verloren, z. B. v0 gegen v1): GBP 10, EUR 1, XAU 13. Sie fallen aus
-  Positiv und Negativ raus.
-- Ohne LQ-1.0-Gegenstück: EUR DR #94 (Evidence 22.09. 13:30), XAU TS 50160 / DR #140 (22.10. 02:30). DR #112, #134,
-  #136 haben weder Setup noch 5M-Pivot-Evidence.
-- Journal-DR mit gemischten Positionen zählt als gewonnen, sobald eine Position gewann.
+MFE-Verteilung (alle, H1-ATR): 1 h Median 0,55 (Q75 0,91, Q90 1,39) · 3 h 0,62 (1,11 / 1,85) · bis Sessionende 0,62
+(1,14 / 1,98). Ein Re-Sweep kommt bei 40 % innerhalb 1 h und bei 56 % innerhalb 3 h. Bei 1,5 ATR in 3 h sind 15 % stark.
 
-## Merkmale (für alle Gruppen gleich berechnet)
+## Merkmale: stark gegen keine (alle Instrumente, AUC bzw. Lift H1 / H2)
 
-`ageHours` LS bis Sweep · `lhAfterLL` LS ist Wechselpivot direkt nach LL (Short; Long gespiegelt) · `isLH` LS unter
-vorigem Hoch · `bos2h` = LQ-2.0-Regel aus `src/liquidity2.js` · `bosBeforeSweep`/`bosMinutes` Schluss unter dem LL
-vor dem Sweep · Impuls bis zum ersten Gegen-Pivot ab BOS (`impulsePips`, `impulseAtr` in H1-ATR(14), `impulseMinutes`),
-`brokenSwings` per Schluss gebrochene Swing-Tiefs (5 Tage zurück) · `sweepDepth*`, `closedBack` · `lsSession`/
-`sweepSession` (Asia/MMM/NY aus `sessions`, London = 07:00–10:30, „Sonstige“ = 13–14 Uhr und 22–23 Uhr) ·
-`sessionExtreme` (`contextForPivot`) · `m5Ob*`/`m15Ob*` LS auf OB-Kante (1 Tick bzw. 1 Pip, Gold 1/3 USD) ·
-`rankRecency` Rang unter den aktiven Kandidaten · `gapNextAtr` Abstand zum nächsten aktiven Kandidaten dahinter.
+„Trennt“ heißt |AUC − 0,5| ≥ 0,05 und p < 0,01 in beiden Halbjahren, mit gleicher Richtung.
 
-## Pins gegen Zufall (GBPUSD, 11 gegen 3000)
-
-| Merkmal | Pins: Median (Q25–Q75) | Zufall: Median (Q25–Q75) | Trennung | p |
+| Merkmal (vor dem Sweep bekannt) | H1 | H2 | trennt | auch je Instrument |
 |---|---|---|---|---|
-| Impuls in H1-ATR | 1,22 (0,98–2,57) | 0,94 (0,59–1,58) | AUC 0,69 | 0,03 |
-| Abstand zum nächsten Kandidaten (ATR) | 0,83 (0,47–1,13) | 0,38 (0,15–0,83) | AUC 0,71 | 0,02 |
-| LQ-2.0-Regel erfüllt | 45 % | 17 % | | 0,01 |
-| Alter (h) | 4,0 (2,1–9,5) | 1,9 (0,8–7,6) | AUC 0,63 | 0,14 |
-| Impuls in Pips | 15,8 (12,9–29,6) | 13,9 (8,6–23,5) | AUC 0,62 | 0,18 |
-| LH nach LL | 64 % | 40 % | | 0,11 |
-| Sweep in London | 45 % | 18 % | | Hinweis |
-| gebrochene Swings, Sweep-Tiefe, OB-Kante, Session-High/-Low | gleich | | | > 0,3 |
+| Impuls vom LS in H1-ATR | AUC 0,70 | 0,71 | ja | GBP, EUR, XAU |
+| Alter des LS | 0,63 | 0,66 | ja | GBP, EUR, XAU |
+| gebrochene Swings im Impuls | 0,62 | 0,64 | ja | GBP, EUR, XAU |
+| Impulsdauer | 0,61 | 0,63 | ja | GBP, EUR, XAU |
+| Rang unter aktiven Kandidaten | 0,60 | 0,61 | ja | GBP, EUR, XAU |
+| BOS vor dem Sweep | Lift 1,31 | 1,34 | ja | GBP, EUR, XAU |
+| Sweep in NY | Lift 1,45 | 1,62 | ja | GBP, EUR, XAU |
+| Sweep in Asia | Lift 0,67 | 0,63 | ja (negativ) | GBP, EUR |
+| LQ 2.0 heute (LH nach LL + BOS ≤ 2 h) | Lift 1,33 | 1,30 | schwach (AUC 0,53) | – |
+| LH nach LL | 1,01 | 1,04 | nein | – |
+| mit der Wurzel (TS1.1) | 1,00 | 0,98 | nein | – |
+| mit der aktuellen Ebene (TS1.1) | 0,97 | 0,96 | nein | – |
+| M5- bzw. M15-OB-Kante (Pip) | 1,00 / 0,92 | 0,99 / 1,03 | nein | – |
+| Abstand zum nächsten Kandidaten | AUC 0,51 | 0,50 | nein | – |
 
-Bei 21 getesteten Merkmalen hält davon keines eine Bonferroni-Korrektur aus (Schwelle ≈ 0,002). 3 der 11 Pins
-(611, 617, 620) sind keine Wechselpivots: Zwischen zwei Hochs liegt kein P5-Tief. Eine Strukturregel auf
-den heutigen alternierenden P5-Pivots kann diese Pins nie behalten.
+Nachlaufend, darum nicht in der LS-Regel:
+- Spanne der Sweep-Kerze: AUC 0,79/0,82. Sie steckt zum Teil selbst in der MFE und taugt als Entry-Auslöser.
+- Gegen-FVG direkt nach dem Sweep: Lift 1,68/1,95.
+- Session-High/-Low: Lift 1,54/1,56. Der Wert kennt das Session-Ende.
 
-## Lauf-Gewinner gegen Lauf-Verlierer (erster Trade je LS)
+## Regeln (nur Merkmale vor dem Sweep)
 
-| | GBP 190/332 | EUR 156/290 | XAU 168/279 |
-|---|---|---|---|
-| Stärkstes Zahlenmerkmal (AUC) | `bosMinutes` 0,43 (p 0,08) | `rankRecency` 0,54 (p 0,16) | alle 0,49–0,51 |
-| LH nach LL (Anteil Gewinner/Verlierer) | 60 % / 50 % (p 0,02) | 43 % / 45 % | 52 % / 51 % |
-| Wechselpivot überhaupt | 87 % / 76 % (p 0,001) | 75 % / 78 % | 77 % / 83 % |
-| LQ-2.0-Regel | 26 % / 24 % | 19 % / 23 % | 26 % / 25 % |
+P = Precision (Anteil stark), R = Recall (Anteil der starken behalten), keine = Anteil der „keine“-Sweeps, die die Regel
+behält. Basis stark: 14,3 / 15,9 %. Werte für alle drei Instrumente; je Instrument steht es in `reaktion.json`.
 
-„LH nach LL“ je Lauf (Winrate behalten / verworfen): GBP v0 40,7 / 30,1 % (p 0,02), GBP v1 39,2 / 32,7 % (p 0,23),
-XAU v1 39,9 / 32,6 % (p 0,22), XAU v0 37,1 / 38,0 %, EUR v0 34,0 / 35,6 %. Die Richtung stimmt in 3 von 5 Läufen,
-die Läufe überlappen aber. Das ist ein Hinweis, kein Befund. „Wechselpivot überhaupt“ ist bei GBP das schärfste
-Lauf-Merkmal (p 0,001), dreht bei EUR und XAU aber die Richtung.
+| Regel | P H1 / H2 | R H1 / H2 | Lift | keine behalten |
+|---|---|---|---|---|
+| LQ 2.0 heute | 19,0 / 20,8 | 20,8 / 21,5 | 1,33 / 1,30 | 14 / 15 % |
+| Impuls ≥ 1 ATR | 19,9 / 22,6 | 62,8 / 65,6 | 1,39 / 1,42 | 34 % |
+| Impuls ≥ 1,5 ATR | 22,1 / 24,1 | 38,8 / 40,0 | 1,55 / 1,51 | 16 / 17 % |
+| Alter ≥ 10 h | 23,0 / 26,3 | 32,4 / 36,8 | 1,61 / 1,65 | 13 % |
+| **Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia** | **21,4 / 26,0** | **42,4 / 47,8** | **1,50 / 1,63** | **19 %** |
+| LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia | 20,2 / 24,5 | 22,8 / 26,4 | 1,41 / 1,54 | 11 / 13 % |
 
-## Kandidaten-Regeln
+Die gierige Suche auf H1 (geprüft auf H2) findet mit Merkmalen vor dem Sweep keine bessere Kombination als Impuls oder
+Alter allein (Lift 1,6–1,7). Darf sie die Sweep-Kerze nutzen, kommt „Spanne ≥ 0,64 ATR & Impuls ≥ 1,1 ATR & Sweep nicht
+13–14/22–23 Uhr“ heraus (Lift 2,4 / 2,5). Das ist aber ein Entry-Auslöser, keine LS-Bewertung.
 
-Positiv/Pins/Journal = Anteil behalten · Zufall raus = Anteil verworfen · WR = Winrate erster Lauf-Trade je LS,
-behalten gegen verworfen. Break-even bei 3R ≈ 25 %.
+## Gegenprobe
 
-| Regel | GBP Pins | GBP Journal + | Zufall raus (GBP/EUR/XAU) | WR GBP | WR EUR | WR XAU |
-|---|---|---|---|---|---|---|
-| LQ 2.0 heute (LH nach LL + BOS ≤ 2 h) | 5/11 | 38 % | 83 / 84 / 83 % | 38 / 36 | 30 / 36 | 38 / 38 |
-| LH nach LL | 7/11 | 63 % | 60 / 61 / 59 % | **41 / 31** (p 0,02) | 34 / 36 | 38 / 37 |
-| Impuls ≥ 0,5 H1-ATR | 11/11 | 100 % | 18 / 18 / 17 % | 37 / 32 | 37 / 26 (p 0,08) | 37 / 42 |
-| Impuls ≥ 1 H1-ATR | 8/11 | 63 % | 54 / 54 / 56 % | 37 / 36 | 38 / 32 | 38 / 37 |
-| Alter ≥ 2 h | 8/11 | 75 % | 50 / 51 / 51 % | 37 / 36 | 36 / 34 | 36 / 39 |
-| Impuls ≥ 1 ATR + Alter ≥ 2 h | 7/11 | 50 % | 64 / 64 / 64 % | 38 / 35 | 38 / 33 | 37 / 38 |
-| ≥ 1 gebrochener Swing | 7/11 | 63 % | 51 / 52 / 52 % | 36 / 37 | 35 / 35 | 36 / 40 |
-| M5/M15-OB-Kante (Pip) | 8/11 | 63 % | 18 / 14 / 41 % | 37 / 34 | 36 / 31 | 39 / 35 |
+| Regel | Pins | Journal + | Journal − | DR #145 15:45, P557 07:45 | 19:40 raus? |
+|---|---|---|---|---|---|
+| LQ 2.0 heute | 5/11 | 12/28 | 1/5 | 2/2 | ja |
+| Impuls ≥ 1 ATR | 8/11 | 12/28 | 2/5 | 2/2 | nein |
+| Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia | 5/11 | 9/28 | 2/5 | 2/2 | **nein** (1,5 ATR, 1 Swing, Sweep London) |
+| LH nach LL & Impuls ≥ 1 ATR & Sweep nicht Asia | 4/11 | 9/28 | 1/5 | 2/2 | ja |
 
-Mustertrades: DR #145 LS 15:45 erfüllt alles (LH nach LL, BOS nach 50 min, 2,5 ATR, 3 Swings, 20 h alt). Der
-popelige LS 19:40 fällt nur an der Struktur durch (kein LH, kein LH nach LL), Impuls 1,5 ATR und 1 Swing hätte er.
-P557 LS 07:45 erfüllt LQ 2.0 (BOS nach 15 min, 1,1 ATR, 1 Swing, 2,8 h).
+Reaktionsklasse der Prüffälle:
+- Pins: 5/11 stark, 0/11 keine.
+- Journal-Gewinner: 7/28 stark, 1/28 keine.
+- DR #145 15:45: „mittel“ (1,28 ATR in 3 h; der große Abgang kam erst nach 15:45).
+- P557: stark (1,51).
+- 19:40: „mittel“ (0,91).
 
 ## Vorschlag
 
-- **Impuls ≥ 0,5 H1-ATR als Untergrenze.** Sie behält alle Pins und alle gewonnenen Journal-DRs und wirft knapp
-  ein Fünftel der Zufalls-Sweeps raus. Die Lauf-Winrate ändert sie nicht belastbar (bei XAU sind die verworfenen
-  sogar etwas besser, 42 gegen 37 %, p 0,43). Ein sicherer, aber schwacher Filter.
-- **Struktur bleibt Kern, BOS ≤ 2 h wird gelockert.** „LH nach LL“ ist der einzige Lauf-Hinweis und trennt 15:45
-  von 19:40. Die 2-h-BOS-Pflicht kostet dagegen Pins ohne Winrate-Gewinn. Variante zum Ansehen am Chart:
-  LH nach LL **und** (Impuls ≥ 1 ATR **oder** Alter ≥ 2 h).
-- **Strukturbasis prüfen:** 3 von 11 Pins sind auf den alternierenden P5-Pivots gar keine Wechselpivots. Bevor eine
-  Strukturregel scharf geschaltet wird, sollte Philip entscheiden, ob innere Pivots (kleinere Periode oder M1)
-  zählen.
-- **Für eine belastbare Regel fehlen Daten, nicht Merkmale.** Die Lauf-Winrate ist als Zielgröße für die LS-Qualität
-  zu verrauscht (Entry, SL und DOB entscheiden mehr). Nötig wären etwa 30 bis 50 weitere Pins, systematisch
-  gesetzt: gute **und** popelige LS, auch für EUR und XAU. Dann ist der Vergleich Pins gegen Pins möglich statt
-  Pins gegen Zufall.
+- **LQ-2.0-Kern aus den Daten:** Impuls ≥ 1 H1-ATR, mindestens 1 gebrochener Swing, Sweep nicht in Asia. Die Regel
+  ist in beiden Halbjahren und allen Instrumenten stabil (Lift 1,45–1,77). Sie behält knapp die Hälfte der starken
+  Reaktionen und wirft vier Fünftel der „keine“-Sweeps raus.
+- **Strukturfrage für Philip:** Mit „LH nach LL“ fällt 19:40 raus, und DR #145 und P557 bleiben drin. Die Daten zeigen
+  dafür aber keinen Mehrwert: Der Recall halbiert sich, die Precision steigt nicht. Ob die Struktur Pflicht wird, ist
+  eine fachliche Entscheidung.
+- **Streichen als LS-Kriterium:** BOS ≤ 2 h (zu streng, schwach), OB-Kante, Elterntrend.
+- **Grenzen:** Die Regel behält nur 5 von 11 Pins und 9 von 28 Journal-Gewinnern, obwohl diese fast nie scheitern.
+  Philips Auge sieht also mehr als diese Merkmale. Die Gold-Journal-Gewinner haben oft nur 0,6–0,9 ATR Impuls.
+
+## Frühere Auswertung (Positiv/Zufall, `ergebnis.json`)
+
+- Pins gegen Zufall zeigten dieselbe Richtung: größerer Impuls (1,22 gegen 0,94 ATR) und älterer LS (4 gegen 1,9 h).
+- Was in den Läufen „Positiv gegen Zufall“ trennte (LH nach LL, Rückschluss), steckte genauso in den Verlierern. Das
+  ist die TS1.1-Vorauswahl.
+- Lauf-LS (erster Trade je LS): GBP v0 462, v1 321, EUR v0 447, XAU v0 398, v1 268.
+- Journal-DR ohne LS: #112, #134, #136.
+- Ohne LQ-1.0-Gegenstück: EUR DR #94, XAU TS 50160/DR #140.
+- Die HTF-OB-Läufe (`dob-setup-*`) haben keinen TS1.1-Link und damit keinen LS.
