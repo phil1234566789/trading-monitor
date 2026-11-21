@@ -2,21 +2,15 @@ import { z } from "npm:zod@3.24.1";
 import type { McpServer } from "npm:@modelcontextprotocol/sdk@^1.12.0/server/mcp.js";
 import { berlinDateTimeStrFor } from "../../_shared/berlinTime.ts";
 import { fetchForexCandles } from "../forexCandles.ts";
-import { fetchActiveTscRangeId, fetchDealingRangeCockpit, findRecentTradeSetupIdsByKey, getSessions } from "../db.ts";
-import { markIgnored, withoutIgnored } from "../../_shared/ignoredCandles.ts";
+import { fetchActiveTscRangeId, fetchDealingRangeCockpit, findRecentTradeSetupIdsByKey, getLatestDailyStructureStartTime, getSessions } from "../db.ts";
+import { markIgnored } from "../../_shared/ignoredCandles.ts";
 import { buildNearRelevantLiquidityLevels } from "./nearRelevantLiquidityLevels.ts";
 import { buildNearRelevantObZones } from "./nearRelevantObZones.ts";
 import { computeCurrentEma, computeCurrentRsi } from "./reads.ts";
 import { isBoxInvalidated } from "../../_shared/orderBlocks.ts";
-import { detectLiquidityLevels, type LiquidityLevel } from "../../_shared/liquidity.ts";
-import {
-  detectSetupObs,
-  detectTradeSetup,
-  TRADE_SETUP_M5_FRACTAL_PERIOD,
-  TRADE_SETUP_H1_FRACTAL_PERIOD,
-  DEFAULT_TRADE_SETUP_PARAMS,
-  type DetectedTradeSetup,
-} from "../../_shared/tradeSetup.ts";
+import type { DetectedTradeSetup } from "../../_shared/tradeSetup.ts";
+import { setup1StructureWindow, TRADE_SETUP_M5_CANDLE_COUNT } from "../../../../src/setup1Detection.js";
+import { detectLiveSetup1 } from "../../_shared/setup1Live.ts";
 import { json } from "../jsonResponse.ts";
 
 // get_data_snapshot (Task "schlankes Schritt-5-Tool"/get-trade-setups-filtern, 2026-08-30) —
@@ -29,17 +23,9 @@ const SNAPSHOT_RANGE_PIPS = 15;
 const SNAPSHOT_RECENCY_HOURS = 24;
 const SETUP_MAX_AGE_HOURS = 48;
 
-// Task "Live-Trade-Setup-Erkennung serverseitig für Lana" (2026-09-05): vorher las dieses Tool nur
-// die von poi-watcher's Cron persistierte trade_setups-Tabelle (getLatestTradeSetupPerDirection) —
-// verpasste poi-watcher ein Setup an einem Tag (Bug-Beispiel 28.08.2026 16:15 GBPUSD, Root-Cause
-// noch offen), sah Lana über MCP nichts, obwohl das Setup im Chart längst sichtbar war. Jetzt
-// dieselbe Erkennung wie poi-watcher/index.ts (detectTradeSetup, dieselben Tuning-Konstanten aus
-// _shared/tradeSetup.ts), aber live aus frisch geholten Kerzen statt aus dem Cron-Schreibstand —
-// deutlich schlankere Kerzenfenster als poi-watcher (siehe unten), weil hier NUR die Trade-Setup-
-// Erkennung selbst dranhängt, nicht auch noch die separate "monatealte unberührte 1H-Level"-
-// Alarmierung, die poi-watchers großes FOREX_H1_LOOKBACK_CANDLES=3000 begründet.
-const SETUP_M5_CANDLE_COUNT = 300; // ~25h, wie poi-watchers TRADE_SETUP_M5_CANDLE_LIMIT
-const SETUP_H1_CANDLE_COUNT = 100; // ~4 Tage — deutlich mehr als maxLookbackSec+lsMaxLeadSecH1 (8h)
+// Task "Live-Trade-Setup-Erkennung serverseitig für Lana" (2026-09-05): live aus frisch geholten
+// Kerzen statt aus dem Cron-Schreibstand, mit derselben Pipeline wie Chart und poi-watcher
+// (src/setup1Detection.js: M5-Fenster, H1-Struktur-Level, Parameter).
 
 function curateLiveTradeSetup(direction: "long" | "short", setup: DetectedTradeSetup | null, asOfSec: number, persistedIdByKey: Map<string, number>) {
   if (!setup) return null;
@@ -77,9 +63,7 @@ function curateLiveTradeSetup(direction: "long" | "short", setup: DetectedTradeS
 // Setup, dessen OB seither per Wick überschritten (siehe isBoxInvalidated/orderBlocks.ts) und damit
 // tot ist, trotzdem als aktuelles Setup ausgegeben (Bug-Report Philip 2026-09-05, GBPUSD-Setup #443:
 // OB 1.35923–1.3595 wurde um 16:00 bis 1.35966 durchstochen, danach als bärische Resistance tot).
-// Eigener, exakt bedarfsgroßer Kerzen-Fetch (nicht der ohnehin geladene m5CandlesForSetup unten) —
-// obStartTime kann bis zu SETUP_MAX_AGE_HOURS zurückliegen, das feste SETUP_M5_CANDLE_COUNT-Fenster
-// (~25h) würde einen älteren Sweep-Zeitraum sonst nur teilweise abdecken.
+// Eigener, exakt bedarfsgroßer Kerzen-Fetch ab obStartTime statt des festen Erkennungsfensters unten.
 async function isSetupObStillValid(
   instrument: string,
   obStartTime: number,
@@ -106,10 +90,11 @@ export async function buildDataSnapshot({ instrument, replayUntilSec }: DataSnap
   const fromSec = asOfSec - SNAPSHOT_RECENCY_HOURS * 3600;
   const setupIdLookupSinceSec = asOfSec - SETUP_MAX_AGE_HOURS * 3600;
 
+  const structureStartSec = await getLatestDailyStructureStartTime(instrument, asOfSec);
   const [priceCandles, m5CandlesRoh, h1CandlesRoh, persistedIdByKey, liquidity, obZones, ema, rsi, activeTscRangeId, sessionConfigs] = await Promise.all([
     fetchForexCandles(instrument, "5m", { count: 1, toMs: asOfSec * 1000 }),
-    fetchForexCandles(instrument, "5m", { count: SETUP_M5_CANDLE_COUNT, toMs: asOfSec * 1000 }),
-    fetchForexCandles(instrument, "1h", { count: SETUP_H1_CANDLE_COUNT, toMs: asOfSec * 1000 }),
+    fetchForexCandles(instrument, "5m", { count: TRADE_SETUP_M5_CANDLE_COUNT, toMs: asOfSec * 1000 }),
+    fetchForexCandles(instrument, "1h", { count: setup1StructureWindow(asOfSec, structureStartSec).count, toMs: asOfSec * 1000 }),
     findRecentTradeSetupIdsByKey(instrument, setupIdLookupSinceSec, asOfSec),
     buildNearRelevantLiquidityLevels({ instrument, fromSec, toSec: asOfSec, rangePips: SNAPSHOT_RANGE_PIPS }),
     buildNearRelevantObZones({ instrument, fromSec, toSec: asOfSec, rangePips: SNAPSHOT_RANGE_PIPS }),
@@ -120,41 +105,12 @@ export async function buildDataSnapshot({ instrument, replayUntilSec }: DataSnap
   ]);
 
   const referencePrice = priceCandles[priceCandles.length - 1]?.close ?? null;
-  // Spread Hour raus, bevor irgendetwas erkannt wird — sonst meldet das Snapshot Setups, die der
-  // Chart nicht mehr zeigt (siehe markIgnoredCandles).
-  const m5CandlesForSetup = markIgnored(m5CandlesRoh, sessionConfigs);
-  const h1CandlesForSetup = markIgnored(h1CandlesRoh, sessionConfigs);
-
-  // Dieselbe Erkennung wie poi-watcher/index.ts (Liquidity Sweep + Protected M5-Fraktal + M5-OB),
-  // hier live statt aus dem Cron-Schreibstand — siehe Kommentar bei SETUP_M5_CANDLE_COUNT oben.
-  const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5CandlesForSetup, TRADE_SETUP_M5_FRACTAL_PERIOD);
-  const { highs: h1Highs, lows: h1Lows } = detectLiquidityLevels(h1CandlesForSetup, TRADE_SETUP_H1_FRACTAL_PERIOD);
-  const setupObs = detectSetupObs(m5CandlesForSetup);
-
-  // Live-Preis-Sofort-Touch, gleiches Muster wie poi-watchers applyLiveTouch — sonst würde ein
-  // Fraktalbruch/Sweep erst beim nächsten Kerzenschluss erkannt und ein längst gebrochenes
-  // "Protected" fälschlich noch als gültig gelten (asOfSec statt Date.now(), damit das auch im
-  // Replay den simulierten statt den echten Jetzt-Zeitpunkt trifft).
-  const applyLiveTouch = (levels: LiquidityLevel[], direction: "high" | "low") => {
-    if (referencePrice == null) return;
-    for (const lvl of levels) {
-      if (!lvl.touched && (direction === "high" ? referencePrice >= lvl.price : referencePrice <= lvl.price)) {
-        lvl.touched = true;
-        lvl.touchedTime = asOfSec;
-      }
-    }
-  };
-  applyLiveTouch(m5Highs, "high");
-  applyLiveTouch(m5Lows, "low");
-  applyLiveTouch(h1Highs, "high");
-  applyLiveTouch(h1Lows, "low");
-
-  const tradeSetupParams = { ...DEFAULT_TRADE_SETUP_PARAMS, nowTime: m5CandlesForSetup[m5CandlesForSetup.length - 1].time };
-  // Preis-Scans in detectTradeSetup (Sweep-Bruch per Close, Aufweiten der OB-Kante aufs Extrem)
-  // duerfen die Kerze wirklich weglassen — gleiche Behandlung wie im Frontend und in poi-watcher.
-  const m5OhneIgnorierte = withoutIgnored(m5CandlesRoh, sessionConfigs);
-  const detectedShort = detectTradeSetup(1, m5Highs, h1Highs, m5Highs, setupObs, tradeSetupParams, m5OhneIgnorierte);
-  const detectedLong = detectTradeSetup(-1, m5Lows, h1Lows, m5Lows, setupObs, tradeSetupParams, m5OhneIgnorierte);
+  // Je Richtung das neueste alarmfähige Setup — dieselbe Erkennung und Auswahl wie poi-watcher. Spread
+  // Hour vorher markiert (markIgnoredCandles); asOfSec trifft auch im Replay den simulierten Zeitpunkt.
+  const { detected: fresh } = detectLiveSetup1({ instrument, m5Candles: markIgnored(m5CandlesRoh, sessionConfigs),
+    h1Candles: markIgnored(h1CandlesRoh, sessionConfigs), nowSec: asOfSec, structureStartSec, currentPrice: referencePrice });
+  const detectedShort = fresh.filter((s) => s.dir === 1).at(-1) ?? null;
+  const detectedLong = fresh.filter((s) => s.dir === -1).at(-1) ?? null;
 
   const [longObValid, shortObValid] = await Promise.all([
     detectedLong ? isSetupObStillValid(instrument, detectedLong.obStartTime, detectedLong.obTop, detectedLong.obBottom, "long", asOfSec) : true,

@@ -8,7 +8,7 @@ const FUNCTIONS_DIR = "supabase/functions";
 
 // Bündeln Code aus src/ (direkt oder über _shared/dobDelivery.js). test/edgeFunctionsToDeploy.test.js
 // prüft die Liste gegen die Imports, eine neue Abhängigkeit fällt dort auf.
-export const SRC_DEPENDENT = ["dob-watcher", "trading-monitor-mcp"];
+export const SRC_DEPENDENT = ["daily-structure-pivots", "dob-watcher", "poi-watcher", "trading-monitor-mcp"];
 
 export function functionsToDeploy(changedFiles, { allFunctions, sharedUsers }) {
   const out = new Set();

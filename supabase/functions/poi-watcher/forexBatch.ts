@@ -3,6 +3,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { Candle } from "../_shared/orderBlocks.ts";
 import { readFxcmCandles } from "../_shared/fxcmCandles.ts";
 import { LIVE_TOUCH_WINDOW_SEC } from "./liveTouch.ts";
+import { TRADE_SETUP_M5_CANDLE_COUNT } from "../../../src/setup1Detection.js";
 
 // 300h (~12,5 Tage) reichten nicht, um lange unberührte 1H-Liquiditäts-Level (und 1H-OB-Zonen, die
 // denselben Kerzensatz mitnutzen) im Blick zu behalten — Philip tradet von Ziel zu Ziel und
@@ -21,7 +22,8 @@ const FOREX_H4_LOOKBACK_CANDLES = 3000;
 // Eine PostgREST-Seite (~10 Handelstage). Ältere unberührte M15-Zonen bleiben über den
 // DB-Bestand im Touch-Check (Off-Window-Pfad in index.ts), nur ihre Invalidierung nicht.
 const FOREX_M15_LOOKBACK_CANDLES = 1000;
-export const TRADE_SETUP_M5_CANDLE_LIMIT = 300; // ~25h M5-Historie, deutlich mehr als der Lookback (siehe DEFAULT_TRADE_SETUP_PARAMS.maxLookbackSec)
+// Dasselbe M5-Fenster wie der Chart: ältere M5-Level können innerhalb des Lookbacks gesweept werden.
+export const TRADE_SETUP_M5_CANDLE_LIMIT: number = TRADE_SETUP_M5_CANDLE_COUNT;
 
 // FXCM-H4 folgt dem New-York-Handelstag. Archiv-Lesen pro Tick vermeidet
 // starre UTC-Grenzen und verpasst auch verspätet eingetroffene Kerzen nicht.

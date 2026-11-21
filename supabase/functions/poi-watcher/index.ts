@@ -1,21 +1,17 @@
 // 4H/1H/15M-Zonen und M5-Setups aus geschlossenen FXCM-Bid-Kerzen.
 // Alarmfenster und Telegram-Schalter bleiben in der Datenbank konfiguriert.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { detectOrderBlocks } from "../_shared/orderBlocks.ts";
-import { obMinimum, strategyDistance } from '../_shared/instrumentConfig.js';
-import { detectLiquidityLevels, type LiquidityLevel } from "../_shared/liquidity.ts";
+import { obMinimum } from '../_shared/instrumentConfig.js';
+import { detectLiquidityLevels } from "../_shared/liquidity.ts";
 import { unprocessedTimeframes } from "./fxcmRefresh.js";
 import { fetchAllRows } from "../_shared/fetchAllRows.ts";
 import { WATCHED_OB_TIMEFRAMES } from "../_shared/obTimeframes.js";
-import { fetchForexBatch, FOREX_H1_LOOKBACK_CANDLES, TRADE_SETUP_M5_CANDLE_LIMIT } from "./forexBatch.ts";
-import {
-  detectSetupObs,
-  detectTradeSetup,
-  TRADE_SETUP_M5_FRACTAL_PERIOD,
-  TRADE_SETUP_H1_FRACTAL_PERIOD,
-  DEFAULT_TRADE_SETUP_PARAMS,
-  TRADE_SETUP_DETECTOR_VERSION,
-} from "../_shared/tradeSetup.ts";
+import { fetchForexBatch, TRADE_SETUP_M5_CANDLE_LIMIT } from "./forexBatch.ts";
+import { TRADE_SETUP_DETECTOR_VERSION } from "../_shared/tradeSetup.ts";
+import { setup1StructureWindow, TRADE_SETUP_M5_FRACTAL_PERIOD } from "../../../src/setup1Detection.js";
+import { detectLiveSetup1 } from "../_shared/setup1Live.ts";
+import { LIQUIDITY_FRACTAL_PERIOD } from "../_shared/liquidityDetection.ts";
 import { setup1Configuration, tradeSetupProvenance } from '../_shared/tradeSetupProvenance.js';
 import { computeSweepAgeHours } from "../_shared/ageTier.ts";
 import { toPips } from "../_shared/pipConfig.js";
@@ -32,13 +28,8 @@ import {
 
 // Liquidity bleibt bei 4H/1H; die OB-Schleife läuft über WATCHED_OB_TIMEFRAMES (inkl. 15M).
 const LIQUIDITY_TIMEFRAMES = ["4H", "1H"];
-const LIQUIDITY_FRACTAL_PERIOD = 5; // siehe LIQUIDITY_FRACTAL_PERIOD in PriceChart.vue
-
-// Trade-Setup-Tuning-Parameter (Liquidity Sweep + Protected M5-Fraktal + M5-OB) jetzt in
-// _shared/tradeSetup.ts (DEFAULT_TRADE_SETUP_PARAMS/TRADE_SETUP_M5_FRACTAL_PERIOD/
-// TRADE_SETUP_H1_FRACTAL_PERIOD) — dieselben Werte, die get_data_snapshot (trading-monitor-mcp)
-// für die Live-Erkennung braucht, DRY statt zweiter Kopie (Task "Live-Trade-Setup-Erkennung
-// serverseitig für Lana", 2026-09-05).
+// Trade-Setup (Liquidity Sweep + M5-Fraktal + M5-OB): Pipeline und Tuning-Werte in src/setup1Detection.js,
+// derselbe Code wie im Chart und in get_data_snapshot.
 
 // Explizit typisiert statt auf die select-String-Typinferenz von supabase-js zu vertrauen —
 // die kollabiert bei einem untypisierten Client (kein Database-Generic bei createClient) ab
@@ -120,6 +111,16 @@ async function sendTelegram(text: string) {
     body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
   });
   if (!res.ok) console.error("Telegram send failed:", await res.text());
+}
+
+// Strukturstart wie im Chart (useDailyPivotStructureStart, live): neuester 1D-Pivot mit aufgelöstem Start.
+// Ohne Pivot fällt setup1H1Structure aufs rollierende Lookback zurück, wie der Chart.
+async function latestStructureStartSec(supabase: SupabaseClient, instrument: string): Promise<number | null> {
+  const { data, error } = await supabase.from("daily_structure_pivots").select("structure_start_time")
+    .eq("instrument", instrument).not("structure_start_time", "is", null)
+    .order("pivot_time", { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  return data ? Math.floor(Date.parse(data.structure_start_time as string) / 1000) : null;
 }
 
 function fmt(n: number, precision: number) {
@@ -738,59 +739,31 @@ Deno.serve(async (req) => {
       }
 
       // Trade-Setup: Liquidity Sweep + Protected M5-Fraktal + M5-OB, in dieser Reihenfolge
-      // (siehe tv-indikator/src/tradesetup.pine, portiert nach _shared/tradeSetup.ts).
+      // (siehe tv-indikator/src/tradesetup.pine, portiert nach src/tradeSetup.js).
       // dir=1 (Short/Protected High) und dir=-1 (Long/Protected Low) laufen mit denselben
       // Kerzen, nur gespiegelt (siehe checkShortSetup/checkLongSetup im Original).
       {
         const alarmActive = shouldSend && isAlarmOn("trade_setup");
         const m5Candles = forexBatch.candlesByTf.get("M5")!;
-        const candles1hForSetup = h1CandlesForSetup!;
-        const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(m5Candles, TRADE_SETUP_M5_FRACTAL_PERIOD);
-        const { highs: h1HighsSetup, lows: h1LowsSetup } = detectLiquidityLevels(candles1hForSetup, TRADE_SETUP_H1_FRACTAL_PERIOD);
-        const setupObs = detectSetupObs(m5Candles, obMinimum(cfg.instrument, '5m'));
-        // Wie im Frontend: die Preis-Scans in detectTradeSetup (Sweep-Bruch per Close, Aufweiten
-        // der OB-Kante aufs Extrem) duerfen die Kerze wirklich weglassen.
-        const m5OhneIgnorierte = withoutIgnored(m5Candles, ignoreSessions);
-
-        // Live-Preis-Sofort-Touch, gleiches Muster wie bei den 1H-Liquiditäts-Leveln oben —
-        // sonst würde ein Fraktalbruch/Sweep erst beim nächsten Kerzenschluss erkannt (bis zu
-        // 5min bei M5, bis zu 1h bei H1) und ein längst gebrochenes "Protected" fälschlich
-        // noch als gültig gelten.
         const nowSec = Math.floor(Date.now() / 1000);
-        const applyLiveTouch = (levels: LiquidityLevel[], direction: "high" | "low") => {
-          for (const lvl of levels) {
-            if (!lvl.touched && (direction === "high" ? currentPrice >= lvl.price : currentPrice <= lvl.price)) {
-              lvl.touched = true;
-              lvl.touchedTime = nowSec;
-            }
-          }
-        };
-        applyLiveTouch(m5Highs, "high");
-        applyLiveTouch(m5Lows, "low");
-        applyLiveTouch(h1HighsSetup, "high");
-        applyLiveTouch(h1LowsSetup, "low");
-
-        const tradeSetupParams = { ...DEFAULT_TRADE_SETUP_PARAMS,
-          maxDistanceM5: strategyDistance(DEFAULT_TRADE_SETUP_PARAMS.maxDistanceM5, cfg.instrument),
-          maxSweepDistance: strategyDistance(DEFAULT_TRADE_SETUP_PARAMS.maxSweepDistance, cfg.instrument),
-          nowTime: m5Candles[m5Candles.length - 1].time };
-
+        // H1-Level wie im Chart aus der H1-Marktstruktur ab dem letzten 1D-Strukturpivot, alle
+        // alarmfähigen Setups statt nur des neuesten je Richtung (siehe _shared/setup1Live.ts).
+        const structureStartSec = await latestStructureStartSec(supabase, cfg.instrument);
+        const { detected, params: tradeSetupParams } = detectLiveSetup1({ instrument: cfg.instrument, m5Candles,
+          h1Candles: h1CandlesForSetup, nowSec, structureStartSec, currentPrice });
         const setupProvenance = await tradeSetupProvenance({ source: 'live', detectorVersion: TRADE_SETUP_DETECTOR_VERSION,
           configuration: setup1Configuration({ instrument: cfg.instrument, params: tradeSetupParams,
             minGap: obMinimum(cfg.instrument, '5m'), sessions: ignoreSessions,
-            m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD, h1FractalPeriod: TRADE_SETUP_H1_FRACTAL_PERIOD,
-            m5Window: TRADE_SETUP_M5_CANDLE_LIMIT, h1Window: FOREX_H1_LOOKBACK_CANDLES, h1Source: 'h1Fractals' }) });
-        const detected = [
-          detectTradeSetup(1, m5Highs, h1HighsSetup, m5Highs, setupObs, tradeSetupParams, m5OhneIgnorierte),
-          detectTradeSetup(-1, m5Lows, h1LowsSetup, m5Lows, setupObs, tradeSetupParams, m5OhneIgnorierte),
-        ].filter((s): s is NonNullable<typeof s> => s !== null);
+            m5FractalPeriod: TRADE_SETUP_M5_FRACTAL_PERIOD,
+            m5Window: TRADE_SETUP_M5_CANDLE_LIMIT, h1Window: setup1StructureWindow(nowSec, structureStartSec).count,
+            h1Source: 'marketStructurePivots' }) });
 
         // Schlüssel ist seit 2026-09-20 der bestätigende OB, nicht mehr fractal_pivot_time — ein
         // Setup ist durch ihn identifiziert, nicht durch den Pfad, über den es gefunden wurde
-        // (siehe detectTradeSetup). Der Unique-Index deckelt Duplikate damit schon in der DB; die
+        // (siehe detectTradeSetups). Der Unique-Index deckelt Duplikate damit schon in der DB; die
         // frühere ob_zone_id-Alarmsperre ist dadurch ersatzlos entfallen.
         //
-        // Gefragt wird NUR nach den gerade erkannten OBs (höchstens zwei), nicht nach dem ganzen
+        // Gefragt wird NUR nach den gerade erkannten OBs, nicht nach dem ganzen
         // Bestand: PostgREST deckelt eine Antwort server-seitig bei 1000 Zeilen, ohne Fehler (siehe
         // CLAUDE.md). GBPUSD stand am 20.09. bei 930 Zeilen und wuchs ~4/Tag — ein Voll-Select
         // hätte ab Anfang Oktober stillschweigend die JÜNGSTEN Zeilen verloren, und genau die

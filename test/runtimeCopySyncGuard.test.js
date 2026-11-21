@@ -56,12 +56,7 @@ const TEILPORTS = [
   "timeframes",
   "tradeSetup",
   "trades",
-  // liquidityDetection: der Fraktal-Kern (detectLiquidityLevels/isUpFractal/isDownFractal/
-  // buildLevel) ist funktional identisch, nur mit TS-Typen versehen — geprueft im Extra-Test unten,
-  // weil computeRangesPivots (marketStructureAnalysis.ts) genau darauf aufsetzt. Die Datei als
-  // GANZES weicht ab: filterRelevantLevels hat im Frontend zwei zusaetzliche Parameter
-  // (currentPrice/priceThreshold) und einen isPriceRelevant-Zweig, und selectRelevantHtfLevels
-  // fehlt im Backend komplett. Beides wird von computeRangesPivots nicht benutzt.
+  // liquidityDetection: Backend reicht den Frontend-Kern nur typisiert weiter (siehe Extra-Test unten).
   "liquidityDetection",
   // Browser-Seite baut nur Snapshot/Label/Hit-Test und importiert die Validierung direkt aus der
   // Deno-Datei — kein Duplikat, sondern Wrapper um die eine Quelle.

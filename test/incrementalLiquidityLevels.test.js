@@ -34,9 +34,8 @@ it('keeps the full frontend and both backend detectors equivalent to the frozen 
       const prefix=rows.slice(0,end),expected=before(prefix,period);
       expect(detectLiquidityLevels(prefix,period)).toEqual(expected);
       expect(detect(prefix)).toEqual(expected);expect(mcp(prefix,period)).toEqual(expected);
-      const withoutDir=Object.fromEntries(Object.entries(expected)
-        .map(([key,levels])=>[key,levels.map(({dir,...level})=>level)]));
-      expect(watcher(prefix,period)).toEqual(withoutDir);
+      // poi-watcher nutzt seit 21.11.2026 denselben Kern, seine Level tragen jetzt auch dir.
+      expect(watcher(prefix,period)).toEqual(expected);
     }
   }
 });

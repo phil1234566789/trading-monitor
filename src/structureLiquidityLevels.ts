@@ -1,5 +1,5 @@
-import type { Pivot, MarketStructureState } from "./range.type";
-import { collectNestedChain } from "./marketStructureAnalysis";
+import type { Pivot, MarketStructureState } from "./range.type.ts";
+import { collectNestedChain } from "./marketStructureAnalysis.ts";
 
 // Wandelt einen Pivot in die von tradeSetup.js erwartete LqLevel-Form um (siehe liquidity.js:
 // buildLevel — dieselben Felder: price/dir/pivotTime/touched/touchedTime/endTime). Bug-Report

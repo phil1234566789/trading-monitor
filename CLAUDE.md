@@ -46,19 +46,13 @@ Supabase (edge functions + DB), via `npx supabase` (no global install in this re
 
 ## Architecture
 
-### Two runtimes, one algorithm set, deliberately duplicated
+### Two runtimes, one detection
 
-Order-block, liquidity-level, and trade-setup detection each exist **twice**, independently
-ported, not shared code:
-
-| Concept | Frontend (Vue, live chart) | Backend (Deno edge function, alerting) |
-|---|---|---|
-| Order blocks | `src/orderBlocks.js` | `supabase/functions/_shared/orderBlocks.ts` |
-| Liquidity levels | `src/liquidity.js` | `supabase/functions/_shared/liquidity.ts` |
-| Trade setups | `src/tradeSetup.js` | `supabase/functions/_shared/tradeSetup.ts` |
-
-This is unavoidable (browser bundle vs. Deno edge runtime, no shared build step between them),
-but it means **a detection-logic bug fix almost always needs to land in both files**. The
+Chart and alarms must detect identically. Setup 1 and the fractal core are shared code: edge
+functions import `src/setup1Detection.js` / `src/liquidityDetection.js` directly (the `_shared/`
+files are typed re-exports; list such functions in `SRC_DEPENDENT`, `scripts/edgeFunctionsToDeploy.mjs`).
+Order blocks are still copies (`src/orderBlockDetection.js`, `_shared/orderBlocks.ts`) — a fix lands
+in both. Guards: `test/setup1ParityGuard.test.js`, `test/obDetectionParityGuard.test.js`. The
 Pine Script source of truth for the trade-setup tuning constants lives in a sibling
 `tv-indikator` project (`tv-indikator/src/inputs.pine`), referenced in comments but not in this
 repo.

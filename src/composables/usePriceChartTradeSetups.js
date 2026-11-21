@@ -17,11 +17,8 @@
 // würde zirkuläre Abhängigkeiten zwischen den Composables erzeugen. scheduleNextTradeSetupM5Poll
 // bleibt aus demselben Grund ebenfalls dort (hängt an withPollRetries + chart-alive-Check).
 import { ref } from "vue";
-import { tradeSetupParameters } from "../tradeSetupParameters.js";
-import { obMinimum } from '../instrumentConfig.js';
-import { detectLiquidityLevels } from "../liquidity.js";
-import { collectStructureLqLevels } from "../marketStructureRendering";
-import { detectSetupObs, detectTradeSetups, TRADE_SETUP_DETECTOR_VERSION, hasUninterruptedSweepReaction } from "../tradeSetup.js";
+import { setup1Inputs, setup1H1Levels, detectSetup1 } from "../setup1Detection.js";
+import { TRADE_SETUP_DETECTOR_VERSION, hasUninterruptedSweepReaction } from "../tradeSetup.js";
 import { setup1Configuration } from '../../supabase/functions/_shared/tradeSetupProvenance.js';
 import { mergeDbTradeSetups } from "../tradeSetups.js";
 import { setupInvalidationTarget } from "../setupInvalidationTarget.js";
@@ -77,26 +74,19 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
     // Einmal markiert fuer Fraktale UND die bestaetigende FVG — die beiden Erkennungen lesen das
     // Flag unterschiedlich (siehe markIgnoredCandles), brauchen aber denselben Kerzensatz.
     const kerzen = markIgnored(candles, symbol);
-    const params = {...tradeSetupParameters(symbol, candles[candles.length - 1].time),
-      ...(sweepSourceProfile ? {sweepSourceProfile} : {})};
     const symbolSessions = sessions.filter((s) => s.instrument === symbol);
-    const minGap = obMinimum(symbol, '5m');
     // H1-/M5-Lader und DB-Poll können denselben Stand liefern. Innenkorrekturen bleiben relevant.
+    // Parameter/Schwelle folgen aus Symbol und Kerzen, stecken also schon im Schlüssel.
     const inputKey = JSON.stringify([symbol, kerzen, marketStructureState, dbTradeSetups,
-      tradeSetupHistoryCount, params, minGap, symbolSessions, policyContext]);
+      tradeSetupHistoryCount, symbolSessions, policyContext]);
     if (inputKey === computedInputKey) return;
     const request=++computationRevision;
-    const { highs: m5Highs, lows: m5Lows } = detectLiquidityLevels(kerzen, TRADE_SETUP_M5_FRACTAL_PERIOD);
-    // H1-Level kommen seit Chat 2026-07-28 aus marketStructureState.structurePivots statt einer
-    // eigenen H1-Fraktal-Erkennung — kann leer sein, solange marketStructureState noch nicht
-    // geladen ist; Path A/B finden dann übergangsweise nur M5-basierte Setups, kein Absturz.
-    const h1Highs = collectStructureLqLevels(marketStructureState, 1);
-    const h1Lows = collectStructureLqLevels(marketStructureState, -1);
-    const setupObs = detectSetupObs(kerzen, minGap);
-    // Preis-Scans von detectTradeSetups (Sweep-Bruch per Close, Aufweiten der OB-Kante auf das
-    // Extrem) duerfen die Kerze wirklich weglassen — sonst beendet ein Rollover-Docht einen Sweep
-    // oder zieht die Invalidierung auf einen Preis, den es auf anderen Feeds nicht gab.
-    const kerzenOhneIgnorierte = kerzen.filter((c) => !c.ignored);
+    const inputs = setup1Inputs(symbol, kerzen, { sweepSourceProfile });
+    const { params, minGap, setupObs, m5Highs, m5Lows, clean: kerzenOhneIgnorierte } = inputs;
+    // H1-Level kommen seit Chat 2026-07-28 aus marketStructureState.structurePivots — kann leer sein,
+    // solange marketStructureState noch nicht geladen ist; dann übergangsweise nur M5-Setups.
+    const h1 = setup1H1Levels(marketStructureState);
+    const { shorts, longs } = detectSetup1(inputs, h1.highs, h1.lows);
     // n zählt die GESAMTE Anzahl gezeigter Setups je Richtung (kein separates "Live"-Setup, siehe
     // detectTradeSetups). n=0 zeigt nichts (slice(-0) wäre sonst das GANZE Array, daher der
     // Sonderfall).
@@ -119,8 +109,8 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
     // vorherigen Instruments hält (gleicher Grund wie filterDbObZones).
     const dbFor = (dir) => dbTradeSetups.filter((s) => s.instrument === symbol && s.dir === dir);
     const merged = [
-      ...mergeDbTradeSetups(detectTradeSetups(1, m5Highs, h1Highs, m5Highs, setupObs, params, kerzenOhneIgnorierte, kerzen), dbFor(1)),
-      ...mergeDbTradeSetups(detectTradeSetups(-1, m5Lows, h1Lows, m5Lows, setupObs, params, kerzenOhneIgnorierte, kerzen), dbFor(-1)),
+      ...mergeDbTradeSetups(shorts, dbFor(1)),
+      ...mergeDbTradeSetups(longs, dbFor(-1)),
     ].filter(keep).map(s => s.fromDb ? s : { ...s, instrument:symbol, detectorVersion: TRADE_SETUP_DETECTOR_VERSION, detectionConfiguration });
     // Neue Policies prüfen auch DB-Treffer vor der Historie; verworfene Treffer dürfen keinen Platz belegen.
     const candidates = evaluateCandidates ? evaluateCandidates(merged, policyContext) : merged;

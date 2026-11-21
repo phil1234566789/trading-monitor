@@ -30,7 +30,6 @@ const ALLOWED = {
   'src/sharedOrderBlocks.js': [2, 'reicht Parameter durch'],
   'src/tradeSetup.js': [1, 'detectSetupObs, Schwelle kommt als Parameter (Aufrufer nutzen obMinimum)'],
   'src/sweepRetestSources.js': [1, 'instrumentConfig(instrument).minFvg = obMinimum'],
-  'supabase/functions/_shared/tradeSetup.ts': [1, 'detectSetupObs, Schwelle kommt als Parameter'],
   'supabase/functions/trading-monitor-mcp/tools/dataExport.ts': [1, 'M5-Default, Funktion kennt das Instrument nicht'],
   'scripts/setup2PerformancePrimitives.mjs': [1, 'Laufzeitmessung, keine Erkennung für Alarme'],
 };
