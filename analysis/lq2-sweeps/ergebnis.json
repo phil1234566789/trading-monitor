@@ -1,6 +1,6 @@
 {
  "measurement": "lq2-sweeps-v1",
- "git": "899e80e1",
+ "git": "a6f51f7a",
  "snapshotAt": "2026-11-21T16:00:20.276Z",
  "span": {
   "from": "2026-01-05 00:00",
@@ -31,11 +31,11 @@
     "negativ": 327,
     "zufall": 3000,
     "konfliktPosNeg": 10,
-    "pin": 0,
-    "journalPos": 0,
-    "journalNeg": 0,
-    "laufPos": 0,
-    "laufNeg": 0
+    "pin": 11,
+    "journalPos": 8,
+    "journalNeg": 4,
+    "laufPos": 190,
+    "laufNeg": 332
    },
    "verteilung": {
     "positiv": {
@@ -278,334 +278,390 @@
      }
     },
     "pin": {
-     "n": 0,
+     "n": 11,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 2.13,
+      "med": 4,
+      "q75": 9.46
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 12.9,
+      "med": 15.8,
+      "q75": 29.6
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.98,
+      "med": 1.22,
+      "q75": 2.57
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 42.5,
+      "med": 90,
+      "q75": 127.5
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 1
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 23.75,
+      "med": 55,
+      "q75": 105
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.75,
+      "med": 1.4,
+      "q75": 1.6
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.07,
+      "med": 0.09,
+      "q75": 0.14
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1.5
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.47,
+      "med": 0.83,
+      "q75": 1.13
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 72.7,
+     "lhAfterLL": 63.6,
+     "isLH": 63.6,
+     "bos2h": 45.5,
+     "bosBeforeSweep": 54.5,
+     "closedBack": 63.6,
+     "sessionExtreme": 18.2,
+     "m5ObTick": 36.4,
+     "m5ObPip": 72.7,
+     "m15ObTick": 18.2,
+     "m15ObPip": 36.4,
+     "lsSession": {
+      "Asia": 36.4,
+      "Sonstige": 9.1,
+      "London": 18.2,
+      "NY": 18.2,
+      "MMM": 18.2
+     },
+     "sweepSession": {
+      "Asia": 9.1,
+      "Sonstige": 27.3,
+      "London": 45.5,
+      "NY": 18.2
+     }
     },
     "journalPos": {
-     "n": 0,
+     "n": 8,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 3.38,
+      "med": 14,
+      "q75": 17.04
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 14.2,
+      "med": 16.65,
+      "q75": 28.8
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.84,
+      "med": 1.14,
+      "q75": 2.48
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 30,
+      "med": 52.5,
+      "q75": 76.25
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 2.25
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 20,
+      "med": 25,
+      "q75": 50
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.25,
+      "med": 0.8,
+      "q75": 1.57
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.02,
+      "med": 0.05,
+      "q75": 0.11
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1.25
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.3,
+      "med": 0.71,
+      "q75": 1
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 87.5,
+     "lhAfterLL": 62.5,
+     "isLH": 62.5,
+     "bos2h": 37.5,
+     "bosBeforeSweep": 62.5,
+     "closedBack": 87.5,
+     "sessionExtreme": 25,
+     "m5ObTick": 25,
+     "m5ObPip": 62.5,
+     "m15ObTick": 0,
+     "m15ObPip": 0,
+     "lsSession": {
+      "NY": 50,
+      "Asia": 12.5,
+      "Sonstige": 12.5,
+      "London": 12.5,
+      "MMM": 12.5
+     },
+     "sweepSession": {
+      "London": 25,
+      "NY": 25,
+      "Sonstige": 25,
+      "MMM": 25
+     }
     },
     "journalNeg": {
-     "n": 0,
+     "n": 4,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1.79,
+      "med": 3.46,
+      "q75": 9.54
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 10.75,
+      "med": 11.5,
+      "q75": 19.35
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.82,
+      "med": 0.85,
+      "q75": 1.63
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 42.5,
+      "med": 55,
+      "q75": 71.25
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 0,
+      "q75": 1.75
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 55,
+      "med": 55,
+      "q75": 55
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.33,
+      "med": 0.5,
+      "q75": 0.9
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.03,
+      "med": 0.04,
+      "q75": 0.06
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1.25
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.5,
+      "med": 0.75,
+      "q75": 0.98
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 100,
+     "lhAfterLL": 75,
+     "isLH": 25,
+     "bos2h": 25,
+     "bosBeforeSweep": 25,
+     "closedBack": 50,
+     "sessionExtreme": 25,
+     "m5ObTick": 50,
+     "m5ObPip": 75,
+     "m15ObTick": 25,
+     "m15ObPip": 50,
+     "lsSession": {
+      "Asia": 50,
+      "Sonstige": 25,
+      "London": 25
+     },
+     "sweepSession": {
+      "London": 75,
+      "NY": 25
+     }
     },
     "laufPos": {
-     "n": 0,
+     "n": 190,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.92,
+      "med": 2.04,
+      "q75": 5.04
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 9.25,
+      "med": 14.45,
+      "q75": 21.2
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.65,
+      "med": 1.01,
+      "q75": 1.48
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 21.25,
+      "med": 42.5,
+      "q75": 83.75
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 2
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 15,
+      "med": 35,
+      "q75": 70
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.33,
+      "med": 1,
+      "q75": 1.9
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.03,
+      "med": 0.07,
+      "q75": 0.13
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.3,
+      "med": 0.59,
+      "q75": 1.18
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 87.4,
+     "lhAfterLL": 60,
+     "isLH": 59.5,
+     "bos2h": 26.3,
+     "bosBeforeSweep": 48.4,
+     "closedBack": 55.8,
+     "sessionExtreme": 13.2,
+     "m5ObTick": 52.1,
+     "m5ObPip": 77.4,
+     "m15ObTick": 8.4,
+     "m15ObPip": 25.3,
+     "lsSession": {
+      "London": 12.1,
+      "WE": 0.5,
+      "Asia": 28.9,
+      "MMM": 14.2,
+      "NY": 34.7,
+      "Sonstige": 9.5
+     },
+     "sweepSession": {
+      "London": 18.4,
+      "Asia": 24.7,
+      "NY": 41.6,
+      "MMM": 7.9,
+      "Sonstige": 7.4
+     }
     },
     "laufNeg": {
-     "n": 0,
+     "n": 332,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.83,
+      "med": 1.96,
+      "q75": 4.69
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 9.05,
+      "med": 14.3,
+      "q75": 21.92
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.64,
+      "med": 1,
+      "q75": 1.57
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 20,
+      "med": 40,
+      "q75": 80
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 2
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 20,
+      "med": 45,
+      "q75": 90
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.37,
+      "med": 0.9,
+      "q75": 1.8
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.03,
+      "med": 0.06,
+      "q75": 0.12
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.31,
+      "med": 0.64,
+      "q75": 1
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 75.6,
+     "lhAfterLL": 49.7,
+     "isLH": 51.8,
+     "bos2h": 24.4,
+     "bosBeforeSweep": 45.5,
+     "closedBack": 61.1,
+     "sessionExtreme": 13.6,
+     "m5ObTick": 45.5,
+     "m5ObPip": 77.4,
+     "m15ObTick": 7.5,
+     "m15ObPip": 24.4,
+     "lsSession": {
+      "London": 13,
+      "Asia": 30.1,
+      "NY": 31.3,
+      "Sonstige": 8.1,
+      "MMM": 16.6,
+      "WE": 0.9
+     },
+     "sweepSession": {
+      "London": 22.3,
+      "Asia": 24.7,
+      "NY": 29.8,
+      "MMM": 14.8,
+      "Sonstige": 8.1,
+      "WE": 0.3
+     }
     }
    },
    "vergleich": {
@@ -791,306 +847,1604 @@
      }
     },
     "laufGewinnerVsVerlierer": {
-     "ageHours": null,
-     "impulsePips": null,
-     "impulseAtr": null,
-     "impulseMinutes": null,
-     "brokenSwings": null,
-     "bosMinutes": null,
-     "sweepDepthPips": null,
-     "sweepDepthAtr": null,
-     "rankRecency": null,
-     "gapNextAtr": null,
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null
+     "ageHours": {
+      "auc": 0.523,
+      "p": 0.38,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "impulsePips": {
+      "auc": 0.504,
+      "p": 0.87,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "impulseAtr": {
+      "auc": 0.498,
+      "p": 0.95,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "impulseMinutes": {
+      "auc": 0.504,
+      "p": 0.89,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "brokenSwings": {
+      "auc": 0.486,
+      "p": 0.59,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "bosMinutes": {
+      "auc": 0.433,
+      "p": 0.079,
+      "n": [
+       92,
+       151
+      ]
+     },
+     "sweepDepthPips": {
+      "auc": 0.514,
+      "p": 0.58,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "sweepDepthAtr": {
+      "auc": 0.515,
+      "p": 0.58,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "rankRecency": {
+      "auc": 0.503,
+      "p": 0.9,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "gapNextAtr": {
+      "auc": 0.505,
+      "p": 0.84,
+      "n": [
+       189,
+       332
+      ]
+     },
+     "hasAltPivot": {
+      "a": 87.4,
+      "b": 75.6,
+      "p": 0.0013,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "lhAfterLL": {
+      "a": 60,
+      "b": 49.7,
+      "p": 0.023,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "isLH": {
+      "a": 59.5,
+      "b": 51.8,
+      "p": 0.091,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "bos2h": {
+      "a": 26.3,
+      "b": 24.4,
+      "p": 0.63,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "bosBeforeSweep": {
+      "a": 48.4,
+      "b": 45.5,
+      "p": 0.52,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "closedBack": {
+      "a": 55.8,
+      "b": 61.1,
+      "p": 0.23,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "sessionExtreme": {
+      "a": 13.2,
+      "b": 13.6,
+      "p": 0.9,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "m5ObTick": {
+      "a": 52.1,
+      "b": 45.5,
+      "p": 0.14,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "m5ObPip": {
+      "a": 77.4,
+      "b": 77.4,
+      "p": 0.99,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "m15ObTick": {
+      "a": 8.4,
+      "b": 7.5,
+      "p": 0.72,
+      "n": [
+       190,
+       332
+      ]
+     },
+     "m15ObPip": {
+      "a": 25.3,
+      "b": 24.4,
+      "p": 0.83,
+      "n": [
+       190,
+       332
+      ]
+     }
     },
     "pinVsZufall": {
-     "ageHours": null,
-     "impulsePips": null,
-     "impulseAtr": null,
-     "impulseMinutes": null,
-     "brokenSwings": null,
-     "bosMinutes": null,
-     "sweepDepthPips": null,
-     "sweepDepthAtr": null,
-     "rankRecency": null,
-     "gapNextAtr": null,
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null
+     "ageHours": {
+      "auc": 0.628,
+      "p": 0.14,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "impulsePips": {
+      "auc": 0.616,
+      "p": 0.18,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "impulseAtr": {
+      "auc": 0.686,
+      "p": 0.033,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "impulseMinutes": {
+      "auc": 0.646,
+      "p": 0.093,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "brokenSwings": {
+      "auc": 0.506,
+      "p": 0.94,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "bosMinutes": {
+      "auc": 0.517,
+      "p": 0.88,
+      "n": [
+       6,
+       1312
+      ]
+     },
+     "sweepDepthPips": {
+      "auc": 0.478,
+      "p": 0.8,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "sweepDepthAtr": {
+      "auc": 0.526,
+      "p": 0.77,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "rankRecency": {
+      "auc": 0.533,
+      "p": 0.7,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "gapNextAtr": {
+      "auc": 0.711,
+      "p": 0.016,
+      "n": [
+       11,
+       2979
+      ]
+     },
+     "hasAltPivot": {
+      "a": 72.7,
+      "b": 82.6,
+      "p": 0.39,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "lhAfterLL": {
+      "a": 63.6,
+      "b": 39.9,
+      "p": 0.11,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "isLH": {
+      "a": 63.6,
+      "b": 43.1,
+      "p": 0.17,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "bos2h": {
+      "a": 45.5,
+      "b": 16.7,
+      "p": 0.011,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "bosBeforeSweep": {
+      "a": 54.5,
+      "b": 43.7,
+      "p": 0.47,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "closedBack": {
+      "a": 63.6,
+      "b": 47.8,
+      "p": 0.29,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "sessionExtreme": {
+      "a": 18.2,
+      "b": 15.1,
+      "p": 0.78,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "m5ObTick": {
+      "a": 36.4,
+      "b": 46.6,
+      "p": 0.5,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "m5ObPip": {
+      "a": 72.7,
+      "b": 77.9,
+      "p": 0.68,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "m15ObTick": {
+      "a": 18.2,
+      "b": 9.3,
+      "p": 0.31,
+      "n": [
+       11,
+       3000
+      ]
+     },
+     "m15ObPip": {
+      "a": 36.4,
+      "b": 28.2,
+      "p": 0.55,
+      "n": [
+       11,
+       3000
+      ]
+     }
     },
     "journalGewinnerVsVerlierer": {
-     "ageHours": null,
-     "impulsePips": null,
-     "impulseAtr": null,
-     "impulseMinutes": null,
-     "brokenSwings": null,
+     "ageHours": {
+      "auc": 0.563,
+      "p": 0.73,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "impulsePips": {
+      "auc": 0.563,
+      "p": 0.73,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "impulseAtr": {
+      "auc": 0.563,
+      "p": 0.73,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "impulseMinutes": {
+      "auc": 0.453,
+      "p": 0.8,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "brokenSwings": {
+      "auc": 0.609,
+      "p": 0.55,
+      "n": [
+       8,
+       4
+      ]
+     },
      "bosMinutes": null,
-     "sweepDepthPips": null,
-     "sweepDepthAtr": null,
-     "rankRecency": null,
-     "gapNextAtr": null,
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null
+     "sweepDepthPips": {
+      "auc": 0.484,
+      "p": 0.93,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "sweepDepthAtr": {
+      "auc": 0.5,
+      "p": 1,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "rankRecency": {
+      "auc": 0.516,
+      "p": 0.93,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "gapNextAtr": {
+      "auc": 0.469,
+      "p": 0.87,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "hasAltPivot": {
+      "a": 87.5,
+      "b": 100,
+      "p": 0.46,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "lhAfterLL": {
+      "a": 62.5,
+      "b": 75,
+      "p": 0.67,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "isLH": {
+      "a": 62.5,
+      "b": 25,
+      "p": 0.22,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "bos2h": {
+      "a": 37.5,
+      "b": 25,
+      "p": 0.67,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "bosBeforeSweep": {
+      "a": 62.5,
+      "b": 25,
+      "p": 0.22,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "closedBack": {
+      "a": 87.5,
+      "b": 50,
+      "p": 0.16,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "sessionExtreme": {
+      "a": 25,
+      "b": 25,
+      "p": 1,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "m5ObTick": {
+      "a": 25,
+      "b": 50,
+      "p": 0.39,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "m5ObPip": {
+      "a": 62.5,
+      "b": 75,
+      "p": 0.67,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "m15ObTick": {
+      "a": 0,
+      "b": 25,
+      "p": 0.14,
+      "n": [
+       8,
+       4
+      ]
+     },
+     "m15ObPip": {
+      "a": 0,
+      "b": 50,
+      "p": 0.028,
+      "n": [
+       8,
+       4
+      ]
+     }
     }
    },
    "regeln": {
     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
      "positivBehalten": 26,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 45.5,
+     "journalWinBehalten": 37.5,
      "negativBehalten": 23.9,
      "zufallRaus": 83.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 38.2,
+     "laufWinrateVerworfen": 35.8,
+     "laufBehalten": 131,
+     "laufVerworfen": 391,
+     "laufP": 0.63
     },
     "LH nach LL": {
      "positivBehalten": 59.9,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 63.6,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 49.5,
      "zufallRaus": 60.1,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 40.9,
+     "laufWinrateVerworfen": 31.3,
+     "laufBehalten": 279,
+     "laufVerworfen": 243,
+     "laufP": 0.023
     },
     "LS ist LH (bzw. HL)": {
      "positivBehalten": 58.9,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 63.6,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 50.8,
      "zufallRaus": 56.9,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 39.6,
+     "laufWinrateVerworfen": 32.5,
+     "laufBehalten": 285,
+     "laufVerworfen": 237,
+     "laufP": 0.091
     },
     "BOS vor dem Sweep (ohne Zeitlimit)": {
      "positivBehalten": 48.4,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 54.5,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 45.3,
      "zufallRaus": 56.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.9,
+     "laufWinrateVerworfen": 35.1,
+     "laufBehalten": 243,
+     "laufVerworfen": 279,
+     "laufP": 0.52
     },
     "LH nach LL + BOS vor Sweep": {
      "positivBehalten": 31.3,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 54.5,
+     "journalWinBehalten": 37.5,
      "negativBehalten": 27.8,
      "zufallRaus": 80.1,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 38.6,
+     "laufWinrateVerworfen": 35.5,
+     "laufBehalten": 153,
+     "laufVerworfen": 369,
+     "laufP": 0.51
     },
     "≥ 1 gebrochener Swing": {
      "positivBehalten": 52.1,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 63.6,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 54.1,
      "zufallRaus": 50.7,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.5,
+     "laufWinrateVerworfen": 37.4,
+     "laufBehalten": 279,
+     "laufVerworfen": 243,
+     "laufP": 0.64
     },
     "≥ 2 gebrochene Swings": {
      "positivBehalten": 27.6,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 18.2,
+     "journalWinBehalten": 37.5,
      "negativBehalten": 31.2,
      "zufallRaus": 70.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 34,
+     "laufWinrateVerworfen": 37.4,
+     "laufBehalten": 156,
+     "laufVerworfen": 366,
+     "laufP": 0.45
     },
     "Impuls ≥ 0,5 H1-ATR": {
      "positivBehalten": 88.5,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 100,
+     "journalWinBehalten": 100,
      "negativBehalten": 85,
      "zufallRaus": 17.8,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.2,
+     "laufWinrateVerworfen": 31.5,
+     "laufBehalten": 449,
+     "laufVerworfen": 73,
+     "laufP": 0.35
     },
     "Impuls ≥ 1 H1-ATR": {
      "positivBehalten": 53.1,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 72.7,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 50.5,
      "zufallRaus": 53.6,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.6,
+     "laufWinrateVerworfen": 36.2,
+     "laufBehalten": 262,
+     "laufVerworfen": 260,
+     "laufP": 0.91
     },
     "Alter ≥ 2 h": {
      "positivBehalten": 51,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 72.7,
+     "journalWinBehalten": 75,
      "negativBehalten": 49.8,
      "zufallRaus": 50.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.6,
+     "laufWinrateVerworfen": 36.2,
+     "laufBehalten": 262,
+     "laufVerworfen": 260,
+     "laufP": 0.91
     },
     "Alter ≥ 6 h": {
      "positivBehalten": 22.9,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 27.3,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 20.5,
      "zufallRaus": 71.7,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.7,
+     "laufWinrateVerworfen": 36.1,
+     "laufBehalten": 106,
+     "laufVerworfen": 416,
+     "laufP": 0.75
     },
     "Sweep schließt zurück": {
      "positivBehalten": 56.8,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 63.6,
+     "journalWinBehalten": 87.5,
      "negativBehalten": 61.2,
      "zufallRaus": 52.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 34.3,
+     "laufWinrateVerworfen": 39.4,
+     "laufBehalten": 309,
+     "laufVerworfen": 213,
+     "laufP": 0.23
     },
     "Session-High/-Low": {
      "positivBehalten": 14.1,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 18.2,
+     "journalWinBehalten": 25,
      "negativBehalten": 13.8,
      "zufallRaus": 84.9,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.7,
+     "laufWinrateVerworfen": 36.5,
+     "laufBehalten": 70,
+     "laufVerworfen": 452,
+     "laufP": 0.9
     },
     "M5/M15-OB-Kante (Pip)": {
      "positivBehalten": 80.7,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 72.7,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 79.2,
      "zufallRaus": 18.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.1,
+     "laufWinrateVerworfen": 33.7,
+     "laufBehalten": 418,
+     "laufVerworfen": 104,
+     "laufP": 0.52
     },
     "Impuls ≥ 0,5 ATR + ≥ 1 Swing": {
      "positivBehalten": 50.5,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 63.6,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 52.3,
      "zufallRaus": 52.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.6,
+     "laufWinrateVerworfen": 37.3,
+     "laufBehalten": 270,
+     "laufVerworfen": 252,
+     "laufP": 0.68
     },
     "Impuls ≥ 1 ATR + ≥ 1 Swing": {
      "positivBehalten": 40.1,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 54.5,
+     "journalWinBehalten": 50,
      "negativBehalten": 37.9,
      "zufallRaus": 63.9,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.2,
+     "laufWinrateVerworfen": 35.9,
+     "laufBehalten": 199,
+     "laufVerworfen": 323,
+     "laufP": 0.77
     },
     "Impuls ≥ 1 ATR + Alter ≥ 2 h": {
      "positivBehalten": 39.6,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 63.6,
+     "journalWinBehalten": 50,
      "negativBehalten": 35.2,
      "zufallRaus": 63.7,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 38.3,
+     "laufWinrateVerworfen": 35.3,
+     "laufBehalten": 188,
+     "laufVerworfen": 334,
+     "laufP": 0.5
     },
     "≥ 1 Swing + Alter ≥ 2 h": {
      "positivBehalten": 38.5,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 54.5,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 40.1,
      "zufallRaus": 60.9,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.3,
+     "laufWinrateVerworfen": 37.1,
+     "laufBehalten": 207,
+     "laufVerworfen": 315,
+     "laufP": 0.66
     },
     "Impuls ≥ 0,5 ATR + ≥ 1 Swing + Alter ≥ 2 h": {
      "positivBehalten": 38.5,
-     "pinBehalten": null,
-     "journalWinBehalten": null,
+     "pinBehalten": 54.5,
+     "journalWinBehalten": 62.5,
      "negativBehalten": 39.4,
      "zufallRaus": 61.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.6,
+     "laufWinrateVerworfen": 36.9,
+     "laufBehalten": 205,
+     "laufVerworfen": 317,
+     "laufP": 0.76
     }
    },
-   "jeLauf": {}
+   "jeLauf": {
+    "lauf:dob-lq-sweep-gbpusd-v0": {
+     "gewinner": 165,
+     "verlierer": 297,
+     "vergleich": {
+      "ageHours": {
+       "auc": 0.551,
+       "p": 0.07,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "impulsePips": {
+       "auc": 0.525,
+       "p": 0.38,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "impulseAtr": {
+       "auc": 0.512,
+       "p": 0.66,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "impulseMinutes": {
+       "auc": 0.53,
+       "p": 0.29,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "brokenSwings": {
+       "auc": 0.495,
+       "p": 0.86,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "bosMinutes": {
+       "auc": 0.435,
+       "p": 0.12,
+       "n": [
+        78,
+        125
+       ]
+      },
+      "sweepDepthPips": {
+       "auc": 0.527,
+       "p": 0.34,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "sweepDepthAtr": {
+       "auc": 0.525,
+       "p": 0.38,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "rankRecency": {
+       "auc": 0.508,
+       "p": 0.79,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "gapNextAtr": {
+       "auc": 0.523,
+       "p": 0.4,
+       "n": [
+        164,
+        297
+       ]
+      },
+      "hasAltPivot": {
+       "a": 88.5,
+       "b": 74.7,
+       "p": 0.00044,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "lhAfterLL": {
+       "a": 60.6,
+       "b": 49.2,
+       "p": 0.018,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "isLH": {
+       "a": 60.6,
+       "b": 51.5,
+       "p": 0.06,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "bos2h": {
+       "a": 24.8,
+       "b": 22.6,
+       "p": 0.58,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "bosBeforeSweep": {
+       "a": 47.3,
+       "b": 42.1,
+       "p": 0.28,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "closedBack": {
+       "a": 55.8,
+       "b": 61.3,
+       "p": 0.25,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "sessionExtreme": {
+       "a": 13.3,
+       "b": 12.5,
+       "p": 0.79,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "m5ObTick": {
+       "a": 52.7,
+       "b": 44.4,
+       "p": 0.088,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "m5ObPip": {
+       "a": 77.6,
+       "b": 76.1,
+       "p": 0.72,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "m15ObTick": {
+       "a": 8.5,
+       "b": 7.1,
+       "p": 0.58,
+       "n": [
+        165,
+        297
+       ]
+      },
+      "m15ObPip": {
+       "a": 24.8,
+       "b": 24.9,
+       "p": 0.99,
+       "n": [
+        165,
+        297
+       ]
+      }
+     },
+     "regeln": {
+      "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+       "positivBehalten": 26,
+       "pinBehalten": 45.5,
+       "journalWinBehalten": 37.5,
+       "negativBehalten": 23.9,
+       "zufallRaus": 83.3,
+       "laufWinrateBehalten": 38,
+       "laufWinrateVerworfen": 35,
+       "laufBehalten": 108,
+       "laufVerworfen": 354,
+       "laufP": 0.58
+      },
+      "LH nach LL": {
+       "positivBehalten": 59.9,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 49.5,
+       "zufallRaus": 60.1,
+       "laufWinrateBehalten": 40.7,
+       "laufWinrateVerworfen": 30.1,
+       "laufBehalten": 246,
+       "laufVerworfen": 216,
+       "laufP": 0.018
+      },
+      "LS ist LH (bzw. HL)": {
+       "positivBehalten": 58.9,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 50.8,
+       "zufallRaus": 56.9,
+       "laufWinrateBehalten": 39.5,
+       "laufWinrateVerworfen": 31.1,
+       "laufBehalten": 253,
+       "laufVerworfen": 209,
+       "laufP": 0.06
+      },
+      "BOS vor dem Sweep (ohne Zeitlimit)": {
+       "positivBehalten": 48.4,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 45.3,
+       "zufallRaus": 56.3,
+       "laufWinrateBehalten": 38.4,
+       "laufWinrateVerworfen": 33.6,
+       "laufBehalten": 203,
+       "laufVerworfen": 259,
+       "laufP": 0.28
+      },
+      "LH nach LL + BOS vor Sweep": {
+       "positivBehalten": 31.3,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 37.5,
+       "negativBehalten": 27.8,
+       "zufallRaus": 80.1,
+       "laufWinrateBehalten": 39.2,
+       "laufWinrateVerworfen": 34.4,
+       "laufBehalten": 125,
+       "laufVerworfen": 337,
+       "laufP": 0.34
+      },
+      "≥ 1 gebrochener Swing": {
+       "positivBehalten": 52.1,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 54.1,
+       "zufallRaus": 50.7,
+       "laufWinrateBehalten": 36,
+       "laufWinrateVerworfen": 35.4,
+       "laufBehalten": 236,
+       "laufVerworfen": 226,
+       "laufP": 0.89
+      },
+      "≥ 2 gebrochene Swings": {
+       "positivBehalten": 27.6,
+       "pinBehalten": 18.2,
+       "journalWinBehalten": 37.5,
+       "negativBehalten": 31.2,
+       "zufallRaus": 70.3,
+       "laufWinrateBehalten": 33.8,
+       "laufWinrateVerworfen": 36.5,
+       "laufBehalten": 133,
+       "laufVerworfen": 329,
+       "laufP": 0.59
+      },
+      "Impuls ≥ 0,5 H1-ATR": {
+       "positivBehalten": 88.5,
+       "pinBehalten": 100,
+       "journalWinBehalten": 100,
+       "negativBehalten": 85,
+       "zufallRaus": 17.8,
+       "laufWinrateBehalten": 36.7,
+       "laufWinrateVerworfen": 30,
+       "laufBehalten": 392,
+       "laufVerworfen": 70,
+       "laufP": 0.28
+      },
+      "Impuls ≥ 1 H1-ATR": {
+       "positivBehalten": 53.1,
+       "pinBehalten": 72.7,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 50.5,
+       "zufallRaus": 53.6,
+       "laufWinrateBehalten": 37,
+       "laufWinrateVerworfen": 34.6,
+       "laufBehalten": 219,
+       "laufVerworfen": 243,
+       "laufP": 0.59
+      },
+      "Alter ≥ 2 h": {
+       "positivBehalten": 51,
+       "pinBehalten": 72.7,
+       "journalWinBehalten": 75,
+       "negativBehalten": 49.8,
+       "zufallRaus": 50.2,
+       "laufWinrateBehalten": 37.4,
+       "laufWinrateVerworfen": 34.2,
+       "laufBehalten": 219,
+       "laufVerworfen": 243,
+       "laufP": 0.46
+      },
+      "Alter ≥ 6 h": {
+       "positivBehalten": 22.9,
+       "pinBehalten": 27.3,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 20.5,
+       "zufallRaus": 71.7,
+       "laufWinrateBehalten": 39.3,
+       "laufWinrateVerworfen": 34.9,
+       "laufBehalten": 89,
+       "laufVerworfen": 373,
+       "laufP": 0.43
+      },
+      "Sweep schließt zurück": {
+       "positivBehalten": 56.8,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 87.5,
+       "negativBehalten": 61.2,
+       "zufallRaus": 52.2,
+       "laufWinrateBehalten": 33.6,
+       "laufWinrateVerworfen": 38.8,
+       "laufBehalten": 274,
+       "laufVerworfen": 188,
+       "laufP": 0.25
+      },
+      "Session-High/-Low": {
+       "positivBehalten": 14.1,
+       "pinBehalten": 18.2,
+       "journalWinBehalten": 25,
+       "negativBehalten": 13.8,
+       "zufallRaus": 84.9,
+       "laufWinrateBehalten": 37.3,
+       "laufWinrateVerworfen": 35.5,
+       "laufBehalten": 59,
+       "laufVerworfen": 403,
+       "laufP": 0.79
+      },
+      "M5/M15-OB-Kante (Pip)": {
+       "positivBehalten": 80.7,
+       "pinBehalten": 72.7,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 79.2,
+       "zufallRaus": 18.2,
+       "laufWinrateBehalten": 36.8,
+       "laufWinrateVerworfen": 31.6,
+       "laufBehalten": 367,
+       "laufVerworfen": 95,
+       "laufP": 0.35
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing": {
+       "positivBehalten": 50.5,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 52.3,
+       "zufallRaus": 52.3,
+       "laufWinrateBehalten": 36,
+       "laufWinrateVerworfen": 35.5,
+       "laufBehalten": 228,
+       "laufVerworfen": 234,
+       "laufP": 0.91
+      },
+      "Impuls ≥ 1 ATR + ≥ 1 Swing": {
+       "positivBehalten": 40.1,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 50,
+       "negativBehalten": 37.9,
+       "zufallRaus": 63.9,
+       "laufWinrateBehalten": 37.9,
+       "laufWinrateVerworfen": 34.6,
+       "laufBehalten": 161,
+       "laufVerworfen": 301,
+       "laufP": 0.48
+      },
+      "Impuls ≥ 1 ATR + Alter ≥ 2 h": {
+       "positivBehalten": 39.6,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 50,
+       "negativBehalten": 35.2,
+       "zufallRaus": 63.7,
+       "laufWinrateBehalten": 39.5,
+       "laufWinrateVerworfen": 33.9,
+       "laufBehalten": 152,
+       "laufVerworfen": 310,
+       "laufP": 0.24
+      },
+      "≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 38.5,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 40.1,
+       "zufallRaus": 60.9,
+       "laufWinrateBehalten": 36.3,
+       "laufWinrateVerworfen": 35.4,
+       "laufBehalten": 171,
+       "laufVerworfen": 291,
+       "laufP": 0.85
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 38.5,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 39.4,
+       "zufallRaus": 61.3,
+       "laufWinrateBehalten": 36.5,
+       "laufWinrateVerworfen": 35.3,
+       "laufBehalten": 170,
+       "laufVerworfen": 292,
+       "laufP": 0.8
+      }
+     }
+    },
+    "lauf:dob-lq-sweep-gbpusd-v1": {
+     "gewinner": 116,
+     "verlierer": 205,
+     "vergleich": {
+      "ageHours": {
+       "auc": 0.48,
+       "p": 0.54,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "impulsePips": {
+       "auc": 0.462,
+       "p": 0.26,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "impulseAtr": {
+       "auc": 0.461,
+       "p": 0.25,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "impulseMinutes": {
+       "auc": 0.416,
+       "p": 0.012,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "brokenSwings": {
+       "auc": 0.449,
+       "p": 0.13,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "bosMinutes": {
+       "auc": 0.415,
+       "p": 0.037,
+       "n": [
+        78,
+        141
+       ]
+      },
+      "sweepDepthPips": {
+       "auc": 0.476,
+       "p": 0.48,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "sweepDepthAtr": {
+       "auc": 0.479,
+       "p": 0.53,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "rankRecency": {
+       "auc": 0.492,
+       "p": 0.82,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "gapNextAtr": {
+       "auc": 0.52,
+       "p": 0.56,
+       "n": [
+        115,
+        205
+       ]
+      },
+      "hasAltPivot": {
+       "a": 86.2,
+       "b": 79,
+       "p": 0.11,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "lhAfterLL": {
+       "a": 57.8,
+       "b": 50.7,
+       "p": 0.23,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "isLH": {
+       "a": 56,
+       "b": 55.1,
+       "p": 0.87,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "bos2h": {
+       "a": 38.8,
+       "b": 39,
+       "p": 0.97,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "bosBeforeSweep": {
+       "a": 67.2,
+       "b": 68.8,
+       "p": 0.78,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "closedBack": {
+       "a": 60.3,
+       "b": 60.5,
+       "p": 0.98,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "sessionExtreme": {
+       "a": 12.9,
+       "b": 16.6,
+       "p": 0.38,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "m5ObTick": {
+       "a": 56.9,
+       "b": 48.8,
+       "p": 0.16,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "m5ObPip": {
+       "a": 82.8,
+       "b": 81,
+       "p": 0.69,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "m15ObTick": {
+       "a": 12.1,
+       "b": 10.2,
+       "p": 0.61,
+       "n": [
+        116,
+        205
+       ]
+      },
+      "m15ObPip": {
+       "a": 29.3,
+       "b": 28.8,
+       "p": 0.92,
+       "n": [
+        116,
+        205
+       ]
+      }
+     },
+     "regeln": {
+      "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+       "positivBehalten": 26,
+       "pinBehalten": 45.5,
+       "journalWinBehalten": 37.5,
+       "negativBehalten": 23.9,
+       "zufallRaus": 83.3,
+       "laufWinrateBehalten": 36,
+       "laufWinrateVerworfen": 36.2,
+       "laufBehalten": 125,
+       "laufVerworfen": 196,
+       "laufP": 0.97
+      },
+      "LH nach LL": {
+       "positivBehalten": 59.9,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 49.5,
+       "zufallRaus": 60.1,
+       "laufWinrateBehalten": 39.2,
+       "laufWinrateVerworfen": 32.7,
+       "laufBehalten": 171,
+       "laufVerworfen": 150,
+       "laufP": 0.23
+      },
+      "LS ist LH (bzw. HL)": {
+       "positivBehalten": 58.9,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 50.8,
+       "zufallRaus": 56.9,
+       "laufWinrateBehalten": 36.5,
+       "laufWinrateVerworfen": 35.7,
+       "laufBehalten": 178,
+       "laufVerworfen": 143,
+       "laufP": 0.87
+      },
+      "BOS vor dem Sweep (ohne Zeitlimit)": {
+       "positivBehalten": 48.4,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 45.3,
+       "zufallRaus": 56.3,
+       "laufWinrateBehalten": 35.6,
+       "laufWinrateVerworfen": 37.3,
+       "laufBehalten": 219,
+       "laufVerworfen": 102,
+       "laufP": 0.78
+      },
+      "LH nach LL + BOS vor Sweep": {
+       "positivBehalten": 31.3,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 37.5,
+       "negativBehalten": 27.8,
+       "zufallRaus": 80.1,
+       "laufWinrateBehalten": 36.3,
+       "laufWinrateVerworfen": 36,
+       "laufBehalten": 146,
+       "laufVerworfen": 175,
+       "laufP": 0.96
+      },
+      "≥ 1 gebrochener Swing": {
+       "positivBehalten": 52.1,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 54.1,
+       "zufallRaus": 50.7,
+       "laufWinrateBehalten": 33.1,
+       "laufWinrateVerworfen": 46.6,
+       "laufBehalten": 248,
+       "laufVerworfen": 73,
+       "laufP": 0.035
+      },
+      "≥ 2 gebrochene Swings": {
+       "positivBehalten": 27.6,
+       "pinBehalten": 18.2,
+       "journalWinBehalten": 37.5,
+       "negativBehalten": 31.2,
+       "zufallRaus": 70.3,
+       "laufWinrateBehalten": 32.4,
+       "laufWinrateVerworfen": 39.2,
+       "laufBehalten": 145,
+       "laufVerworfen": 176,
+       "laufP": 0.21
+      },
+      "Impuls ≥ 0,5 H1-ATR": {
+       "positivBehalten": 88.5,
+       "pinBehalten": 100,
+       "journalWinBehalten": 100,
+       "negativBehalten": 85,
+       "zufallRaus": 17.8,
+       "laufWinrateBehalten": 36.2,
+       "laufWinrateVerworfen": 35.3,
+       "laufBehalten": 304,
+       "laufVerworfen": 17,
+       "laufP": 0.94
+      },
+      "Impuls ≥ 1 H1-ATR": {
+       "positivBehalten": 53.1,
+       "pinBehalten": 72.7,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 50.5,
+       "zufallRaus": 53.6,
+       "laufWinrateBehalten": 34.9,
+       "laufWinrateVerworfen": 38.5,
+       "laufBehalten": 212,
+       "laufVerworfen": 109,
+       "laufP": 0.52
+      },
+      "Alter ≥ 2 h": {
+       "positivBehalten": 51,
+       "pinBehalten": 72.7,
+       "journalWinBehalten": 75,
+       "negativBehalten": 49.8,
+       "zufallRaus": 50.2,
+       "laufWinrateBehalten": 34.3,
+       "laufWinrateVerworfen": 39.8,
+       "laufBehalten": 213,
+       "laufVerworfen": 108,
+       "laufP": 0.33
+      },
+      "Alter ≥ 6 h": {
+       "positivBehalten": 22.9,
+       "pinBehalten": 27.3,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 20.5,
+       "zufallRaus": 71.7,
+       "laufWinrateBehalten": 37.2,
+       "laufWinrateVerworfen": 35.7,
+       "laufBehalten": 94,
+       "laufVerworfen": 227,
+       "laufP": 0.79
+      },
+      "Sweep schließt zurück": {
+       "positivBehalten": 56.8,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 87.5,
+       "negativBehalten": 61.2,
+       "zufallRaus": 52.2,
+       "laufWinrateBehalten": 36.1,
+       "laufWinrateVerworfen": 36.2,
+       "laufBehalten": 194,
+       "laufVerworfen": 127,
+       "laufP": 0.98
+      },
+      "Session-High/-Low": {
+       "positivBehalten": 14.1,
+       "pinBehalten": 18.2,
+       "journalWinBehalten": 25,
+       "negativBehalten": 13.8,
+       "zufallRaus": 84.9,
+       "laufWinrateBehalten": 30.6,
+       "laufWinrateVerworfen": 37.1,
+       "laufBehalten": 49,
+       "laufVerworfen": 272,
+       "laufP": 0.38
+      },
+      "M5/M15-OB-Kante (Pip)": {
+       "positivBehalten": 80.7,
+       "pinBehalten": 72.7,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 79.2,
+       "zufallRaus": 18.2,
+       "laufWinrateBehalten": 37.4,
+       "laufWinrateVerworfen": 29.4,
+       "laufBehalten": 270,
+       "laufVerworfen": 51,
+       "laufP": 0.28
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing": {
+       "positivBehalten": 50.5,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 52.3,
+       "zufallRaus": 52.3,
+       "laufWinrateBehalten": 33.3,
+       "laufWinrateVerworfen": 44.9,
+       "laufBehalten": 243,
+       "laufVerworfen": 78,
+       "laufP": 0.065
+      },
+      "Impuls ≥ 1 ATR + ≥ 1 Swing": {
+       "positivBehalten": 40.1,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 50,
+       "negativBehalten": 37.9,
+       "zufallRaus": 63.9,
+       "laufWinrateBehalten": 35.3,
+       "laufWinrateVerworfen": 37.2,
+       "laufBehalten": 184,
+       "laufVerworfen": 137,
+       "laufP": 0.73
+      },
+      "Impuls ≥ 1 ATR + Alter ≥ 2 h": {
+       "positivBehalten": 39.6,
+       "pinBehalten": 63.6,
+       "journalWinBehalten": 50,
+       "negativBehalten": 35.2,
+       "zufallRaus": 63.7,
+       "laufWinrateBehalten": 37,
+       "laufWinrateVerworfen": 35.3,
+       "laufBehalten": 165,
+       "laufVerworfen": 156,
+       "laufP": 0.75
+      },
+      "≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 38.5,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 40.1,
+       "zufallRaus": 60.9,
+       "laufWinrateBehalten": 33.3,
+       "laufWinrateVerworfen": 40,
+       "laufBehalten": 186,
+       "laufVerworfen": 135,
+       "laufP": 0.22
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 38.5,
+       "pinBehalten": 54.5,
+       "journalWinBehalten": 62.5,
+       "negativBehalten": 39.4,
+       "zufallRaus": 61.3,
+       "laufWinrateBehalten": 33.7,
+       "laufWinrateVerworfen": 39.4,
+       "laufBehalten": 184,
+       "laufVerworfen": 137,
+       "laufP": 0.29
+      }
+     }
+    }
+   }
   },
   "EURUSD": {
    "m5Candles": 66145,
@@ -1117,10 +2471,10 @@
     "zufall": 3000,
     "konfliktPosNeg": 1,
     "pin": 0,
-    "journalPos": 0,
+    "journalPos": 2,
     "journalNeg": 0,
-    "laufPos": 0,
-    "laufNeg": 0
+    "laufPos": 156,
+    "laufNeg": 290
    },
    "verteilung": {
     "positiv": {
@@ -1429,70 +2783,76 @@
      "sweepSession": {}
     },
     "journalPos": {
-     "n": 0,
+     "n": 2,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 4.48,
+      "med": 7.96,
+      "q75": 11.44
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 18.97,
+      "med": 20.15,
+      "q75": 21.33
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1.82,
+      "med": 1.95,
+      "q75": 2.07
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 40,
+      "med": 65,
+      "q75": 90
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.25,
+      "med": 0.5,
+      "q75": 0.75
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 95,
+      "med": 95,
+      "q75": 95
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.92,
+      "med": 1.25,
+      "q75": 1.57
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.09,
+      "med": 0.14,
+      "q75": 0.19
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1.25,
+      "med": 1.5,
+      "q75": 1.75
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1.77,
+      "med": 1.95,
+      "q75": 2.12
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 50,
+     "lhAfterLL": 50,
+     "isLH": 50,
+     "bos2h": 50,
+     "bosBeforeSweep": 50,
+     "closedBack": 50,
+     "sessionExtreme": 0,
+     "m5ObTick": 50,
+     "m5ObPip": 100,
+     "m15ObTick": 0,
+     "m15ObPip": 0,
+     "lsSession": {
+      "MMM": 50,
+      "NY": 50
+     },
+     "sweepSession": {
+      "MMM": 50,
+      "London": 50
+     }
     },
     "journalNeg": {
      "n": 0,
@@ -1561,136 +2921,163 @@
      "sweepSession": {}
     },
     "laufPos": {
-     "n": 0,
+     "n": 156,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.83,
+      "med": 2,
+      "q75": 6.15
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 7.4,
+      "med": 11.4,
+      "q75": 17.85
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.65,
+      "med": 1.02,
+      "q75": 1.42
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 20,
+      "med": 37.5,
+      "q75": 80
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 2
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 20,
+      "med": 35,
+      "q75": 95
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.3,
+      "med": 0.8,
+      "q75": 1.7
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.03,
+      "med": 0.07,
+      "q75": 0.14
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.35,
+      "med": 0.54,
+      "q75": 0.83
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 75,
+     "lhAfterLL": 42.9,
+     "isLH": 47.4,
+     "bos2h": 18.6,
+     "bosBeforeSweep": 43.6,
+     "closedBack": 59,
+     "sessionExtreme": 9.6,
+     "m5ObTick": 51.9,
+     "m5ObPip": 85.9,
+     "m15ObTick": 13.5,
+     "m15ObPip": 32.1,
+     "lsSession": {
+      "London": 18.6,
+      "MMM": 12.8,
+      "NY": 30.8,
+      "Asia": 28.8,
+      "Sonstige": 5.8,
+      "Weekend Gap": 3.2
+     },
+     "sweepSession": {
+      "MMM": 11.5,
+      "Sonstige": 10.3,
+      "NY": 28.8,
+      "London": 21.2,
+      "Asia": 28.2
+     }
     },
     "laufNeg": {
-     "n": 0,
+     "n": 290,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.83,
+      "med": 1.92,
+      "q75": 4.67
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 6.6,
+      "med": 10.55,
+      "q75": 17.55
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.6,
+      "med": 0.94,
+      "q75": 1.51
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 20,
+      "med": 37.5,
+      "q75": 75
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 2
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 15,
+      "med": 30,
+      "q75": 67.5
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.3,
+      "med": 0.9,
+      "q75": 1.9
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.02,
+      "med": 0.08,
+      "q75": 0.16
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.29,
+      "med": 0.57,
+      "q75": 1.01
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 77.9,
+     "lhAfterLL": 44.8,
+     "isLH": 51.7,
+     "bos2h": 23.4,
+     "bosBeforeSweep": 47.9,
+     "closedBack": 55.2,
+     "sessionExtreme": 12.4,
+     "m5ObTick": 52.8,
+     "m5ObPip": 83.1,
+     "m15ObTick": 10,
+     "m15ObPip": 31,
+     "lsSession": {
+      "MMM": 14.8,
+      "Weekend Gap": 1,
+      "Asia": 32.4,
+      "NY": 29,
+      "London": 12.1,
+      "Sonstige": 10.7
+     },
+     "sweepSession": {
+      "MMM": 9.7,
+      "Weekend Gap": 0.7,
+      "Asia": 28.3,
+      "NY": 32.8,
+      "London": 21.7,
+      "Sonstige": 6.9
+     }
     }
    },
    "vergleich": {
@@ -1876,27 +3263,185 @@
      }
     },
     "laufGewinnerVsVerlierer": {
-     "ageHours": null,
-     "impulsePips": null,
-     "impulseAtr": null,
-     "impulseMinutes": null,
-     "brokenSwings": null,
-     "bosMinutes": null,
-     "sweepDepthPips": null,
-     "sweepDepthAtr": null,
-     "rankRecency": null,
-     "gapNextAtr": null,
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null
+     "ageHours": {
+      "auc": 0.528,
+      "p": 0.33,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "impulsePips": {
+      "auc": 0.533,
+      "p": 0.25,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "impulseAtr": {
+      "auc": 0.525,
+      "p": 0.39,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "impulseMinutes": {
+      "auc": 0.527,
+      "p": 0.34,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "brokenSwings": {
+      "auc": 0.503,
+      "p": 0.92,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "bosMinutes": {
+      "auc": 0.547,
+      "p": 0.27,
+      "n": [
+       68,
+       139
+      ]
+     },
+     "sweepDepthPips": {
+      "auc": 0.492,
+      "p": 0.77,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "sweepDepthAtr": {
+      "auc": 0.49,
+      "p": 0.72,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "rankRecency": {
+      "auc": 0.541,
+      "p": 0.16,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "gapNextAtr": {
+      "auc": 0.497,
+      "p": 0.91,
+      "n": [
+       154,
+       289
+      ]
+     },
+     "hasAltPivot": {
+      "a": 75,
+      "b": 77.9,
+      "p": 0.48,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "lhAfterLL": {
+      "a": 42.9,
+      "b": 44.8,
+      "p": 0.7,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "isLH": {
+      "a": 47.4,
+      "b": 51.7,
+      "p": 0.39,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "bos2h": {
+      "a": 18.6,
+      "b": 23.4,
+      "p": 0.24,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "bosBeforeSweep": {
+      "a": 43.6,
+      "b": 47.9,
+      "p": 0.38,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "closedBack": {
+      "a": 59,
+      "b": 55.2,
+      "p": 0.44,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "sessionExtreme": {
+      "a": 9.6,
+      "b": 12.4,
+      "p": 0.38,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "m5ObTick": {
+      "a": 51.9,
+      "b": 52.8,
+      "p": 0.87,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "m5ObPip": {
+      "a": 85.9,
+      "b": 83.1,
+      "p": 0.44,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "m15ObTick": {
+      "a": 13.5,
+      "b": 10,
+      "p": 0.27,
+      "n": [
+       156,
+       290
+      ]
+     },
+     "m15ObPip": {
+      "a": 32.1,
+      "b": 31,
+      "p": 0.83,
+      "n": [
+       156,
+       290
+      ]
+     }
     },
     "pinVsZufall": {
      "ageHours": null,
@@ -1949,233 +3494,649 @@
     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
      "positivBehalten": 19.1,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 23.5,
      "zufallRaus": 83.7,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 29.9,
+     "laufWinrateVerworfen": 36.4,
+     "laufBehalten": 97,
+     "laufVerworfen": 349,
+     "laufP": 0.24
     },
     "LH nach LL": {
      "positivBehalten": 43.3,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 45,
      "zufallRaus": 60.7,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 34,
+     "laufWinrateVerworfen": 35.7,
+     "laufBehalten": 197,
+     "laufVerworfen": 249,
+     "laufP": 0.7
     },
     "LS ist LH (bzw. HL)": {
      "positivBehalten": 47.8,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 51.9,
      "zufallRaus": 58.1,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 33,
+     "laufWinrateVerworfen": 36.9,
+     "laufBehalten": 224,
+     "laufVerworfen": 222,
+     "laufP": 0.39
     },
     "BOS vor dem Sweep (ohne Zeitlimit)": {
      "positivBehalten": 43.9,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 48.1,
      "zufallRaus": 57.7,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 32.9,
+     "laufWinrateVerworfen": 36.8,
+     "laufBehalten": 207,
+     "laufVerworfen": 239,
+     "laufP": 0.38
     },
     "LH nach LL + BOS vor Sweep": {
      "positivBehalten": 22.3,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 25.3,
      "zufallRaus": 80.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 31.8,
+     "laufWinrateVerworfen": 36,
+     "laufBehalten": 107,
+     "laufVerworfen": 339,
+     "laufP": 0.43
     },
     "≥ 1 gebrochener Swing": {
      "positivBehalten": 53.5,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 54,
      "zufallRaus": 52.4,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 34.7,
+     "laufWinrateVerworfen": 35.3,
+     "laufBehalten": 239,
+     "laufVerworfen": 207,
+     "laufP": 0.91
     },
     "≥ 2 gebrochene Swings": {
      "positivBehalten": 31.8,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 0,
      "negativBehalten": 30.1,
      "zufallRaus": 72.6,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.5,
+     "laufWinrateVerworfen": 34.3,
+     "laufBehalten": 137,
+     "laufVerworfen": 309,
+     "laufP": 0.65
     },
     "Impuls ≥ 0,5 H1-ATR": {
      "positivBehalten": 87.9,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 100,
      "negativBehalten": 81.3,
      "zufallRaus": 18.4,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.7,
+     "laufWinrateVerworfen": 26,
+     "laufBehalten": 373,
+     "laufVerworfen": 73,
+     "laufP": 0.08
     },
     "Impuls ≥ 1 H1-ATR": {
      "positivBehalten": 52.9,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 100,
      "negativBehalten": 45.7,
      "zufallRaus": 54.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 38.1,
+     "laufWinrateVerworfen": 32,
+     "laufBehalten": 215,
+     "laufVerworfen": 231,
+     "laufP": 0.18
     },
     "Alter ≥ 2 h": {
      "positivBehalten": 51.6,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 49.5,
      "zufallRaus": 50.7,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.9,
+     "laufWinrateVerworfen": 34.1,
+     "laufBehalten": 223,
+     "laufVerworfen": 223,
+     "laufP": 0.69
     },
     "Alter ≥ 6 h": {
      "positivBehalten": 26.1,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 20.4,
      "zufallRaus": 72.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 40.4,
+     "laufWinrateVerworfen": 33.4,
+     "laufBehalten": 99,
+     "laufVerworfen": 347,
+     "laufP": 0.2
     },
     "Sweep schließt zurück": {
      "positivBehalten": 58.6,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 55,
      "zufallRaus": 52.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.5,
+     "laufWinrateVerworfen": 33,
+     "laufBehalten": 252,
+     "laufVerworfen": 194,
+     "laufP": 0.44
     },
     "Session-High/-Low": {
      "positivBehalten": 9.6,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 0,
      "negativBehalten": 12.5,
      "zufallRaus": 84.6,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 29.4,
+     "laufWinrateVerworfen": 35.7,
+     "laufBehalten": 51,
+     "laufVerworfen": 395,
+     "laufP": 0.38
     },
     "M5/M15-OB-Kante (Pip)": {
      "positivBehalten": 89.2,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 100,
      "negativBehalten": 86.9,
      "zufallRaus": 13.6,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.5,
+     "laufWinrateVerworfen": 30.9,
+     "laufBehalten": 391,
+     "laufVerworfen": 55,
+     "laufP": 0.5
     },
     "Impuls ≥ 0,5 ATR + ≥ 1 Swing": {
      "positivBehalten": 53.5,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 52.2,
      "zufallRaus": 54.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.5,
+     "laufWinrateVerworfen": 34.4,
+     "laufBehalten": 234,
+     "laufVerworfen": 212,
+     "laufP": 0.82
     },
     "Impuls ≥ 1 ATR + ≥ 1 Swing": {
      "positivBehalten": 41.4,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 36.3,
      "zufallRaus": 65.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.9,
+     "laufWinrateVerworfen": 33.2,
+     "laufBehalten": 169,
+     "laufVerworfen": 277,
+     "laufP": 0.32
     },
     "Impuls ≥ 1 ATR + Alter ≥ 2 h": {
      "positivBehalten": 40.8,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 35.6,
      "zufallRaus": 63.8,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 38,
+     "laufWinrateVerworfen": 33.2,
+     "laufBehalten": 166,
+     "laufVerworfen": 280,
+     "laufP": 0.31
     },
     "≥ 1 Swing + Alter ≥ 2 h": {
      "positivBehalten": 41.4,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 38.4,
      "zufallRaus": 61.8,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.6,
+     "laufWinrateVerworfen": 33.9,
+     "laufBehalten": 175,
+     "laufVerworfen": 271,
+     "laufP": 0.57
     },
     "Impuls ≥ 0,5 ATR + ≥ 1 Swing + Alter ≥ 2 h": {
      "positivBehalten": 41.4,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 38.1,
      "zufallRaus": 62.4,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.8,
+     "laufWinrateVerworfen": 33.8,
+     "laufBehalten": 174,
+     "laufVerworfen": 272,
+     "laufP": 0.52
     }
    },
-   "jeLauf": {}
+   "jeLauf": {
+    "lauf:dob-lq-sweep-eurusd-v0": {
+     "gewinner": 156,
+     "verlierer": 291,
+     "vergleich": {
+      "ageHours": {
+       "auc": 0.528,
+       "p": 0.33,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "impulsePips": {
+       "auc": 0.532,
+       "p": 0.26,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "impulseAtr": {
+       "auc": 0.523,
+       "p": 0.41,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "impulseMinutes": {
+       "auc": 0.528,
+       "p": 0.33,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "brokenSwings": {
+       "auc": 0.503,
+       "p": 0.93,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "bosMinutes": {
+       "auc": 0.549,
+       "p": 0.25,
+       "n": [
+        68,
+        140
+       ]
+      },
+      "sweepDepthPips": {
+       "auc": 0.49,
+       "p": 0.73,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "sweepDepthAtr": {
+       "auc": 0.488,
+       "p": 0.68,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "rankRecency": {
+       "auc": 0.541,
+       "p": 0.15,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "gapNextAtr": {
+       "auc": 0.496,
+       "p": 0.89,
+       "n": [
+        154,
+        290
+       ]
+      },
+      "hasAltPivot": {
+       "a": 75,
+       "b": 78,
+       "p": 0.47,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "lhAfterLL": {
+       "a": 42.9,
+       "b": 44.7,
+       "p": 0.73,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "isLH": {
+       "a": 47.4,
+       "b": 51.9,
+       "p": 0.37,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "bos2h": {
+       "a": 18.6,
+       "b": 23.4,
+       "p": 0.24,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "bosBeforeSweep": {
+       "a": 43.6,
+       "b": 48.1,
+       "p": 0.36,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "closedBack": {
+       "a": 59,
+       "b": 55,
+       "p": 0.42,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "sessionExtreme": {
+       "a": 9.6,
+       "b": 12.4,
+       "p": 0.38,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "m5ObTick": {
+       "a": 51.9,
+       "b": 52.9,
+       "p": 0.84,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "m5ObPip": {
+       "a": 85.9,
+       "b": 83.2,
+       "p": 0.45,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "m15ObTick": {
+       "a": 13.5,
+       "b": 10,
+       "p": 0.26,
+       "n": [
+        156,
+        291
+       ]
+      },
+      "m15ObPip": {
+       "a": 32.1,
+       "b": 30.9,
+       "p": 0.81,
+       "n": [
+        156,
+        291
+       ]
+      }
+     },
+     "regeln": {
+      "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+       "positivBehalten": 19.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 23.5,
+       "zufallRaus": 83.7,
+       "laufWinrateBehalten": 29.9,
+       "laufWinrateVerworfen": 36.3,
+       "laufBehalten": 97,
+       "laufVerworfen": 350,
+       "laufP": 0.24
+      },
+      "LH nach LL": {
+       "positivBehalten": 43.3,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 45,
+       "zufallRaus": 60.7,
+       "laufWinrateBehalten": 34,
+       "laufWinrateVerworfen": 35.6,
+       "laufBehalten": 197,
+       "laufVerworfen": 250,
+       "laufP": 0.73
+      },
+      "LS ist LH (bzw. HL)": {
+       "positivBehalten": 47.8,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 51.9,
+       "zufallRaus": 58.1,
+       "laufWinrateBehalten": 32.9,
+       "laufWinrateVerworfen": 36.9,
+       "laufBehalten": 225,
+       "laufVerworfen": 222,
+       "laufP": 0.37
+      },
+      "BOS vor dem Sweep (ohne Zeitlimit)": {
+       "positivBehalten": 43.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 48.1,
+       "zufallRaus": 57.7,
+       "laufWinrateBehalten": 32.7,
+       "laufWinrateVerworfen": 36.8,
+       "laufBehalten": 208,
+       "laufVerworfen": 239,
+       "laufP": 0.36
+      },
+      "LH nach LL + BOS vor Sweep": {
+       "positivBehalten": 22.3,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 25.3,
+       "zufallRaus": 80.2,
+       "laufWinrateBehalten": 31.8,
+       "laufWinrateVerworfen": 35.9,
+       "laufBehalten": 107,
+       "laufVerworfen": 340,
+       "laufP": 0.44
+      },
+      "≥ 1 gebrochener Swing": {
+       "positivBehalten": 53.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 54,
+       "zufallRaus": 52.4,
+       "laufWinrateBehalten": 34.6,
+       "laufWinrateVerworfen": 35.3,
+       "laufBehalten": 240,
+       "laufVerworfen": 207,
+       "laufP": 0.88
+      },
+      "≥ 2 gebrochene Swings": {
+       "positivBehalten": 31.8,
+       "pinBehalten": null,
+       "journalWinBehalten": 0,
+       "negativBehalten": 30.1,
+       "zufallRaus": 72.6,
+       "laufWinrateBehalten": 36.5,
+       "laufWinrateVerworfen": 34.2,
+       "laufBehalten": 137,
+       "laufVerworfen": 310,
+       "laufP": 0.64
+      },
+      "Impuls ≥ 0,5 H1-ATR": {
+       "positivBehalten": 87.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 100,
+       "negativBehalten": 81.3,
+       "zufallRaus": 18.4,
+       "laufWinrateBehalten": 36.6,
+       "laufWinrateVerworfen": 26,
+       "laufBehalten": 374,
+       "laufVerworfen": 73,
+       "laufP": 0.082
+      },
+      "Impuls ≥ 1 H1-ATR": {
+       "positivBehalten": 52.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 100,
+       "negativBehalten": 45.7,
+       "zufallRaus": 54.3,
+       "laufWinrateBehalten": 38,
+       "laufWinrateVerworfen": 32,
+       "laufBehalten": 216,
+       "laufVerworfen": 231,
+       "laufP": 0.19
+      },
+      "Alter ≥ 2 h": {
+       "positivBehalten": 51.6,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 49.5,
+       "zufallRaus": 50.7,
+       "laufWinrateBehalten": 35.9,
+       "laufWinrateVerworfen": 33.9,
+       "laufBehalten": 223,
+       "laufVerworfen": 224,
+       "laufP": 0.67
+      },
+      "Alter ≥ 6 h": {
+       "positivBehalten": 26.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 20.4,
+       "zufallRaus": 72.2,
+       "laufWinrateBehalten": 40.4,
+       "laufWinrateVerworfen": 33.3,
+       "laufBehalten": 99,
+       "laufVerworfen": 348,
+       "laufP": 0.19
+      },
+      "Sweep schließt zurück": {
+       "positivBehalten": 58.6,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 55,
+       "zufallRaus": 52.3,
+       "laufWinrateBehalten": 36.5,
+       "laufWinrateVerworfen": 32.8,
+       "laufBehalten": 252,
+       "laufVerworfen": 195,
+       "laufP": 0.42
+      },
+      "Session-High/-Low": {
+       "positivBehalten": 9.6,
+       "pinBehalten": null,
+       "journalWinBehalten": 0,
+       "negativBehalten": 12.5,
+       "zufallRaus": 84.6,
+       "laufWinrateBehalten": 29.4,
+       "laufWinrateVerworfen": 35.6,
+       "laufBehalten": 51,
+       "laufVerworfen": 396,
+       "laufP": 0.38
+      },
+      "M5/M15-OB-Kante (Pip)": {
+       "positivBehalten": 89.2,
+       "pinBehalten": null,
+       "journalWinBehalten": 100,
+       "negativBehalten": 86.9,
+       "zufallRaus": 13.6,
+       "laufWinrateBehalten": 35.5,
+       "laufWinrateVerworfen": 30.9,
+       "laufBehalten": 392,
+       "laufVerworfen": 55,
+       "laufP": 0.51
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing": {
+       "positivBehalten": 53.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 52.2,
+       "zufallRaus": 54.2,
+       "laufWinrateBehalten": 35.3,
+       "laufWinrateVerworfen": 34.4,
+       "laufBehalten": 235,
+       "laufVerworfen": 212,
+       "laufP": 0.84
+      },
+      "Impuls ≥ 1 ATR + ≥ 1 Swing": {
+       "positivBehalten": 41.4,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 36.3,
+       "zufallRaus": 65.2,
+       "laufWinrateBehalten": 37.6,
+       "laufWinrateVerworfen": 33.2,
+       "laufBehalten": 170,
+       "laufVerworfen": 277,
+       "laufP": 0.34
+      },
+      "Impuls ≥ 1 ATR + Alter ≥ 2 h": {
+       "positivBehalten": 40.8,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 35.6,
+       "zufallRaus": 63.8,
+       "laufWinrateBehalten": 38,
+       "laufWinrateVerworfen": 33.1,
+       "laufBehalten": 166,
+       "laufVerworfen": 281,
+       "laufP": 0.3
+      },
+      "≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 41.4,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 38.4,
+       "zufallRaus": 61.8,
+       "laufWinrateBehalten": 36.6,
+       "laufWinrateVerworfen": 33.8,
+       "laufBehalten": 175,
+       "laufVerworfen": 272,
+       "laufP": 0.55
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 41.4,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 38.1,
+       "zufallRaus": 62.4,
+       "laufWinrateBehalten": 36.8,
+       "laufWinrateVerworfen": 33.7,
+       "laufBehalten": 174,
+       "laufVerworfen": 273,
+       "laufP": 0.51
+      }
+     }
+    }
+   }
   },
   "XAUUSD": {
    "m5Candles": 63002,
@@ -2218,10 +4179,10 @@
     "zufall": 3000,
     "konfliktPosNeg": 13,
     "pin": 0,
-    "journalPos": 0,
-    "journalNeg": 0,
-    "laufPos": 0,
-    "laufNeg": 0
+    "journalPos": 18,
+    "journalNeg": 1,
+    "laufPos": 168,
+    "laufNeg": 279
    },
    "verteilung": {
     "positiv": {
@@ -2525,268 +4486,307 @@
      "sweepSession": {}
     },
     "journalPos": {
-     "n": 0,
+     "n": 18,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1.27,
+      "med": 1.92,
+      "q75": 3.23
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1117.75,
+      "med": 1303.5,
+      "q75": 1538
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.71,
+      "med": 0.82,
+      "q75": 1.03
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 21.25,
+      "med": 30,
+      "q75": 50
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 1
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 11.25,
+      "med": 17.5,
+      "q75": 28.75
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 78.25,
+      "med": 104,
+      "q75": 246.75
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.05,
+      "med": 0.06,
+      "q75": 0.13
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.53,
+      "med": 0.75,
+      "q75": 0.94
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 88.9,
+     "lhAfterLL": 55.6,
+     "isLH": 61.1,
+     "bos2h": 44.4,
+     "bosBeforeSweep": 55.6,
+     "closedBack": 50,
+     "sessionExtreme": 5.6,
+     "m5ObTick": 33.3,
+     "m5ObPip": 66.7,
+     "m15ObTick": 5.6,
+     "m15ObPip": 16.7,
+     "lsSession": {
+      "London": 27.8,
+      "Asia": 38.9,
+      "NY": 22.2,
+      "MMM": 11.1
+     },
+     "sweepSession": {
+      "London": 22.2,
+      "MMM": 27.8,
+      "Sonstige": 16.7,
+      "NY": 22.2,
+      "Asia": 11.1
+     }
     },
     "journalNeg": {
-     "n": 0,
+     "n": 1,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 45.58,
+      "med": 45.58,
+      "q75": 45.58
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 3579,
+      "med": 3579,
+      "q75": 3579
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 2.47,
+      "med": 2.47,
+      "q75": 2.47
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 45,
+      "med": 45,
+      "q75": 45
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 3,
+      "med": 3,
+      "q75": 3
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 10,
+      "med": 10,
+      "q75": 10
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 138,
+      "med": 138,
+      "q75": 138
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.1,
+      "med": 0.1,
+      "q75": 0.1
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.38,
+      "med": 0.38,
+      "q75": 0.38
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 100,
+     "lhAfterLL": 0,
+     "isLH": 100,
+     "bos2h": 0,
+     "bosBeforeSweep": 100,
+     "closedBack": 0,
+     "sessionExtreme": 0,
+     "m5ObTick": 100,
+     "m5ObPip": 100,
+     "m15ObTick": 100,
+     "m15ObPip": 100,
+     "lsSession": {
+      "NY": 100
+     },
+     "sweepSession": {
+      "Sonstige": 100
+     }
     },
     "laufPos": {
-     "n": 0,
+     "n": 168,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1.75,
+      "q75": 4.92
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1108.25,
+      "med": 1845.5,
+      "q75": 3222
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.6,
+      "med": 0.93,
+      "q75": 1.48
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 20,
+      "med": 40,
+      "q75": 75
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 2
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 15,
+      "med": 30,
+      "q75": 65
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 70.25,
+      "med": 148,
+      "q75": 336
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.03,
+      "med": 0.07,
+      "q75": 0.16
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.32,
+      "med": 0.6,
+      "q75": 0.88
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 76.8,
+     "lhAfterLL": 52.4,
+     "isLH": 56.5,
+     "bos2h": 25.6,
+     "bosBeforeSweep": 45.8,
+     "closedBack": 65.5,
+     "sessionExtreme": 8.3,
+     "m5ObTick": 50.6,
+     "m5ObPip": 64.3,
+     "m15ObTick": 7.1,
+     "m15ObPip": 14.3,
+     "lsSession": {
+      "NY": 28.6,
+      "London": 22,
+      "Asia": 26.8,
+      "MMM": 13.7,
+      "Sonstige": 8.9
+     },
+     "sweepSession": {
+      "NY": 31,
+      "MMM": 14.9,
+      "Sonstige": 4.8,
+      "London": 22,
+      "Asia": 27.4
+     }
     },
     "laufNeg": {
-     "n": 0,
+     "n": 279,
      "ageHours": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.88,
+      "med": 2,
+      "q75": 5.88
      },
      "impulsePips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1149,
+      "med": 1743,
+      "q75": 2893
      },
      "impulseAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.63,
+      "med": 0.91,
+      "q75": 1.41
      },
      "impulseMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 20,
+      "med": 35,
+      "q75": 75
      },
      "brokenSwings": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0,
+      "med": 1,
+      "q75": 2
      },
      "bosMinutes": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 15,
+      "med": 35,
+      "q75": 65
      },
      "sweepDepthPips": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 67,
+      "med": 144,
+      "q75": 287.5
      },
      "sweepDepthAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.04,
+      "med": 0.07,
+      "q75": 0.14
      },
      "rankRecency": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 1,
+      "med": 1,
+      "q75": 1
      },
      "gapNextAtr": {
-      "q25": null,
-      "med": null,
-      "q75": null
+      "q25": 0.31,
+      "med": 0.55,
+      "q75": 0.89
      },
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null,
-     "lsSession": {},
-     "sweepSession": {}
+     "hasAltPivot": 82.8,
+     "lhAfterLL": 50.9,
+     "isLH": 57,
+     "bos2h": 25.4,
+     "bosBeforeSweep": 51.6,
+     "closedBack": 62.4,
+     "sessionExtreme": 8.6,
+     "m5ObTick": 44.1,
+     "m5ObPip": 58.1,
+     "m15ObTick": 4.7,
+     "m15ObPip": 9.3,
+     "lsSession": {
+      "Asia": 27.2,
+      "NY": 31.2,
+      "London": 21.9,
+      "MMM": 11.1,
+      "Sonstige": 8.6
+     },
+     "sweepSession": {
+      "Asia": 28,
+      "NY": 35.1,
+      "London": 19,
+      "MMM": 11.8,
+      "Sonstige": 6.1
+     }
     }
    },
    "vergleich": {
@@ -2972,27 +4972,185 @@
      }
     },
     "laufGewinnerVsVerlierer": {
-     "ageHours": null,
-     "impulsePips": null,
-     "impulseAtr": null,
-     "impulseMinutes": null,
-     "brokenSwings": null,
-     "bosMinutes": null,
-     "sweepDepthPips": null,
-     "sweepDepthAtr": null,
-     "rankRecency": null,
-     "gapNextAtr": null,
-     "hasAltPivot": null,
-     "lhAfterLL": null,
-     "isLH": null,
-     "bos2h": null,
-     "bosBeforeSweep": null,
-     "closedBack": null,
-     "sessionExtreme": null,
-     "m5ObTick": null,
-     "m5ObPip": null,
-     "m15ObTick": null,
-     "m15ObPip": null
+     "ageHours": {
+      "auc": 0.497,
+      "p": 0.92,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "impulsePips": {
+      "auc": 0.497,
+      "p": 0.92,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "impulseAtr": {
+      "auc": 0.503,
+      "p": 0.9,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "impulseMinutes": {
+      "auc": 0.507,
+      "p": 0.8,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "brokenSwings": {
+      "auc": 0.486,
+      "p": 0.62,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "bosMinutes": {
+      "auc": 0.499,
+      "p": 0.98,
+      "n": [
+       77,
+       144
+      ]
+     },
+     "sweepDepthPips": {
+      "auc": 0.515,
+      "p": 0.58,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "sweepDepthAtr": {
+      "auc": 0.515,
+      "p": 0.6,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "rankRecency": {
+      "auc": 0.485,
+      "p": 0.6,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "gapNextAtr": {
+      "auc": 0.498,
+      "p": 0.93,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "hasAltPivot": {
+      "a": 76.8,
+      "b": 82.8,
+      "p": 0.12,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "lhAfterLL": {
+      "a": 52.4,
+      "b": 50.9,
+      "p": 0.76,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "isLH": {
+      "a": 56.5,
+      "b": 57,
+      "p": 0.93,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "bos2h": {
+      "a": 25.6,
+      "b": 25.4,
+      "p": 0.97,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "bosBeforeSweep": {
+      "a": 45.8,
+      "b": 51.6,
+      "p": 0.24,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "closedBack": {
+      "a": 65.5,
+      "b": 62.4,
+      "p": 0.51,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "sessionExtreme": {
+      "a": 8.3,
+      "b": 8.6,
+      "p": 0.92,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "m5ObTick": {
+      "a": 50.6,
+      "b": 44.1,
+      "p": 0.18,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "m5ObPip": {
+      "a": 64.3,
+      "b": 58.1,
+      "p": 0.19,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "m15ObTick": {
+      "a": 7.1,
+      "b": 4.7,
+      "p": 0.27,
+      "n": [
+       168,
+       279
+      ]
+     },
+     "m15ObPip": {
+      "a": 14.3,
+      "b": 9.3,
+      "p": 0.11,
+      "n": [
+       168,
+       279
+      ]
+     }
     },
     "pinVsZufall": {
      "ageHours": null,
@@ -3045,233 +5203,1064 @@
     "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
      "positivBehalten": 26.3,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 44.4,
      "negativBehalten": 24.7,
      "zufallRaus": 83.1,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.7,
+     "laufWinrateVerworfen": 37.5,
+     "laufBehalten": 114,
+     "laufVerworfen": 333,
+     "laufP": 0.97
     },
     "LH nach LL": {
      "positivBehalten": 52.7,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 55.6,
      "negativBehalten": 50.6,
      "zufallRaus": 58.9,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 38.3,
+     "laufWinrateVerworfen": 36.9,
+     "laufBehalten": 230,
+     "laufVerworfen": 217,
+     "laufP": 0.76
     },
     "LS ist LH (bzw. HL)": {
      "positivBehalten": 57.5,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 61.1,
      "negativBehalten": 57.7,
      "zufallRaus": 56.8,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.4,
+     "laufWinrateVerworfen": 37.8,
+     "laufBehalten": 254,
+     "laufVerworfen": 193,
+     "laufP": 0.93
     },
     "BOS vor dem Sweep (ohne Zeitlimit)": {
      "positivBehalten": 46.1,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 55.6,
      "negativBehalten": 51.7,
      "zufallRaus": 55.9,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 34.8,
+     "laufWinrateVerworfen": 40.3,
+     "laufBehalten": 221,
+     "laufVerworfen": 226,
+     "laufP": 0.24
     },
     "LH nach LL + BOS vor Sweep": {
      "positivBehalten": 29.9,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 44.4,
      "negativBehalten": 26.2,
      "zufallRaus": 79.6,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 39.5,
+     "laufWinrateVerworfen": 36.8,
+     "laufBehalten": 124,
+     "laufVerworfen": 323,
+     "laufP": 0.6
     },
     "≥ 1 gebrochener Swing": {
      "positivBehalten": 54.5,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 61.1,
      "negativBehalten": 58.4,
      "zufallRaus": 51.5,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.1,
+     "laufWinrateVerworfen": 39.6,
+     "laufBehalten": 255,
+     "laufVerworfen": 192,
+     "laufP": 0.45
     },
     "≥ 2 gebrochene Swings": {
      "positivBehalten": 28.1,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 16.7,
      "negativBehalten": 29.2,
      "zufallRaus": 71.8,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.7,
+     "laufWinrateVerworfen": 37.5,
+     "laufBehalten": 130,
+     "laufVerworfen": 317,
+     "laufP": 0.98
     },
     "Impuls ≥ 0,5 H1-ATR": {
      "positivBehalten": 82.6,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 100,
      "negativBehalten": 84.6,
      "zufallRaus": 17.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.8,
+     "laufWinrateVerworfen": 41.7,
+     "laufBehalten": 375,
+     "laufVerworfen": 72,
+     "laufP": 0.43
     },
     "Impuls ≥ 1 H1-ATR": {
      "positivBehalten": 42.5,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 27.8,
      "negativBehalten": 41.9,
      "zufallRaus": 55.5,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 38.3,
+     "laufWinrateVerworfen": 37,
+     "laufBehalten": 193,
+     "laufVerworfen": 254,
+     "laufP": 0.77
     },
     "Alter ≥ 2 h": {
      "positivBehalten": 46.7,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 49.8,
      "zufallRaus": 51.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36,
+     "laufWinrateVerworfen": 39.1,
+     "laufBehalten": 222,
+     "laufVerworfen": 225,
+     "laufP": 0.5
     },
     "Alter ≥ 6 h": {
      "positivBehalten": 20.4,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 16.7,
      "negativBehalten": 23.2,
      "zufallRaus": 71.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.4,
+     "laufWinrateVerworfen": 37.9,
+     "laufBehalten": 107,
+     "laufVerworfen": 340,
+     "laufP": 0.78
     },
     "Sweep schließt zurück": {
      "positivBehalten": 64.1,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 50,
      "negativBehalten": 61.8,
      "zufallRaus": 51.1,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 38.7,
+     "laufWinrateVerworfen": 35.6,
+     "laufBehalten": 284,
+     "laufVerworfen": 163,
+     "laufP": 0.51
     },
     "Session-High/-Low": {
      "positivBehalten": 8.4,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 5.6,
      "negativBehalten": 8.6,
      "zufallRaus": 84.8,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.8,
+     "laufWinrateVerworfen": 37.7,
+     "laufBehalten": 38,
+     "laufVerworfen": 409,
+     "laufP": 0.92
     },
     "M5/M15-OB-Kante (Pip)": {
      "positivBehalten": 62.9,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 66.7,
      "negativBehalten": 59.2,
      "zufallRaus": 40.7,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 39.4,
+     "laufWinrateVerworfen": 34.5,
+     "laufBehalten": 279,
+     "laufVerworfen": 168,
+     "laufP": 0.3
     },
     "Impuls ≥ 0,5 ATR + ≥ 1 Swing": {
      "positivBehalten": 53.3,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 61.1,
      "negativBehalten": 57.7,
      "zufallRaus": 52.5,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 35.9,
+     "laufWinrateVerworfen": 39.8,
+     "laufBehalten": 251,
+     "laufVerworfen": 196,
+     "laufP": 0.39
     },
     "Impuls ≥ 1 ATR + ≥ 1 Swing": {
      "positivBehalten": 33.5,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 27.8,
      "negativBehalten": 34.8,
      "zufallRaus": 64.6,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.9,
+     "laufWinrateVerworfen": 37.9,
+     "laufBehalten": 157,
+     "laufVerworfen": 290,
+     "laufP": 0.84
     },
     "Impuls ≥ 1 ATR + Alter ≥ 2 h": {
      "positivBehalten": 31.1,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 11.1,
      "negativBehalten": 33,
      "zufallRaus": 64.3,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 37.3,
+     "laufWinrateVerworfen": 37.7,
+     "laufBehalten": 150,
+     "laufVerworfen": 297,
+     "laufP": 0.94
     },
     "≥ 1 Swing + Alter ≥ 2 h": {
      "positivBehalten": 35.9,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 27.8,
      "negativBehalten": 38.6,
      "zufallRaus": 62.2,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.1,
+     "laufWinrateVerworfen": 38.5,
+     "laufBehalten": 169,
+     "laufVerworfen": 278,
+     "laufP": 0.61
     },
     "Impuls ≥ 0,5 ATR + ≥ 1 Swing + Alter ≥ 2 h": {
      "positivBehalten": 35.9,
      "pinBehalten": null,
-     "journalWinBehalten": null,
+     "journalWinBehalten": 27.8,
      "negativBehalten": 38.6,
      "zufallRaus": 62.5,
-     "laufWinrateBehalten": null,
-     "laufWinrateVerworfen": null,
-     "laufBehalten": 0,
-     "laufVerworfen": 0,
-     "laufP": null
+     "laufWinrateBehalten": 36.1,
+     "laufWinrateVerworfen": 38.5,
+     "laufBehalten": 169,
+     "laufVerworfen": 278,
+     "laufP": 0.61
     }
    },
-   "jeLauf": {}
+   "jeLauf": {
+    "lauf:dob-lq-sweep-v0": {
+     "gewinner": 149,
+     "verlierer": 248,
+     "vergleich": {
+      "ageHours": {
+       "auc": 0.504,
+       "p": 0.9,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "impulsePips": {
+       "auc": 0.49,
+       "p": 0.75,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "impulseAtr": {
+       "auc": 0.504,
+       "p": 0.89,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "impulseMinutes": {
+       "auc": 0.518,
+       "p": 0.54,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "brokenSwings": {
+       "auc": 0.484,
+       "p": 0.6,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "bosMinutes": {
+       "auc": 0.494,
+       "p": 0.89,
+       "n": [
+        64,
+        121
+       ]
+      },
+      "sweepDepthPips": {
+       "auc": 0.514,
+       "p": 0.65,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "sweepDepthAtr": {
+       "auc": 0.513,
+       "p": 0.66,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "rankRecency": {
+       "auc": 0.499,
+       "p": 0.98,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "gapNextAtr": {
+       "auc": 0.483,
+       "p": 0.56,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "hasAltPivot": {
+       "a": 75.8,
+       "b": 82.7,
+       "p": 0.099,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "lhAfterLL": {
+       "a": 51,
+       "b": 52,
+       "p": 0.85,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "isLH": {
+       "a": 57.7,
+       "b": 56.9,
+       "p": 0.87,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "bos2h": {
+       "a": 24.8,
+       "b": 24.2,
+       "p": 0.89,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "bosBeforeSweep": {
+       "a": 43,
+       "b": 48.8,
+       "p": 0.26,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "closedBack": {
+       "a": 63.8,
+       "b": 60.5,
+       "p": 0.52,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "sessionExtreme": {
+       "a": 6.7,
+       "b": 9.3,
+       "p": 0.37,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "m5ObTick": {
+       "a": 49.7,
+       "b": 44.8,
+       "p": 0.34,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "m5ObPip": {
+       "a": 63.8,
+       "b": 58.1,
+       "p": 0.26,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "m15ObTick": {
+       "a": 7.4,
+       "b": 4,
+       "p": 0.15,
+       "n": [
+        149,
+        248
+       ]
+      },
+      "m15ObPip": {
+       "a": 15.4,
+       "b": 9.3,
+       "p": 0.063,
+       "n": [
+        149,
+        248
+       ]
+      }
+     },
+     "regeln": {
+      "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+       "positivBehalten": 26.3,
+       "pinBehalten": null,
+       "journalWinBehalten": 44.4,
+       "negativBehalten": 24.7,
+       "zufallRaus": 83.1,
+       "laufWinrateBehalten": 38.1,
+       "laufWinrateVerworfen": 37.3,
+       "laufBehalten": 97,
+       "laufVerworfen": 300,
+       "laufP": 0.89
+      },
+      "LH nach LL": {
+       "positivBehalten": 52.7,
+       "pinBehalten": null,
+       "journalWinBehalten": 55.6,
+       "negativBehalten": 50.6,
+       "zufallRaus": 58.9,
+       "laufWinrateBehalten": 37.1,
+       "laufWinrateVerworfen": 38,
+       "laufBehalten": 205,
+       "laufVerworfen": 192,
+       "laufP": 0.85
+      },
+      "LS ist LH (bzw. HL)": {
+       "positivBehalten": 57.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 61.1,
+       "negativBehalten": 57.7,
+       "zufallRaus": 56.8,
+       "laufWinrateBehalten": 37.9,
+       "laufWinrateVerworfen": 37.1,
+       "laufBehalten": 227,
+       "laufVerworfen": 170,
+       "laufP": 0.87
+      },
+      "BOS vor dem Sweep (ohne Zeitlimit)": {
+       "positivBehalten": 46.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 55.6,
+       "negativBehalten": 51.7,
+       "zufallRaus": 55.9,
+       "laufWinrateBehalten": 34.6,
+       "laufWinrateVerworfen": 40.1,
+       "laufBehalten": 185,
+       "laufVerworfen": 212,
+       "laufP": 0.26
+      },
+      "LH nach LL + BOS vor Sweep": {
+       "positivBehalten": 29.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 44.4,
+       "negativBehalten": 26.2,
+       "zufallRaus": 79.6,
+       "laufWinrateBehalten": 38.8,
+       "laufWinrateVerworfen": 37.1,
+       "laufBehalten": 103,
+       "laufVerworfen": 294,
+       "laufP": 0.75
+      },
+      "≥ 1 gebrochener Swing": {
+       "positivBehalten": 54.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 61.1,
+       "negativBehalten": 58.4,
+       "zufallRaus": 51.5,
+       "laufWinrateBehalten": 36.4,
+       "laufWinrateVerworfen": 38.8,
+       "laufBehalten": 214,
+       "laufVerworfen": 183,
+       "laufP": 0.63
+      },
+      "≥ 2 gebrochene Swings": {
+       "positivBehalten": 28.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 16.7,
+       "negativBehalten": 29.2,
+       "zufallRaus": 71.8,
+       "laufWinrateBehalten": 36.1,
+       "laufWinrateVerworfen": 38.1,
+       "laufBehalten": 108,
+       "laufVerworfen": 289,
+       "laufP": 0.72
+      },
+      "Impuls ≥ 0,5 H1-ATR": {
+       "positivBehalten": 82.6,
+       "pinBehalten": null,
+       "journalWinBehalten": 100,
+       "negativBehalten": 84.6,
+       "zufallRaus": 17.2,
+       "laufWinrateBehalten": 36.8,
+       "laufWinrateVerworfen": 40.8,
+       "laufBehalten": 326,
+       "laufVerworfen": 71,
+       "laufP": 0.52
+      },
+      "Impuls ≥ 1 H1-ATR": {
+       "positivBehalten": 42.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 27.8,
+       "negativBehalten": 41.9,
+       "zufallRaus": 55.5,
+       "laufWinrateBehalten": 38.8,
+       "laufWinrateVerworfen": 36.7,
+       "laufBehalten": 160,
+       "laufVerworfen": 237,
+       "laufP": 0.68
+      },
+      "Alter ≥ 2 h": {
+       "positivBehalten": 46.7,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 49.8,
+       "zufallRaus": 51.3,
+       "laufWinrateBehalten": 36.1,
+       "laufWinrateVerworfen": 38.8,
+       "laufBehalten": 191,
+       "laufVerworfen": 206,
+       "laufP": 0.58
+      },
+      "Alter ≥ 6 h": {
+       "positivBehalten": 20.4,
+       "pinBehalten": null,
+       "journalWinBehalten": 16.7,
+       "negativBehalten": 23.2,
+       "zufallRaus": 71.3,
+       "laufWinrateBehalten": 35.2,
+       "laufWinrateVerworfen": 38.2,
+       "laufBehalten": 91,
+       "laufVerworfen": 306,
+       "laufP": 0.6
+      },
+      "Sweep schließt zurück": {
+       "positivBehalten": 64.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 61.8,
+       "zufallRaus": 51.1,
+       "laufWinrateBehalten": 38.8,
+       "laufWinrateVerworfen": 35.5,
+       "laufBehalten": 245,
+       "laufVerworfen": 152,
+       "laufP": 0.52
+      },
+      "Session-High/-Low": {
+       "positivBehalten": 8.4,
+       "pinBehalten": null,
+       "journalWinBehalten": 5.6,
+       "negativBehalten": 8.6,
+       "zufallRaus": 84.8,
+       "laufWinrateBehalten": 30.3,
+       "laufWinrateVerworfen": 38.2,
+       "laufBehalten": 33,
+       "laufVerworfen": 364,
+       "laufP": 0.37
+      },
+      "M5/M15-OB-Kante (Pip)": {
+       "positivBehalten": 62.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 66.7,
+       "negativBehalten": 59.2,
+       "zufallRaus": 40.7,
+       "laufWinrateBehalten": 39.4,
+       "laufWinrateVerworfen": 34.4,
+       "laufBehalten": 246,
+       "laufVerworfen": 151,
+       "laufP": 0.32
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing": {
+       "positivBehalten": 53.3,
+       "pinBehalten": null,
+       "journalWinBehalten": 61.1,
+       "negativBehalten": 57.7,
+       "zufallRaus": 52.5,
+       "laufWinrateBehalten": 36.2,
+       "laufWinrateVerworfen": 39,
+       "laufBehalten": 210,
+       "laufVerworfen": 187,
+       "laufP": 0.56
+      },
+      "Impuls ≥ 1 ATR + ≥ 1 Swing": {
+       "positivBehalten": 33.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 27.8,
+       "negativBehalten": 34.8,
+       "zufallRaus": 64.6,
+       "laufWinrateBehalten": 37.8,
+       "laufWinrateVerworfen": 37.4,
+       "laufBehalten": 127,
+       "laufVerworfen": 270,
+       "laufP": 0.94
+      },
+      "Impuls ≥ 1 ATR + Alter ≥ 2 h": {
+       "positivBehalten": 31.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 11.1,
+       "negativBehalten": 33,
+       "zufallRaus": 64.3,
+       "laufWinrateBehalten": 37.9,
+       "laufWinrateVerworfen": 37.4,
+       "laufBehalten": 124,
+       "laufVerworfen": 273,
+       "laufP": 0.92
+      },
+      "≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 35.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 27.8,
+       "negativBehalten": 38.6,
+       "zufallRaus": 62.2,
+       "laufWinrateBehalten": 35.9,
+       "laufWinrateVerworfen": 38.4,
+       "laufBehalten": 142,
+       "laufVerworfen": 255,
+       "laufP": 0.62
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 35.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 27.8,
+       "negativBehalten": 38.6,
+       "zufallRaus": 62.5,
+       "laufWinrateBehalten": 35.9,
+       "laufWinrateVerworfen": 38.4,
+       "laufBehalten": 142,
+       "laufVerworfen": 255,
+       "laufP": 0.62
+      }
+     }
+    },
+    "lauf:dob-lq-sweep-v1": {
+     "gewinner": 97,
+     "verlierer": 170,
+     "vergleich": {
+      "ageHours": {
+       "auc": 0.489,
+       "p": 0.76,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "impulsePips": {
+       "auc": 0.535,
+       "p": 0.34,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "impulseAtr": {
+       "auc": 0.52,
+       "p": 0.58,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "impulseMinutes": {
+       "auc": 0.477,
+       "p": 0.53,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "brokenSwings": {
+       "auc": 0.482,
+       "p": 0.63,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "bosMinutes": {
+       "auc": 0.49,
+       "p": 0.82,
+       "n": [
+        65,
+        125
+       ]
+      },
+      "sweepDepthPips": {
+       "auc": 0.558,
+       "p": 0.11,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "sweepDepthAtr": {
+       "auc": 0.539,
+       "p": 0.29,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "rankRecency": {
+       "auc": 0.463,
+       "p": 0.32,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "gapNextAtr": {
+       "auc": 0.555,
+       "p": 0.14,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "hasAltPivot": {
+       "a": 79.4,
+       "b": 86.5,
+       "p": 0.13,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "lhAfterLL": {
+       "a": 56.7,
+       "b": 48.8,
+       "p": 0.22,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "isLH": {
+       "a": 56.7,
+       "b": 60,
+       "p": 0.6,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "bos2h": {
+       "a": 42.3,
+       "b": 38.2,
+       "p": 0.52,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "bosBeforeSweep": {
+       "a": 67,
+       "b": 73.5,
+       "p": 0.26,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "closedBack": {
+       "a": 68,
+       "b": 68.2,
+       "p": 0.97,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "sessionExtreme": {
+       "a": 11.3,
+       "b": 10,
+       "p": 0.73,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "m5ObTick": {
+       "a": 58.8,
+       "b": 47.1,
+       "p": 0.066,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "m5ObPip": {
+       "a": 69.1,
+       "b": 60,
+       "p": 0.14,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "m15ObTick": {
+       "a": 10.3,
+       "b": 5.3,
+       "p": 0.13,
+       "n": [
+        97,
+        170
+       ]
+      },
+      "m15ObPip": {
+       "a": 14.4,
+       "b": 10,
+       "p": 0.28,
+       "n": [
+        97,
+        170
+       ]
+      }
+     },
+     "regeln": {
+      "LQ2.0 heute (LH nach LL + BOS ≤ 2 h)": {
+       "positivBehalten": 26.3,
+       "pinBehalten": null,
+       "journalWinBehalten": 44.4,
+       "negativBehalten": 24.7,
+       "zufallRaus": 83.1,
+       "laufWinrateBehalten": 38.7,
+       "laufWinrateVerworfen": 34.8,
+       "laufBehalten": 106,
+       "laufVerworfen": 161,
+       "laufP": 0.52
+      },
+      "LH nach LL": {
+       "positivBehalten": 52.7,
+       "pinBehalten": null,
+       "journalWinBehalten": 55.6,
+       "negativBehalten": 50.6,
+       "zufallRaus": 58.9,
+       "laufWinrateBehalten": 39.9,
+       "laufWinrateVerworfen": 32.6,
+       "laufBehalten": 138,
+       "laufVerworfen": 129,
+       "laufP": 0.22
+      },
+      "LS ist LH (bzw. HL)": {
+       "positivBehalten": 57.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 61.1,
+       "negativBehalten": 57.7,
+       "zufallRaus": 56.8,
+       "laufWinrateBehalten": 35,
+       "laufWinrateVerworfen": 38.2,
+       "laufBehalten": 157,
+       "laufVerworfen": 110,
+       "laufP": 0.6
+      },
+      "BOS vor dem Sweep (ohne Zeitlimit)": {
+       "positivBehalten": 46.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 55.6,
+       "negativBehalten": 51.7,
+       "zufallRaus": 55.9,
+       "laufWinrateBehalten": 34.2,
+       "laufWinrateVerworfen": 41.6,
+       "laufBehalten": 190,
+       "laufVerworfen": 77,
+       "laufP": 0.26
+      },
+      "LH nach LL + BOS vor Sweep": {
+       "positivBehalten": 29.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 44.4,
+       "negativBehalten": 26.2,
+       "zufallRaus": 79.6,
+       "laufWinrateBehalten": 40,
+       "laufWinrateVerworfen": 33.6,
+       "laufBehalten": 115,
+       "laufVerworfen": 152,
+       "laufP": 0.28
+      },
+      "≥ 1 gebrochener Swing": {
+       "positivBehalten": 54.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 61.1,
+       "negativBehalten": 58.4,
+       "zufallRaus": 51.5,
+       "laufWinrateBehalten": 34.9,
+       "laufWinrateVerworfen": 42.3,
+       "laufBehalten": 215,
+       "laufVerworfen": 52,
+       "laufP": 0.32
+      },
+      "≥ 2 gebrochene Swings": {
+       "positivBehalten": 28.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 16.7,
+       "negativBehalten": 29.2,
+       "zufallRaus": 71.8,
+       "laufWinrateBehalten": 35.6,
+       "laufWinrateVerworfen": 36.9,
+       "laufBehalten": 118,
+       "laufVerworfen": 149,
+       "laufP": 0.82
+      },
+      "Impuls ≥ 0,5 H1-ATR": {
+       "positivBehalten": 82.6,
+       "pinBehalten": null,
+       "journalWinBehalten": 100,
+       "negativBehalten": 84.6,
+       "zufallRaus": 17.2,
+       "laufWinrateBehalten": 36,
+       "laufWinrateVerworfen": 42.9,
+       "laufBehalten": 253,
+       "laufVerworfen": 14,
+       "laufP": 0.6
+      },
+      "Impuls ≥ 1 H1-ATR": {
+       "positivBehalten": 42.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 27.8,
+       "negativBehalten": 41.9,
+       "zufallRaus": 55.5,
+       "laufWinrateBehalten": 36.4,
+       "laufWinrateVerworfen": 36.3,
+       "laufBehalten": 154,
+       "laufVerworfen": 113,
+       "laufP": 0.99
+      },
+      "Alter ≥ 2 h": {
+       "positivBehalten": 46.7,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 49.8,
+       "zufallRaus": 51.3,
+       "laufWinrateBehalten": 34.5,
+       "laufWinrateVerworfen": 39.6,
+       "laufBehalten": 171,
+       "laufVerworfen": 96,
+       "laufP": 0.41
+      },
+      "Alter ≥ 6 h": {
+       "positivBehalten": 20.4,
+       "pinBehalten": null,
+       "journalWinBehalten": 16.7,
+       "negativBehalten": 23.2,
+       "zufallRaus": 71.3,
+       "laufWinrateBehalten": 37,
+       "laufWinrateVerworfen": 36,
+       "laufBehalten": 92,
+       "laufVerworfen": 175,
+       "laufP": 0.88
+      },
+      "Sweep schließt zurück": {
+       "positivBehalten": 64.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 50,
+       "negativBehalten": 61.8,
+       "zufallRaus": 51.1,
+       "laufWinrateBehalten": 36.3,
+       "laufWinrateVerworfen": 36.5,
+       "laufBehalten": 182,
+       "laufVerworfen": 85,
+       "laufP": 0.97
+      },
+      "Session-High/-Low": {
+       "positivBehalten": 8.4,
+       "pinBehalten": null,
+       "journalWinBehalten": 5.6,
+       "negativBehalten": 8.6,
+       "zufallRaus": 84.8,
+       "laufWinrateBehalten": 39.3,
+       "laufWinrateVerworfen": 36,
+       "laufBehalten": 28,
+       "laufVerworfen": 239,
+       "laufP": 0.73
+      },
+      "M5/M15-OB-Kante (Pip)": {
+       "positivBehalten": 62.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 66.7,
+       "negativBehalten": 59.2,
+       "zufallRaus": 40.7,
+       "laufWinrateBehalten": 38.3,
+       "laufWinrateVerworfen": 32.6,
+       "laufBehalten": 175,
+       "laufVerworfen": 92,
+       "laufP": 0.36
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing": {
+       "positivBehalten": 53.3,
+       "pinBehalten": null,
+       "journalWinBehalten": 61.1,
+       "negativBehalten": 57.7,
+       "zufallRaus": 52.5,
+       "laufWinrateBehalten": 34.9,
+       "laufWinrateVerworfen": 41.8,
+       "laufBehalten": 212,
+       "laufVerworfen": 55,
+       "laufP": 0.34
+      },
+      "Impuls ≥ 1 ATR + ≥ 1 Swing": {
+       "positivBehalten": 33.5,
+       "pinBehalten": null,
+       "journalWinBehalten": 27.8,
+       "negativBehalten": 34.8,
+       "zufallRaus": 64.6,
+       "laufWinrateBehalten": 35,
+       "laufWinrateVerworfen": 37.7,
+       "laufBehalten": 137,
+       "laufVerworfen": 130,
+       "laufP": 0.65
+      },
+      "Impuls ≥ 1 ATR + Alter ≥ 2 h": {
+       "positivBehalten": 31.1,
+       "pinBehalten": null,
+       "journalWinBehalten": 11.1,
+       "negativBehalten": 33,
+       "zufallRaus": 64.3,
+       "laufWinrateBehalten": 36.9,
+       "laufWinrateVerworfen": 35.9,
+       "laufBehalten": 122,
+       "laufVerworfen": 145,
+       "laufP": 0.86
+      },
+      "≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 35.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 27.8,
+       "negativBehalten": 38.6,
+       "zufallRaus": 62.2,
+       "laufWinrateBehalten": 34.9,
+       "laufWinrateVerworfen": 38.1,
+       "laufBehalten": 149,
+       "laufVerworfen": 118,
+       "laufP": 0.59
+      },
+      "Impuls ≥ 0,5 ATR + ≥ 1 Swing + Alter ≥ 2 h": {
+       "positivBehalten": 35.9,
+       "pinBehalten": null,
+       "journalWinBehalten": 27.8,
+       "negativBehalten": 38.6,
+       "zufallRaus": 62.5,
+       "laufWinrateBehalten": 34.9,
+       "laufWinrateVerworfen": 38.1,
+       "laufBehalten": 149,
+       "laufVerworfen": 118,
+       "laufP": 0.59
+      }
+     }
+    }
+   }
   }
  },
  "journalDrOhneLs": [
@@ -3301,7 +6290,1465 @@
    "lsNot5m": 14
   }
  },
- "einzelfaelle": [],
+ "einzelfaelle": [
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 610",
+   "instrument": "GBPUSD",
+   "dir": -1,
+   "berlin": "2026-11-04 03:15",
+   "ageHours": 2.92,
+   "impulsePips": 27.2,
+   "impulseAtr": 1.79,
+   "impulseMinutes": 140,
+   "brokenSwings": 1,
+   "bosMinutes": 135,
+   "sweepDepthPips": 0,
+   "sweepDepthAtr": 0,
+   "rankRecency": 1,
+   "gapNextAtr": 1.36,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "Asia"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 611",
+   "instrument": "GBPUSD",
+   "dir": -1,
+   "berlin": "2026-10-28 13:00",
+   "ageHours": 0.83,
+   "impulsePips": 7.8,
+   "impulseAtr": 0.69,
+   "impulseMinutes": 10,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 1.6,
+   "sweepDepthAtr": 0.14,
+   "rankRecency": 1,
+   "gapNextAtr": 1.07,
+   "hasAltPivot": false,
+   "lhAfterLL": null,
+   "isLH": null,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Sonstige",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 612",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-10-27 08:30",
+   "ageHours": 4.58,
+   "impulsePips": 22.5,
+   "impulseAtr": 2.28,
+   "impulseMinutes": 130,
+   "brokenSwings": 1,
+   "bosMinutes": 115,
+   "sweepDepthPips": 0.8,
+   "sweepDepthAtr": 0.08,
+   "rankRecency": 2,
+   "gapNextAtr": 0.52,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": true,
+   "lsSession": "London",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 613",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-10-08 16:35",
+   "ageHours": 15,
+   "impulsePips": 44.9,
+   "impulseAtr": 3.19,
+   "impulseMinutes": 90,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 1.2,
+   "sweepDepthAtr": 0.09,
+   "rankRecency": 2,
+   "gapNextAtr": 0.42,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": false,
+   "sessionExtreme": true,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": true,
+   "m15ObPip": true,
+   "lsSession": "NY",
+   "sweepSession": "London"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 614",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-10-01 09:55",
+   "ageHours": 4,
+   "impulsePips": 34.6,
+   "impulseAtr": 2.86,
+   "impulseMinutes": 65,
+   "brokenSwings": 2,
+   "bosMinutes": 20,
+   "sweepDepthPips": 6,
+   "sweepDepthAtr": 0.5,
+   "rankRecency": 1,
+   "gapNextAtr": 1.9,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "London",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 615",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-23 10:40",
+   "ageHours": 171.83,
+   "impulsePips": 32,
+   "impulseAtr": 2.86,
+   "impulseMinutes": 125,
+   "brokenSwings": 1,
+   "bosMinutes": 35,
+   "sweepDepthPips": 1.6,
+   "sweepDepthAtr": 0.14,
+   "rankRecency": 3,
+   "gapNextAtr": 1.19,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": true,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": true,
+   "m15ObPip": true,
+   "lsSession": "MMM",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 616",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-29 06:30",
+   "ageHours": 1.58,
+   "impulsePips": 9.4,
+   "impulseAtr": 0.77,
+   "impulseMinutes": 25,
+   "brokenSwings": 1,
+   "bosMinutes": 5,
+   "sweepDepthPips": 1.4,
+   "sweepDepthAtr": 0.12,
+   "rankRecency": 1,
+   "gapNextAtr": 1.04,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": true,
+   "lsSession": "Asia",
+   "sweepSession": "London"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 617",
+   "instrument": "GBPUSD",
+   "dir": -1,
+   "berlin": "2026-09-28 03:10",
+   "ageHours": 5.08,
+   "impulsePips": 14.1,
+   "impulseAtr": 1.22,
+   "impulseMinutes": 210,
+   "brokenSwings": 2,
+   "bosMinutes": null,
+   "sweepDepthPips": 0.3,
+   "sweepDepthAtr": 0.03,
+   "rankRecency": 1,
+   "gapNextAtr": 0.37,
+   "hasAltPivot": false,
+   "lhAfterLL": null,
+   "isLH": null,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "London"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 618",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-23 20:00",
+   "ageHours": 13.83,
+   "impulsePips": 15.8,
+   "impulseAtr": 0.91,
+   "impulseMinutes": 30,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 1.5,
+   "sweepDepthAtr": 0.09,
+   "rankRecency": 1,
+   "gapNextAtr": 0.83,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "London"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 619",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-23 06:20",
+   "ageHours": 2.42,
+   "impulsePips": 11.7,
+   "impulseAtr": 1.05,
+   "impulseMinutes": 115,
+   "brokenSwings": 1,
+   "bosMinutes": 75,
+   "sweepDepthPips": 1.9,
+   "sweepDepthAtr": 0.17,
+   "rankRecency": 1,
+   "gapNextAtr": 0.66,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "London"
+  },
+  {
+   "source": "pin",
+   "group": "pos",
+   "ref": "Pin 620",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-22 12:35",
+   "ageHours": 1.83,
+   "impulsePips": 15.8,
+   "impulseAtr": 1.21,
+   "impulseMinutes": 55,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 0.7,
+   "sweepDepthAtr": 0.05,
+   "rankRecency": 1,
+   "gapNextAtr": 0.31,
+   "hasAltPivot": false,
+   "lhAfterLL": null,
+   "isLH": null,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "MMM",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #97",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-15 15:55",
+   "ageHours": 16.08,
+   "impulsePips": 27.1,
+   "impulseAtr": 2.5,
+   "impulseMinutes": 145,
+   "brokenSwings": 4,
+   "bosMinutes": 100,
+   "sweepDepthPips": 1.8,
+   "sweepDepthAtr": 0.17,
+   "rankRecency": 2,
+   "gapNextAtr": 0.75,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": false,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": true,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #99",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-08-28 01:50",
+   "ageHours": 14.17,
+   "impulsePips": 5.1,
+   "impulseAtr": 0.52,
+   "impulseMinutes": 30,
+   "brokenSwings": 1,
+   "bosMinutes": 25,
+   "sweepDepthPips": 0,
+   "sweepDepthAtr": 0,
+   "rankRecency": 6,
+   "gapNextAtr": 0.33,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": true,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "journal-setup",
+   "group": "neg",
+   "ref": "DR #104",
+   "instrument": "GBPUSD",
+   "dir": -1,
+   "berlin": "2026-09-24 06:00",
+   "ageHours": 1.92,
+   "impulsePips": 12.1,
+   "impulseAtr": 0.84,
+   "impulseMinutes": 65,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 0.6,
+   "sweepDepthAtr": 0.04,
+   "rankRecency": 1,
+   "gapNextAtr": 0.58,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": true,
+   "lsSession": "Asia",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #105",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-23 20:00",
+   "ageHours": 13.83,
+   "impulsePips": 15.8,
+   "impulseAtr": 0.91,
+   "impulseMinutes": 30,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 1.5,
+   "sweepDepthAtr": 0.09,
+   "rankRecency": 1,
+   "gapNextAtr": 0.83,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #106",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-24 13:25",
+   "ageHours": 1.5,
+   "impulsePips": 17.5,
+   "impulseAtr": 1.13,
+   "impulseMinutes": 70,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 0.3,
+   "sweepDepthAtr": 0.02,
+   "rankRecency": 1,
+   "gapNextAtr": 1.52,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Sonstige",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "journal-setup",
+   "group": "neg",
+   "ref": "DR #108",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-25 03:10",
+   "ageHours": 5,
+   "impulsePips": 10.9,
+   "impulseAtr": 0.77,
+   "impulseMinutes": 45,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 1.8,
+   "sweepDepthAtr": 0.13,
+   "rankRecency": 1,
+   "gapNextAtr": 1.18,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": false,
+   "sessionExtreme": true,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-setup",
+   "group": "neg",
+   "ref": "DR #110",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-09-25 13:35",
+   "ageHours": 1.42,
+   "impulsePips": 10.3,
+   "impulseAtr": 0.87,
+   "impulseMinutes": 35,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 0.1,
+   "sweepDepthAtr": 0.01,
+   "rankRecency": 2,
+   "gapNextAtr": 0.91,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Sonstige",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "journal-setup",
+   "group": "neg",
+   "ref": "DR #116",
+   "instrument": "GBPUSD",
+   "dir": -1,
+   "berlin": "2026-09-28 08:30",
+   "ageHours": 23.17,
+   "impulsePips": 41.1,
+   "impulseAtr": 3.91,
+   "impulseMinutes": 90,
+   "brokenSwings": 7,
+   "bosMinutes": 55,
+   "sweepDepthPips": 0.4,
+   "sweepDepthAtr": 0.04,
+   "rankRecency": 1,
+   "gapNextAtr": 0.23,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": false,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": true,
+   "m15ObPip": true,
+   "lsSession": "London",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #117",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-10-01 09:55",
+   "ageHours": 4,
+   "impulsePips": 34.6,
+   "impulseAtr": 2.86,
+   "impulseMinutes": 65,
+   "brokenSwings": 2,
+   "bosMinutes": 20,
+   "sweepDepthPips": 6,
+   "sweepDepthAtr": 0.5,
+   "rankRecency": 1,
+   "gapNextAtr": 1.9,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "London",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #118",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-10-05 12:55",
+   "ageHours": 0.5,
+   "impulsePips": 9.7,
+   "impulseAtr": 0.64,
+   "impulseMinutes": 25,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 1.3,
+   "sweepDepthAtr": 0.09,
+   "rankRecency": 1,
+   "gapNextAtr": 0.67,
+   "hasAltPivot": false,
+   "lhAfterLL": null,
+   "isLH": null,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "MMM",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "pos",
+   "ref": "DR #145",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-11-18 14:50",
+   "ageHours": 20.92,
+   "impulsePips": 15.7,
+   "impulseAtr": 1.14,
+   "impulseMinutes": 40,
+   "brokenSwings": 1,
+   "bosMinutes": 20,
+   "sweepDepthPips": 0.3,
+   "sweepDepthAtr": 0.02,
+   "rankRecency": 1,
+   "gapNextAtr": 0.03,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "pos",
+   "ref": "DR #145",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-11-18 15:45",
+   "ageHours": 19.92,
+   "impulsePips": 33.9,
+   "impulseAtr": 2.47,
+   "impulseMinutes": 95,
+   "brokenSwings": 3,
+   "bosMinutes": 50,
+   "sweepDepthPips": 0.1,
+   "sweepDepthAtr": 0.01,
+   "rankRecency": 1,
+   "gapNextAtr": 0.21,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "muster",
+   "group": "pos",
+   "ref": "DR #145 LS 15:45",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-11-18 15:45",
+   "ageHours": 19.92,
+   "impulsePips": 33.9,
+   "impulseAtr": 2.47,
+   "impulseMinutes": 95,
+   "brokenSwings": 3,
+   "bosMinutes": 50,
+   "sweepDepthPips": 0.1,
+   "sweepDepthAtr": 0.01,
+   "rankRecency": 1,
+   "gapNextAtr": 0.21,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "muster",
+   "group": "neg",
+   "ref": "DR #145 popeliger LS 19:40",
+   "instrument": "GBPUSD",
+   "dir": 1,
+   "berlin": "2026-11-18 19:40",
+   "ageHours": 13.25,
+   "impulsePips": 20.6,
+   "impulseAtr": 1.47,
+   "impulseMinutes": 70,
+   "brokenSwings": 1,
+   "bosMinutes": 20,
+   "sweepDepthPips": 0.7,
+   "sweepDepthAtr": 0.05,
+   "rankRecency": 1,
+   "gapNextAtr": 0.87,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "pos",
+   "ref": "DR #94",
+   "instrument": "EURUSD",
+   "dir": 1,
+   "berlin": "2026-09-22 10:50",
+   "ageHours": 1,
+   "impulsePips": 17.8,
+   "impulseAtr": 2.2,
+   "impulseMinutes": 15,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 1.9,
+   "sweepDepthAtr": 0.23,
+   "rankRecency": 1,
+   "gapNextAtr": 1.59,
+   "hasAltPivot": false,
+   "lhAfterLL": null,
+   "isLH": null,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "MMM",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #146",
+   "instrument": "EURUSD",
+   "dir": 1,
+   "berlin": "2026-11-12 17:00",
+   "ageHours": 14.92,
+   "impulsePips": 22.5,
+   "impulseAtr": 1.7,
+   "impulseMinutes": 115,
+   "brokenSwings": 1,
+   "bosMinutes": 95,
+   "sweepDepthPips": 0.6,
+   "sweepDepthAtr": 0.05,
+   "rankRecency": 2,
+   "gapNextAtr": 2.3,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "neg",
+   "ref": "DR #111",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-09-23 15:30",
+   "ageHours": 45.58,
+   "impulsePips": 3579,
+   "impulseAtr": 2.47,
+   "impulseMinutes": 45,
+   "brokenSwings": 3,
+   "bosMinutes": 10,
+   "sweepDepthPips": 138,
+   "sweepDepthAtr": 0.1,
+   "rankRecency": 1,
+   "gapNextAtr": 0.38,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": true,
+   "m15ObPip": true,
+   "lsSession": "NY",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "pos",
+   "ref": "DR #119",
+   "instrument": "XAUUSD",
+   "dir": -1,
+   "berlin": "2026-09-16 08:35",
+   "ageHours": 1.58,
+   "impulsePips": 1546,
+   "impulseAtr": 0.97,
+   "impulseMinutes": 65,
+   "brokenSwings": 1,
+   "bosMinutes": null,
+   "sweepDepthPips": 76,
+   "sweepDepthAtr": 0.05,
+   "rankRecency": 1,
+   "gapNextAtr": 0.14,
+   "hasAltPivot": false,
+   "lhAfterLL": null,
+   "isLH": null,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "London",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "pos",
+   "ref": "DR #121",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-10-29 10:05",
+   "ageHours": 2,
+   "impulsePips": 1479,
+   "impulseAtr": 0.9,
+   "impulseMinutes": 30,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 92,
+   "sweepDepthAtr": 0.06,
+   "rankRecency": 1,
+   "gapNextAtr": 0.51,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "London",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "pos",
+   "ref": "DR #125",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-09-21 06:20",
+   "ageHours": 7.33,
+   "impulsePips": 1954,
+   "impulseAtr": 1.24,
+   "impulseMinutes": 160,
+   "brokenSwings": 4,
+   "bosMinutes": 40,
+   "sweepDepthPips": 189,
+   "sweepDepthAtr": 0.12,
+   "rankRecency": 1,
+   "gapNextAtr": 0.18,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "pos",
+   "ref": "DR #125",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-09-21 05:40",
+   "ageHours": 8.17,
+   "impulsePips": 1244,
+   "impulseAtr": 0.77,
+   "impulseMinutes": 25,
+   "brokenSwings": 1,
+   "bosMinutes": 15,
+   "sweepDepthPips": 228,
+   "sweepDepthAtr": 0.14,
+   "rankRecency": 1,
+   "gapNextAtr": 0.91,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #126",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-11-05 10:05",
+   "ageHours": 2.17,
+   "impulsePips": 1207,
+   "impulseAtr": 0.63,
+   "impulseMinutes": 80,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 253,
+   "sweepDepthAtr": 0.13,
+   "rankRecency": 1,
+   "gapNextAtr": 0.58,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "London",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "journal-evidence",
+   "group": "pos",
+   "ref": "DR #127",
+   "instrument": "XAUUSD",
+   "dir": -1,
+   "berlin": "2026-11-06 17:40",
+   "ageHours": 1,
+   "impulsePips": 1218,
+   "impulseAtr": 0.62,
+   "impulseMinutes": 15,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 254,
+   "sweepDepthAtr": 0.13,
+   "rankRecency": 1,
+   "gapNextAtr": 0.6,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": true,
+   "lsSession": "NY",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #128",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-11-05 16:05",
+   "ageHours": 1.67,
+   "impulsePips": 4523,
+   "impulseAtr": 2.33,
+   "impulseMinutes": 50,
+   "brokenSwings": 1,
+   "bosMinutes": 45,
+   "sweepDepthPips": 151,
+   "sweepDepthAtr": 0.08,
+   "rankRecency": 1,
+   "gapNextAtr": 0.75,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #129",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-10-27 06:35",
+   "ageHours": 0.58,
+   "impulsePips": 756,
+   "impulseAtr": 0.6,
+   "impulseMinutes": 10,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 75,
+   "sweepDepthAtr": 0.06,
+   "rankRecency": 1,
+   "gapNextAtr": 1.13,
+   "hasAltPivot": false,
+   "lhAfterLL": null,
+   "isLH": null,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #130",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-10-19 17:25",
+   "ageHours": 23,
+   "impulsePips": 1086,
+   "impulseAtr": 0.83,
+   "impulseMinutes": 35,
+   "brokenSwings": 3,
+   "bosMinutes": 25,
+   "sweepDepthPips": 414,
+   "sweepDepthAtr": 0.32,
+   "rankRecency": 3,
+   "gapNextAtr": 1.33,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #132",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-11-13 08:50",
+   "ageHours": 2.17,
+   "impulsePips": 1429,
+   "impulseAtr": 0.82,
+   "impulseMinutes": 40,
+   "brokenSwings": 1,
+   "bosMinutes": 30,
+   "sweepDepthPips": 99,
+   "sweepDepthAtr": 0.06,
+   "rankRecency": 1,
+   "gapNextAtr": 0.1,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": true,
+   "bos2h": false,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "London",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #133",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-11-11 06:30",
+   "ageHours": 1.83,
+   "impulsePips": 1227,
+   "impulseAtr": 0.84,
+   "impulseMinutes": 70,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 25,
+   "sweepDepthAtr": 0.02,
+   "rankRecency": 1,
+   "gapNextAtr": 0.93,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": true,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #135",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-11-05 14:05",
+   "ageHours": 0.67,
+   "impulsePips": 1363,
+   "impulseAtr": 0.78,
+   "impulseMinutes": 25,
+   "brokenSwings": 2,
+   "bosMinutes": 10,
+   "sweepDepthPips": 109,
+   "sweepDepthAtr": 0.06,
+   "rankRecency": 1,
+   "gapNextAtr": 0.76,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "NY",
+   "sweepSession": "NY"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #137",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-11-02 02:15",
+   "ageHours": 4.33,
+   "impulsePips": 1088,
+   "impulseAtr": 0.74,
+   "impulseMinutes": 5,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 88,
+   "sweepDepthAtr": 0.06,
+   "rankRecency": 2,
+   "gapNextAtr": 0.59,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "Asia"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #138",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-10-26 09:50",
+   "ageHours": 3.58,
+   "impulsePips": 886,
+   "impulseAtr": 0.7,
+   "impulseMinutes": 30,
+   "brokenSwings": 0,
+   "bosMinutes": null,
+   "sweepDepthPips": 18,
+   "sweepDepthAtr": 0.01,
+   "rankRecency": 1,
+   "gapNextAtr": 0.95,
+   "hasAltPivot": true,
+   "lhAfterLL": false,
+   "isLH": false,
+   "bos2h": false,
+   "bosBeforeSweep": false,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "London",
+   "sweepSession": "Sonstige"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #139",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-10-22 06:55",
+   "ageHours": 1.17,
+   "impulsePips": 2632,
+   "impulseAtr": 1.81,
+   "impulseMinutes": 50,
+   "brokenSwings": 1,
+   "bosMinutes": 15,
+   "sweepDepthPips": 378,
+   "sweepDepthAtr": 0.26,
+   "rankRecency": 1,
+   "gapNextAtr": 2.12,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "Asia",
+   "sweepSession": "London"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #141",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-10-12 10:40",
+   "ageHours": 1.75,
+   "impulsePips": 647,
+   "impulseAtr": 0.56,
+   "impulseMinutes": 10,
+   "brokenSwings": 1,
+   "bosMinutes": 5,
+   "sweepDepthPips": 15,
+   "sweepDepthAtr": 0.01,
+   "rankRecency": 2,
+   "gapNextAtr": 0.77,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": true,
+   "lsSession": "MMM",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #142",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-11-17 10:45",
+   "ageHours": 2,
+   "impulsePips": 1514,
+   "impulseAtr": 1.04,
+   "impulseMinutes": 30,
+   "brokenSwings": 1,
+   "bosMinutes": 20,
+   "sweepDepthPips": 277,
+   "sweepDepthAtr": 0.19,
+   "rankRecency": 1,
+   "gapNextAtr": 0.41,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": false,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": true,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "MMM",
+   "sweepSession": "MMM"
+  },
+  {
+   "source": "journal-setup",
+   "group": "pos",
+   "ref": "DR #143",
+   "instrument": "XAUUSD",
+   "dir": -1,
+   "berlin": "2026-06-04 01:40",
+   "ageHours": 0.92,
+   "impulsePips": 1914,
+   "impulseAtr": 1.11,
+   "impulseMinutes": 20,
+   "brokenSwings": 1,
+   "bosMinutes": 5,
+   "sweepDepthPips": 85,
+   "sweepDepthAtr": 0.05,
+   "rankRecency": 1,
+   "gapNextAtr": 1.3,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": true,
+   "m5ObPip": true,
+   "m15ObTick": true,
+   "m15ObPip": true,
+   "lsSession": "Asia",
+   "sweepSession": "Asia"
+  },
+  {
+   "source": "muster",
+   "group": "pos",
+   "ref": "P557 LS 07:45",
+   "instrument": "XAUUSD",
+   "dir": 1,
+   "berlin": "2026-11-18 07:45",
+   "ageHours": 2.83,
+   "impulsePips": 1901,
+   "impulseAtr": 1.12,
+   "impulseMinutes": 55,
+   "brokenSwings": 1,
+   "bosMinutes": 15,
+   "sweepDepthPips": 24,
+   "sweepDepthAtr": 0.01,
+   "rankRecency": 1,
+   "gapNextAtr": 0.84,
+   "hasAltPivot": true,
+   "lhAfterLL": true,
+   "isLH": true,
+   "bos2h": true,
+   "bosBeforeSweep": true,
+   "closedBack": true,
+   "sessionExtreme": false,
+   "m5ObTick": false,
+   "m5ObPip": false,
+   "m15ObTick": false,
+   "m15ObPip": false,
+   "lsSession": "London",
+   "sweepSession": "MMM"
+  }
+ ],
  "tradeEbene": {
   "dob-lq-sweep-eurusd-v0": {
    "trades": 1019,

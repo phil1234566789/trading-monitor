@@ -129,7 +129,7 @@ export function featuresFor(instrument) {
       if (lsIdx == null || sweepIdx == null) continue; // OB-Start in der Spread Hour
       const atr = atrAt(L.pivotTime);
       const k = altIdx.get(key(dir, L.pivotTime));
-      const f = { source, instrument, dir, pivotTime: L.pivotTime, touchedTime: T, price: L.price, hasAltPivot: k != null };
+      const f = { levelSource: source, instrument, dir, pivotTime: L.pivotTime, touchedTime: T, price: L.price, hasAltPivot: k != null };
       // OB-Kante, die zugleich ein Pivot-Level ist (gleicher Preis ±1 Tick, gleicher Sweep): sonst doppelt gezählt.
       if (source === 'ob') f.alsoPivot = (dir === 1 ? highs : lows).some(p => p.touchedTime === T && Math.abs(p.price - L.price) <= tol.tick);
       f.ageHours = (T - L.pivotTime) / 3600;

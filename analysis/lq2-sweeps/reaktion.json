@@ -1,6 +1,6 @@
 {
  "measurement": "lq2-reaktion-v1",
- "git": "899e80e1",
+ "git": "a6f51f7a",
  "definition": {
   "fenster": "3h",
   "stark": "MFE ≥ 1.5 H1-ATR vor Re-Sweep",
