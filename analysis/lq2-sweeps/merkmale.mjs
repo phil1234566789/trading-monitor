@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detectLiquidityLevels, LIQUIDITY_FRACTAL_PERIOD } from '../../src/liquidityDetection.js';
 import { detectStrongLiquidityLevels } from '../../src/liquidity2.js';
+import { setup1ObLiquidityLevels } from '../../src/setup1Detection.js';
 import { wilderAtrValues } from '../../src/atr.js';
 import { detectOrderBlocks } from '../../src/orderBlockDetection.js';
 import { sessionFromRow, markIgnoredCandles, buildSessionContextLookup, contextForPivot } from '../../src/sessionOccurrences.js';
@@ -111,20 +112,26 @@ export function featuresFor(instrument) {
   }
   const swingsSorted = { 1: [...lows].sort((a, b) => a.pivotTime - b.pivotTime), [-1]: [...highs].sort((a, b) => a.pivotTime - b.pivotTime) };
 
-  const result = new Map();
-  for (const dir of [1, -1]) {
-    const levels = dir === 1 ? highs : lows;
-    // Aktive Kandidaten zum Sweep-Zeitpunkt: bestätigt (Pivot + P Kerzen) und bis dahin unberührt.
-    const byKnown = [...levels].sort((a, b) => a.pivotTime - b.pivotTime);
+  // Zweite Quelle: gebrochene M5-OB-Kanten wie der Chart-Toggle „OB Sweeps“ (nur berührte Kanten, Erkennung kausal).
+  const obLevels = setup1ObLiquidityLevels(instrument, marked);
+  const result = new Map(), obResult = new Map();
+  for (const [source, levelsOf, knownAt] of [['pivot', d => d === 1 ? highs : lows, l => l.pivotTime + LIQUIDITY_FRACTAL_PERIOD * 300],
+    ['ob', d => obLevels.filter(l => l.dir === d), l => l.sourceKnownAt]]) for (const dir of [1, -1]) {
+    const levels = levelsOf(dir);
+    // Aktive Kandidaten zum Sweep-Zeitpunkt: bestätigt und bis dahin unberührt. OB-Quelle kennt nur berührte Kanten → Rang/Abstand dort null.
+    const byKnown = [...levels].sort((a, b) => knownAt(a) - knownAt(b));
     let ptr = 0, active = [];
     for (const L of [...levels].filter(l => l.touched).sort((a, b) => a.touchedTime - b.touchedTime)) {
       const T = L.touchedTime;
-      while (ptr < byKnown.length && byKnown[ptr].pivotTime + LIQUIDITY_FRACTAL_PERIOD * 300 <= T) active.push(byKnown[ptr++]);
+      while (ptr < byKnown.length && knownAt(byKnown[ptr]) <= T) active.push(byKnown[ptr++]);
       active = active.filter(a => !a.touched || a.touchedTime >= T);
       const lsIdx = idx.get(L.pivotTime), sweepIdx = idx.get(T);
+      if (lsIdx == null || sweepIdx == null) continue; // OB-Start in der Spread Hour
       const atr = atrAt(L.pivotTime);
       const k = altIdx.get(key(dir, L.pivotTime));
-      const f = { instrument, dir, pivotTime: L.pivotTime, touchedTime: T, price: L.price, hasAltPivot: k != null };
+      const f = { source, instrument, dir, pivotTime: L.pivotTime, touchedTime: T, price: L.price, hasAltPivot: k != null };
+      // OB-Kante, die zugleich ein Pivot-Level ist (gleicher Preis ±1 Tick, gleicher Sweep): sonst doppelt gezählt.
+      if (source === 'ob') f.alsoPivot = (dir === 1 ? highs : lows).some(p => p.touchedTime === T && Math.abs(p.price - L.price) <= tol.tick);
       f.ageHours = (T - L.pivotTime) / 3600;
       f.lhAfterLL = k != null && k >= 3 ? (pivots[k - 3].price - pivots[k - 1].price) * dir > 0 : null;
       f.isLH = k != null && k >= 2 ? (pivots[k - 2].price - L.price) * dir > 0 : null;
@@ -210,10 +217,11 @@ export function featuresFor(instrument) {
       const gap = beyond.length ? Math.min(...beyond) : null;
       f.gapNextPips = gap == null ? null : toPips(gap, instrument);
       f.gapNextAtr = gap == null || !atr ? null : gap / atr;
-      result.set(key(dir, L.pivotTime), f);
+      if (source === 'ob') { f.rankRecency = null; f.gapNextPips = null; f.gapNextAtr = null; }
+      (source === 'pivot' ? result : obResult).set(key(dir, L.pivotTime), f);
     }
   }
-  return { features: result, levelCount: highs.length + lows.length, candles: candles.length };
+  return { features: result, obFeatures: obResult, levelCount: highs.length + lows.length, candles: candles.length };
 }
 
 // ---- Stichproben ---------------------------------------------------------------------------------------------

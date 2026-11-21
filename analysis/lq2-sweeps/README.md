@@ -115,6 +115,31 @@ Reaktionsklasse der Prüffälle:
 - **Grenzen:** Die Regel behält nur 5 von 11 Pins und 9 von 28 Journal-Gewinnern, obwohl diese fast nie scheitern.
   Philips Auge sieht also mehr als diese Merkmale. Die Gold-Journal-Gewinner haben oft nur 0,6–0,9 ATR Impuls.
 
+## Zweite Quelle: M5-OB-Kanten (`obQuelle` in `reaktion.json`)
+
+Die OB-Kanten stammen aus `setup1ObLiquidityLevels` (`detectOrderBlockLiquidityLevels`, dieselben OBs wie der Chart-Toggle
+„OB Sweeps“). Zeitraum, Zone und Klassen sind dieselben wie bei den Pivots. Rang und Abstand zum nächsten Kandidaten
+entfallen hier, weil die Quelle nur berührte Kanten kennt. Eine OB-Kante, die auf demselben Preis (±1 Tick) zur selben
+Zeit gesweept wird wie ein Pivot, zählt als „Pivot“.
+
+| alle Instrumente | n H1 / H2 | stark H1 / H2 | keine H1 / H2 | MFE-Median 3 h |
+|---|---|---|---|---|
+| Pivot (alle) | 9715 / 8036 | 14,3 / 15,9 % | 32,5 / 32,3 % | 0,61 / 0,62 |
+| Pivot ohne OB-Kante | 5387 / 4227 | 13,9 / 15,7 % | 32,8 / 33,5 % | 0,61 / 0,61 |
+| Pivot auf OB-Kante | 4328 / 3809 | 14,8 / 16,2 % | 32,2 / 30,8 % | 0,62 / 0,64 |
+| OB-Kante, kein Pivot | 10593 / 8383 | 15,1 / 16,2 % | 31,7 / 32,4 % | 0,63 / 0,62 |
+
+- **OB-Kanten reagieren nicht besser als Pivots.** Der Unterschied liegt bei höchstens einem Prozentpunkt und ist nicht
+  in beiden Halbjahren signifikant. Das gilt auch je Instrument (GBP, EUR, XAU): Abstand ≤ 1,5 Prozentpunkte, in
+  wechselnder Richtung. Auch der Durchbruch-Anteil ist gleich, rund 21 % bei beiden Quellen.
+- Innerhalb der reinen OB-Sweeps trennen dieselben Merkmale in beiden Halbjahren: Impuls (AUC 0,70/0,68), Alter
+  (0,62/0,62), Swings (0,60/0,61) und Sweep in NY (Lift 1,43/1,57), Asia gegenläufig. Die Elternebene trennt
+  wieder nicht.
+- Dieselbe Regel (Impuls ≥ 1 ATR & ≥ 1 Swing & Sweep nicht Asia) bringt bei OB-Kanten Lift 1,41/1,46 bei Recall
+  45/50 %. Sie lässt sich also für beide Quellen gleich verwenden.
+- Bei den Pins liegt der LS seltener auf einer M5-OB-Kante (4/11) als im Zufall (47 %). Die Vermutung „gute Sweeps sind
+  eher OB-Kanten“ bestätigen die Daten damit nicht.
+
 ## Frühere Auswertung (Positiv/Zufall, `ergebnis.json`)
 
 - Pins gegen Zufall zeigten dieselbe Richtung: größerer Impuls (1,22 gegen 0,94 ATR) und älterer LS (4 gegen 1,9 h).

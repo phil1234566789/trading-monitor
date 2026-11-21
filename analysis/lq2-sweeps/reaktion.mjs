@@ -20,11 +20,18 @@ const LEAK = new Set(['counterFvg', 'sessionExtreme']);
 // zählt nur, was vor dem Sweep feststeht; die zweite Regel darf sie nutzen (Entry-Auslöser).
 const SWEEP_CANDLE = new Set(['sweepRangeAtr', 'sweepRejection', 'sweepBodyAtr', 'zoneDepthAtr', 'sweepDepthPips', 'sweepDepthAtr', 'closedBack']);
 
-const rows = [], breakouts = {};
+const rows = [], obRows = [], breakouts = {}, obBreakouts = {};
 const byKey = {};
 for (const instrument of input.instruments) {
-  const { features } = featuresFor(instrument);
+  const { features, obFeatures } = featuresFor(instrument);
   byKey[instrument] = features;
+  for (const f of obFeatures.values()) {
+    if (f.pivotTime < SPAN_FROM || f.mfe_3h == null) continue;
+    obBreakouts[instrument] = (obBreakouts[instrument] ?? 0) + (f.breakout ? 1 : 0);
+    if (f.breakout) continue;
+    for (const s of SESSIONS) { f[`ls_${s}`] = f.lsSession === s; f[`sweep_${s}`] = f.sweepSession === s; }
+    obRows.push({ ...f, half: half(f.touchedTime), cls: cls(f) });
+  }
   for (const f of features.values()) {
     if (f.pivotTime < SPAN_FROM || f.mfe_3h == null) continue;
     breakouts[f.instrument] = (breakouts[f.instrument] ?? 0) + (f.breakout ? 1 : 0);
@@ -134,6 +141,31 @@ for (const instrument of [...input.instruments, 'ALLE']) {
   const list = instrument === 'ALLE' ? rows : rows.filter(r => r.instrument === instrument);
   out.instruments[instrument].kandidaten = Object.fromEntries(Object.entries(CANDIDATES).map(([n, fn]) =>
     [n, { H1: score(list.filter(r => r.half === 'H1'), fn), H2: score(list.filter(r => r.half === 'H2'), fn) }]));
+}
+
+// Zweite Quelle OB-Kanten: Reaktionsklassen je Quelle und Halbjahr, Merkmale und Kandidaten innerhalb der reinen OB-Sweeps.
+const QUELLEN = {
+  'Pivot (alle)': rows,
+  'Pivot ohne OB-Kante': rows.filter(r => !r.m5ObTick),
+  'Pivot auf OB-Kante (1 Tick)': rows.filter(r => r.m5ObTick),
+  'OB-Kante (alle)': obRows,
+  'OB-Kante, kein Pivot': obRows.filter(r => !r.alsoPivot),
+};
+out.obQuelle = { durchbrueche: obBreakouts, instruments: {} };
+for (const instrument of [...input.instruments, 'ALLE']) {
+  const pick = l => instrument === 'ALLE' ? l : l.filter(r => r.instrument === instrument);
+  const obOnly = pick(QUELLEN['OB-Kante, kein Pivot']), H = { H1: obOnly.filter(r => r.half === 'H1'), H2: obOnly.filter(r => r.half === 'H2') };
+  const feats = Object.fromEntries([...NUM_X, ...BOOL_X].map(f => [f, { H1: effect(H.H1, f), H2: effect(H.H2, f) }]));
+  out.obQuelle.instruments[instrument] = {
+    klassen: Object.fromEntries(Object.entries(QUELLEN).map(([n, l]) => [n, Object.fromEntries(['H1', 'H2'].map(h => {
+      const x = pick(l).filter(r => r.half === h);
+      return [h, { n: x.length, stark: pct(x.filter(r => r.cls === 'stark').length, x.length), keine: pct(x.filter(r => r.cls === 'keine').length, x.length),
+        mfe3hMedian: q(x.map(r => r.mfe_3h), .5) }];
+    }))])),
+    obNurMerkmale: feats,
+    obNurTrenntInBeidenHalbjahren: Object.entries(feats).filter(([, e]) => holds(e.H1, e.H2)).map(([f]) => f),
+    obNurKandidaten: Object.fromEntries(Object.entries(CANDIDATES).map(([n, fn]) => [n, { H1: score(H.H1, fn), H2: score(H.H2, fn) }])),
+  };
 }
 
 // Gegenprobe: Pins, Journal-Gewinner, Muster gegen die gepoolte Regel (ALLE) und die Instrument-Regel.
