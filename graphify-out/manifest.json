@@ -10158,9 +10158,9 @@
     "semantic_hash": ""
   },
   "scripts/dobTradeSetupsFill.mjs": {
-    "mtime": 1795351825.378768,
-    "seen": 1795352041.6945732,
-    "ast_hash": "61c505c35edcbd227b375821dca1c43f",
+    "mtime": 1795358113.2672114,
+    "seen": 1795358301.2504396,
+    "ast_hash": "30ae949f6b5c2d34a3a55ae4691b6e3f",
     "semantic_hash": ""
   },
   "src/composables/useDobChartRoute.js": {
@@ -10170,9 +10170,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeStatistics.js": {
-    "mtime": 1795351780.6319969,
-    "seen": 1795352041.771125,
-    "ast_hash": "1402f85bf181436aa539c86819ca1e63",
+    "mtime": 1795358113.265212,
+    "seen": 1795358301.331579,
+    "ast_hash": "632229216c2425bf6129be67b8acb0a3",
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
@@ -10212,9 +10212,9 @@
     "semantic_hash": ""
   },
   "src/dobAlarm.js": {
-    "mtime": 1795351780.6329954,
-    "seen": 1795352041.7671196,
-    "ast_hash": "b5eb6bf3391aded5c0a52734bdcc47b2",
+    "mtime": 1795358113.2672114,
+    "seen": 1795358301.326065,
+    "ast_hash": "73728fa3128273e0629c9572fe26eb44",
     "semantic_hash": ""
   },
   "supabase/functions/dob-watcher/index.ts": {
@@ -10596,9 +10596,9 @@
     "semantic_hash": ""
   },
   "src/dobPartialProfit.js": {
-    "mtime": 1795351780.6329954,
-    "seen": 1795352041.770129,
-    "ast_hash": "5be628b3d7fdcb0fd706d623a9be54bf",
+    "mtime": 1795358113.2662115,
+    "seen": 1795358301.3295708,
+    "ast_hash": "f87a6bd842a591f91769b682b08ea99b",
     "semantic_hash": ""
   },
   "test/dobPartialProfit.test.js": {
@@ -10764,9 +10764,9 @@
     "semantic_hash": ""
   },
   "src/components/DobSetupConfigPanel.vue": {
-    "mtime": 1795352538.181626,
-    "seen": 1795352733.8549812,
-    "ast_hash": "106c2ee684b52d26601bc8aa9a639808",
+    "mtime": 1795358142.8924854,
+    "seen": 1795358301.2869704,
+    "ast_hash": "4f17f782e7fb0324a124eb772153e652",
     "semantic_hash": ""
   },
   "test/dobSetupConfigPanel.test.js": {
@@ -11430,21 +11430,21 @@
     "semantic_hash": ""
   },
   "test/dobSwingStop.test.js": {
-    "mtime": 1795351869.9518387,
-    "seen": 1795352041.905486,
-    "ast_hash": "432c2cbc3688a7314f7015f2b642e378",
+    "mtime": 1795358158.5208778,
+    "seen": 1795358301.4605935,
+    "ast_hash": "2441436cfe37daa054a45071e297917f",
     "semantic_hash": ""
   },
   "src/dobIntraday.js": {
-    "mtime": 1795351846.8041396,
-    "seen": 1795352041.769127,
-    "ast_hash": "bd99365ed25818093845a2e60de5bd00",
+    "mtime": 1795358113.2662115,
+    "seen": 1795358301.3280656,
+    "ast_hash": "336d9a1ae3fcec319fdf3d1779027cab",
     "semantic_hash": ""
   },
   "src/slAlgo.js": {
-    "mtime": 1795351731.043237,
-    "seen": 1795352041.8196468,
-    "ast_hash": "d6e2b31e793000144320730bde1c97d7",
+    "mtime": 1795358122.8288212,
+    "seen": 1795358301.376749,
+    "ast_hash": "2b87715a134198f8c1c551b878074c8d",
     "semantic_hash": ""
   },
   "test/dobEntryWindowsNy.test.js": {
