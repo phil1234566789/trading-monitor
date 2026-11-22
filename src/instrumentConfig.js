@@ -3,7 +3,7 @@
 // Forex-FVG-Mindestgrößen in Pip: einzige Quelle für alle drei OB-Erkennungskopien und über obMinimum für jeden
 // Aufrufer (Chart, ob_zones, Alarme, DOB, MCP). Ein Aufrufer mit eigener Schwelle wich still vom Chart ab (DOB-POI
 // lief mit der 0,05-%-Schwelle). Herleitung der Werte: Kommentare in src/orderBlockDetection.js.
-export const FOREX_MIN_FVG_PIPS = { '1m': 1, '3m': 1, '5m': 0.4, '15M': 1, '1H': 1, '4H': 4 };
+export const FOREX_MIN_FVG_PIPS = { '1m': 1, '3m': 1, '5m': 0.4, '15M': 1, '1H': 3, '4H': 4 };
 const FOREX_PIP = 0.0001;
 // obMinimum nur für HTF: M1/M5 bleiben null, weil obMinimum(…,'5m') in Konfig-Fingerprints steht (setup1Configuration,
 // TS2 m5OrderBlockMinGap); der Erkennungs-Default liest dieselbe Tabelle, die Schwelle ist also identisch.

@@ -142,8 +142,9 @@ describe.each([['EURUSD', 1.1, 0.0003], ['GBPUSD', 1.3, 0.0004], ['XAUUSD', 2600
   });
 });
 
-// 20.11.2026 06:00 Berlin: bullischer EURUSD-1H-OB mit 1,3-Pip-FVG, im Chart sichtbar, der DOB-POI unbekannt.
-it('DOB-POI findet den EURUSD-1H-OB vom 20.11. 06:00', () => {
+// 20.11.2026 06:00 Berlin: EURUSD-1H-FVG mit 1,3 Pip. Chart und DOB-POI urteilen gleich: seit dem 1H-Minimum 3 Pip (Philip 22.11.)
+// beide ohne OB, mit 3,0 Pip beide mit demselben OB.
+it('DOB-POI urteilt über den EURUSD-1H-OB vom 20.11. 06:00 wie der Chart (Minimum 3 Pip)', () => {
   const t = (iso) => Date.parse(iso) / 1000;
   const h1 = [
     { time: t('2026-11-20T03:00:00Z'), open: 1.09705, high: 1.09769, low: 1.09686, close: 1.09755 },
@@ -153,6 +154,8 @@ it('DOB-POI findet den EURUSD-1H-OB vom 20.11. 06:00', () => {
     { time: t('2026-11-20T07:00:00Z'), open: 1.09847, high: 1.09896, low: 1.09823, close: 1.09836 },
     { time: t('2026-11-20T08:00:00Z'), open: 1.09836, high: 1.0987, low: 1.0983, close: 1.0985 },
   ];
-  const { zones } = dobPoiContext({ htfCandles: { '1h': h1 }, instrument: 'EURUSD' });
-  expect(zones).toContainEqual(expect.objectContaining({ tf: 'H1', side: 'long', top: 1.0981, bottom: 1.09776, startTime: t('2026-11-20T06:00:00Z') }));
+  const poi = (rows) => dobPoiContext({ htfCandles: { '1h': rows }, instrument: 'EURUSD' }).zones.filter((z) => z.tf === 'H1');
+  expect(poi(h1)).toEqual([]);
+  const wide = h1.map((c, i) => (i === 4 ? { ...c, low: 1.0984 } : c));
+  expect(poi(wide)).toContainEqual(expect.objectContaining({ tf: 'H1', side: 'long', top: 1.0981, bottom: 1.09776, startTime: t('2026-11-20T06:00:00Z') }));
 });

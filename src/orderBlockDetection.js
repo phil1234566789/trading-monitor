@@ -49,7 +49,8 @@ const HTF_FOREX_LABELS = new Set(["15M", "1H", "4H"]);
 // 07:00 wurde vom alten 4-Pip-Minimum verschluckt). 4H von 8 auf 4 gesenkt: 8 Pip lag sogar ueber
 // der abgeloesten Prozentschwelle (0,05% sind bei EURUSD ~5,7 Pip) und verschluckte tradebare
 // 4H-Zonen, zuletzt eine 6,1-Pip-FVG bei EURUSD. 15M: Startwert zwischen M5 (0,5) und 1H, ungemessen.
-// 1H weiter auf 1 Pip: EURUSD-1H-FVG 20.11.2026 06:00 mit 1,3 Pip war ein echter POI (test/orderBlocksForexH1Minimum).
+// 1H auf 3 Pip (Philip 22.11.2026): mit 1 Pip verdreifachten sich die DOB-Forex-Trades über die vielen kleinen 1H-POIs; die
+// 1,3-Pip-FVG vom 20.11. 06:00 bildet damit bewusst keinen OB mehr (test/orderBlocksForexH1Minimum).
 // Werte in FOREX_MIN_FVG_PIPS (_shared/instrumentConfig.js), damit obMinimum und dieser Default nie auseinanderlaufen.
 
 // Bug-Report Philip 2026-08-11, direkt im Anschluss an die 1,5-Pip-Absenkung oben: genau die Zone,
