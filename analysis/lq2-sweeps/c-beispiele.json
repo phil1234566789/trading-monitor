@@ -1,0 +1,943 @@
+{
+ "measurement": "c-beispiele-v1",
+ "htfCWinDLoss": [
+  {
+   "asset": "GBPUSD",
+   "richtung": "Long",
+   "lauf": "dob-setup-gbpusd-v3",
+   "entry": "14.10. 18:08",
+   "session": "NY",
+   "entryPreis": 1.31529,
+   "slAlt": 1.31479,
+   "slNeu": 1.31362,
+   "m15Pivot": "14.10. 17:00",
+   "tp": 1.31629,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "14.10. 19:15",
+   "dLoss": "16/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1791991200%3A1791992700%3Aa&instrument=GBPUSD&bar=5m&replay=1792012500"
+  },
+  {
+   "asset": "EURUSD",
+   "richtung": "Long",
+   "lauf": "dob-setup-eurusd-v3",
+   "entry": "17.09. 09:44",
+   "session": "London",
+   "entryPreis": 1.14775,
+   "slAlt": 1.14752,
+   "slNeu": 1.14624,
+   "m15Pivot": "17.09. 07:15",
+   "tp": 1.14821,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "17.09. 14:10",
+   "dLoss": "16/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A1%3A1789620300%3A1789627200%3Ab&instrument=EURUSD&bar=5m&replay=1789661400"
+  },
+  {
+   "asset": "XAUUSD",
+   "richtung": "Long",
+   "lauf": "dob-setup-v3",
+   "entry": "03.11. 16:13",
+   "session": "NY",
+   "entryPreis": 3938.75,
+   "slAlt": 3929.81,
+   "slNeu": 3898.86,
+   "m15Pivot": "03.11. 13:00",
+   "tp": 3956.63,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "04.11. 02:20",
+   "dLoss": "17/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1793711100%3A1793712300%3Aa&instrument=XAUUSD&bar=5m&replay=1793769600"
+  },
+  {
+   "asset": "GBPUSD",
+   "richtung": "Long",
+   "lauf": "dob-setup-gbpusd-v3",
+   "entry": "04.09. 17:40",
+   "session": "NY",
+   "entryPreis": 1.35219,
+   "slAlt": 1.35191,
+   "slNeu": 1.34808,
+   "m15Pivot": "04.09. 14:30",
+   "tp": 1.35275,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "07.09. 08:30",
+   "dLoss": "20/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1788528000%3A1788534900%3Aa&instrument=GBPUSD&bar=5m&replay=1788777000"
+  },
+  {
+   "asset": "EURUSD",
+   "richtung": "Short",
+   "lauf": "dob-setup-eurusd-v3",
+   "entry": "31.07. 10:26",
+   "session": "London",
+   "entryPreis": 1.15105,
+   "slAlt": 1.15158,
+   "slNeu": 1.15266,
+   "m15Pivot": "31.07. 02:15",
+   "tp": 1.14999,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "31.07. 13:00",
+   "dLoss": "16/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A-1%3A1785457800%3A1785485100%3Aa&instrument=EURUSD&bar=5m&replay=1785510000"
+  },
+  {
+   "asset": "XAUUSD",
+   "richtung": "Short",
+   "lauf": "dob-setup-v3",
+   "entry": "16.10. 19:03",
+   "session": "NY",
+   "entryPreis": 4157.98,
+   "slAlt": 4166.24,
+   "slNeu": 4199.08,
+   "m15Pivot": "16.10. 16:15",
+   "tp": 4141.46,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "19.10. 17:50",
+   "dLoss": "18/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1792168200%3A1792169100%3Aa&instrument=XAUUSD&bar=5m&replay=1792439400"
+  },
+  {
+   "asset": "GBPUSD",
+   "richtung": "Short",
+   "lauf": "dob-setup-gbpusd-v3",
+   "entry": "17.08. 21:25",
+   "session": "NY",
+   "entryPreis": 1.35416,
+   "slAlt": 1.35452,
+   "slNeu": 1.35649,
+   "m15Pivot": "17.08. 18:30",
+   "tp": 1.35344,
+   "a": "Win",
+   "c": "Win",
+   "cZeit": "18.08. 05:45",
+   "dLoss": "15/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A-1%3A1786987200%3A1786991100%3Aa&instrument=GBPUSD&bar=5m&replay=1787039100"
+  },
+  {
+   "asset": "EURUSD",
+   "richtung": "Short",
+   "lauf": "dob-setup-eurusd-v3",
+   "entry": "23.03. 18:25",
+   "session": "NY",
+   "entryPreis": 1.15937,
+   "slAlt": 1.16073,
+   "slNeu": 1.16399,
+   "m15Pivot": "23.03. 15:30",
+   "tp": 1.15665,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "24.03. 18:05",
+   "dLoss": "16/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A-1%3A1774279800%3A1774281000%3Ab&instrument=EURUSD&bar=5m&replay=1774386300"
+  },
+  {
+   "asset": "GBPUSD",
+   "richtung": "Long",
+   "lauf": "dob-setup-gbpusd-v3",
+   "entry": "14.07. 20:32",
+   "session": "NY",
+   "entryPreis": 1.33808,
+   "slAlt": 1.33786,
+   "slNeu": 1.33671,
+   "m15Pivot": "14.07. 19:15",
+   "tp": 1.33852,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "14.07. 21:15",
+   "dLoss": "17/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1784018400%3A1784052600%3Aa&instrument=GBPUSD&bar=5m&replay=1784070900"
+  },
+  {
+   "asset": "XAUUSD",
+   "richtung": "Long",
+   "lauf": "dob-setup-v3",
+   "entry": "16.06. 21:22",
+   "session": "NY",
+   "entryPreis": 4339.77,
+   "slAlt": 4336.43,
+   "slNeu": 4325.07,
+   "m15Pivot": "16.06. 19:15",
+   "tp": 4346.45,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "17.06. 03:05",
+   "dLoss": "16/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1781632200%3A1781636400%3Aa&instrument=XAUUSD&bar=5m&replay=1781672700"
+  }
+ ],
+ "gegenbeispiele": [
+  {
+   "asset": "GBPUSD",
+   "richtung": "Long",
+   "lauf": "dob-setup-gbpusd-v3",
+   "entry": "17.09. 10:00",
+   "session": "London",
+   "entryPreis": 1.33881,
+   "slAlt": 1.3382,
+   "slNeu": 1.33787,
+   "m15Pivot": "17.09. 08:00",
+   "tp": 1.34003,
+   "a": "Loss",
+   "c": "Loss",
+   "cZeit": "17.09. 10:10",
+   "dLoss": "4/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1789622700%3A1789626000%3Aa&instrument=GBPUSD&bar=5m&replay=1789647120"
+  },
+  {
+   "asset": "EURUSD",
+   "richtung": "Short",
+   "lauf": "dob-setup-eurusd-v3",
+   "entry": "26.02. 17:04",
+   "session": "NY",
+   "entryPreis": 1.17933,
+   "slAlt": 1.18121,
+   "slNeu": 1.1816,
+   "m15Pivot": "26.02. 15:45",
+   "tp": 1.17557,
+   "a": "Loss",
+   "c": "Loss",
+   "cZeit": "27.02. 08:45",
+   "dLoss": "4/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A-1%3A1772112300%3A1772119200%3Aa&instrument=EURUSD&bar=5m&replay=1772192700"
+  },
+  {
+   "asset": "XAUUSD",
+   "richtung": "Short",
+   "lauf": "dob-setup-v3",
+   "entry": "16.06. 20:21",
+   "session": "NY",
+   "entryPreis": 4340,
+   "slAlt": 4346.4,
+   "slNeu": 4347.1,
+   "m15Pivot": "16.06. 18:00",
+   "tp": 4327.2,
+   "a": "Loss",
+   "c": "Loss",
+   "cZeit": "17.06. 03:05",
+   "dLoss": "3/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1781615100%3A1781628900%3Ab&instrument=XAUUSD&bar=5m&replay=1781672820"
+  },
+  {
+   "asset": "GBPUSD",
+   "richtung": "Long",
+   "lauf": "dob-setup-gbpusd-v3",
+   "entry": "26.05. 19:33",
+   "session": "NY",
+   "entryPreis": 1.34458,
+   "slAlt": 1.34396,
+   "slNeu": 1.34386,
+   "m15Pivot": "26.05. 18:45",
+   "tp": 1.34582,
+   "a": "Loss",
+   "c": "Loss",
+   "cZeit": "26.05. 19:45",
+   "dLoss": "4/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1779811800%3A1779815100%3Aa&instrument=GBPUSD&bar=5m&replay=1779831900"
+  },
+  {
+   "asset": "EURUSD",
+   "richtung": "Short",
+   "lauf": "dob-setup-eurusd-v3",
+   "entry": "30.10. 05:16",
+   "session": "Asia",
+   "entryPreis": 1.11913,
+   "slAlt": 1.12004,
+   "slNeu": 1.12029,
+   "m15Pivot": "30.10. 04:00",
+   "tp": 1.11731,
+   "a": "Loss",
+   "c": "Loss",
+   "cZeit": "30.10. 11:05",
+   "dLoss": "4/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A-1%3A1793324400%3A1793331000%3Ab&instrument=EURUSD&bar=5m&replay=1793369100"
+  }
+ ],
+ "lqCWinALoss": [
+  {
+   "asset": "GBPUSD",
+   "richtung": "Short",
+   "lauf": "dob-lq-sweep-gbpusd-v1",
+   "entry": "06.11. 17:12",
+   "session": "NY",
+   "entryPreis": 1.33611,
+   "slAlt": 1.33662,
+   "slNeu": 1.33778,
+   "m15Pivot": "06.11. 16:15",
+   "tp": 1.33509,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "06.11. 18:55",
+   "dLoss": "11/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-gbpusd-v1%3Adob%3AGBPUSD%3A-1%3A1793969100%3A1793980500%3Aa&instrument=GBPUSD&bar=5m&replay=1794002100"
+  },
+  {
+   "asset": "EURUSD",
+   "richtung": "Long",
+   "lauf": "dob-lq-sweep-eurusd-v0",
+   "entry": "09.11. 18:50",
+   "session": "NY",
+   "entryPreis": 1.12039,
+   "slAlt": 1.12012,
+   "slNeu": 1.1189,
+   "m15Pivot": "09.11. 16:30",
+   "tp": 1.12093,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "09.11. 20:25",
+   "dLoss": "0/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-eurusd-v0%3Adob%3AEURUSD%3A1%3A1794228900%3A1794243000%3Ab&instrument=EURUSD&bar=5m&replay=1794266700"
+  },
+  {
+   "asset": "XAUUSD",
+   "richtung": "Short",
+   "lauf": "dob-lq-sweep-v1",
+   "entry": "19.11. 09:02",
+   "session": "London",
+   "entryPreis": 3735.65,
+   "slAlt": 3741.51,
+   "slNeu": 3744.41,
+   "m15Pivot": "19.11. 06:30",
+   "tp": 3723.93,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "19.11. 12:45",
+   "dLoss": "2/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A-1%3A1795056000%3A1795073100%3Aa&instrument=XAUUSD&bar=5m&replay=1795103100"
+  },
+  {
+   "asset": "GBPUSD",
+   "richtung": "Long",
+   "lauf": "dob-lq-sweep-gbpusd-v1",
+   "entry": "30.10. 17:48",
+   "session": "NY",
+   "entryPreis": 1.33977,
+   "slAlt": 1.33825,
+   "slNeu": 1.33781,
+   "m15Pivot": "30.10. 16:00",
+   "tp": 1.34281,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "02.11. 09:35",
+   "dLoss": "1/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-gbpusd-v1%3Adob%3AGBPUSD%3A1%3A1793373600%3A1793375700%3Aa&instrument=GBPUSD&bar=5m&replay=1793622900"
+  },
+  {
+   "asset": "XAUUSD",
+   "richtung": "Short",
+   "lauf": "dob-lq-sweep-v1",
+   "entry": "28.10. 10:08",
+   "session": "London",
+   "entryPreis": 4052.05,
+   "slAlt": 4058.22,
+   "slNeu": 4070.8,
+   "m15Pivot": "28.10. 01:00",
+   "tp": 4039.71,
+   "a": "Loss",
+   "c": "Win",
+   "cZeit": "28.10. 15:30",
+   "dLoss": "4/20",
+   "link": "https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A-1%3A1793151000%3A1793177700%3Aa&instrument=XAUUSD&bar=5m&replay=1793212200"
+  }
+ ],
+ "anzahl": {
+  "htfCWinDLoss": 33,
+  "htfGegen": 9,
+  "lqCWinALoss": 343
+ },
+ "zuFrueh": {
+  "dob-lq-sweep-gbpusd-v1": {
+   "gesamt": {
+    "losses": 584,
+    "mitM15": 580,
+    "ja": 191,
+    "nein": 389,
+    "offen": 0,
+    "anteilJa": 32.9
+   },
+   "H1": {
+    "losses": 332,
+    "mitM15": 328,
+    "ja": 114,
+    "nein": 214,
+    "offen": 0,
+    "anteilJa": 34.8
+   },
+   "H2": {
+    "losses": 252,
+    "mitM15": 252,
+    "ja": 77,
+    "nein": 175,
+    "offen": 0,
+    "anteilJa": 30.6
+   },
+   "treffer": {
+    "losses": 391,
+    "mitM15": 388,
+    "ja": 117,
+    "nein": 271,
+    "offen": 0,
+    "anteilJa": 30.2
+   },
+   "keinTreffer": {
+    "losses": 193,
+    "mitM15": 192,
+    "ja": 74,
+    "nein": 118,
+    "offen": 0,
+    "anteilJa": 38.5
+   }
+  },
+  "dob-setup-gbpusd-v3": {
+   "gesamt": {
+    "losses": 248,
+    "mitM15": 247,
+    "ja": 89,
+    "nein": 158,
+    "offen": 0,
+    "anteilJa": 36
+   },
+   "H1": {
+    "losses": 169,
+    "mitM15": 168,
+    "ja": 61,
+    "nein": 107,
+    "offen": 0,
+    "anteilJa": 36.3
+   },
+   "H2": {
+    "losses": 79,
+    "mitM15": 79,
+    "ja": 28,
+    "nein": 51,
+    "offen": 0,
+    "anteilJa": 35.4
+   },
+   "treffer": {
+    "losses": 181,
+    "mitM15": 181,
+    "ja": 68,
+    "nein": 113,
+    "offen": 0,
+    "anteilJa": 37.6
+   },
+   "keinTreffer": {
+    "losses": 67,
+    "mitM15": 66,
+    "ja": 21,
+    "nein": 45,
+    "offen": 0,
+    "anteilJa": 31.8
+   }
+  },
+  "dob-lq-sweep-eurusd-v0": {
+   "gesamt": {
+    "losses": 728,
+    "mitM15": 721,
+    "ja": 228,
+    "nein": 493,
+    "offen": 0,
+    "anteilJa": 31.6
+   },
+   "H1": {
+    "losses": 411,
+    "mitM15": 407,
+    "ja": 124,
+    "nein": 283,
+    "offen": 0,
+    "anteilJa": 30.5
+   },
+   "H2": {
+    "losses": 317,
+    "mitM15": 314,
+    "ja": 104,
+    "nein": 210,
+    "offen": 0,
+    "anteilJa": 33.1
+   },
+   "treffer": {
+    "losses": 491,
+    "mitM15": 485,
+    "ja": 154,
+    "nein": 331,
+    "offen": 0,
+    "anteilJa": 31.8
+   },
+   "keinTreffer": {
+    "losses": 237,
+    "mitM15": 236,
+    "ja": 74,
+    "nein": 162,
+    "offen": 0,
+    "anteilJa": 31.4
+   }
+  },
+  "dob-setup-eurusd-v3": {
+   "gesamt": {
+    "losses": 196,
+    "mitM15": 195,
+    "ja": 55,
+    "nein": 140,
+    "offen": 0,
+    "anteilJa": 28.2
+   },
+   "H1": {
+    "losses": 122,
+    "mitM15": 121,
+    "ja": 26,
+    "nein": 95,
+    "offen": 0,
+    "anteilJa": 21.5
+   },
+   "H2": {
+    "losses": 74,
+    "mitM15": 74,
+    "ja": 29,
+    "nein": 45,
+    "offen": 0,
+    "anteilJa": 39.2
+   },
+   "treffer": {
+    "losses": 140,
+    "mitM15": 139,
+    "ja": 37,
+    "nein": 102,
+    "offen": 0,
+    "anteilJa": 26.6
+   },
+   "keinTreffer": {
+    "losses": 56,
+    "mitM15": 56,
+    "ja": 18,
+    "nein": 38,
+    "offen": 0,
+    "anteilJa": 32.1
+   }
+  },
+  "dob-lq-sweep-v1": {
+   "gesamt": {
+    "losses": 341,
+    "mitM15": 341,
+    "ja": 92,
+    "nein": 249,
+    "offen": 0,
+    "anteilJa": 27
+   },
+   "H1": {
+    "losses": 169,
+    "mitM15": 169,
+    "ja": 40,
+    "nein": 129,
+    "offen": 0,
+    "anteilJa": 23.7
+   },
+   "H2": {
+    "losses": 172,
+    "mitM15": 172,
+    "ja": 52,
+    "nein": 120,
+    "offen": 0,
+    "anteilJa": 30.2
+   },
+   "treffer": {
+    "losses": 259,
+    "mitM15": 259,
+    "ja": 73,
+    "nein": 186,
+    "offen": 0,
+    "anteilJa": 28.2
+   },
+   "keinTreffer": {
+    "losses": 82,
+    "mitM15": 82,
+    "ja": 19,
+    "nein": 63,
+    "offen": 0,
+    "anteilJa": 23.2
+   }
+  },
+  "dob-setup-v3": {
+   "gesamt": {
+    "losses": 334,
+    "mitM15": 332,
+    "ja": 102,
+    "nein": 230,
+    "offen": 0,
+    "anteilJa": 30.7
+   },
+   "H1": {
+    "losses": 200,
+    "mitM15": 199,
+    "ja": 57,
+    "nein": 142,
+    "offen": 0,
+    "anteilJa": 28.6
+   },
+   "H2": {
+    "losses": 134,
+    "mitM15": 133,
+    "ja": 45,
+    "nein": 88,
+    "offen": 0,
+    "anteilJa": 33.8
+   },
+   "treffer": {
+    "losses": 257,
+    "mitM15": 256,
+    "ja": 78,
+    "nein": 178,
+    "offen": 0,
+    "anteilJa": 30.5
+   },
+   "keinTreffer": {
+    "losses": 77,
+    "mitM15": 76,
+    "ja": 24,
+    "nein": 52,
+    "offen": 0,
+    "anteilJa": 31.6
+   }
+  },
+  "alle LQ-Sweep": {
+   "gesamt": {
+    "losses": 1653,
+    "mitM15": 1642,
+    "ja": 511,
+    "nein": 1131,
+    "offen": 0,
+    "anteilJa": 31.1
+   },
+   "H1": {
+    "losses": 912,
+    "mitM15": 904,
+    "ja": 278,
+    "nein": 626,
+    "offen": 0,
+    "anteilJa": 30.8
+   },
+   "H2": {
+    "losses": 741,
+    "mitM15": 738,
+    "ja": 233,
+    "nein": 505,
+    "offen": 0,
+    "anteilJa": 31.6
+   },
+   "treffer": {
+    "losses": 1141,
+    "mitM15": 1132,
+    "ja": 344,
+    "nein": 788,
+    "offen": 0,
+    "anteilJa": 30.4
+   },
+   "keinTreffer": {
+    "losses": 512,
+    "mitM15": 510,
+    "ja": 167,
+    "nein": 343,
+    "offen": 0,
+    "anteilJa": 32.7
+   }
+  },
+  "alle HTF-OB v3": {
+   "gesamt": {
+    "losses": 778,
+    "mitM15": 774,
+    "ja": 246,
+    "nein": 528,
+    "offen": 0,
+    "anteilJa": 31.8
+   },
+   "H1": {
+    "losses": 491,
+    "mitM15": 488,
+    "ja": 144,
+    "nein": 344,
+    "offen": 0,
+    "anteilJa": 29.5
+   },
+   "H2": {
+    "losses": 287,
+    "mitM15": 286,
+    "ja": 102,
+    "nein": 184,
+    "offen": 0,
+    "anteilJa": 35.7
+   },
+   "treffer": {
+    "losses": 578,
+    "mitM15": 576,
+    "ja": 183,
+    "nein": 393,
+    "offen": 0,
+    "anteilJa": 31.8
+   },
+   "keinTreffer": {
+    "losses": 200,
+    "mitM15": 198,
+    "ja": 63,
+    "nein": 135,
+    "offen": 0,
+    "anteilJa": 31.8
+   }
+  },
+  "alle": {
+   "gesamt": {
+    "losses": 2431,
+    "mitM15": 2416,
+    "ja": 757,
+    "nein": 1659,
+    "offen": 0,
+    "anteilJa": 31.3
+   },
+   "H1": {
+    "losses": 1403,
+    "mitM15": 1392,
+    "ja": 422,
+    "nein": 970,
+    "offen": 0,
+    "anteilJa": 30.3
+   },
+   "H2": {
+    "losses": 1028,
+    "mitM15": 1024,
+    "ja": 335,
+    "nein": 689,
+    "offen": 0,
+    "anteilJa": 32.7
+   },
+   "treffer": {
+    "losses": 1719,
+    "mitM15": 1708,
+    "ja": 527,
+    "nein": 1181,
+    "offen": 0,
+    "anteilJa": 30.9
+   },
+   "keinTreffer": {
+    "losses": 712,
+    "mitM15": 708,
+    "ja": 230,
+    "nein": 478,
+    "offen": 0,
+    "anteilJa": 32.5
+   }
+  }
+ },
+ "haelt": {
+  "dob-lq-sweep-gbpusd-v1": {
+   "gesamt": {
+    "n": 770,
+    "p2HaeltDocht": 61.3,
+    "kontrolleHaeltDocht": 60.8,
+    "p2HaeltSchluss": 64.8,
+    "kontrolleHaeltSchluss": 65.6
+   },
+   "H1": {
+    "n": 438,
+    "p2HaeltDocht": 60.3,
+    "kontrolleHaeltDocht": 59.7,
+    "p2HaeltSchluss": 63.7,
+    "kontrolleHaeltSchluss": 64.1
+   },
+   "H2": {
+    "n": 332,
+    "p2HaeltDocht": 62.7,
+    "kontrolleHaeltDocht": 62.3,
+    "p2HaeltSchluss": 66.3,
+    "kontrolleHaeltSchluss": 67.7
+   }
+  },
+  "dob-setup-gbpusd-v3": {
+   "gesamt": {
+    "n": 345,
+    "p2HaeltDocht": 58.8,
+    "kontrolleHaeltDocht": 55.4,
+    "p2HaeltSchluss": 63.5,
+    "kontrolleHaeltSchluss": 60.3
+   },
+   "H1": {
+    "n": 223,
+    "p2HaeltDocht": 57.8,
+    "kontrolleHaeltDocht": 53.7,
+    "p2HaeltSchluss": 61.9,
+    "kontrolleHaeltSchluss": 58.4
+   },
+   "H2": {
+    "n": 122,
+    "p2HaeltDocht": 60.7,
+    "kontrolleHaeltDocht": 58.5,
+    "p2HaeltSchluss": 66.4,
+    "kontrolleHaeltSchluss": 63.7
+   }
+  },
+  "dob-lq-sweep-eurusd-v0": {
+   "gesamt": {
+    "n": 985,
+    "p2HaeltDocht": 60.3,
+    "kontrolleHaeltDocht": 60.6,
+    "p2HaeltSchluss": 63.4,
+    "kontrolleHaeltSchluss": 64.1
+   },
+   "H1": {
+    "n": 570,
+    "p2HaeltDocht": 60,
+    "kontrolleHaeltDocht": 61.3,
+    "p2HaeltSchluss": 61.4,
+    "kontrolleHaeltSchluss": 64.6
+   },
+   "H2": {
+    "n": 415,
+    "p2HaeltDocht": 60.7,
+    "kontrolleHaeltDocht": 59.5,
+    "p2HaeltSchluss": 66,
+    "kontrolleHaeltSchluss": 63.4
+   }
+  },
+  "dob-setup-eurusd-v3": {
+   "gesamt": {
+    "n": 262,
+    "p2HaeltDocht": 59.5,
+    "kontrolleHaeltDocht": 59,
+    "p2HaeltSchluss": 61.8,
+    "kontrolleHaeltSchluss": 62.9
+   },
+   "H1": {
+    "n": 162,
+    "p2HaeltDocht": 54.9,
+    "kontrolleHaeltDocht": 55.9,
+    "p2HaeltSchluss": 56.2,
+    "kontrolleHaeltSchluss": 58.9
+   },
+   "H2": {
+    "n": 100,
+    "p2HaeltDocht": 67,
+    "kontrolleHaeltDocht": 64.2,
+    "p2HaeltSchluss": 71,
+    "kontrolleHaeltSchluss": 69.5
+   }
+  },
+  "dob-lq-sweep-v1": {
+   "gesamt": {
+    "n": 495,
+    "p2HaeltDocht": 56.8,
+    "kontrolleHaeltDocht": 58.3,
+    "p2HaeltSchluss": 62.4,
+    "kontrolleHaeltSchluss": 63.6
+   },
+   "H1": {
+    "n": 258,
+    "p2HaeltDocht": 55.4,
+    "kontrolleHaeltDocht": 57.9,
+    "p2HaeltSchluss": 60.5,
+    "kontrolleHaeltSchluss": 62.5
+   },
+   "H2": {
+    "n": 237,
+    "p2HaeltDocht": 58.2,
+    "kontrolleHaeltDocht": 58.7,
+    "p2HaeltSchluss": 64.6,
+    "kontrolleHaeltSchluss": 64.7
+   }
+  },
+  "dob-setup-v3": {
+   "gesamt": {
+    "n": 484,
+    "p2HaeltDocht": 58.9,
+    "kontrolleHaeltDocht": 56.8,
+    "p2HaeltSchluss": 62.2,
+    "kontrolleHaeltSchluss": 62.3
+   },
+   "H1": {
+    "n": 276,
+    "p2HaeltDocht": 57.2,
+    "kontrolleHaeltDocht": 54.6,
+    "p2HaeltSchluss": 59.8,
+    "kontrolleHaeltSchluss": 59.7
+   },
+   "H2": {
+    "n": 208,
+    "p2HaeltDocht": 61.1,
+    "kontrolleHaeltDocht": 59.7,
+    "p2HaeltSchluss": 65.4,
+    "kontrolleHaeltSchluss": 65.7
+   }
+  },
+  "alle LQ-Sweep": {
+   "gesamt": {
+    "n": 2250,
+    "p2HaeltDocht": 59.9,
+    "kontrolleHaeltDocht": 60.2,
+    "p2HaeltSchluss": 63.6,
+    "kontrolleHaeltSchluss": 64.5
+   },
+   "H1": {
+    "n": 1266,
+    "p2HaeltDocht": 59.2,
+    "kontrolleHaeltDocht": 60.1,
+    "p2HaeltSchluss": 62,
+    "kontrolleHaeltSchluss": 64
+   },
+   "H2": {
+    "n": 984,
+    "p2HaeltDocht": 60.8,
+    "kontrolleHaeltDocht": 60.3,
+    "p2HaeltSchluss": 65.8,
+    "kontrolleHaeltSchluss": 65.2
+   }
+  },
+  "alle HTF-OB v3": {
+   "gesamt": {
+    "n": 1091,
+    "p2HaeltDocht": 59,
+    "kontrolleHaeltDocht": 56.9,
+    "p2HaeltSchluss": 62.5,
+    "kontrolleHaeltSchluss": 61.8
+   },
+   "H1": {
+    "n": 661,
+    "p2HaeltDocht": 56.9,
+    "kontrolleHaeltDocht": 54.6,
+    "p2HaeltSchluss": 59.6,
+    "kontrolleHaeltSchluss": 59
+   },
+   "H2": {
+    "n": 430,
+    "p2HaeltDocht": 62.3,
+    "kontrolleHaeltDocht": 60.4,
+    "p2HaeltSchluss": 67,
+    "kontrolleHaeltSchluss": 66
+   }
+  },
+  "alle": {
+   "gesamt": {
+    "n": 3341,
+    "p2HaeltDocht": 59.6,
+    "kontrolleHaeltDocht": 59.1,
+    "p2HaeltSchluss": 63.3,
+    "kontrolleHaeltSchluss": 63.6
+   },
+   "H1": {
+    "n": 1927,
+    "p2HaeltDocht": 58.4,
+    "kontrolleHaeltDocht": 58.2,
+    "p2HaeltSchluss": 61.2,
+    "kontrolleHaeltSchluss": 62.3
+   },
+   "H2": {
+    "n": 1414,
+    "p2HaeltDocht": 61.2,
+    "kontrolleHaeltDocht": 60.3,
+    "p2HaeltSchluss": 66.1,
+    "kontrolleHaeltSchluss": 65.4
+   }
+  }
+ }
+}

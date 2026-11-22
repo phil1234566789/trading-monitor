@@ -83,6 +83,22 @@ function structureSl(P, tfKey, t, side, sl) {
   }
   return best && { price: best.price - side * P.buffer, pivotTime: best.pivotTime, swing: best.price };
 }
+// Erste Kerze ab fromTime (Kerzenstart), die das Ziel berührt; SL wird ignoriert.
+function firstTouch(P, fromTime, side, price) {
+  for (let i = lb(P.c5, fromTime, x => x.time); i < P.c5.length && P.c5[i].time < fromTime + HORIZON; i++)
+    if (side === -1 ? P.c5[i].low <= price : P.c5[i].high >= price) return P.c5[i].time;
+  return null;
+}
+// Wird ein Level (gegen die Trade-Richtung) zwischen fromTime und toTime (einschließlich, konservativ) per Docht bzw. Schluss gebrochen?
+function brokenBetween(P, fromTime, toTime, side, level) {
+  let wick = false, close = false;
+  for (let i = lb(P.c5, fromTime, x => x.time); i < P.c5.length && P.c5[i].time <= toTime; i++) {
+    const x = P.c5[i];
+    if (side === -1 ? x.high >= level : x.low <= level) wick = true;
+    if (side === -1 ? x.close > level : x.close < level) { close = true; break; }
+  }
+  return { wick, close };
+}
 // M5-Simulation ab der Entry-Kerze; SL und Ziel in derselben Kerze zählt konservativ als SL.
 function simulate(P, entryTime, side, sl, target) {
   for (let i = lb(P.c5, Math.floor(entryTime / 300) * 300, x => x.time); i < P.c5.length && P.c5[i].time < entryTime + HORIZON; i++) {
@@ -125,10 +141,36 @@ for (const instrument of input.instruments) {
       if (!s) { row[`c${tfKey}`] = { R: ra, keinPunkt: obs.length > 0 || hitStrict }; continue; }
       const res = simulate(P, tr.entry_time, side, s.price, tr.target_price), newRisk = Math.abs(s.price - tr.entry_price);
       row[`c${tfKey}`] = { R: res == null ? 0 : res.win ? +(Math.abs(tr.target_price - tr.entry_price) / newRisk).toFixed(3) : -1,
-        sl: +s.price.toFixed(5), swing: B(s.pivotTime), riskFaktor: +(newRisk / risk).toFixed(2), ergebnis: res ? (res.win ? 'win' : 'loss') : 'offen', zeit: res ? B(res.time) : null };
+        sl: +s.price.toFixed(5), swing: B(s.pivotTime), riskFaktor: +(newRisk / risk).toFixed(2), ergebnis: res ? (res.win ? 'win' : 'loss') : 'offen', zeit: res ? B(res.time) : null,
+        zeitSec: res?.time ?? null };
     }
     if (row.cM15.sl != null) row.cM15.R_kR = withSl(P, row, row.cM15.sl, 'kR');
+    // c-beispiele: M15-P2 für jeden Trade (auch ohne Treffer), Zielzeit ohne SL, „zu früh ausgestoppt“ und Halten des P2 bis zum Ziel.
+    row.exitTime = tr.exit_time; row.lossTime = own && !own.win ? own.time : null;
+    const s15 = structureSl(P, 'M15', t, side, tr.stop_price);
+    row.m15 = s15 && { sl: +s15.price.toFixed(5), swing: B(s15.pivotTime), faktor: Math.abs(s15.price - tr.entry_price) / risk };
+    row.targetTime = firstTouch(P, t, side, tr.target_price);
+    if (row.lossTime && s15) {
+      // Nach dem DOB-Stopp: Ziel zuerst (ja) oder das M15-P2-Level jenseits des Stopps zuerst (nein); gleiche Kerze = nein.
+      const tt = firstTouch(P, row.lossTime + 300, side, tr.target_price), bt = firstTouch(P, row.lossTime + 300, -side, s15.price); // Level liegt gegen die Trade-Richtung
+      row.zuFrueh = bt != null && (tt == null || bt <= tt) ? 'nein' : tt == null ? 'offen' : 'ja';
+    }
+    if (row.targetTime && s15) row.haelt = brokenBetween(P, t, row.targetTime, side, s15.price);
     rows.push(row);
+  }
+  // Halten gleich weiter Kontroll-Level: Faktor des M15-P2 eines zufällig gezogenen anderen Trades desselben Laufs (eigener Seed, damit (d) unverändert bleibt).
+  const rndHold = mulberry32(CONTROL_SEED + 1);
+  for (const run of [...new Set(rows.filter(r => r.instrument === instrument).map(r => r.run))]) {
+    const pool = rows.filter(r => r.run === run && r.m15), reached = pool.filter(r => r.targetTime);
+    for (const row of reached) {
+      let wick = 0, close = 0;
+      for (let k = 0; k < CONTROL_REPS; k++) {
+        let j = Math.floor(rndHold() * pool.length); if (pool[j] === row) j = (j + 1) % pool.length;
+        const b = brokenBetween(P, Math.floor(row.entryTime / 300) * 300, row.targetTime, row.side, row.entryPrice - row.side * pool[j].m15.faktor * Math.abs(row.entryPrice - row.sl));
+        wick += b.wick ? 1 : 0; close += b.close ? 1 : 0;
+      }
+      row.haeltKontrolle = { wickGebrochen: wick / CONTROL_REPS, closeGebrochen: close / CONTROL_REPS };
+    }
   }
   // Kontrolle (d): SL-Faktor von (c) M15 eines zufällig gezogenen ANDEREN Treffers desselben Laufs, angewandt aufs eigene DOB-Risiko.
   // Prüft, ob der Strukturpunkt etwas bringt oder nur die SL-Weite. Fester Seed, 20 Wiederholungen.

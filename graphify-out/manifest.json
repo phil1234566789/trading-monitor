@@ -11496,9 +11496,9 @@
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/slStattSperre.mjs": {
-    "mtime": 1795343933.554382,
-    "seen": 1795344059.665482,
-    "ast_hash": "6722b978aca96c8b713ae64d223ebe97",
+    "mtime": 1795346252.1076155,
+    "seen": 1795346362.4825542,
+    "ast_hash": "0a5799c90c9e5f3dd4cec8f06642c244",
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/svgDr148.mjs": {
@@ -11508,9 +11508,9 @@
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/README.md": {
-    "mtime": 1795344175.5156786,
-    "seen": 1795344242.2325823,
-    "ast_hash": "188edceff3a1a1a6fa4e65dd971ad5b4",
+    "mtime": 1795346298.67562,
+    "seen": 1795346362.8397565,
+    "ast_hash": "5d28b250ba2b5cc26fcdfa4eefe03d93",
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/fall-dr148.svg": {
@@ -11520,8 +11520,8 @@
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/gegenprobe-c.json": {
-    "mtime": 1795343965.1591988,
-    "seen": 1795344059.6629744,
+    "mtime": 1795346262.968616,
+    "seen": 1795346362.4805546,
     "ast_hash": "23a8307752984f18476c035030a10a56",
     "semantic_hash": ""
   },
@@ -11529,6 +11529,18 @@
     "mtime": 1795343964.4544618,
     "seen": 1795344059.6629744,
     "ast_hash": "3bad135d889b62e7da5cfc7906b5387a",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/c-beispiele.json": {
+    "mtime": 1795346262.78925,
+    "seen": 1795346362.478554,
+    "ast_hash": "5f471bdd86eea365e9a5e68320c3207e",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/cBeispiele.mjs": {
+    "mtime": 1795346225.2080114,
+    "seen": 1795346362.479554,
+    "ast_hash": "428547d04ad21db1ef1831e74e981e72",
     "semantic_hash": ""
   }
 }

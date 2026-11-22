@@ -459,3 +459,79 @@ Fett markiert sind Halbjahre, in denen die verworfenen Trades mindestens gleich 
 - **Ergebnis:** Ohne Struktur-Pflicht verliert die Regel deutlich weniger Winner (42 statt 68 %), hebt die WR aber auch nur um
   1,3 Punkte. Stabil in beiden Halbjahren ist das wieder nur bei XAU. Auf der TS1.1-Vorauswahl trennen die LS-Merkmale
   Gewinner und Verlierer kaum; das deckt sich mit der Trade-Ebene ganz oben.
+
+## c-beispiele: Fälle zum Durchklicken und „Richtung stimmt“
+
+Skript `cBeispiele.mjs` → `c-beispiele.json` (Datengrundlage `slStattSperre.mjs`). Zeiten Berlin, (c) = SL hinter dem letzten unberührten M15-P2, Ziel fest; d-Loss = Losses der Kontrolle (d) in 20 Ziehungen. Die Chart-Links haben das Format von `dobChartUrl` (`src/dobAlarm.js`), Replay 4 h nach dem späteren Exit wie `dobChartLink`. Auswahl: NY/London zuerst, Assets im Wechsel, je Asset und Monat ein Fall.
+
+**HTF-OB v3: (c) Win, (d) in ≥ 15 von 20 Ziehungen Loss** (33 Fälle insgesamt)
+
+| # | Asset · Richtung · Lauf | Entry | Entry-Preis | SL alt | SL neu (M15-P2) | TP | a / c | d-Loss | Chart |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | GBPUSD Long · setup-gbpusd-v3 | 14.10. 18:08 NY | 1,31529 | 1,31479 | 1,31362 (14.10. 17:00) | 1,31629 | Loss / Win (14.10. 19:15) | 16/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1791991200%3A1791992700%3Aa&instrument=GBPUSD&bar=5m&replay=1792012500) |
+| 2 | EURUSD Long · setup-eurusd-v3 | 17.09. 09:44 London | 1,14775 | 1,14752 | 1,14624 (17.09. 07:15) | 1,14821 | Loss / Win (17.09. 14:10) | 16/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A1%3A1789620300%3A1789627200%3Ab&instrument=EURUSD&bar=5m&replay=1789661400) |
+| 3 | XAUUSD Long · setup-v3 | 03.11. 16:13 NY | 3938,75 | 3929,81 | 3898,86 (03.11. 13:00) | 3956,63 | Loss / Win (04.11. 02:20) | 17/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1793711100%3A1793712300%3Aa&instrument=XAUUSD&bar=5m&replay=1793769600) |
+| 4 | GBPUSD Long · setup-gbpusd-v3 | 04.09. 17:40 NY | 1,35219 | 1,35191 | 1,34808 (04.09. 14:30) | 1,35275 | Loss / Win (07.09. 08:30) | 20/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1788528000%3A1788534900%3Aa&instrument=GBPUSD&bar=5m&replay=1788777000) |
+| 5 | EURUSD Short · setup-eurusd-v3 | 31.07. 10:26 London | 1,15105 | 1,15158 | 1,15266 (31.07. 02:15) | 1,14999 | Loss / Win (31.07. 13:00) | 16/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A-1%3A1785457800%3A1785485100%3Aa&instrument=EURUSD&bar=5m&replay=1785510000) |
+| 6 | XAUUSD Short · setup-v3 | 16.10. 19:03 NY | 4157,98 | 4166,24 | 4199,08 (16.10. 16:15) | 4141,46 | Loss / Win (19.10. 17:50) | 18/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1792168200%3A1792169100%3Aa&instrument=XAUUSD&bar=5m&replay=1792439400) |
+| 7 | GBPUSD Short · setup-gbpusd-v3 | 17.08. 21:25 NY | 1,35416 | 1,35452 | 1,35649 (17.08. 18:30) | 1,35344 | Win / Win (18.08. 05:45) | 15/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A-1%3A1786987200%3A1786991100%3Aa&instrument=GBPUSD&bar=5m&replay=1787039100) |
+| 8 | EURUSD Short · setup-eurusd-v3 | 23.03. 18:25 NY | 1,15937 | 1,16073 | 1,16399 (23.03. 15:30) | 1,15665 | Loss / Win (24.03. 18:05) | 16/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A-1%3A1774279800%3A1774281000%3Ab&instrument=EURUSD&bar=5m&replay=1774386300) |
+| 9 | GBPUSD Long · setup-gbpusd-v3 | 14.07. 20:32 NY | 1,33808 | 1,33786 | 1,33671 (14.07. 19:15) | 1,33852 | Loss / Win (14.07. 21:15) | 17/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1784018400%3A1784052600%3Aa&instrument=GBPUSD&bar=5m&replay=1784070900) |
+| 10 | XAUUSD Long · setup-v3 | 16.06. 21:22 NY | 4339,77 | 4336,43 | 4325,07 (16.06. 19:15) | 4346,45 | Loss / Win (17.06. 03:05) | 16/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A1%3A1781632200%3A1781636400%3Aa&instrument=XAUUSD&bar=5m&replay=1781672700) |
+
+**Gegenbeispiele HTF-OB v3: (c) Loss, (d) in ≥ 15 von 20 Ziehungen Win** (9 Fälle insgesamt)
+
+| # | Asset · Richtung · Lauf | Entry | Entry-Preis | SL alt | SL neu (M15-P2) | TP | a / c | d-Loss | Chart |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | GBPUSD Long · setup-gbpusd-v3 | 17.09. 10:00 London | 1,33881 | 1,3382 | 1,33787 (17.09. 08:00) | 1,34003 | Loss / Loss (17.09. 10:10) | 4/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1789622700%3A1789626000%3Aa&instrument=GBPUSD&bar=5m&replay=1789647120) |
+| 2 | EURUSD Short · setup-eurusd-v3 | 26.02. 17:04 NY | 1,17933 | 1,18121 | 1,1816 (26.02. 15:45) | 1,17557 | Loss / Loss (27.02. 08:45) | 4/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A-1%3A1772112300%3A1772119200%3Aa&instrument=EURUSD&bar=5m&replay=1772192700) |
+| 3 | XAUUSD Short · setup-v3 | 16.06. 20:21 NY | 4340 | 4346,4 | 4347,1 (16.06. 18:00) | 4327,2 | Loss / Loss (17.06. 03:05) | 3/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-v3%3Adob%3AXAUUSD%3A-1%3A1781615100%3A1781628900%3Ab&instrument=XAUUSD&bar=5m&replay=1781672820) |
+| 4 | GBPUSD Long · setup-gbpusd-v3 | 26.05. 19:33 NY | 1,34458 | 1,34396 | 1,34386 (26.05. 18:45) | 1,34582 | Loss / Loss (26.05. 19:45) | 4/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-gbpusd-v3%3Adob%3AGBPUSD%3A1%3A1779811800%3A1779815100%3Aa&instrument=GBPUSD&bar=5m&replay=1779831900) |
+| 5 | EURUSD Short · setup-eurusd-v3 | 30.10. 05:16 Asia | 1,11913 | 1,12004 | 1,12029 (30.10. 04:00) | 1,11731 | Loss / Loss (30.10. 11:05) | 4/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-setup-eurusd-v3%3Adob%3AEURUSD%3A-1%3A1793324400%3A1793331000%3Ab&instrument=EURUSD&bar=5m&replay=1793369100) |
+
+**LQ-Sweep: (c) Win statt (a) Loss** (343 Fälle insgesamt)
+
+| # | Asset · Richtung · Lauf | Entry | Entry-Preis | SL alt | SL neu (M15-P2) | TP | a / c | d-Loss | Chart |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | GBPUSD Short · lq-sweep-gbpusd-v1 | 06.11. 17:12 NY | 1,33611 | 1,33662 | 1,33778 (06.11. 16:15) | 1,33509 | Loss / Win (06.11. 18:55) | 11/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-gbpusd-v1%3Adob%3AGBPUSD%3A-1%3A1793969100%3A1793980500%3Aa&instrument=GBPUSD&bar=5m&replay=1794002100) |
+| 2 | EURUSD Long · lq-sweep-eurusd-v0 | 09.11. 18:50 NY | 1,12039 | 1,12012 | 1,1189 (09.11. 16:30) | 1,12093 | Loss / Win (09.11. 20:25) | 0/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-eurusd-v0%3Adob%3AEURUSD%3A1%3A1794228900%3A1794243000%3Ab&instrument=EURUSD&bar=5m&replay=1794266700) |
+| 3 | XAUUSD Short · lq-sweep-v1 | 19.11. 09:02 London | 3735,65 | 3741,51 | 3744,41 (19.11. 06:30) | 3723,93 | Loss / Win (19.11. 12:45) | 2/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A-1%3A1795056000%3A1795073100%3Aa&instrument=XAUUSD&bar=5m&replay=1795103100) |
+| 4 | GBPUSD Long · lq-sweep-gbpusd-v1 | 30.10. 17:48 NY | 1,33977 | 1,33825 | 1,33781 (30.10. 16:00) | 1,34281 | Loss / Win (02.11. 09:35) | 1/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-gbpusd-v1%3Adob%3AGBPUSD%3A1%3A1793373600%3A1793375700%3Aa&instrument=GBPUSD&bar=5m&replay=1793622900) |
+| 5 | XAUUSD Short · lq-sweep-v1 | 28.10. 10:08 London | 4052,05 | 4058,22 | 4070,8 (28.10. 01:00) | 4039,71 | Loss / Win (28.10. 15:30) | 4/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A-1%3A1793151000%3A1793177700%3Aa&instrument=XAUUSD&bar=5m&replay=1793212200) |
+
+Auffällig in den Gegenbeispielen: Der neue SL liegt dort fast auf dem alten (Faktor 1,0–1,2). Der M15-P2 lag knapp hinter dem
+DOB-SL, eine zufällig weitere Kontrolle hatte mehr Luft.
+
+**„Eigentlich Win, nur zu früh ausgestoppt“:** Alle DOB-Losses mit M15-P2 (2.416 von 2.431). Gemessen wird nach dem Stopp,
+ob zuerst das ursprüngliche Ziel kommt (ja) oder zuerst der Bruch des M15-P2-Levels per Docht (nein). Gleiche Kerze zählt als
+nein, 10 Tage Horizont.
+
+| Lauf | ja gesamt | H1 | H2 | bei Anti-Confluence-Treffern / ohne |
+|---|---|---|---|---|
+| LQ-Sweep GBP v1 | 32,9 % (191/580) | 34,8 % | 30,6 % | 30,2 / 38,5 % |
+| LQ-Sweep EUR v0 | 31,6 % (228/721) | 30,5 % | 33,1 % | 31,8 / 31,4 % |
+| LQ-Sweep XAU v1 | 27,0 % (92/341) | 23,7 % | 30,2 % | 28,2 / 23,2 % |
+| HTF-OB GBP v3 | 36,0 % (89/247) | 36,3 % | 35,4 % | 37,6 / 31,8 % |
+| HTF-OB EUR v3 | 28,2 % (55/195) | 21,5 % | 39,2 % | 26,6 / 32,1 % |
+| HTF-OB XAU v3 | 30,7 % (102/332) | 28,6 % | 33,8 % | 30,5 / 31,6 % |
+| **alle** | **31,3 % (757/2.416)** | 30,3 % | 32,7 % | 30,9 / 32,5 % |
+
+Knapp ein Drittel der Losses hätte mit einem SL hinter dem M15-P2 das Ziel noch erreicht. Der Anteil ist über Läufe und
+Halbjahre stabil (mit Ausnahme von EUR HTF H1) und unabhängig davon, ob eine Anti-Confluence vorlag.
+
+**Hält der M15-P2 öfter als ein beliebiger Punkt gleicher Weite?** Grundlage sind alle Trades, die ihr Ziel irgendwann
+erreichen. Gemessen wird, ob das Level bis zum Ziel hält. Die Kontrolle nimmt die P2-Weite eines zufällig gezogenen anderen
+Trades desselben Laufs (20 Ziehungen, eigener Seed).
+
+| Gruppe | n | hält per Docht: P2 / Kontrolle (H1 · H2) | hält per Schluss: P2 / Kontrolle (H1 · H2) |
+|---|---|---|---|
+| alle LQ-Sweep | 2.250 | 59,9 / 60,2 % (59,2/60,1 · 60,8/60,3) | 63,6 / 64,5 % (62,0/64,0 · 65,8/65,2) |
+| alle HTF-OB v3 | 1.091 | **59,0 / 56,9 %** (56,9/54,6 · 62,3/60,4) | 62,5 / 61,8 % (59,6/59,0 · 67,0/66,0) |
+| alle | 3.341 | 59,6 / 59,1 % | 63,3 / 63,6 % |
+
+- **LQ-Sweep:** Der M15-P2 hält nicht öfter als ein beliebiger Punkt gleicher Weite.
+- **HTF-OB v3:** Er hält per Docht etwa 2 Punkte öfter, in beiden Halbjahren. Per Schluss ist der Unterschied unter einem
+  Punkt. Das passt zur Gegenprobe oben: Nur bei HTF-OB trägt der Strukturpunkt etwas, und das wenig.
+- **Zur Hypothese „Qualität = Richtung stimmt“:** Rund ein Drittel der Losses hatte die Richtung richtig und wurde nur zu früh
+  ausgestoppt. Dass der Strukturpunkt dafür der richtige SL-Ort ist, zeigen die Daten bei LQ-Sweep nicht. Dort reicht jeder
+  gleich weite SL.
