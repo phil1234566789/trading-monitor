@@ -499,7 +499,7 @@ Skript `cBeispiele.mjs` → `c-beispiele.json` (Datengrundlage `slStattSperre.mj
 | 4 | GBPUSD Long · lq-sweep-gbpusd-v1 | 30.10. 17:48 NY | 1,33977 | 1,33825 | 1,33781 (30.10. 16:00) | 1,34281 | Loss / Win (02.11. 09:35) | 1/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-gbpusd-v1%3Adob%3AGBPUSD%3A1%3A1793373600%3A1793375700%3Aa&instrument=GBPUSD&bar=5m&replay=1793622900) |
 | 5 | XAUUSD Short · lq-sweep-v1 | 28.10. 10:08 London | 4052,05 | 4058,22 | 4070,8 (28.10. 01:00) | 4039,71 | Loss / Win (28.10. 15:30) | 4/20 | [Chart](https://phil1234566789.github.io/trading-monitor/#/?dob=dob-lq-sweep-v1%3Adob%3AXAUUSD%3A-1%3A1793151000%3A1793177700%3Aa&instrument=XAUUSD&bar=5m&replay=1793212200) |
 
-Auffällig in den Gegenbeispielen: Der neue SL liegt dort fast auf dem alten (Faktor 1,0–1,2). Der M15-P2 lag knapp hinter dem
+Auffällig in den Gegenbeispielen: Der neue SL liegt dort nah am alten (Faktor 1,1–1,5). Der M15-P2 lag knapp hinter dem
 DOB-SL, eine zufällig weitere Kontrolle hatte mehr Luft.
 
 **„Eigentlich Win, nur zu früh ausgestoppt“:** Alle DOB-Losses mit M15-P2 (2.416 von 2.431). Gemessen wird nach dem Stopp,
