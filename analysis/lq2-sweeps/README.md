@@ -343,3 +343,67 @@ Monatliche WR von (c) M15 (alle Trades, ΣR in Klammern):
   5. für den Live-Betrieb dasselbe in `supabase/functions/dob-watcher`.
 - **Fachentscheidung nötig:** Die weite Variante rechnet die Ziele aus dem neuen Risiko (k·R). Diese Messung hält dagegen den
   Zielpreis fest. Welche Semantik soll (c) haben?
+
+## LQ-2.1-Prüfung: Darf LQ 2.1 die LS-Zuordnung in TS1.1 ersetzen?
+
+Skript `lq21Pruefung.mjs` → `lq21-pruefung.json`. Das Urteil kommt direkt aus `src/liquidity2.js` (`liquidity2-v2`: LH nach LL,
+Impuls ≥ 0,85 H1-ATR, ≥ 1 gebrochener Swing). Die Kennzahlen verworfener LS kommen aus `merkmale.mjs`, das gleich misst.
+
+**Datengrundlage:**
+- Ausgewertet sind alle abgeschlossenen Trades der LQ-Sweep-Läufe GBP v1, EUR v0 und XAU v1 mit M5-LS: 2.336 Trades auf
+  1.030 LS.
+- Nicht dabei: 154 Trades mit H1-LS und 1 LS ohne LQ-1.0-Gegenstück. Die HTF-OB-Läufe v3 (1.180 Trades) sind nicht
+  LS-basiert, ihr POI ist eine H1/H4-Zone ohne TS1.1-LS.
+- **TS1.1-Vorauswahl:** Alle diese LS hat TS1.1 bereits als Sweep-Quelle ausgewählt. LQ 2.1 wirkt hier als zweiter Filter
+  auf eine vorgefilterte Menge, nicht auf alle Sweeps. Die Reaktionsmessung oben (alle Sweeps) ist darum nicht direkt
+  übertragbar.
+
+| Asset | Trades | behalten | WR behalten / verworfen (H1 · H2) | verlorene Winner | ΣR behalten / verworfen (Info) |
+|---|---|---|---|---|---|
+| GBPUSD | 814 | 327 (40 %) | 33,3 / 32,4 % (33,7/29,5 · **32,9/36,1**) | 158 von 267 (59 %) | 0 / −13 |
+| EURUSD | 1.019 | 207 (20 %) | 33,8 / 33,4 % (**34,0/35,2** · 33,6/30,7) | 271 von 341 (79 %) | +3 / +1 |
+| XAUUSD | 503 | 182 (36 %) | 40,1 / 34,0 % (42,9/35,8 · 37,4/32,1) | 109 von 182 (60 %) | +37 / +6 |
+| **alle** | 2.336 | 716 (31 %) | 35,2 / 33,2 % (36,0/33,6 · 34,3/32,7) | **538 von 790 (68 %)** | +40 / −6 |
+
+Fett markiert sind Halbjahre, in denen die verworfenen Trades die bessere WR haben.
+
+**Gründe fürs Verwerfen** (1.620 Trades): 72 % scheitern an der Struktur (kein LH nach LL: 677, kein Wechselpivot: 489,
+teils zusammen mit Impuls oder Swings). 28 % scheitern nur an Impuls oder Swings (Impuls < 0,85: 149, 0 Swings: 93,
+beides: 212).
+
+**Ergebnis:**
+- LQ 2.1 behält nur 31 % der Trades und verliert dabei 68 % der Winner. Die WR steigt um 2 Punkte, das ist nicht signifikant
+  (z = 0,9).
+- Je Asset hält nur XAU die Richtung in beiden Halbjahren (+7 bzw. +5 Punkte, z = 1,4). Bei GBP und EUR dreht sie.
+- Der Großteil der Verwerfungen kommt aus „LH nach LL“. Genau das Merkmal sagte in der Reaktionsmessung nichts vorher
+  (Lift 1,0). Impuls und Swings, die dort trugen, sind nur für 28 % der Verwerfungen verantwortlich.
+- **Einschätzung:** In dieser Form ist LQ 2.1 kein sauberer Ersatz für die TS1.1-LS-Zuordnung. Es halbiert die Trades und
+  mehr, ohne die WR stabil zu heben. Vor einem Ersatz sollte Philip prüfen, ob die Struktur-Bedingung bleiben muss; die
+  Handstichprobe unten deckt Impuls/Swings-Grenzfälle ab.
+
+**Stichprobe zum Handprüfen** (ein Trade je LS, Grenzfälle zuerst: Impuls 0,7–1,0 ATR oder 0/1 Swing, Sweep bevorzugt in
+NY/London; Zeiten Berlin). Die verworfenen sind alle LH nach LL und scheitern nur an Impuls oder Swings.
+
+| # | Urteil | Asset · Richtung | LS | Sweep | Impuls (ATR) | Swings | Grund | Trade |
+|---|---|---|---|---|---|---|---|---|
+| 1 | behalten | GBPUSD Long | 20.07. 05:05 | 20.07. 08:55 London | 0,87 | 1 | | Win |
+| 2 | behalten | EURUSD Long | 18.06. 04:15 | 18.06. 07:55 London | 0,95 | 1 | | Loss |
+| 3 | behalten | XAUUSD Long | 26.10. 05:05 | 26.10. 07:15 London | 0,89 | 1 | | Loss |
+| 4 | behalten | GBPUSD Short | 21.04. 02:45 | 21.04. 08:00 London | 0,97 | 1 | | Win |
+| 5 | behalten | EURUSD Short | 08.06. 08:20 | 08.06. 09:10 London | 0,93 | 1 | | Loss |
+| 6 | behalten | XAUUSD Long | 06.10. 09:10 | 07.10. 08:00 London | 0,99 | 1 | | Loss |
+| 7 | behalten | GBPUSD Long | 12.11. 09:25 | 12.11. 12:45 MMM | 0,95 | 1 | | Loss |
+| 8 | behalten | EURUSD Short | 13.07. 14:00 | 13.07. 14:55 NY | 0,87 | 2 | | Win |
+| 9 | behalten | XAUUSD Long | 10.08. 22:05 | 11.08. 07:30 London | 0,93 | 1 | | Win |
+| 10 | behalten | GBPUSD Short | 26.10. 10:20 | 26.10. 12:00 MMM | 0,92 | 1 | | Win |
+| 11 | verworfen | GBPUSD Short | 29.09. 06:30 | 29.09. 08:05 London | 0,77 | 1 | Impuls < 0,85 | Loss |
+| 12 | verworfen | EURUSD Short | 17.11. 12:45 | 17.11. 14:00 NY | 0,88 | 0 | 0 Swings | Win |
+| 13 | verworfen | XAUUSD Long | 04.11. 14:30 | 04.11. 16:15 NY | 0,93 | 0 | 0 Swings | Win |
+| 14 | verworfen | GBPUSD Short | 01.09. 04:55 | 01.09. 07:05 London | 0,80 | 1 | Impuls < 0,85 | Loss |
+| 15 | verworfen | EURUSD Short | 05.11. 09:20 | 05.11. 10:00 London | 0,77 | 0 | Impuls, 0 Swings | Win |
+| 16 | verworfen | XAUUSD Short | 08.10. 09:20 | 08.10. 10:15 London | 0,85 | 0 | 0 Swings | Loss |
+| 17 | verworfen | GBPUSD Long | 13.08. 13:00 | 13.08. 14:25 NY | 0,83 | 0 | Impuls, 0 Swings | Win |
+| 18 | verworfen | EURUSD Long | 02.11. 12:00 | 02.11. 16:30 NY | 0,79 | 0 | Impuls, 0 Swings | Win |
+| 19 | verworfen | XAUUSD Long | 08.07. 06:15 | 08.07. 09:05 London | 0,79 | 1 | Impuls < 0,85 | Loss |
+| 20 | verworfen | GBPUSD Short | 04.08. 13:40 | 04.08. 16:05 NY | 0,99 | 0 | 0 Swings | Loss |
+
