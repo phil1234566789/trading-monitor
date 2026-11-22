@@ -92,7 +92,7 @@ import {
 import { reportUiError } from "../composables/useHttpActivity.js";
 import {doubleOrderBlockPinLabel} from '../doubleOrderBlockPin.js';
 import { usePolledFetch } from "../composables/usePolledFetch.js";
-import { chartObjectId, chartObjectLabel, chartObjectType } from "../chartObjectRegistry.js";
+import { chartObjectId, chartObjectDisplayLabel, chartObjectType } from "../chartObjectRegistry.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import {useDobRunOptions} from "../composables/usePriceChartDobPositions.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
@@ -994,7 +994,7 @@ const pinAddPopupError = ref(null);
 // dazu, damit jede Zeile eindeutig ist.
 function pinCandidateLabel(c) {
   if(c.kind==='double_order_block')return `${doubleOrderBlockPinLabel(c.dobContext)} · OB1 ${formatDatedTime(c.dobContext.pair.firstOrderBlock.startTime)} → OB2 ${formatDatedTime(c.dobContext.pair.secondOrderBlock.startTime)}`;
-  if (c.kind === "chart_object") return `${c.timeframe} ${chartObjectLabel(c.type, c.snapshot, c.instrument)}`;
+  if (c.kind === "chart_object") return chartObjectDisplayLabel(c);
   if (c.kind === "ob_zone") return `${c.zone.timeframe} ${c.zone.dir === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "chart_ob") return `${c.zone.timeframe.replace(/^(\d+)M$/, 'M$1')} ${c.zone.dirNum === 1 ? "Bull" : "Bear"}-OB`;
   if (c.kind === "trade_setup") return `${c.direction === "short" ? "Short" : "Long"}-Setup #${c.tradeSetupId} (${c.instrument})`;
@@ -1237,9 +1237,13 @@ const pinnedChartObjects = computed(() =>
     .filter((e) => e.kind === "chart_object" && e.chartObject.instrument === currentSymbol.value && e.chartObject.timeframe === currentBar.value)
     .map((e) => ({ id: chartObjectId(e.chartObject.type, e.chartObject.key), type: e.chartObject.type, snapshot: e.chartObject.snapshot })),
 );
+// Gehoverte TSC-/Modal-Rollenzeile mit Registry-Objekt hebt das Objekt selbst hervor, wie eine Pin-Zeile.
+const hoveredRoleChartObject = computed(() =>
+  [hoveredCockpitEvidenceItem, hoveredCockpitTargetItem, hoveredModalEvidenceItem, hoveredModalTargetItem].map((r) => r.value?.chartObject).find(Boolean) ?? null);
 const hoveredChartObjectId = computed(() => {
   const e = hoveredPinEntry.value;
-  return e?.kind === "chart_object" ? chartObjectId(e.chartObject.type, e.chartObject.key) : null;
+  const o = e?.kind === "chart_object" ? e.chartObject : hoveredRoleChartObject.value;
+  return o ? chartObjectId(o.type, o.key) : null;
 });
 const hoveredPinRsiDivergenceKey = computed(() => {
   const e = hoveredPinEntry.value;
@@ -1682,7 +1686,9 @@ const { data: pinContextEntries, refresh: refreshPinContext } = usePolledFetch((
 // gemeinsame Quelle statt den Toggle in jedem der ~10 abgeleiteten Computeds einzeln zu prüfen.
 const visiblePinContextEntries = computed(() => (showPinHighlights.value ? pinContextEntries.value : []));
 const pinnedDoubleOrderBlocks=computed(()=>visiblePinContextEntries.value.filter(e=>e.kind==='double_order_block'&&e.dobContext?.pair.instrument===currentSymbol.value).map(e=>e.dobContext));
-const hoveredDoubleOrderBlockPin=computed(()=>hoveredPinEntry.value?.kind==='double_order_block'&&hoveredPinEntry.value.dobContext?.pair.instrument===currentSymbol.value?hoveredPinEntry.value.dobContext:dobEntryPreview.value);
+// DOB als Rollen-Objekt: sein Snapshot ist ein DOB-Pin-Kontext, gezeigt über den DOB-Renderer statt über eine Snapshot-Linie.
+const hoveredRoleDob=computed(()=>hoveredRoleChartObject.value?.type==='double_order_block'&&hoveredRoleChartObject.value.snapshot.pair?.instrument===currentSymbol.value?hoveredRoleChartObject.value.snapshot:null);
+const hoveredDoubleOrderBlockPin=computed(()=>hoveredPinEntry.value?.kind==='double_order_block'&&hoveredPinEntry.value.dobContext?.pair.instrument===currentSymbol.value?hoveredPinEntry.value.dobContext:hoveredRoleDob.value??dobEntryPreview.value);
 // 1H/4H-OB-Zonen (Task "Chart-Objekte: OBs auf kanonische ob_zones-ID konsolidieren", Punkt 7) —
 // anders als trades/pinContextEntries oben ändert sich das hier NICHT nur durch explizite
 // Browser-Aktionen, sondern im Hintergrund durch poi-watcher (Cron alle 5min) — deshalb, anders als

@@ -3,6 +3,7 @@ import { pinTypeFields, type PinType } from './pinType.ts';
 import {persistDoubleOrderBlockPin,upsertM5ObZoneId} from '../_shared/doubleOrderBlockPinStore.js';
 import {assertTradeSetupSourceSnapshot} from '../_shared/tradeSetupSourceSnapshot.js';
 import { supabase } from "./supabaseClient.ts";
+import { CHART_OBJECT_COLUMNS, INVALIDATION_CHART_OBJECT_COLUMNS, assertChartObject, chartObjectFromRow, chartObjectToRow } from "../_shared/chartObjectColumns.js";
 import { PIP_SIZE } from "../_shared/pipConfig.js";
 import { berlinDayRangeUtcMs } from "../_shared/berlinTime.ts";
 import { applyAsOf, applyAsOfZones, earliestAmbiguousEventSec, type ProbeCandle } from "./replayAsOf.ts";
@@ -209,7 +210,7 @@ export async function findRecentTradeSetupIdsByKey(instrument: string, sinceSec:
 export async function getJournal(instrument?: string, source?: string, limit = 50, dateStr?: string) {
   let query = supabase
     .from("trade_positions")
-    .select("*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, trade_targets(id, price)), trade_partial_exits(price, exit_time, portion_pct)")
+    .select(`*, dealing_ranges!inner(instrument, direction, invalidation, trade_setup_id, lesson_dealing_range_id, setup_type, ${INVALIDATION_CHART_OBJECT_COLUMNS}, trade_targets(id, price, kind, ${CHART_OBJECT_COLUMNS}), trade_evidence(id, kind, category, price, ${CHART_OBJECT_COLUMNS})), trade_partial_exits(price, exit_time, portion_pct)`)
     .order("triggered_at", { ascending: false })
     .limit(limit);
   if (instrument) query = query.eq("dealing_ranges.instrument", instrument);
@@ -809,9 +810,11 @@ export interface UpdateDealingRangeArgs {
   // 20260813120000_dealing_ranges_setup_type.sql) — aktuell nur ein Enum-Wert ('10/10-Trade'),
   // null entfernt die Markierung wieder.
   setupType?: "10/10-Trade" | null;
+  // Registry-Chartobjekt als Herkunft der Invalidierung (src/chartObjectRegistry.js), gleiche Form wie get_pin_context.chartObject.
+  invalidationChartObject?: ChartObjectArg | null;
 }
 
-const DEALING_RANGE_FIELD_MAP: Record<keyof UpdateDealingRangeArgs, string> = {
+const DEALING_RANGE_FIELD_MAP: Record<Exclude<keyof UpdateDealingRangeArgs, "invalidationChartObject">, string> = {
   instrument: "instrument",
   direction: "direction",
   invalidation: "invalidation",
@@ -821,17 +824,19 @@ const DEALING_RANGE_FIELD_MAP: Record<keyof UpdateDealingRangeArgs, string> = {
 };
 
 export async function updateDealingRange(id: number, fields: UpdateDealingRangeArgs) {
+  const { invalidationChartObject, ...plain } = fields;
   const patch: Record<string, unknown> = {};
-  for (const key of Object.keys(fields) as (keyof UpdateDealingRangeArgs)[]) {
-    patch[DEALING_RANGE_FIELD_MAP[key]] = fields[key];
+  for (const key of Object.keys(plain) as (keyof typeof plain)[]) {
+    patch[DEALING_RANGE_FIELD_MAP[key]] = plain[key];
   }
   // Das verknüpfte Chart-Objekt gehört immer zu dem Preis, der gerade geschrieben wird — ein neuer
   // Wert über dieses generische Update kommt ohne Objekt, also muss die alte Verknüpfung weg, sonst
   // hebt das Chart ein Objekt hervor, das diesen Wert nicht gesetzt hat. Gleiche Regel wie im
   // Frontend (src/tradeIntake.js: updateDealingRange), bewusst in beiden Runtimes.
-  if ("invalidation" in fields) {
+  if ("invalidation" in fields || invalidationChartObject !== undefined) {
     patch.invalidation_liquidity_level_id = null;
     patch.invalidation_ob_zone_id = null;
+    Object.assign(patch, chartObjectToRow(invalidationChartObject ? assertChartObject(invalidationChartObject) : null, "invalidation_"));
   }
   const { data, error } = await supabase.from("dealing_ranges").update(patch).eq("id", id).select("*").single();
   if (error) throw new Error(error.message);
@@ -940,11 +945,13 @@ function toLiquidityLevel(row: { liquidity_levels?: { price: number; direction: 
 // Sweep-Bestätigung/-Target das bestehende LQ-Chartobjekt highlighten kann statt eine zweite,
 // dickere Linie zu zeichnen (dieselbe toLiquidityLevel-Formel wie getJournal).
 export async function fetchDealingRangeCockpit(dealingRangeId: number) {
-  const { data: range, error: rangeError } = await supabase
+  const { data: rangeRow, error: rangeError } = await supabase
     .from("dealing_ranges")
-    .select("id, instrument, direction, invalidation")
+    .select(`id, instrument, direction, invalidation, ${INVALIDATION_CHART_OBJECT_COLUMNS}` as string)
     .eq("id", dealingRangeId)
     .maybeSingle();
+  // String-Konstante im select verliert die Zeilentypen von supabase-js, deshalb any wie bei den Evidenz-Zeilen unten.
+  const range: any = rangeRow;
   if (rangeError) throw new Error(rangeError.message);
   if (!range) return null;
 
@@ -955,12 +962,12 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
   ] = await Promise.all([
     supabase
       .from("trade_evidence")
-      .select(`id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, category, historical_only, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}, ${CHART_OBJECT_COLUMNS}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
       .from("trade_targets")
-      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, ${LIQUIDITY_LEVEL_EMBED}, ${CHART_OBJECT_COLUMNS}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
   ]);
@@ -972,6 +979,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
     instrument: range.instrument,
     direction: range.direction,
     invalidation: range.invalidation ?? null,
+    invalidationChartObject: chartObjectFromRow(range, "invalidation_"),
     confirmations: (confirmations ?? []).map((c: any) => ({
       id: c.id,
       level: "range",
@@ -990,6 +998,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
       toRsi: c.to_rsi ?? null,
       divergenceType: c.divergence_type ?? null,
       bonus: c.bonus ?? null,
+      chartObject: chartObjectFromRow(c),
     })),
     targets: (targets ?? []).map((t: any) => ({
       id: t.id,
@@ -1001,9 +1010,12 @@ export async function fetchDealingRangeCockpit(dealingRangeId: number) {
       rangeHigh: t.range_high ?? null,
       timeframe: t.timeframe ?? null,
       liquidityLevel: toLiquidityLevel(t),
+      chartObject: chartObjectFromRow(t),
     })),
   };
 }
+
+export type ChartObjectArg = { type: string; key: string; instrument: string; timeframe: string; snapshot: Record<string, unknown> };
 
 export interface AddTradeConfirmationArgs {
   level: "range" | "position";
@@ -1017,7 +1029,10 @@ export interface AddTradeConfirmationArgs {
   // trotzdem explizit gesetzte Feld gewinnt gegen die Ableitung (z.B. touchedTime nachtragen).
   pinId?: number;
   // Pflicht, AUSSER pinId ist gesetzt (dann daraus abgeleitet) — siehe addTradeConfirmation-Guard.
-  kind?: "pivot" | "ob" | "fib" | "rsi_divergence";
+  kind?: "pivot" | "ob" | "fib" | "rsi_divergence" | "chart_object";
+  // Registry-Chartobjekt (DOB, LQ 2.0, OB Sweep, ...), setzt kind='chart_object'. price/sourceTime mitgeben, wo der Snapshot
+  // sie nicht direkt trägt (z.B. DOB) — sie positionieren den Eintrag im Chart.
+  chartObject?: ChartObjectArg;
   // Pflicht seit Bug-Report Philip 2026-08-18 (siehe Task "Lana soll confirmations/targets sauber
   // in der dealing range verknüpfen") — ohne sourceTime kann PriceChart.vue die Box/Linie nicht
   // positionieren (snapToBarTime braucht einen Zeitpunkt), die Bestätigung landete im Journal, blieb
@@ -1085,6 +1100,7 @@ const KIND_TO_CATEGORY: Record<Exclude<AddTradeConfirmationArgs["kind"], undefin
   ob: "confirmation",
   fib: "confluence",
   rsi_divergence: "confirmation",
+  chart_object: "confirmation",
 };
 
 // Holt eine einzelne pin_context-Zeile für die pinId-Ableitung unten — schmaleres Pendant zu
@@ -1100,7 +1116,7 @@ async function getPinContextRowById(id: number) {
         "liquidity_levels(*), " +
         "m5_liquidity_instrument, m5_liquidity_timeframe, m5_liquidity_direction, m5_liquidity_price, m5_liquidity_pivot_time, " +
         "rsi_divergence_type, rsi_divergence_to_time, rsi_divergence_from_price, rsi_divergence_to_price, " +
-        "rsi_divergence_from_rsi, rsi_divergence_to_rsi",
+        "rsi_divergence_from_rsi, rsi_divergence_to_rsi, " + CHART_OBJECT_COLUMNS,
     )
     .eq("id", id)
     .maybeSingle();
@@ -1168,10 +1184,24 @@ function deriveConfirmationFromPin(pin: Record<string, any>): Partial<AddTradeCo
       toRsi: pin.rsi_divergence_to_rsi,
     };
   }
+  if (pin.kind === "chart_object") return chartObjectArgs(chartObjectFromRow(pin));
   throw new Error(
     `pin_context ${pin.id} (kind='${pin.kind}') lässt sich nicht zu einer Bestätigung ableiten — nur ` +
-      "'ob_zone'/'liquidity_level'/'m5_liquidity_level'/'rsi_divergence' unterstützt.",
+      "'ob_zone'/'liquidity_level'/'m5_liquidity_level'/'rsi_divergence'/'chart_object' unterstützt.",
   );
+}
+
+// Registry-Objekt → Rollen-Felder. Preis/Zeit nur, wo der Snapshot sie direkt trägt (LQ 2.0, OB Sweep, DOB-Start); sonst muss
+// der Aufrufer price/sourceTime mitgeben — die Typ-Geometrie lebt im Frontend (src/chartObjectRegistry.js).
+export function chartObjectArgs(chartObject: any): Partial<AddTradeConfirmationArgs> {
+  const s = chartObject?.snapshot ?? {};
+  const sec = s.pivotTime ?? s.sourceStartTime ?? s.pair?.firstOrderBlock?.startTime;
+  return {
+    kind: "chart_object",
+    chartObject,
+    ...(typeof s.price === "number" ? { price: s.price } : {}),
+    ...(typeof sec === "number" ? { sourceTime: new Date(sec * 1000).toISOString() } : {}),
+  };
 }
 
 // Port derselben Richtungs-Herleitung wie Dashboard.vue: onSelectTarget/onSelectSetupConfirmations
@@ -1196,6 +1226,10 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
     // spread lässt explizite Werte gewinnen, ohne die (im JSON-Request meist fehlenden statt
     // `undefined` gesetzten) übrigen Felder zu berühren.
     args = { ...deriveConfirmationFromPin(pin), ...rawArgs };
+  }
+  if (rawArgs.chartObject) {
+    args = { ...args, ...chartObjectArgs(assertChartObject(rawArgs.chartObject)),
+      ...(rawArgs.price != null ? { price: rawArgs.price } : {}), ...(rawArgs.sourceTime ? { sourceTime: rawArgs.sourceTime } : {}) };
   }
   if (!args.kind) throw new Error("kind fehlt (weder explizit gegeben noch aus pinId ableitbar).");
   if (args.price == null) throw new Error("price fehlt (weder explizit gegeben noch aus pinId ableitbar).");
@@ -1273,9 +1307,11 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
 
   // Stabile OB-/Pivot-Referenzen verhindern doppelte Bestätigungen derselben Range.
   let data: Record<string, unknown> | null = null;
-  if (args.level === "range" && (obZoneId != null || liquidityLevelId != null)) {
+  if (args.level === "range" && (obZoneId != null || liquidityLevelId != null || args.chartObject)) {
     let dupQuery = supabase.from("trade_evidence").select("*").eq("dealing_range_id", args.id);
-    dupQuery = obZoneId != null ? dupQuery.eq("ob_zone_id", obZoneId) : dupQuery.eq("liquidity_level_id", liquidityLevelId);
+    dupQuery = args.chartObject
+      ? dupQuery.eq("chart_object_type", args.chartObject.type).eq("chart_object_key", args.chartObject.key).eq("category", resolvedCategory)
+      : obZoneId != null ? dupQuery.eq("ob_zone_id", obZoneId) : dupQuery.eq("liquidity_level_id", liquidityLevelId);
     const { data: existing, error: dupError } = await dupQuery.maybeSingle();
     if (dupError) throw new Error(dupError.message);
     data = existing;
@@ -1301,6 +1337,7 @@ export async function addTradeConfirmation(rawArgs: AddTradeConfirmationArgs) {
         from_rsi: args.fromRsi ?? null,
         to_rsi: args.toRsi ?? null,
         bonus: args.bonus ?? null,
+        ...(args.chartObject ? chartObjectToRow(args.chartObject) : {}),
       })
       .select("*")
       .single();
@@ -1350,7 +1387,9 @@ export interface AddTradeTargetArgs {
   // 'pivot'|'ob' — fehlte hier bisher komplett (nur DB-Default), Port von src/tradeIntake.js:
   // addTargetToTrade. Ohne kind kann PriceChart.vue: refreshTradeTargetLinksInternal ein OB-Target
   // (rangeLow/rangeHigh gesetzt) nicht von einem Pivot-Target unterscheiden.
-  kind?: "pivot" | "ob" | null;
+  kind?: "pivot" | "ob" | "chart_object" | null;
+  // Registry-Chartobjekt als Target, setzt kind='chart_object' (siehe AddTradeConfirmationArgs.chartObject).
+  chartObject?: ChartObjectArg;
   rangeLow?: number | null;
   rangeHigh?: number | null;
   // Pflicht seit Bug-Report Philip 2026-08-18 (siehe AddTradeConfirmationArgs.sourceTime oben,
@@ -1394,13 +1433,15 @@ export async function addTradeTarget(dealingRangeId: number, args: AddTradeTarge
   const { data: range, error: rangeCheckError } = await supabase.from("dealing_ranges").select("id, instrument").eq("id", dealingRangeId).maybeSingle();
   if (rangeCheckError) throw new Error(rangeCheckError.message);
   if (!range) throw new Error(`dealing_range ${dealingRangeId} existiert nicht — zuerst create_dealing_range aufrufen und dessen id hier als dealingRangeId verwenden (siehe get_tsc_range für eine bereits offene Idee).`);
-  const liquidityLevelId = await resolvePivotLiquidityLevelId(args);
+  const chartObject = args.chartObject ? assertChartObject(args.chartObject) : null;
+  const liquidityLevelId = chartObject ? null : await resolvePivotLiquidityLevelId(args);
   const { data, error } = await supabase
     .from("trade_targets")
     .insert({
       dealing_range_id: dealingRangeId,
       price: args.price,
-      kind: args.kind ?? null,
+      kind: chartObject ? "chart_object" : args.kind ?? null,
+      ...(chartObject ? chartObjectToRow(chartObject) : {}),
       range_low: args.rangeLow ?? null,
       range_high: args.rangeHigh ?? null,
       source_time: args.sourceTime,
