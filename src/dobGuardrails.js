@@ -2,6 +2,7 @@ import {berlinOffsetMinutes,berlinDateStrFor} from './berlinTime.js';
 import {dobFeaturesOf,dobFeature,dobPoiFeature} from './dobTradeFeatures.js';
 import {DOB_LQ_MATCH_LEVELS} from './dobLqSweepPoi.js';
 import {dobPoiTypeOf} from './dobPoiType.js';
+import {SL_ALGO_DEFAULT,slAlgoFromJson,slAlgoText} from './slAlgo.js';
 
 // Sperr- und Regel-Konfiguration des DOB-Setups je Instrument (Tabelle dob_guardrails). Eine Quelle für Statistikseite und
 // dob-watcher, deshalb rein und nur mit Deno-tauglichen Importen (Dateiendung, siehe test/dobWatcherImports.test.js).
@@ -22,11 +23,11 @@ export const DOB_COUNTER_CANDLES_MODES=['off','3of3','3of5'];
 // poiMatchMode (nur POI-Art LQ-Sweep): schwächste Verbindung TS1.1 ↔ DOB, die noch zählt; edge = gleiche Kante (Philips Regel),
 // overlap/adjacent zeigen in der Statistik, ob auch Überlappung bzw. knapp daneben trägt. alarmEnabled: Alarme dieser POI-Art
 // werden gesendet (aus = nur Protokoll, LQ-Sweep startet aus bis zu Philips Go).
-// swingStop (nur HTF-OB, src/dobSwingStop.js): Anti-Confluence „breit“ sperrt nicht, der SL kommt hinter den M15-P2, Ziel fest. Default aus.
+// slAlgo (src/slAlgo.js): SL-Methode samt Parametern; Default DOB-SL. 1.0 = Struktur-P2 bei Anti-Confluence „breit“ statt Sperre.
 export const DOB_POI_MATCH_MODE_LABELS={edge:'gleiche Kante',overlap:'Kante oder Überlappung',adjacent:'Kante, Überlappung oder knapp daneben (XAU ≤ 1 USD, Forex ≤ 3 Pips)'};
 export const DOB_GUARDRAILS_DEFAULT=Object.freeze({entryWindows:[],defaultTpR:DOB_DEFAULT_TP_R,blockedMonths:[],minZoneAgeSeconds:null,
  minZoneAgeSavedSeconds:null,counterDobMode:DOB_COUNTER_DOB_DEFAULT_MODE,counterCandlesMode:'off',partialAtR:null,partialPct:50,partialBe:true,
- poiMatchMode:'edge',alarmEnabled:true,swingStop:false});
+ poiMatchMode:'edge',alarmEnabled:true,slAlgo:SL_ALGO_DEFAULT});
 
 export const dobRuleActive=w=>w.enabled!==false;
 export function dobGuardrailsFromRow(row){
@@ -41,7 +42,7 @@ export function dobGuardrailsFromRow(row){
   counterCandlesMode:DOB_COUNTER_CANDLES_MODES.includes(row.counter_candles_mode)?row.counter_candles_mode:'off',
   partialAtR:Number.isFinite(row.partial_at_r)?row.partial_at_r:null,partialPct:Number.isFinite(row.partial_pct)?row.partial_pct:50,
   partialBe:row.partial_be!==false,poiMatchMode:DOB_LQ_MATCH_LEVELS.includes(row.poi_match_mode)?row.poi_match_mode:'edge',
-  alarmEnabled:row.alarm_enabled!==false,swingStop:row.swing_stop===true};
+  alarmEnabled:row.alarm_enabled!==false,slAlgo:slAlgoFromJson(row.sl_algo)};
 }
 // Eine Leseform für alle Leser (Seite, Panel, Chart, Watcher, Labore): Konfig je Instrument UND POI-Art; ohne POI-Art
 // träfe die Abfrage seit der LQ-Sweep-Zeile zwei Zeilen.
@@ -51,7 +52,7 @@ export const dobGuardrailsToRow=(instrument,config,poiType)=>({instrument,poi_ty
  blocked_months:config.blockedMonths,min_zone_age_seconds:config.minZoneAgeSeconds,
  min_zone_age_saved_seconds:config.minZoneAgeSavedSeconds??config.minZoneAgeSeconds,counter_dob_mode:config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE,
  counter_candles_mode:config.counterCandlesMode??'off',partial_at_r:config.partialAtR??null,partial_pct:config.partialPct??50,
- partial_be:config.partialBe!==false,poi_match_mode:config.poiMatchMode??'edge',alarm_enabled:config.alarmEnabled!==false,swing_stop:config.swingStop===true});
+ partial_be:config.partialBe!==false,poi_match_mode:config.poiMatchMode??'edge',alarm_enabled:config.alarmEnabled!==false,sl_algo:config.slAlgo??SL_ALGO_DEFAULT});
 
 // Monat in Berlin (1–12). Der Watcher prüft ihn als Erstes und rechnet in gesperrten Monaten gar nicht.
 export const dobMonthBlocked=(config,atSec)=>config.blockedMonths.includes(Number(berlinDateStrFor(atSec).slice(5,7)));
@@ -130,7 +131,6 @@ const rText=r=>`${r.toLocaleString('de-DE')}R`;
 const ageText=sec=>sec%(7*86400)===0?`${sec/(7*86400)} Wo`:sec%86400===0?`${sec/86400} ${sec===86400?'Tag':'Tage'}`:`${Math.round(sec/3600)} h`;
 export const DOB_COUNTER_DOB_MODE_LABELS={block_all:'Gegen-DOB sperrt',live_block_dead_5r:'lebender Gegen-DOB sperrt, nur tote TP 5R',off:'Gegen-DOB aus'};
 export const DOB_COUNTER_CANDLES_MODE_LABELS={off:'Gegenkerzen aus','3of3':'3 von 3 Gegenkerzen sperrt','3of5':'3 von 5 Gegenkerzen sperrt'};
-export const DOB_SWING_STOP_LABEL='Anti-Confluence: SL hinter M15-P2 statt Sperre';
 export function dobGuardrailsSummary(config){
  const active=config.entryWindows.filter(dobRuleActive),span=w=>`${clock(w.from)}–${clock(w.to)}`;
  const blocks=active.filter(w=>w.action==='block').map(span);
@@ -143,7 +143,7 @@ export function dobGuardrailsSummary(config){
   (config.counterDobMode??DOB_COUNTER_DOB_DEFAULT_MODE)!==DOB_COUNTER_DOB_DEFAULT_MODE?DOB_COUNTER_DOB_MODE_LABELS[config.counterDobMode]:null,
   (config.counterCandlesMode??'off')!=='off'?DOB_COUNTER_CANDLES_MODE_LABELS[config.counterCandlesMode]:null,
   (config.poiMatchMode??'edge')!=='edge'?`POI: ${DOB_POI_MATCH_MODE_LABELS[config.poiMatchMode]}`:null,
-  config.swingStop?DOB_SWING_STOP_LABEL:null,
+  config.slAlgo?.method&&config.slAlgo.method!=='dob'?slAlgoText(config.slAlgo):null,
   config.partialAtR!=null?dobPartialText({atR:config.partialAtR,pct:config.partialPct??50,be:config.partialBe!==false}):null,
   config.entryWindows.length>active.length?`${config.entryWindows.length-active.length} Regel${config.entryWindows.length-active.length>1?'n':''} aus`:null];
  return parts.filter(Boolean).join(' · ');

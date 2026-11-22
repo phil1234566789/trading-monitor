@@ -48,7 +48,7 @@ const retestOf=pair=>({id:`${pair.id}:retest`,pairId:pair.id,instrument:pair.ins
 // aus createDobM5TrendGate; wird vom Aufrufer hereingereicht, damit der Trend-Algo nicht im Watcher-Bundle landet.
 // guardrails (optional, dobGuardrailsFromRow): Zonenalter und Entry-Stunde → rejected 'blockedZoneAge'/'blockedEntryHour'; den Monat
 // prüft der Watcher vorab. Ein Entry außerhalb der Sperre bekommt tpRule {tpR, window} und Ziel/Ausgang zu diesem R.
-// swingStopGate (optional, nur HTF-OB): setup → {hits, stop} aus createDobSwingStopGate, am Setup als swingStop.
+// swingStopGate (optional): (setup, slAlgo, poiType) → {hits, stop} aus createDobSwingStopGate, am Setup als swingStop.
 // counterDobGate (optional, v3): setup → {count, liveCount, status} aus createDobCounterDobGate; ohne guardrails nur am Setup
 // vermerkt (Statistik speichert alle Status), mit guardrails entscheidet counterDobMode über Sperre bzw. TP 5R. setups = mit POI; rejected = dieselben DOB-Setups mit Grund, damit nichts still verschwindet.
 // Der Indikator rechnet Ziel und Ausgang mit 2R; ein anderes R aus der Fensterregel rechnet dieselbe Ausgangslogik nach.
@@ -122,8 +122,8 @@ export function checkDobTradeSetup(input){
   const partial=setup.tpRule&&dobPartialPlan(guardrails,setup.tpRule.tpR);
   if(partial)setup.tpRule={...setup.tpRule,partial};
   if(partial&&setup.entryTime!=null)setup.partialOutcome=partialOutcome(setup,partial,setup.tpRule.tpR,input);
-  // SL-Variante (c) (input.swingStopGate, src/dobSwingStop.js): nur HTF-OB; ob der Alarm den SL nennt, entscheidet guardrails.swingStop.
-  if(input.swingStopGate&&poiType==='htf_ob'&&setup.entryTime!=null){const swingStop=input.swingStopGate(setup);if(swingStop)setup.swingStop=swingStop;}
+  // SL-Algo (input.swingStopGate, src/dobSwingStop.js): Methode und POI-Familien aus guardrails.slAlgo, im Lauf ohne Konfig input.slAlgo.
+  if(input.swingStopGate&&setup.entryTime!=null){const swingStop=input.swingStopGate(setup,guardrails?.slAlgo??input.slAlgo,poiType);if(swingStop)setup.swingStop=swingStop;}
   // Anti-Gate erst nach des POI: Trend nur für die wenigen Kandidaten, Grund bleibt im rejected sichtbar.
   const m5Trend=input.trendGate?.({...setup,poi});
   if(m5Trend?.rejectReason)rejected.push({...setup,poi,m5Trend,reason:m5Trend.rejectReason});

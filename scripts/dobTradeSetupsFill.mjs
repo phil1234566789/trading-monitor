@@ -53,9 +53,9 @@ try {
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { dobPoiContext, dobPoiZoneAgeSeconds }, { dobMaxR, dobWideVariant, dobSwingStopVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, dobPoiFeatures, DOB_BREAKEVEN_AT_R_LEVELS },
-    { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }, { tradeSetup11RowVerdicts, TRADE_SETUP_11_VERSION }, { createDobSwingStopGate }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }, { tradeSetup11RowVerdicts, TRADE_SETUP_11_VERSION }, { createDobSwingStopGate }, { SL_ALGO_V1 }, { dobIntradayOutcome }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js',
-      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/tradeSetup11Rows.js', '/src/dobSwingStop.js'].map(load));
+      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/tradeSetup11Rows.js', '/src/dobSwingStop.js', '/src/slAlgo.js', '/src/dobIntraday.js'].map(load));
   const [{ fetchDobTradePins }, { missingDobModelTrades }] = await Promise.all(['/src/pinContext.js', '/src/dobTradeStatistics.js'].map(load));
   const LQ = RUNS[RUN_ID].poiType === 'lq_sweep';
   // trade_setups-Zeilen (alle Detektorversionen) nur für LQ-Sweep-Läufe; TS1.1 daraus erst unten mit dem Trendkontext.
@@ -93,9 +93,9 @@ try {
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
   // Der Lauf entscheidet, welche Setups zählen; die POI kommt aus dem einmal vorberechneten Kontext.
   const counterDobGate = RUNS[RUN_ID].counterDob ? createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: SYMBOL }) : undefined;
-  // SL-Variante (c) nur für HTF-OB-Läufe ab v1 (mit POI); ATR aus demselben POI-Kontext wie der Watcher (dobH1AtrSeries).
-  const swingStopGate = !LQ && RUNS[RUN_ID].version !== 'dob-setup-v0' ? createDobSwingStopGate({ m5Candles: m5Marked, instrument: SYMBOL, atr: poiContext.atr }) : undefined;
-  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, poiType: RUNS[RUN_ID].poiType, poiContext, poiOptions: RUNS[RUN_ID].poiOptions, counterDobGate, swingStopGate, tradeSetups })) });
+  // SL-Algo 1.0 (Struktur-P2) für HTF-OB-Läufe ab v1 (mit POI); ATR aus demselben POI-Kontext wie der Watcher (dobH1AtrSeries).
+  const swingStopGate = RUNS[RUN_ID].version !== 'dob-setup-v0' ? createDobSwingStopGate({ m5Candles: m5Marked, instrument: SYMBOL, atr: poiContext.atr }) : undefined;
+  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, poiType: RUNS[RUN_ID].poiType, poiContext, poiOptions: RUNS[RUN_ID].poiOptions, counterDobGate, swingStopGate, slAlgo: SL_ALGO_V1, tradeSetups })) });
   const trades = dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup: runSetups, dobLiveWindowInput }).setups,
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   const carrying = new Map();
@@ -117,9 +117,13 @@ try {
     // Weite SL-Variante (ferne OB2-Kante) nur, wo der SL am Retest-Extrem liegt; sonst null (eng = weit).
     ...(wide => ({ wide_max_r: wide?.maxR ?? null, wide_sl_hit: wide?.slHit ?? null, wide_ambiguous_r: wide?.ambiguousR ?? null,
       wide_risk_usd: wide?.riskUsd ?? null }))(dobWideVariant(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
-    // SL-Variante (c): nur bei Anti-Confluence „breit“ mit M15-P2, sonst null (Trade bleibt beim DOB-SL).
+    // SL-Algo 1.0: nur bei Anti-Confluence „breit“ mit M15-P2, sonst null (Trade bleibt beim DOB-SL).
     ...(swing => ({ swing_max_r: swing?.maxR ?? null, swing_sl_hit: swing?.slHit ?? null, swing_ambiguous_r: swing?.ambiguousR ?? null,
-      swing_risk_usd: swing?.riskUsd ?? null, swing_stop_price: swing?.stopPrice ?? null }))(dobSwingStopVariant(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
+      swing_risk_usd: swing?.riskUsd ?? null, swing_stop_price: swing?.stopPrice ?? null,
+      // Zusätzliche Messgröße „Ziel bis Tagesende“ (src/dobIntraday.js), mit DOB-SL und mit SL-Algo; kein Filter.
+      ...(day => ({ intraday_max_r: day?.maxR ?? null, intraday_close_r: day?.closeR ?? null }))(dobIntradayOutcome(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
+      ...(day => ({ swing_intraday_max_r: day?.maxR ?? null, swing_intraday_close_r: day?.closeR ?? null }))(swing
+        ? dobIntradayOutcome({ ...t, stopPrice: swing.stopPrice }, { candles: m1Marked, dataEnd, instrument: SYMBOL, rScale: Math.abs(t.entryPrice - t.stopPrice) / swing.riskUsd }) : null) }))(dobSwingStopVariant(t, { candles: m1Marked, dataEnd, instrument: SYMBOL })),
     counter_dob_status: counterStatus.get(dobTradeKey(t)) ?? null,
     // Konfig-Merkmale als jsonb (Philip): Schlüssel nur in src/dobTradeFeatures.js, gelesen über dobRowGuardrailReason.
     // Teilprofit mit SL auf Entry: Rest-Verlauf je gespeicherter Stufe (DOB_BREAKEVEN_AT_R_LEVELS), gerechnet in src/dobPartialProfit.js.

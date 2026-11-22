@@ -1,7 +1,9 @@
 <script setup>
 import {computed,ref,watch} from 'vue';
 import {supabase} from '../supabaseClient.js';
-import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRuleActive,dobPartialText,dobEntryWindowOverlaps,dobSortEntryWindows,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS,DOB_COUNTER_CANDLES_MODES,DOB_COUNTER_CANDLES_MODE_LABELS,DOB_POI_MATCH_MODE_LABELS,DOB_SWING_STOP_LABEL} from '../dobGuardrails.js';
+import {dobGuardrailsToRow,dobGuardrailsFromRow,dobRowGuardrailReason,dobRuleActive,dobPartialText,dobEntryWindowOverlaps,dobSortEntryWindows,DOB_COUNTER_DOB_MODES,DOB_COUNTER_DOB_MODE_LABELS,DOB_COUNTER_CANDLES_MODES,DOB_COUNTER_CANDLES_MODE_LABELS,DOB_POI_MATCH_MODE_LABELS,dobRowConfigTpR} from '../dobGuardrails.js';
+import {SL_ALGO_DEFAULT,SL_ALGO_V1,slAlgoText} from '../slAlgo.js';
+import {dobIntradayWinrate} from '../dobIntraday.js';
 import {DOB_LQ_MATCH_LEVELS} from '../dobLqSweepPoi.js';
 import {dobFeaturesOf,dobFeature,dobPoiFeature,DOB_BREAKEVEN_AT_R_LEVELS} from '../dobTradeFeatures.js';
 import {dobRowConfigScore,dobHasPartialData} from '../dobPartialProfit.js';
@@ -71,10 +73,12 @@ const hasCounterCandles=computed(()=>props.rows.some(r=>dobFeature(dobFeaturesOf
 // POI-Verbindung (nur LQ-Sweep-Läufe, features.poi_match): welche Stufe TS1.1 ↔ DOB noch zählt.
 const hasPoiMatch=computed(()=>props.rows.some(r=>dobPoiFeature(dobFeaturesOf(r),'match')!=null));
 const matchImpacts=computed(()=>Object.fromEntries(DOB_LQ_MATCH_LEVELS.map(m=>[m,configSumR({...draft.value,poiMatchMode:m})])));
-// SL-Variante (c) gibt es nur in HTF-OB-Läufen ab dem Fill mit swing_*-Spalten. Bewertet wird nach Winrate (TPs noch unkoordiniert).
+// SL-Algo: Methodenwahl nur in Läufen mit swing_*-Spalten (HTF-OB ab dem Fill mit SL-Algo 1.0). Bewertet wird nach Winrate
+// (TPs noch unkoordiniert), daneben die Winrate nur mit Intraday-Wins (src/dobIntraday.js).
+const SL_ALGOS=[SL_ALGO_DEFAULT,SL_ALGO_V1];
 const hasSwingStop=computed(()=>props.rows.some(dobHasSwingStopVariant));
-const configStats=cfg=>dobTotalStats(props.rows.filter(r=>!dobRowGuardrailReason(cfg,r)),r=>dobRowConfigScore(cfg,r));
-const swingImpacts=computed(()=>[false,true].map(on=>configStats({...draft.value,swingStop:on})));
+const slAlgoImpacts=computed(()=>SL_ALGOS.map(slAlgo=>{const cfg={...draft.value,slAlgo},rows=props.rows.filter(r=>!dobRowGuardrailReason(cfg,r));
+ return {...dobTotalStats(rows,r=>dobRowConfigScore(cfg,r)),intraday:dobIntradayWinrate(rows,cfg,r=>dobRowConfigTpR(cfg,r)).winrate};}));
 const candleImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_CANDLES_MODES.map(m=>[m,configSumR({...draft.value,counterCandlesMode:m})])));
 // Teilprofit: nur Stufen, deren Rest-Verlauf (SL auf Entry) der Lauf gespeichert hat; ohne SL-auf-Entry reicht max_r für jede Stufe.
 const partialLevels=computed(()=>DOB_BREAKEVEN_AT_R_LEVELS.filter(r=>dobHasPartialData(props.rows,r)));
@@ -136,9 +140,9 @@ const ruleImpacts=computed(()=>{
         <label v-for="m in DOB_LQ_MATCH_LEVELS" :key="m"><input type="radio" name="poiMatchMode" :value="m" v-model="draft.poiMatchMode"> {{ DOB_POI_MATCH_MODE_LABELS[m] }}
           <span class="impact" title="ΣR nach Konfig mit dieser Stellung">{{ dobSignedR(matchImpacts[m]) }} R</span></label>
       </fieldset>
-      <fieldset v-if="hasSwingStop"><legend>Anti-Confluence „breit“ (FVG/OB gegen den Trade)</legend>
-        <label v-for="(on,i) in [false,true]" :key="String(on)"><input type="radio" name="swingStop" :value="on" v-model="draft.swingStop"> {{ on?DOB_SWING_STOP_LABEL:'SL bleibt beim DOB-SL' }}
-          <span class="impact" title="Winrate und ΣR nach Konfig mit dieser Stellung">WR {{ dobPct(swingImpacts[i].winrate) }} · {{ dobSignedR(swingImpacts[i].sumR) }} R</span></label>
+      <fieldset v-if="hasSwingStop"><legend>SL-Algo (bei Anti-Confluence „breit“: FVG/OB gegen den Trade)</legend>
+        <label v-for="(algo,i) in SL_ALGOS" :key="algo.method"><input type="radio" name="slAlgo" :checked="draft.slAlgo?.method===algo.method" @change="draft.slAlgo={...algo}"> {{ slAlgoText(algo) }}
+          <span class="impact" title="Winrate, Winrate nur mit Wins bis NY-Close und ΣR nach Konfig mit dieser Methode">WR {{ dobPct(slAlgoImpacts[i].winrate) }} · intraday {{ dobPct(slAlgoImpacts[i].intraday) }} · {{ dobSignedR(slAlgoImpacts[i].sumR) }} R</span></label>
       </fieldset>
       <fieldset><legend>Telegram-Alarme</legend>
         <label><input type="checkbox" v-model="draft.alarmEnabled"> Alarme dieser POI-Art senden (aus = nur Protokoll)</label>

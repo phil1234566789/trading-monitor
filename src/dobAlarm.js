@@ -42,9 +42,9 @@ export function dobTpLine(s,guardrails){
  const at=k=>price(s.entryPrice+(s.direction==='long'?1:-1)*k*Math.abs(s.entryPrice-s.stopPrice),s.instrument);
  return plan?`TP1 ${rText(plan.atR)} @ ${at(plan.atR)} (${plan.pct} %${plan.be?', danach SL auf Entry':''}) · TP2 ${rText(tp)} @ ${at(tp)}`:`TP ${rText(tp)} @ ${at(tp)}`;
 }
-// SL nach Konfig: SL-Variante (c) nennt den SL hinter dem M15-P2 (Ziel bleibt, dobTpLine rechnet vom DOB-SL); sonst der DOB-SL.
+// SL nach Konfig: SL-Algo Struktur-P2 nennt den SL hinter dem M15-P2 (Ziel bleibt, dobTpLine rechnet vom DOB-SL); sonst der DOB-SL.
 // Der Chart liest denselben SL aus der Lauf-Zeile (dobRowStopPrice); test/dobSwingStop.test.js hält beide gleich.
-export const dobSwingStopOf=(s,guardrails)=>guardrails?.swingStop?s.swingStop?.stop??null:null;
+export const dobSwingStopOf=(s,guardrails)=>guardrails?.slAlgo?.method==='structure_p2'?s.swingStop?.stop??null:null;
 export function dobStopText(s,guardrails){
  const stop=dobSwingStopOf(s,guardrails);
  return stop?`SL ${price(stop.stopPrice,s.instrument)} (hinter M15-Swing ${formatBerlinTime(stop.swingTime)}, Anti-Confluence; DOB-SL ${price(s.stopPrice,s.instrument)})`

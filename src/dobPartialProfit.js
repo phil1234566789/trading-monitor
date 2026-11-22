@@ -1,4 +1,4 @@
-import {dobTargetOutcome,dobHasSwingStopVariant,dobAsSwingStop} from './dobTradeStatistics.js';
+import {dobTargetOutcome,dobHasSwingStopVariant,dobAsSwingStop,dobSlAlgoActive} from './dobTradeStatistics.js';
 import {dobRowConfigTpR,dobPartialPlan} from './dobGuardrails.js';
 import {dobFeaturesOf,dobBreakevenRest} from './dobTradeFeatures.js';
 
@@ -25,10 +25,10 @@ export function dobPartialScore(row,tp,plan){
  const share=plan.pct/100,r=Math.round((share*plan.atR+(1-share)*restR)*1000)/1000;
  return {target:tp,outcome:r>0?'success':'loss',r,rest,label:`${String(plan.atR).replace('.',',')}R ${pctText(plan.pct)}${rest==='breakeven'?' · BE':''}`};
 }
-// SL-Variante (c): festes Ziel gegen den M15-P2-SL; ein Win bringt tp·DOB-Risiko / neues Risiko. Teilprofit-Verläufe gibt es nur
+// SL-Algo Struktur-P2: festes Ziel gegen den M15-P2-SL; ein Win bringt tp·DOB-Risiko / neues Risiko. Teilprofit-Verläufe gibt es nur
 // zum DOB-SL, deshalb rechnen (c)-Trades ohne Teilprofit.
 export const dobRowConfigScore=(config,row)=>{const tp=dobRowConfigTpR(config,row);
- if(!config.swingStop||!dobHasSwingStopVariant(row))return dobPartialScore(row,tp,dobPartialPlan(config,tp));
+ if(!dobSlAlgoActive(config)||!dobHasSwingStopVariant(row))return dobPartialScore(row,tp,dobPartialPlan(config,tp));
  const s=dobPartialScore(dobAsSwingStop(row),tp,null);
  return s.outcome==='success'?{...s,r:Math.round(tp*Math.abs(row.entry_price-row.stop_price)/row.swing_risk_usd*1000)/1000}:s;};
 // Hat der Lauf den Rest-Verlauf für diese Teilprofit-Stufe gespeichert (sonst blendet das Panel den Schalter aus)?

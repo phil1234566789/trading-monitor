@@ -146,10 +146,11 @@ export function dobReturnTracker(){
 // SL-Vergleich: dieselbe Zeile mit den Werten der weiten SL-Variante (ferne OB2-Kante); nur Trades mit Variante (Extrem-SL).
 export const dobHasWideVariant=row=>row.wide_max_r!=null;
 export const dobAsWide=row=>({...row,max_r:row.wide_max_r,sl_hit:row.wide_sl_hit,ambiguous_r:row.wide_ambiguous_r});
-// SL-Variante (c) (Konfig swingStop, nur HTF-OB): Trades mit Anti-Confluence und M15-P2 rechnen mit dessen Werten, alle anderen
-// unverändert. stop_price bleibt (Pin-Schlüssel), der neue SL steht in swing_stop_price.
+// SL-Algo Struktur-P2 (Konfig slAlgo): Trades mit Anti-Confluence und M15-P2 rechnen mit dessen Werten, alle anderen unverändert.
+// Die swing_*-Spalten rechnet der Fill mit SL_ALGO_V1. stop_price bleibt (Pin-Schlüssel), der neue SL steht in swing_stop_price.
 export const dobHasSwingStopVariant=row=>row.swing_max_r!=null;
-export const dobRowStopPrice=(config,row)=>config?.swingStop&&dobHasSwingStopVariant(row)?row.swing_stop_price:row.stop_price;
+export const dobSlAlgoActive=config=>config?.slAlgo?.method==='structure_p2';
+export const dobRowStopPrice=(config,row)=>dobSlAlgoActive(config)&&dobHasSwingStopVariant(row)?row.swing_stop_price:row.stop_price;
 export const dobAsSwingStop=row=>dobHasSwingStopVariant(row)?{...row,max_r:row.swing_max_r,sl_hit:row.swing_sl_hit,ambiguous_r:row.swing_ambiguous_r}:row;
 export const dobMedian=values=>{const v=values.filter(Number.isFinite).sort((a,b)=>a-b);return v.length?v[v.length>>1]:null;};
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};

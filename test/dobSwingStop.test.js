@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
-import {stopBehindSwing} from '../src/swingStop.js';
+import {stopBehindSwing,SL_ALGO_V1,SL_ALGO_DEFAULT,slAlgoApplies,slAlgoFromJson} from '../src/slAlgo.js';
+import {dobIntradayEnd,dobIntradayWinrate} from '../src/dobIntraday.js';
 import {untouchedSwingsAsOf} from '../src/marketStructureSwings.js';
 import {counterZoneHits} from '../src/antiConfluenceCounterZones.js';
 import {createDobSwingStopGate} from '../src/dobSwingStop.js';
@@ -58,7 +59,7 @@ describe('Anti-Confluence-Baustein: counterZoneHits (breit)',()=>{
 // Baustein-Grenze: der SL-Baustein und die DOB-Variante rechnen keine Struktur selbst, nur marketStructureSwings.js fragt den Struktur-Algo.
 describe('Grenze SL-Baustein ↔ Struktur-Algo',()=>{
  const src=f=>readFileSync(new URL(`../src/${f}`,import.meta.url),'utf8');
- it.each(['swingStop.js','dobSwingStop.js','antiConfluenceCounterZones.js','dobMaxR.js'])('%s importiert keine Pivot-/Fraktal-Erkennung',f=>{
+ it.each(['slAlgo.js','dobSwingStop.js','antiConfluenceCounterZones.js','dobMaxR.js'])('%s importiert keine Pivot-/Fraktal-Erkennung',f=>{
   expect(src(f)).not.toMatch(/marketStructureAnalysis|liquidityDetection|detectLiquidityLevels|computeRangesPivots/);
  });
  it('dobSwingStop.js holt die Swings aus marketStructureSwings.js',()=>{
@@ -71,7 +72,7 @@ describe('DOB-SL-Variante (c): Chart = Alarm',()=>{
  const fixture=load('2026-11-12');
  const done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
  const swingStop={hits:[{kind:'FVG',tf:'15M'}],stop:{stopPrice:done.stopPrice+5,swingPrice:done.stopPrice+4.95,swingTime:done.entryTime-3600}};
- const gate=()=>swingStop,on={...DOB_GUARDRAILS_DEFAULT,swingStop:true};
+ const gate=(s,algo,poiType)=>slAlgoApplies(algo,poiType)?swingStop:null,on={...DOB_GUARDRAILS_DEFAULT,slAlgo:SL_ALGO_V1};
  it('Alarm nennt den SL hinter dem M15-P2 nur mit Schalter, TP bleibt beim DOB-Risiko',()=>{
   const at=done.entryTime+60,entry=cfg=>dobAlarmEvents(run(fixture,at,true,undefined,{swingStopGate:gate,guardrails:cfg}),at,{guardrails:cfg}).find(e=>e.phase==='entry');
   const off=entry(DOB_GUARDRAILS_DEFAULT),withSwing=entry(on);
@@ -82,10 +83,13 @@ describe('DOB-SL-Variante (c): Chart = Alarm',()=>{
   expect(withSwing.id).toBe(off.id);
   expect(withSwing.text.split('\n').find(l=>l.startsWith('TP'))).toBe(off.text.split('\n').find(l=>l.startsWith('TP')));
  });
- it('LQ-Sweep fragt das Gate nicht',()=>{
-  let calls=0;
-  run(fixture,undefined,true,undefined,{poiType:'lq_sweep',tradeSetups:[],swingStopGate:()=>{calls++;return swingStop;}});
-  expect(calls).toBe(0);
+ it('SL-Algo 1.0 greift nur bei HTF-OB, Default ist der DOB-SL',()=>{
+  expect(slAlgoApplies(SL_ALGO_V1,'htf_ob')).toBe(true);
+  expect(slAlgoApplies(SL_ALGO_V1,'lq_sweep')).toBe(false);
+  expect(slAlgoApplies(SL_ALGO_DEFAULT,'htf_ob')).toBe(false);
+  expect(createDobSwingStopGate({m5Candles:fixture.candles.m5,instrument:'XAUUSD',atr:[{time:0,value:1e9}]})(done,SL_ALGO_V1,'lq_sweep')).toBeNull();
+  expect(slAlgoFromJson({method:'unbekannt'})).toEqual(SL_ALGO_DEFAULT);
+  expect(slAlgoFromJson({method:'structure_p2'})).toEqual(SL_ALGO_V1);
  });
  it('Chart-Position aus der Lauf-Zeile zeigt denselben SL wie der Alarm',()=>{
   const variant=dobSwingStopVariant({...done,swingStop},{candles:fixture.candles.m1,dataEnd:fixture.provenance.query.to,instrument:'XAUUSD'});
@@ -108,15 +112,15 @@ describe('Statistik-Umschaltung (c)',()=>{
   swing_max_r:2.5,swing_sl_hit:false,swing_ambiguous_r:null,swing_risk_usd:2,swing_stop_price:98};
  it('Schalter aus: DOB-Ergebnis, an: Ziel fest gegen den neuen SL',()=>{
   expect(dobRowConfigScore(DOB_GUARDRAILS_DEFAULT,row)).toMatchObject({outcome:'loss',r:-1});
-  expect(dobRowConfigScore({...DOB_GUARDRAILS_DEFAULT,swingStop:true},row)).toMatchObject({outcome:'success',r:1});
+  expect(dobRowConfigScore({...DOB_GUARDRAILS_DEFAULT,slAlgo:SL_ALGO_V1},row)).toMatchObject({outcome:'success',r:1});
  });
  it('Trades ohne Variante bleiben unverändert',()=>{
   const plain={...row,swing_max_r:null};
-  expect(dobRowConfigScore({...DOB_GUARDRAILS_DEFAULT,swingStop:true},plain)).toEqual(dobRowConfigScore(DOB_GUARDRAILS_DEFAULT,plain));
+  expect(dobRowConfigScore({...DOB_GUARDRAILS_DEFAULT,slAlgo:SL_ALGO_V1},plain)).toEqual(dobRowConfigScore(DOB_GUARDRAILS_DEFAULT,plain));
  });
- it('Konfig-Schalter übersteht die DB-Form, Default aus',()=>{
-  expect(dobGuardrailsFromRow({}).swingStop).toBe(false);
-  expect(dobGuardrailsFromRow(dobGuardrailsToRow('GBPUSD',{...DOB_GUARDRAILS_DEFAULT,swingStop:true},'htf_ob')).swingStop).toBe(true);
+ it('SL-Algo-Konfig übersteht die DB-Form, Default DOB-SL',()=>{
+  expect(dobGuardrailsFromRow({}).slAlgo).toEqual(SL_ALGO_DEFAULT);
+  expect(dobGuardrailsFromRow(dobGuardrailsToRow('GBPUSD',{...DOB_GUARDRAILS_DEFAULT,slAlgo:SL_ALGO_V1},'htf_ob')).slAlgo).toEqual(SL_ALGO_V1);
  });
 });
 
@@ -124,5 +128,20 @@ describe('createDobSwingStopGate auf echten Kerzen',()=>{
  it('läuft ohne ATR durch und liefert dann keine Variante',()=>{
   const fixture=load('2026-11-12'),done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
   expect(createDobSwingStopGate({m5Candles:fixture.candles.m5,instrument:'XAUUSD',atr:[]})(done)).toBeNull();
+ });
+});
+
+describe('Intraday-Messgröße: Ziel bis NY-Close',()=>{
+ it('Tagesende 22:00 Berlin im Sommer, 23:00 im Winter, nach dem Tagesende der nächste Tag',()=>{
+  expect(dobIntradayEnd(berlin('2026-07-15','10:00'))).toBe(berlin('2026-07-15','22:00'));
+  expect(dobIntradayEnd(berlin('2026-01-15','10:00'))).toBe(berlin('2026-01-15','23:00'));
+  expect(dobIntradayEnd(berlin('2026-07-15','22:30'))).toBe(berlin('2026-07-16','22:00'));
+  // Umstellungstag (29.03.2026, Sommerzeit ab 03:00): Tagesende 22:00 Sommerzeit.
+  expect(dobIntradayEnd(berlin('2026-03-29','10:00'))).toBe(berlin('2026-03-29','22:00'));
+ });
+ it('zählt nur Ziele bis zum Tagesende als Win, mit SL-Algo die swing-Werte',()=>{
+  const rows=[{intraday_max_r:2,swing_max_r:null},{intraday_max_r:1,swing_max_r:2,swing_intraday_max_r:2.5},{intraday_max_r:null}];
+  expect(dobIntradayWinrate(rows,DOB_GUARDRAILS_DEFAULT,()=>2)).toEqual({n:2,winrate:0.5});
+  expect(dobIntradayWinrate(rows,{slAlgo:SL_ALGO_V1},()=>2)).toEqual({n:2,winrate:1});
  });
 });

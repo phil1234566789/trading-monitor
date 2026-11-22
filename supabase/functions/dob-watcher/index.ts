@@ -105,7 +105,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
   // Sperr-Konfig je POI-Art jede Minute frisch (Statistikseite speichert direkt). Auch ein gesperrter Monat rechnet und meldet ⛔ (Q23).
-  const configRows=checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be,poi_match_mode,alarm_enabled,swing_stop,updated_at,blocked_stats,blocked_stats_at')
+  const configRows=checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be,poi_match_mode,alarm_enabled,sl_algo,updated_at,blocked_stats,blocked_stats_at')
     .eq('instrument',instrument).order('poi_type').limit(10)) as any[];
   const poiTypes=await Promise.all(configRows.map(async row=>{const guardrails=dobGuardrailsFromRow(row);
     return {poiType:row.poi_type,guardrails,blockStats:dry?row.blocked_stats:await blockStatsFor(client,instrument,row,guardrails)};}));
@@ -118,7 +118,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   // Erkennung zum Datenstand (letzte M1, Feed-Verzug ≤ 3 min), Herzschlag, Stale-Alarm und Alarmfenster zur Uhrzeit.
   const asOf=dobDataAsOf(m1Marked,evaluatedAt);
   const htfCandles={'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)};
-  // SL-Variante (c) wie der Lauf (scripts/dobTradeSetupsFill.mjs): alle M5, nicht der Live-Schnitt, und dieselbe H1-ATR-Serie.
+  // SL-Algo wie der Lauf (scripts/dobTradeSetupsFill.mjs): alle M5, nicht der Live-Schnitt, und dieselbe H1-ATR-Serie.
   const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt:asOf,m1Candles:m1Marked,m5Candles:m5Marked,htfCandles}),
     counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:instrument}),
     swingStopGate:createDobSwingStopGate({m5Candles:m5Marked,instrument,atr:dobH1AtrSeries(htfCandles['1h'])}),tradeSetups};
