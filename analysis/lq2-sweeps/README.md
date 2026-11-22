@@ -187,7 +187,7 @@ Gerechnet mit `fallDr148.mjs` → `fall-dr148.json`, das Diagramm mit `svgDr148.
 - **R4 ist erfüllt:** Nach der aktivierten bullischen Kraft (Sweep 11:55, Anstieg bis 13:55) gibt es mit dem M5-OB 15:00
   einen neuen eigenen bärischen OB.
 - **R5 passt:** Die offenen FVGs um den Entry werden nach dem Entry angelaufen, mit einem Rücklauf bis 1,32356 (15:55).
-  Die tieferen bei 12:10/12:15 holt der Kurs um 16:55–17:05 (Tief 1,32063) und prallt kurz bis 1,32154 ab.
+  Die tieferen bei 12:10/12:15 holt der Kurs um 16:55–17:05 (Tief 1,31976 um 17:05) und prallt bis 1,32154 (17:20) ab.
 - **R6 rettet den Trade:** Der bärische P2-LH ist das Hoch 14:30 bei 1,32372 (Fraktal P2, LH unter dem Hoch 13:55 bei
   1,32490). Der Struktur-Algo führt ihn nur als „high“, nicht als protected-high. Zum Entry sieht er eine Abwärts-Wurzel
   und darin eine innere Aufwärts-Ebene mit protected-low 1,32111.
