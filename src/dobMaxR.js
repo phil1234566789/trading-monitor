@@ -8,9 +8,9 @@ export const DOB_MAX_R_STEPS=[0.5,1,1.5,2,2.5,3,3.5,4,4.5,5];
 // reicht ambiguousR bis zur höchsten davon: Ziele bis dort bleiben unentschieden, höhere sind Loss. Damit gilt für jedes Ziel k:
 // Win bei maxR ≥ k, unentschieden bei k ≤ ambiguousR, Loss bei slHit, sonst offen/unbekannt.
 // breakevenAtR (Teilprofit, Konfig partialBe): dieselben Stufen mit SL auf Entry ab dieser R-Weite; slHit heißt dann ausgestoppt
-// (auf Entry oder am SL).
-export function dobMaxR(trade,{candles,dataEnd,instrument='XAUUSD',breakevenAtR=null}){
- const status=rMultiple=>evaluateDoubleOrderBlockOutcome({...trade,candles,evaluatedAt:dataEnd,instrument,rMultiple,breakevenAtR}).status;
+// (auf Entry oder am SL). rScale: Stufen in einer anderen R-Einheit messen (Variante (c): R des DOB-Risikos bei weiterem SL).
+export function dobMaxR(trade,{candles,dataEnd,instrument='XAUUSD',breakevenAtR=null,rScale=1}){
+ const status=rMultiple=>evaluateDoubleOrderBlockOutcome({...trade,candles,evaluatedAt:dataEnd,instrument,rMultiple:rMultiple*rScale,breakevenAtR}).status;
  let maxR=0,slHit=false,ambiguousR=null;
  // Stufen sind monoton: wird eine nicht erreicht, folgt keine höhere.
  for(const [i,rMultiple] of DOB_MAX_R_STEPS.entries()){
@@ -31,4 +31,13 @@ export function dobWideVariant(t,options){
  if(t.stopAnchor!=='retestExtreme')return null;
  const stopPrice=dobWideStopPrice(t);
  return {stopPrice,riskUsd:Math.abs(t.entryPrice-stopPrice),...dobMaxR({...t,stopPrice},options)};
+}
+
+// SL-Variante (c) (src/dobSwingStop.js, nur HTF-OB): SL hinter dem M15-P2, Ziel bleibt als Preis. Die Stufen bleiben in R des DOB-Risikos,
+// damit dobTargetOutcome(row,k) das feste Ziel k·DOB-Risiko gegen den neuen SL prüft. null = keine Anti-Confluence oder kein Swing.
+export function dobSwingStopVariant(t,options){
+ const stop=t.swingStop?.stop;
+ if(!stop)return null;
+ const riskUsd=Math.abs(t.entryPrice-stop.stopPrice);
+ return {stopPrice:stop.stopPrice,riskUsd,...dobMaxR({...t,stopPrice:stop.stopPrice},{...options,rScale:Math.abs(t.entryPrice-t.stopPrice)/riskUsd})};
 }

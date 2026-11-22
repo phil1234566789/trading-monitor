@@ -15,6 +15,7 @@ export function wilderAtrValues(candles, period = 14) {
 }
 
 // Kerzen zu Buckets fester Länge (z.B. M5 -> H1) zusammenfassen; Bucket-Start = floor(time / seconds).
+// Markierte Kerzen (markIgnoredCandles): der Bucket ist ignored, wenn alle seine Kerzen es sind (OB-Erkennung auf M15/H1).
 export function aggregateCandles(candles, seconds) {
   const out = [];
   for (const c of candles) {
@@ -23,7 +24,8 @@ export function aggregateCandles(candles, seconds) {
       last.high = Math.max(last.high, c.high);
       last.low = Math.min(last.low, c.low);
       last.close = c.close;
-    } else out.push({ time, open: c.open, high: c.high, low: c.low, close: c.close });
+      if ('ignored' in last) last.ignored &&= !!c.ignored;
+    } else out.push({ time, open: c.open, high: c.high, low: c.low, close: c.close, ...('ignored' in c ? { ignored: !!c.ignored } : {}) });
   }
   return out;
 }
@@ -37,4 +39,10 @@ export function closedHourAtrResolver(candles, period = 14) {
     while (lo < hi) { const m = (lo + hi) >> 1; if (h1[m].time <= t - 3600) lo = m + 1; else hi = m; }
     return lo > 0 ? atr[lo - 1] : null;
   };
+}
+
+// Kerzen mit from <= time < to aus einer nach Zeit sortierten Reihe (binäre Suche; Fenster je Trade über eine Jahreshistorie).
+export function candlesInWindow(candles, from, to) {
+  const at = t => { let lo = 0, hi = candles.length; while (lo < hi) { const m = (lo + hi) >> 1; if (candles[m].time < t) lo = m + 1; else hi = m; } return lo; };
+  return candles.slice(at(from), at(to));
 }

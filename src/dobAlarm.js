@@ -42,6 +42,14 @@ export function dobTpLine(s,guardrails){
  const at=k=>price(s.entryPrice+(s.direction==='long'?1:-1)*k*Math.abs(s.entryPrice-s.stopPrice),s.instrument);
  return plan?`TP1 ${rText(plan.atR)} @ ${at(plan.atR)} (${plan.pct} %${plan.be?', danach SL auf Entry':''}) · TP2 ${rText(tp)} @ ${at(tp)}`:`TP ${rText(tp)} @ ${at(tp)}`;
 }
+// SL nach Konfig: SL-Variante (c) nennt den SL hinter dem M15-P2 (Ziel bleibt, dobTpLine rechnet vom DOB-SL); sonst der DOB-SL.
+// Der Chart liest denselben SL aus der Lauf-Zeile (dobRowStopPrice); test/dobSwingStop.test.js hält beide gleich.
+export const dobSwingStopOf=(s,guardrails)=>guardrails?.swingStop?s.swingStop?.stop??null:null;
+export function dobStopText(s,guardrails){
+ const stop=dobSwingStopOf(s,guardrails);
+ return stop?`SL ${price(stop.stopPrice,s.instrument)} (hinter M15-Swing ${formatBerlinTime(stop.swingTime)}, Anti-Confluence; DOB-SL ${price(s.stopPrice,s.instrument)})`
+  :`SL ${price(s.stopPrice,s.instrument)}`;
+}
 const side=direction=>direction==='long'?'Long':'Short';
 export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=5m&replay=${at}`;
 // Die POI-Zeile nennt die Art (H1-OB/H4-OB bei HTF-OB, sonst den Namen der POI-Art); die Kopfzeile bleibt ohne Art.
@@ -79,7 +87,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
     text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${dobWarnText(guardrail,guardrails,s.entryTime)} ${formatBerlinTime(s.entryTime)}, kein Trade${guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,guardrail,s.entryTime)):''}`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
      // Die POI-Zeile zeigt auch hier die Art (Philip); OB-Zonen stehen im Retest-Alarm. TP nach Konfig nur beim echten Entry, nie bei ⛔.
-     dobPoiLine(s,poiType),`Entry ${price(s.entryPrice,instrument)} · SL ${price(s.stopPrice,instrument)}`,...(warn?[]:[dobTpLine({...s,instrument},guardrails)].filter(Boolean)),
+     dobPoiLine(s,poiType),`Entry ${price(s.entryPrice,instrument)} · ${dobStopText({...s,instrument},guardrails)}`,...(warn?[]:[dobTpLine({...s,instrument},guardrails)].filter(Boolean)),
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
   }
  }

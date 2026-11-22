@@ -1,5 +1,6 @@
 import {dobRowGuardrailReason,DOB_GUARDRAILS_DEFAULT} from './dobGuardrails.js';
 import {dobRowConfigScore} from './dobPartialProfit.js';
+import {dobRowStopPrice} from './dobTradeStatistics.js';
 import {entryRiskScale} from './entryRisk.js';
 import {candleTouchesPrice} from './structurePivotTime.ts';
 
@@ -16,7 +17,7 @@ export function dobChartPosition(row,config,candles,showBlocked=false){
  if((blocked&&!showBlocked)||!candles.length)return null;
  const first=candles[0].time,last=candles.at(-1).time;
  if(row.entry_time>last)return null;
- const score=dobRowConfigScore(config,row),k=score.target;
+ const score=dobRowConfigScore(config,row),k=score.target,stopPrice=dobRowStopPrice(config,row),swing=stopPrice!==row.stop_price;
  const scale=entryRiskScale(row.entry_price,row.stop_price,[],row.instrument,row.direction);
  if(scale.status!=='ready')return null;
  const long=row.direction==='long',targetPrice=row.entry_price+(long?1:-1)*k*scale.risk;
@@ -28,15 +29,16 @@ export function dobChartPosition(row,config,candles,showBlocked=false){
   const hit=candles.find(c=>c.time>=row.entry_time&&candleTouchesPrice(c,tp1,!long));
   exitTime=hit?candles.find(c=>c.time>hit.time&&candleTouchesPrice(c,exitPrice,long))?.time??null:null;
  }else if(outcome){
-  exitPrice=outcome==='win'?targetPrice:row.stop_price;
-  const stored=(k===2||outcome==='loss'&&row.outcome==='loss')?row.exit_time:null;
+  exitPrice=outcome==='win'?targetPrice:stopPrice;
+  // Der gespeicherte Exit gehört zum DOB-SL; mit SL-Variante (c) sucht die Anzeige selbst.
+  const stored=!swing&&(k===2||outcome==='loss'&&row.outcome==='loss')?row.exit_time:null;
   exitTime=stored??candles.find(c=>c.time>=row.entry_time&&candleTouchesPrice(c,exitPrice,(outcome==='loss')===long))?.time??null;
  }
  // Im Replay liegt der Ausgang womöglich noch in der Zukunft: dann offen bis zur letzten Kerze, sonst verrät der Chart das Ergebnis.
  const visibleOutcome=exitTime!=null&&exitTime<=last?outcome:null;
  const endTime=visibleOutcome?exitTime:last;
  if(endTime<first)return null;
- return {id:row.id,blocked,k,r:score.r,label:score.label,stopPrice:row.stop_price,targetPrice,endTime,
+ return {id:row.id,blocked,k,r:score.r,label:score.label,stopPrice,targetPrice,endTime,
   position:{id:row.id,direction:row.direction,entryTime:row.entry_time,entryPrice:row.entry_price,
    exitTime:visibleOutcome?exitTime:null,exitPrice:visibleOutcome?exitPrice:null,outcome:visibleOutcome}};
 }

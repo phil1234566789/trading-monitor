@@ -12,6 +12,8 @@ import {fetchAllRows} from '../_shared/fetchAllRows.ts';
 import {readClosedFxcmCandles} from '../_shared/fxcmCandles.ts';
 import {dobGuardrailsFromRow,dobEntryRule} from '../../../src/dobGuardrails.js';
 import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
+import {createDobSwingStopGate} from '../../../src/dobSwingStop.js';
+import {dobH1AtrSeries} from '../../../src/dobHtfObPoi.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
 import {dobTs11FromRow} from '../../../src/dobLqSweepPoi.js';
 import {computeTs11Verdicts,TRADE_SETUP_11_VERSION} from '../_shared/ts11Verdicts.ts';
@@ -23,9 +25,9 @@ import {isWithinTradingWindows,type TradingWindows} from '../_shared/tradingHour
 // Jedes Instrument mit eigener Konfig (dob_guardrails), eigenem Alarmfenster und eigenem Herzschlag (dob_watcher_state); ein Fehler
 // bei einem Instrument hält die anderen nicht auf.
 const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
-// M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende; H1/H4 für beliebig alte POI-Zonen und den ATR.
+// M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende, M5 zusätzlich 2 Tage + 1 Tag Vorlauf für die SL-Variante (c); H1/H4 für beliebig alte POI-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
-const COUNTS: Record<string,number>={'1m':3000,'5m':600,'1h':6000,'4h':1500};
+const COUNTS: Record<string,number>={'1m':3000,'5m':900,'1h':6000,'4h':1500};
 // TS1.1-Trendkontext wie der Chart (tradeSetup11ContextLoader: 300 D1, M5 ab dem D1-Anker, höchstens 15000).
 // ponytail: ein neues TS1.1-Urteil je Tick über alle Instrumente (Edge-CPU-Limit); fehlende gelten bis dahin
 // nicht als TS1.1, d. h. ein LQ-Sweep-Alarm kommt höchstens ein paar Minuten später, nie fälschlich.
@@ -103,7 +105,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
   // Sperr-Konfig je POI-Art jede Minute frisch (Statistikseite speichert direkt). Auch ein gesperrter Monat rechnet und meldet ⛔ (Q23).
-  const configRows=checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be,poi_match_mode,alarm_enabled,updated_at,blocked_stats,blocked_stats_at')
+  const configRows=checked(await client.from('dob_guardrails').select('poi_type,entry_windows,default_tp_r,blocked_months,min_zone_age_seconds,counter_dob_mode,counter_candles_mode,partial_at_r,partial_pct,partial_be,poi_match_mode,alarm_enabled,swing_stop,updated_at,blocked_stats,blocked_stats_at')
     .eq('instrument',instrument).order('poi_type').limit(10)) as any[];
   const poiTypes=await Promise.all(configRows.map(async row=>{const guardrails=dobGuardrailsFromRow(row);
     return {poiType:row.poi_type,guardrails,blockStats:dry?row.blocked_stats:await blockStatsFor(client,instrument,row,guardrails)};}));
@@ -115,9 +117,11 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const ts11=poiTypes.some(p=>p.poiType==='lq_sweep')?await ts11Setups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null,tradeSetups=ts11?.setups??[];
   // Erkennung zum Datenstand (letzte M1, Feed-Verzug ≤ 3 min), Herzschlag, Stale-Alarm und Alarmfenster zur Uhrzeit.
   const asOf=dobDataAsOf(m1Marked,evaluatedAt);
-  const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt:asOf,m1Candles:m1Marked,m5Candles:m5Marked,
-    htfCandles:{'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)}}),
-    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:instrument}),tradeSetups};
+  const htfCandles={'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)};
+  // SL-Variante (c) wie der Lauf (scripts/dobTradeSetupsFill.mjs): alle M5, nicht der Live-Schnitt, und dieselbe H1-ATR-Serie.
+  const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt:asOf,m1Candles:m1Marked,m5Candles:m5Marked,htfCandles}),
+    counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:instrument}),
+    swingStopGate:createDobSwingStopGate({m5Candles:m5Marked,instrument,atr:dobH1AtrSeries(htfCandles['1h'])}),tradeSetups};
   // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
   const calcStart=performance.now(),runs:any[]=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt:asOf,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
   const stale=dobStaleAlarm({instrument:instrument,lastM1Time:m1.at(-1)?.time,evaluatedAt});

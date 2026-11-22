@@ -33,9 +33,12 @@ export function dobPoiContext({htfCandles,m5Candles=[],instrument='XAUUSD'}){
     touches:touchEpisodes(zone,recognizedAt,h1,m5)});
   }
  }
- // ATR(14) nach Wilder über die gehandelten H1-Kerzen, gültig ab Schluss der jeweiligen Stunde.
- const atr=wilderAtrValues(h1,ATR_PERIOD).flatMap((value,i)=>value==null?[]:[{time:h1[i].time+HOUR,value}]);
- return {zones,atr};
+ return {zones,atr:dobH1AtrSeries(h1)};
+}
+// ATR(14) nach Wilder über die gehandelten H1-Kerzen, gültig ab Schluss der jeweiligen Stunde (h1AtrAt liest sie).
+export function dobH1AtrSeries(h1Candles){
+ const h1=h1Candles.filter(c=>!c.ignored);
+ return wilderAtrValues(h1,ATR_PERIOD).flatMap((value,i)=>value==null?[]:[{time:h1[i].time+HOUR,value}]);
 }
 
 // Touch-Episode = aufeinanderfolgende berührende Kerzen (Docht reicht), gespeichert als Startzeit; bis zum Bruch der Zone.
