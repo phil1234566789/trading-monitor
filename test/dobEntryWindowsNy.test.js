@@ -47,3 +47,30 @@ describe('Entry-Fenster: Chart = Alarm',()=>{
   expect(dobChartPosition(row,c,fixture.candles.m5,true).blocked).toBe(true);
  });
 });
+
+describe('Entry-Fenster mit Wochentag (XAU „Montag“)',()=>{
+ const sqlMonday=readFileSync(new URL('../supabase/migrations/20261122160000_dob_entry_window_monday_xau.sql',import.meta.url),'utf8');
+ const monday=JSON.parse(sqlMonday.match(/'\[(\{"label":"Montag".*?\})\]'::jsonb/)[1]);
+ const xauTp={from:840,to:1140,action:'tp',tpR:4};
+ it('Migration legt „Montag“ aus an, ganzer Tag, nur Montag',()=>{
+  expect(monday).toMatchObject({label:'Montag',from:0,to:1440,days:[1],action:'block',enabled:false});
+  expect(dobEntryRule(cfg([monday,xauTp]),berlin('2026-07-13','15:00'))).toMatchObject({action:'tp',tpR:4});
+ });
+ it.each([['2026-07-13','Sommer'],['2026-01-12','Winter']])('eingeschaltet sperrt es den ganzen Berliner Montag (%s, %s)',day=>{
+  const on=cfg([{...monday,enabled:true},xauTp]),next=new Date(Date.parse(`${day}T12:00:00Z`)+86400e3).toISOString().slice(0,10);
+  // 00:30 Berlin ist in UTC noch Sonntag: der Wochentag kommt aus Europe/Berlin, nicht aus UTC.
+  for(const hhmm of ['00:30','15:00','23:59'])expect(dobEntryRule(on,berlin(day,hhmm)).action).toBe('block');
+  expect(dobEntryRule(on,berlin(next,'00:30'))).toMatchObject({action:'tp'});
+ });
+ it('Chart = Alarm mit Wochentag: Donnerstag sperrt beide Wege, Mittwoch keinen',()=>{
+  const fixture=load('2026-11-12'),done=run(fixture).setups.find(s=>s.entryTime===berlin('2026-11-12','14:10'));
+  const row={id:'x',instrument:'XAUUSD',direction:done.direction,entry_time:done.entryTime,entry_price:done.entryPrice,stop_price:done.stopPrice,
+   outcome:'success',exit_time:null,max_r:2,sl_hit:false,ambiguous_r:null};
+  for(const [days,blocked] of [[[4],true],[[3],false]]){
+   const c=cfg([{label:'Tag',from:0,to:1440,days,action:'block'}]);
+   const rejected=run(fixture,undefined,true,undefined,{guardrails:c}).rejected.some(s=>s.entryTime===done.entryTime&&s.reason==='blockedEntryHour');
+   expect(rejected).toBe(blocked);
+   expect(dobRowGuardrailReason(c,row)==='blockedEntryHour').toBe(blocked);
+  }
+ });
+});

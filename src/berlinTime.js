@@ -33,6 +33,9 @@ export function berlinDateStrFor(unixSec) {
   return DATE_FORMATTER.format(new Date(unixSec * 1000));
 }
 
+// Berliner Wochentag (0=So..6=Sa wie Date#getDay und session.days) eines Unix-Sekunden-Zeitpunkts.
+export const berlinWeekday = (unixSec) => new Date(`${berlinDateStrFor(unixSec)}T12:00:00Z`).getUTCDay();
+
 // "YYYY-MM-DD HH:mm" (Europe/Berlin) — die Schreibweise, die datierte Chart-Annotationen nutzen
 // (siehe annotations.js), also eindeutig auch über einen Tageswechsel hinweg.
 export function formatDatedTime(unixSec) {

@@ -1,4 +1,5 @@
-import {berlinOffsetMinutes,berlinDateStrFor} from './berlinTime.js';
+import {berlinOffsetMinutes,berlinDateStrFor,berlinWeekday} from './berlinTime.js';
+import {daysOrAll} from './sessionOccurrences.js';
 import {dobFeaturesOf,dobFeature,dobPoiFeature} from './dobTradeFeatures.js';
 import {DOB_LQ_MATCH_LEVELS} from './dobLqSweepPoi.js';
 import {dobPoiTypeOf} from './dobPoiType.js';
@@ -8,7 +9,8 @@ import {SL_ALGO_DEFAULT,slAlgoFromJson,slAlgoText} from './slAlgo.js';
 // dob-watcher, deshalb rein und nur mit Deno-tauglichen Importen (Dateiendung, siehe test/dobWatcherImports.test.js).
 // Default: nichts gesperrt, TP 2R wie das Setup, damit ohne Konfig nichts still wegfällt oder sich ändert.
 // entryWindows: Regeln je Entry-Zeitfenster {from, to, action:'block'|'tp', tpR?} in Berlin-Minuten [von, bis), über Mitternacht
-// erlaubt (bis < von), Wochentage egal; das erste passende Fenster gilt. Weitere Felder je Fenster können ohne Umbau dazukommen.
+// erlaubt (bis < von), days optional wie session.days (0=So..6=Sa, fehlt = jeder Tag, Berliner Wochentag des Entry); das erste
+// passende Fenster gilt. Weitere Felder je Fenster können ohne Umbau dazukommen.
 // enabled:false schaltet eine Regel ab, ohne ihre Werte zu verlieren (fehlt = an); abgeschaltete Regeln wirken nirgends.
 // minZoneAgeSeconds ist der wirksame Wert (null = aus), minZoneAgeSavedSeconds der gemerkte Wert für das Wiedereinschalten.
 // counterDobMode (v3, Gegen-DOB seit POI-Retest, Status none/dead/live je Trade): live_block_dead_5r = lebende sperren, nur tote
@@ -59,6 +61,7 @@ export const dobMonthBlocked=(config,atSec)=>config.blockedMonths.includes(Numbe
 
 const berlinMinute=sec=>Math.floor((((sec+berlinOffsetMinutes(sec*1000)*60)%86400)+86400)%86400/60);
 const inWindow=(minute,{from,to})=>from<=to?minute>=from&&minute<to:minute>=from||minute<to;
+const onDay=(sec,w)=>daysOrAll(w.days).includes(berlinWeekday(sec));
 
 // Überlappende Entry-Fenster (an oder aus, Fenster über Mitternacht in zwei Stücken): je Index die Indizes der überlappenden Fenster.
 // Bei Überlappung entscheidet die Reihenfolge („erstes passendes gilt“), deshalb sortiert die Konfig dann nicht um.
@@ -75,7 +78,7 @@ export const dobSortEntryWindows=windows=>dobEntryWindowOverlaps(windows).some(h
 // Regel für einen Entry: erstes passendes Fenster, sonst Default-TP. {action:'block'|'tp', tpR, window}.
 export function dobEntryRule(config,entryTimeSec){
  const minute=berlinMinute(entryTimeSec);
- const window=config.entryWindows.find(w=>dobRuleActive(w)&&inWindow(minute,w))??null;
+ const window=config.entryWindows.find(w=>dobRuleActive(w)&&inWindow(minute,w)&&onDay(entryTimeSec,w))??null;
  if(window?.action==='block')return {action:'block',tpR:null,window};
  const tpR=window?.action==='tp'&&Number.isFinite(window.tpR)?window.tpR:config.defaultTpR??DOB_DEFAULT_TP_R;
  return {action:'tp',tpR,window};

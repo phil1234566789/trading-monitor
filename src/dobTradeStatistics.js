@@ -1,6 +1,6 @@
 import {aggregateDobRoutes} from '../scripts/dobWinrateAggregate.mjs';
 import {sessionOccurrences} from './sessionOccurrences.js';
-import {berlinDateStrFor,berlinOffsetMinutes} from './berlinTime.js';
+import {berlinDateStrFor,berlinOffsetMinutes,berlinWeekday} from './berlinTime.js';
 import {narrowByEntryPrice} from './simulationPinMatching.js';
 import {slAlgoApplies} from './slAlgo.js';
 
@@ -42,7 +42,7 @@ export function dobTradesPerWeek(rows){
 }
 export const dobPerWeekText=w=>w.perWeek==null?'–':w.perWeek.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1});
 export const DOB_WEEKDAYS=[[1,'Montag'],[2,'Dienstag'],[3,'Mittwoch'],[4,'Donnerstag'],[5,'Freitag'],[6,'Samstag'],[0,'Sonntag']];
-export const dobTradeWeekday=row=>new Date(`${berlinDateStrFor(row.entry_time)}T12:00:00Z`).getUTCDay();
+export const dobTradeWeekday=row=>berlinWeekday(row.entry_time);
 const offset=sec=>berlinOffsetMinutes(sec*1000);
 export function dobTradeSessions(row,sessions){
  return sessions.filter(s=>sessionOccurrences(s.from_minutes,s.to_minutes,row.entry_time,row.entry_time+1,offset,s.days).length).map(s=>s.label);

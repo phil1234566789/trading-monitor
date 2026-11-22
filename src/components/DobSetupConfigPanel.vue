@@ -12,6 +12,7 @@ import {dobTotalStats,DOB_ZONE_AGE_BUCKETS,DOB_HALVES,dobTradeHalf,dobTradesPerW
 import {DOB_MAX_R_STEPS} from '../dobMaxR.js';
 import {minutesToTimeInput,timeInputToMinutes} from '../chartTimeUtils.js';
 import DobStatCell from './DobStatCell.vue';
+import WeekdayToggles from './WeekdayToggles.vue';
 import {dobPoiTypeLabel} from '../dobPoiType.js';
 
 // Setup-Konfiguration je Instrument und POI-Art bearbeiten (Tabelle dob_guardrails, Speichern trifft nur die eigene POI-Art). Der Entwurf wirkt sofort als Vorschau auf die Seite
@@ -106,6 +107,7 @@ const ruleImpacts=computed(()=>{
         <div v-for="(w,i) in draft.entryWindows" :key="i" class="window" :class="{off:!dobRuleActive(w)}">
           <input type="checkbox" :checked="dobRuleActive(w)" :aria-label="`Fenster ${w.label??i+1} an`" title="Regel an/aus, Werte bleiben" @change="setRuleActive(w,$event.target.checked)">
           <span v-if="w.label" class="window-label">{{ w.label }}</span>
+          <WeekdayToggles v-if="w.days" :days="w.days" @update:days="d=>{w.days=d;}" />
           <input type="time" :value="minutesToTimeInput(w.from)" :aria-label="`Fenster ${i+1} von`" @change="setWindow(i,'from',$event.target.value)"> –
           <input type="time" :value="minutesToTimeInput(w.to)" :aria-label="`Fenster ${i+1} bis`" @change="setWindow(i,'to',$event.target.value)">
           <select :value="w.action" :aria-label="`Fenster ${i+1} Regel`" @change="setAction(w,$event.target.value)"><option value="block">Sperre</option><option value="tp">TP</option></select>
