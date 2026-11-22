@@ -28,7 +28,7 @@ export function dobPartialScore(row,tp,plan){
 // SL-Algo Struktur-P2: festes Ziel gegen den M15-P2-SL; ein Win bringt tp·DOB-Risiko / neues Risiko. Teilprofit-Verläufe gibt es nur
 // zum DOB-SL, deshalb rechnen (c)-Trades ohne Teilprofit.
 export const dobRowConfigScore=(config,row)=>{const tp=dobRowConfigTpR(config,row);
- if(!dobSlAlgoActive(config)||!dobHasSwingStopVariant(row))return dobPartialScore(row,tp,dobPartialPlan(config,tp));
+ if(!dobSlAlgoActive(config,row)||!dobHasSwingStopVariant(row))return dobPartialScore(row,tp,dobPartialPlan(config,tp));
  const s=dobPartialScore(dobAsSwingStop(row),tp,null);
  return s.outcome==='success'?{...s,r:Math.round(tp*Math.abs(row.entry_price-row.stop_price)/row.swing_risk_usd*1000)/1000}:s;};
 // Hat der Lauf den Rest-Verlauf für diese Teilprofit-Stufe gespeichert (sonst blendet das Panel den Schalter aus)?

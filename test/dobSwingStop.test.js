@@ -6,7 +6,7 @@ import {untouchedSwingsAsOf} from '../src/marketStructureSwings.js';
 import {counterZoneHits} from '../src/antiConfluenceCounterZones.js';
 import {createDobSwingStopGate} from '../src/dobSwingStop.js';
 import {dobSwingStopVariant} from '../src/dobMaxR.js';
-import {dobStopText,dobAlarmEvents} from '../src/dobAlarm.js';
+import {dobStopText,dobAlarmEvents,dobSwingStopOf} from '../src/dobAlarm.js';
 import {dobRowStopPrice} from '../src/dobTradeStatistics.js';
 import {dobRowConfigScore} from '../src/dobPartialProfit.js';
 import {dobChartPosition} from '../src/dobChartPositions.js';
@@ -143,5 +143,27 @@ describe('Intraday-Messgröße: Ziel bis NY-Close',()=>{
   const rows=[{intraday_max_r:2,swing_max_r:null},{intraday_max_r:1,swing_max_r:2,swing_intraday_max_r:2.5},{intraday_max_r:null}];
   expect(dobIntradayWinrate(rows,DOB_GUARDRAILS_DEFAULT,()=>2)).toEqual({n:2,winrate:0.5});
   expect(dobIntradayWinrate(rows,{slAlgo:SL_ALGO_V1},()=>2)).toEqual({n:2,winrate:1});
+ });
+});
+
+describe('SL-Algo poiTypes: Chart = Alarm je POI-Familie',()=>{
+ // Lauf-Zeile mit SL-Algo-Werten je Familie (POI-Art aus der Lauf-ID wie dobRunPoiType) und dasselbe Setup im Watcher.
+ const runs={htf_ob:'dob-setup-gbpusd-v3',lq_sweep:'dob-lq-sweep-gbpusd-v1'};
+ const row=poiType=>({run_id:runs[poiType],entry_time:0,entry_price:100,stop_price:99,outcome:'loss',max_r:0.5,sl_hit:true,ambiguous_r:null,
+  swing_max_r:2.5,swing_sl_hit:false,swing_ambiguous_r:null,swing_risk_usd:2,swing_stop_price:98});
+ const setup={entryPrice:100,stopPrice:99,swingStop:{stop:{stopPrice:98,swingPrice:98.05,swingTime:0}}};
+ for(const poiTypes of [['htf_ob'],['lq_sweep'],['htf_ob','lq_sweep'],[]])for(const poiType of ['htf_ob','lq_sweep']){
+  it(`poiTypes [${poiTypes}] · ${poiType}`,()=>{
+   const cfg={...DOB_GUARDRAILS_DEFAULT,slAlgo:{...SL_ALGO_V1,poiTypes}},applies=poiTypes.includes(poiType);
+   expect(slAlgoApplies(cfg.slAlgo,poiType)).toBe(applies);
+   // Alarm: Gate (erste Prüfung slAlgoApplies) und Alarmtext; Chart/Statistik: SL und Ergebnis der Lauf-Zeile.
+   expect(dobSwingStopOf(setup,cfg,poiType)?.stopPrice??null).toBe(applies?98:null);
+   expect(dobRowStopPrice(cfg,row(poiType))).toBe(applies?98:99);
+   expect(dobRowConfigScore(cfg,row(poiType)).outcome).toBe(applies?'success':'loss');
+  });
+ }
+ it('Gate greift für eine nicht gewählte Familie nie',()=>{
+  const gate=createDobSwingStopGate({m5Candles:[],instrument:'GBPUSD',atr:[]});
+  expect(gate({entryTime:1,entryPrice:100,stopPrice:99,direction:'long'},{...SL_ALGO_V1,poiTypes:['htf_ob']},'lq_sweep')).toBeNull();
  });
 });

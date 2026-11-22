@@ -1,4 +1,5 @@
 import {instrumentConfig} from './instrumentConfig.js';
+import {DOB_POI_TYPES} from './dobPoiType.js';
 
 // SL-Algo: wählt per Konfig die SL-Methode je Instrument und POI-Art (dob_guardrails.sl_algo). dob = SL des DOB-Indikators.
 // 1.0 (Philip 22.11.): structure_p2 = 5 Ticks hinter den letzten bestätigten, bis zum Entry unberührten M15-P2 jenseits des DOB-SL,
@@ -7,6 +8,8 @@ import {instrumentConfig} from './instrumentConfig.js';
 export const SL_ALGO_METHOD_LABELS={dob:'DOB-SL',structure_p2:'Struktur-P2'};
 export const SL_ALGO_DEFAULT=Object.freeze({method:'dob'});
 export const SL_ALGO_V1=Object.freeze({method:'structure_p2',timeframe:'15M',bufferTicks:5,poiTypes:Object.freeze(['htf_ob'])});
+// POI-Familien, für die sl_algo.poiTypes schaltbar ist (Panel) und für die der Fill die swing_*-Werte misst.
+export const SL_ALGO_POI_TYPES=Object.freeze(Object.keys(DOB_POI_TYPES));
 export const SL_ALGO_TIMEFRAME_SECONDS={'5m':300,'15M':900,'1H':3600};
 // DB-Wert (jsonb) → Konfig; unbekannte Methoden fallen auf den DOB-SL zurück, fehlende Parameter auf 1.0.
 export function slAlgoFromJson(value){

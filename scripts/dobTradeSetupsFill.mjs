@@ -53,7 +53,7 @@ try {
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { dobPoiContext, dobPoiZoneAgeSeconds }, { dobMaxR, dobWideVariant, dobSwingStopVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, dobPoiFeatures, DOB_BREAKEVEN_AT_R_LEVELS },
-    { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }, { tradeSetup11RowVerdicts, TRADE_SETUP_11_VERSION }, { createDobSwingStopGate }, { SL_ALGO_V1 }, { dobIntradayOutcome }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }, { tradeSetup11RowVerdicts, TRADE_SETUP_11_VERSION }, { createDobSwingStopGate }, { SL_ALGO_V1, SL_ALGO_POI_TYPES }, { dobIntradayOutcome }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js',
       '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/tradeSetup11Rows.js', '/src/dobSwingStop.js', '/src/slAlgo.js', '/src/dobIntraday.js'].map(load));
   const [{ fetchDobTradePins }, { missingDobModelTrades }] = await Promise.all(['/src/pinContext.js', '/src/dobTradeStatistics.js'].map(load));
@@ -93,9 +93,10 @@ try {
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
   // Der Lauf entscheidet, welche Setups zählen; die POI kommt aus dem einmal vorberechneten Kontext.
   const counterDobGate = RUNS[RUN_ID].counterDob ? createDobCounterDobGate({ m5Candles: m5Marked, m1Candles: m1Marked, instrument: SYMBOL }) : undefined;
-  // SL-Algo 1.0 (Struktur-P2) für HTF-OB-Läufe ab v1 (mit POI); ATR aus demselben POI-Kontext wie der Watcher (dobH1AtrSeries).
+  // SL-Algo 1.0 (Struktur-P2) gemessen für jede POI-Familie ab v1 (mit POI); ob er wirkt, entscheidet erst sl_algo.poiTypes der Konfig.
+  // ATR aus demselben POI-Kontext wie der Watcher (dobH1AtrSeries).
   const swingStopGate = RUNS[RUN_ID].version !== 'dob-setup-v0' ? createDobSwingStopGate({ m5Candles: m5Marked, instrument: SYMBOL, atr: poiContext.atr }) : undefined;
-  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, poiType: RUNS[RUN_ID].poiType, poiContext, poiOptions: RUNS[RUN_ID].poiOptions, counterDobGate, swingStopGate, slAlgo: SL_ALGO_V1, tradeSetups })) });
+  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, poiType: RUNS[RUN_ID].poiType, poiContext, poiOptions: RUNS[RUN_ID].poiOptions, counterDobGate, swingStopGate, slAlgo: { ...SL_ALGO_V1, poiTypes: SL_ALGO_POI_TYPES }, tradeSetups })) });
   const trades = dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup: runSetups, dobLiveWindowInput }).setups,
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   const carrying = new Map();

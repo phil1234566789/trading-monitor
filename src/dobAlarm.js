@@ -4,6 +4,7 @@ import {m1GapCovered} from './goldWeekendGap.js';
 import {dobConfigTpR,dobPartialPlan,dobEntryRule} from './dobGuardrails.js';
 import {dobBlockKey,dobBlockStatsText} from './dobBlockStats.js';
 import {instrumentConfig} from './instrumentConfig.js';
+import {slAlgoApplies} from './slAlgo.js';
 import {DOB_DEFAULT_POI_TYPE,dobPoiTypeLabel} from './dobPoiType.js';
 
 // Alarme des DOB-Live-Watchers (supabase/functions/dob-watcher) aus dem Ergebnis von checkDobTradeSetup(). Rein, damit Vitest
@@ -44,9 +45,9 @@ export function dobTpLine(s,guardrails){
 }
 // SL nach Konfig: SL-Algo Struktur-P2 nennt den SL hinter dem M15-P2 (Ziel bleibt, dobTpLine rechnet vom DOB-SL); sonst der DOB-SL.
 // Der Chart liest denselben SL aus der Lauf-Zeile (dobRowStopPrice); test/dobSwingStop.test.js hält beide gleich.
-export const dobSwingStopOf=(s,guardrails)=>guardrails?.slAlgo?.method==='structure_p2'?s.swingStop?.stop??null:null;
-export function dobStopText(s,guardrails){
- const stop=dobSwingStopOf(s,guardrails);
+export const dobSwingStopOf=(s,guardrails,poiType=DOB_DEFAULT_POI_TYPE)=>slAlgoApplies(guardrails?.slAlgo,poiType)?s.swingStop?.stop??null:null;
+export function dobStopText(s,guardrails,poiType){
+ const stop=dobSwingStopOf(s,guardrails,poiType);
  return stop?`SL ${price(stop.stopPrice,s.instrument)} (hinter M15-Swing ${formatBerlinTime(stop.swingTime)}, Anti-Confluence; DOB-SL ${price(s.stopPrice,s.instrument)})`
   :`SL ${price(s.stopPrice,s.instrument)}`;
 }
@@ -87,7 +88,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
     text:[warn?`⛔ DOB ${instrument} ${side(s.direction)} · ${dobWarnText(guardrail,guardrails,s.entryTime)} ${formatBerlinTime(s.entryTime)}, kein Trade${guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,guardrail,s.entryTime)):''}`
      :`🟢 DOB ${instrument} ${side(s.direction)} · Entry ${s.route} ${formatBerlinTime(s.entryTime)}`,
      // Die POI-Zeile zeigt auch hier die Art (Philip); OB-Zonen stehen im Retest-Alarm. TP nach Konfig nur beim echten Entry, nie bei ⛔.
-     dobPoiLine(s,poiType),`Entry ${price(s.entryPrice,instrument)} · ${dobStopText({...s,instrument},guardrails)}`,...(warn?[]:[dobTpLine({...s,instrument},guardrails)].filter(Boolean)),
+     dobPoiLine(s,poiType),`Entry ${price(s.entryPrice,instrument)} · ${dobStopText({...s,instrument},guardrails,poiType)}`,...(warn?[]:[dobTpLine({...s,instrument},guardrails)].filter(Boolean)),
      dobChartUrl(id,instrument,s.entryTime+60)].join('\n')});
   }
  }

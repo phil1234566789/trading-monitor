@@ -32,7 +32,7 @@ export function dobIntradayOutcome(t,{candles,dataEnd,instrument='XAUUSD',rScale
 export function dobIntradayWinrate(rows,config,kOf){
  let n=0,wins=0;
  for(const r of rows){
-  const m=dobSlAlgoActive(config)&&dobHasSwingStopVariant(r)?r.swing_intraday_max_r:r.intraday_max_r;
+  const m=dobSlAlgoActive(config,r)&&dobHasSwingStopVariant(r)?r.swing_intraday_max_r:r.intraday_max_r;
   if(m==null)continue;
   n++;if(m>=kOf(r))wins++;
  }
