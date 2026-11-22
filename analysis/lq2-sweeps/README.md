@@ -155,3 +155,58 @@ Zeit gesweept wird wie ein Pivot, zählt als „Pivot“.
 - Journal-DR ohne LS: #112, #134, #136.
 - Ohne LQ-1.0-Gegenstück: EUR DR #94, XAU TS 50160/DR #140.
 - Die HTF-OB-Läufe (`dob-setup-*`) haben keinen TS1.1-Link und damit keinen LS.
+
+## Einzelfall DR #148 (Position 177): FVG-Anti-Confluence R1–R6
+
+GBPUSD Short, 01.10.2026, Zeiten Berlin (CEST). Entry 15:14 bei 1,32230 am bärischen M5-OB 15:00 (1,32274–1,32320).
+Laut Journal: SL 1,32292, Exit 17:34 bei 1,31923 als Win, Invalidierung 1,3266. H1-ATR beim Entry 18,7 Pips.
+Gerechnet mit `fallDr148.mjs` → `fall-dr148.json`, das Diagramm mit `svgDr148.mjs`. Nur lokale Kerzen.
+
+![DR #148](fall-dr148.svg)
+
+**Bullische Kräfte beim Entry** (Stand 15:10, nur geschlossene Kerzen; Abstand vom Entry nach unten):
+
+| Art | Zeit | Zone/Preis | Abstand | Zustand |
+|---|---|---|---|---|
+| 1H-OB (Journal-Anti-Confluence, `ob_zones` 4863827) | 13:00 | 1,31923–1,32261 | Entry liegt darin | ungetestet |
+| 15M-FVG (A) | 13:30 | 1,32186–1,32310 | Entry liegt darin, direkt unter dem Entry-OB | angelaufen, nicht durchlaufen |
+| 5M-FVG (A) | 13:35 | 1,32193–1,32231 | 0 Pips | angelaufen, nicht durchlaufen |
+| 15M-OB (B) | 13:30 | 1,32138–1,32186 | 4,4 Pips / 0,23 ATR | ungetestet |
+| 5M-OB (B) | 13:35 | 1,32111–1,32193 | 3,7 Pips / 0,20 ATR | ungetestet |
+| 15M-FVG (A) / 15M-OB (B) | 12:15 | 1,32078–1,32180 / 1,32034–1,32078 | 5,0 / 15,2 Pips | angelaufen / ungetestet |
+| 5M-FVG (A) / 5M-OB (B) | 12:10 | 1,32023–1,32034 / 1,31923–1,32023 | 19,6 / 20,7 Pips | offen / ungetestet |
+| protected-low der inneren Aufwärts-Ebene | 13:25 | 1,32111 | 11,9 Pips / 0,63 ATR | nicht gebrochen |
+| bullischer LQ-Sweep (Tief 12:00) | 11:55 | holt die Tiefs 29.09. 17:25–19:55 und 01.10. 11:00 (1,32017–1,32084), Tief 1,31923 | 14,6–21,3 Pips / 0,8–1,1 ATR | nicht sauber gebrochen |
+
+**R1–R6:**
+- **R1 greift:** Eine offene Gegen-FVG (15M 13:30) liegt direkt unter bzw. im Entry-OB. In Variante B gilt dasselbe für
+  den ungetesteten 1H-OB 13:00, in dem der Entry selbst liegt. Beide Varianten würden den Trade sperren.
+- **R2 hängt an „direkt vor dem Kurs“:** Der bullische LQ-Sweep 11:55 ist nicht sauber gebrochen, liegt aber 0,8–1,1 ATR
+  unter dem Entry und ist zugleich das Ziel. Bei einer Grenze von ≤ 0,5 ATR greift R2 nicht.
+- **R3 hebt nichts auf:** Bis zum Entry gibt es keinen Schluss unter das protected-low 13:25 und keinen unter das Sweep-Tief.
+- **R4 ist erfüllt:** Nach der aktivierten bullischen Kraft (Sweep 11:55, Anstieg bis 13:55) gibt es mit dem M5-OB 15:00
+  einen neuen eigenen bärischen OB.
+- **R5 passt:** Die offenen FVGs um den Entry werden nach dem Entry angelaufen, mit einem Rücklauf bis 1,32356 (15:55).
+  Die tieferen bei 12:10/12:15 holt der Kurs um 16:55–17:05 (Tief 1,32063) und prallt kurz bis 1,32154 ab.
+- **R6 rettet den Trade:** Der bärische P2-LH ist das Hoch 14:30 bei 1,32372 (Fraktal P2, LH unter dem Hoch 13:55 bei
+  1,32490). Der Struktur-Algo führt ihn nur als „high“, nicht als protected-high. Zum Entry sieht er eine Abwärts-Wurzel
+  und darin eine innere Aufwärts-Ebene mit protected-low 1,32111.
+
+**SL-Simulation ab der Entry-Kerze** (gleiche Kerze für SL und Ziel zählt konservativ als SL):
+
+| SL | Risiko | Ziel Journal 1,31923 | Ziel DOB 1,32106 |
+|---|---|---|---|
+| 1,32292 (Journal und DOB) | 6,2 Pips | SL 15:45 | SL 15:45 (DOB-Lauf: 15:48) |
+| **1,32377 (0,5 Pip über P2-LH 14:30)** | **14,7 Pips** | **TP 17:30, +2,09 R** | TP 16:55, +0,84 R |
+| 1,32495 (über dem Hoch 13:55) | 26,5 Pips | TP 17:30, +1,16 R | TP 16:55, +0,47 R |
+| 1,3266 (Invalidierung) | 43 Pips | TP 17:30, +0,71 R | TP 16:55, +0,29 R |
+
+Das höchste Hoch zwischen Entry und Ziel liegt bei 1,32356 (15:55), 1,6 Pips unter dem P2-LH. Damit hält der SL.
+
+**DOB-Läufe:** Den Trade gibt es identisch in `dob-lq-sweep-gbpusd-v0`, `-v1` (POI TS 10056) und `dob-setup-gbpusd-v0`:
+Entry a 15:14 bei 1,32230, SL 1,32292, Ziel 1,32106 (2R). Ergebnis **Loss** um 15:48, max_r 1.
+Ein zweiter Entry 17:32 bei 1,31999 ist dort `unknown`.
+
+**Widerspruch im Journal:** Position 177 hat SL 1,32292 und Outcome „win“. Mit diesem SL wäre sie um 15:45 ausgestoppt
+worden. Der eingetragene SL ist offenbar der DOB-SL. Philips realer SL lag nach seiner Aussage auf dem P2-LH; dann
+stimmt das Win mit 2,09 R.
