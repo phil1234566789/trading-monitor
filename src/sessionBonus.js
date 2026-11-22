@@ -15,13 +15,29 @@ import { buildSessionContextLookup, bonusLabelForPivot } from "./sessionOccurren
 // Bonus-Label niemals von den Bändern abweicht, die Philip auf demselben Chart ohnehin sieht.
 export function createSessionBonusResolver(candles, symbol) {
   if (!candles || candles.length === 0) return () => null;
-  const lookup = buildSessionContextLookup(
+  const lookup = sessionLookup(candles, symbol);
+  // dir: 1 = High, -1 = Low — dieselbe Konvention wie im Liquidity-Level-Objekt.
+  return (pivotTime, dir, price) => bonusLabelForPivot(pivotTime, dir, price, lookup);
+}
+
+// Session-Name zu einem Zeitpunkt ("NY", "MMM", "Asia", "London", sonst null) — wie sessionLabel in
+// analysis/lq2-sweeps/merkmale.mjs. London steht nicht in der sessions-Tabelle, es ist die Lücke 07:00–10:30.
+export function createSessionLabelResolver(candles, symbol) {
+  if (!candles || candles.length === 0) return () => null;
+  const lookup = sessionLookup(candles, symbol);
+  return (t) => {
+    for (const { label, occurrences } of lookup) if (label && occurrences.some((o) => t >= o.startSec && t < o.endSec)) return label;
+    const minute = (((t / 60 - new Date(t * 1000).getTimezoneOffset()) % 1440) + 1440) % 1440;
+    return minute >= 420 && minute < 630 ? "London" : null;
+  };
+}
+
+function sessionLookup(candles, symbol) {
+  return buildSessionContextLookup(
     sessions.filter((s) => s.instrument === symbol),
     candles[0]?.time ?? 0,
     (candles[candles.length - 1]?.time ?? 0) + 1,
     (utcSec) => -new Date(utcSec * 1000).getTimezoneOffset(),
     candles,
   );
-  // dir: 1 = High, -1 = Low — dieselbe Konvention wie im Liquidity-Level-Objekt.
-  return (pivotTime, dir, price) => bonusLabelForPivot(pivotTime, dir, price, lookup);
 }

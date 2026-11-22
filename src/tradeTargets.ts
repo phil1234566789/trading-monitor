@@ -5,8 +5,9 @@
 import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import { classifyAge, type AgeTier } from "./ageTier";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
+import { roleItemHead } from "./chartObjectRegistry.js";
 
-export type TradeTargetKind = "pivot" | "ob";
+export type TradeTargetKind = "pivot" | "ob" | "chart_object";
 
 export interface TradeTarget {
   id: number;
@@ -19,9 +20,10 @@ export interface TradeTarget {
   // Falls beim Anklicken schon geswept/getouched — sonst null, die Linie wächst dann wie bei einem
   // aktiven Liquiditäts-Level bis "jetzt" mit (siehe PriceChart.vue).
   touchedTime: number | null;
+  chartObject?: { type: string; key: string; instrument: string; timeframe: string; snapshot: Record<string, unknown> } | null;
 }
 
-const KIND_LABEL: Record<TradeTargetKind, string> = { pivot: "Pivot", ob: "OB" };
+const KIND_LABEL: Record<TradeTargetKind, string> = { pivot: "Pivot", ob: "OB", chart_object: "Objekt" };
 
 export function kindLabel(kind: TradeTargetKind): string {
   return KIND_LABEL[kind] ?? kind;
@@ -47,13 +49,12 @@ export function targetAgeTier(target: TradeTarget, nowSec: number): AgeTier | nu
 // Chart-Label (PriceChart.vue: refreshTradeTargetLinksInternal), damit sich Modal-Zeile und
 // Chart-Box wieder eindeutig zuordnen lassen.
 export function formatTargetLabel(target: TradeTarget, instrument: string, nowSec: number): string {
-  const price = fmtPrice(target.price, pricePrecisionForInstrument(instrument));
-  const kind = kindLabel(target.kind);
+  const head = roleItemHead(target, kindLabel(target.kind), fmtPrice(target.price, pricePrecisionForInstrument(instrument)));
   const seconds = targetAgeSeconds(target, nowSec);
-  if (seconds == null) return `${kind} ${price} #${target.id}`;
+  if (seconds == null) return `${head} #${target.id}`;
   const tier = classifyAge(seconds);
   const age = formatAge(seconds);
-  return `${kind} ${price} · ${tier}${age ? ` (${age})` : ""} #${target.id}`;
+  return `${head} · ${tier}${age ? ` (${age})` : ""} #${target.id}`;
 }
 
 // Erreicht = der Exit-Preis ist mindestens bis zum Target gelaufen (Chat 2026-07-28: "kann man ja

@@ -184,6 +184,12 @@ Find-or-Create-Schritt statt eines einfachen By-ID-Lookups braucht. `m5_liquidit
 `rsi_divergence` bleiben reine Snapshots (nie als eigene DB-Zeile persistiert) — ein Pin kann von
 der Live-Realität abweichen, kein späteres Refresh.
 
+`kind='chart_object'` ist der generische Weg für Chartobjekte ohne eigene Tabelle (zuerst
+`liquidity2_ls`): `chart_object_type`/`_key`/`_instrument`/`_timeframe` plus eingefrorener
+`chart_object_snapshot` mit `algoVersion`. Neue Arten registrieren sich in
+`src/chartObjectRegistry.js` und brauchen keine Migration; `get_pin_context` liefert sie ohne
+Code-Änderung mit. Browser-only (kein `add_pin_entry`), ohne Halo und ohne Touch-Alarm.
+
 Zwei Nebeneffekte hängen mit an Pin dran:
 - Chart-Highlighting ("Pin-Halo") für `liquidity_level`/`m5_liquidity_level` (`src/liquidity.js`)
   und `rsi_divergence` (`src/rsiRendering.js`).

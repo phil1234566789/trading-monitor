@@ -30,6 +30,8 @@ import { createPriceChart } from "../priceChartSetup.js";
 import { historicalEvidenceHint } from "../tradeEvidence";
 import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
 import { applySelectionHalo } from "../chartSelectionHalo.js";
+import { applyChartObjectHighlights, chartObjectRoleTarget, hasChartObjectPinCandidate, roleItemHead } from "../chartObjectRegistry.js";
+import { usePriceChartPinnedChartObjects } from "../composables/usePriceChartPinnedChartObjects.js";
 import {
   firstCandleTouch,
   firstCandleTouchRange,
@@ -48,6 +50,7 @@ import {
   matchDivergence,
   findNearbyPinCandidates as findNearbyPinCandidatesPure,
   hasNearbyPinCandidate as hasNearbyPinCandidatePure,
+  LIQUIDITY_LINE_CLICK_TOLERANCE_PX,
 } from "../priceChartHitTest.js";
 import { LiquidityLinePrimitive, liquidityLevelNaturalKey } from "../liquidity.js";
 import { findNearestLiquidityTargets, findNearestObTargets } from "../findTargets.js";
@@ -252,6 +255,9 @@ const props = defineProps({
   showPivotSweeps: { type: Boolean, default: false },
   showObSweeps: { type: Boolean, default: false },
   showLiquidity2: { type: Boolean, default: false },
+  // Gepinnte Registry-Chartobjekte dieses Charts ([{ id, type, snapshot }]) und die Id des gehoverten Pins.
+  pinnedChartObjects: { type: Array, default: () => [] },
+  hoveredChartObjectId: { type: String, default: null },
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
   tradeSetupHistoryCount: { type: Number, default: 5 },
@@ -521,6 +527,7 @@ const {
   liquidityMetadata,
   liquidityEarliestTime,
   liquidityPrimitives,
+  chartObjectPinSources,
   getCurrentLiquidityLevels,
   create: createLiquidity,
   dispose: disposeLiquidity,
@@ -966,7 +973,7 @@ function refreshTradeTargetLinksInternal() {
   for (const t of tradeLikeEntriesForCandles(candles)) {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
-      const label = `${CATEGORY_ICON.target} ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
+      const label = `${CATEGORY_ICON.target} ${roleItemHead(target, targetKindLabel(target.kind), fmtPrice(target.price, precision))} #${target.id}`;
       // Auswahl-Halo (Chat 2026-08-30, Feature-Wunsch Philip, analog zu
       // refreshTradeConfirmationLinksInternal) — EINMAL pro Target berechnet, für beide
       // Zeichenpfade unten (OB-Box/generische Linie) wiederverwendet. Kein Pin-Panel-Ursprung wie
@@ -1069,7 +1076,7 @@ function refreshTradeConfirmationLinksInternal() {
       // Die Invalidierung hat keine trade_evidence-Id (sie steht auf der dealing_ranges-Zeile) —
       // ohne den Guard stünde "#undefined" am Chart-Objekt.
       const idHint = confirmation.id != null ? ` #${confirmation.id}` : "";
-      const kindPriceId = `${evidenceKindLabel(confirmation)}${bonusHint} ${fmtPrice(confirmation.price, precision)}${idHint}`;
+      const kindPriceId = `${roleItemHead(confirmation, evidenceKindLabel(confirmation) + bonusHint, fmtPrice(confirmation.price, precision))}${idHint}`;
       // Anti-Confluence zeichnet das Icon getrennt und größer statt es wie bei Confirmation/
       // Confluence einfach vor den Text zu schreiben (Philip, Chat 2026-08-28: erst "Label 2x
       // größer" gewünscht, dann korrigiert auf "nur der Totenkopf 1,5x größer, Rest der Schrift
@@ -1482,6 +1489,23 @@ function refreshLiquidityInternal() {
     showLiquidityDebug: props.showLiquidityDebug,
     currentBar: props.currentBar,
   });
+  refreshPinnedChartObjects();
+}
+
+// Registry-Pins: Halo auf den gezeichneten Primitives kippen, fehlende aus dem Snapshot zeichnen. Nach jedem
+// Liquiditäts-Refresh (neue Primitives) und bei Pin-Änderung; Hover kippt nur die Optionen (applyChartObjectHover).
+const pinnedChartObjectDrawing = usePriceChartPinnedChartObjects();
+const pinnedChartObjectIds = computed(() => new Set(props.pinnedChartObjects.map((o) => o.id)));
+function chartObjectHighlightCtx() {
+  return { symbol: props.symbol, currentBar: props.currentBar };
+}
+function refreshPinnedChartObjects() {
+  const drawn = applyChartObjectHighlights(chartObjectPinSources, chartObjectHighlightCtx(), pinnedChartObjectIds.value, props.hoveredChartObjectId);
+  pinnedChartObjectDrawing.refresh(candleSeries, clipReplay(allCandles), props.pinnedChartObjects, drawn, props.hoveredChartObjectId, props.symbol);
+}
+function applyChartObjectHover() {
+  applyChartObjectHighlights(chartObjectPinSources, chartObjectHighlightCtx(), pinnedChartObjectIds.value, props.hoveredChartObjectId);
+  pinnedChartObjectDrawing.applyHover(props.hoveredChartObjectId);
 }
 
 // Dünner Wrapper um usePriceChartDailyPivots' refresh() — 1D-Struktur-Pivot-Kreise, immer
@@ -1735,6 +1759,17 @@ function findClickedFibLevel(param) {
 function findClickedDivergence(param) {
   if (!param.point) return null;
   return matchDivergence(priceChartRsi.divergencePriceLinePrimitives, param.point.x, param.point.y);
+}
+
+// Registry-Objekte (chartObjectRegistry.js) in jeder TSC-Rolle, vor den FK-Arten geprüft: DOB-Boxen liegen auf M5-OB-Zonen und
+// würden sonst immer als einzelner OB treffen. Enger Radius wie bei LQ-Linien. DOB läuft nur hier über die Registry, im
+// Pin-Menü bleibt kind='double_order_block'.
+const chartObjectRoleSources=[...chartObjectPinSources,{type:'double_order_block',
+  candidates:(x,y,radius)=>doubleOrderBlocks.pinCandidates(x,y,radius).map(c=>({obj:c.dobContext,distance:c.distance})),
+  has:(x,y,radius)=>doubleOrderBlocks.hasPinCandidate(x,y,radius)}];
+function findClickedChartObject(point) {
+  if (!point) return null;
+  return chartObjectRoleTarget(point.x, point.y, chartObjectRoleSources, chartObjectHighlightCtx(), LIQUIDITY_LINE_CLICK_TOLERANCE_PX);
 }
 
 // Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
@@ -2201,7 +2236,7 @@ onMounted(() => {
         emit("select-setup-confirmations", setup);
         return;
       }
-      const target = findClickedTarget(param);
+      const target = findClickedChartObject(param.point) ?? findClickedTarget(param);
       if (target) emit("select-target", target);
     }
     // Ein Trade-Modus OHNE scharfe Aktion gibt es nicht mehr (Dashboard.vue: armChartClick setzt
@@ -2221,6 +2256,7 @@ onMounted(() => {
       tradeConfirmationLinkPrimitives,
       divergencePrimitives: priceChartRsi.divergencePriceLinePrimitives,
       tscSetupPrimitives,
+      chartObjectSources: chartObjectPinSources,
     };
   }
   function findNearbyPinCandidates(x, y) {
@@ -2281,6 +2317,7 @@ onMounted(() => {
         ((props.confirmationModeActive || props.antiConfluenceModeActive) && findClickedDivergence(point)) ||
         (props.confirmationModeActive && doubleOrderBlocks.hit(point.point)) ||
         (props.confirmationModeActive && findClickedSetup(point)) ||
+        hasChartObjectPinCandidate(x, y, chartObjectRoleSources, LIQUIDITY_LINE_CLICK_TOLERANCE_PX) ||
         findClickedTarget(point);
       chartContainerRef.value.style.cursor = hit ? "pointer" : "";
       return;
@@ -2342,6 +2379,7 @@ onUnmounted(() => {
   disposeMarketStructure();
   disposeTradeSetupDrawing();
   disposeTradeSetup11();
+  pinnedChartObjectDrawing.clear(candleSeries);
   disposeLiquidity();
   disposeDailyPivots();
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
@@ -2390,6 +2428,8 @@ watch(() => props.pinObZoneKeys, refreshPoiZonesInternal);
 watch(() => props.pinTradeSetupIds, refreshTradeSetupLinksInternal);
 watch(() => props.pinTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
 watch(() => props.pinLiquidityLevelKeys, refreshLiquidityInternal);
+watch(() => props.pinnedChartObjects, refreshPinnedChartObjects);
+watch(() => props.hoveredChartObjectId, applyChartObjectHover);
 // Verknüpfen/Lösen einer Journal-Rolle ändert nur das LABEL des Levels, nicht die
 // Level-Menge selbst — ohne diesen Watch bliebe es bis zum nächsten Refresh unbeschriftet.
 watch(() => props.journalLiquidityCategories, refreshLiquidityInternal);

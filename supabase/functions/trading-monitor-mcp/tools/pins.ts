@@ -91,7 +91,10 @@ export function registerPinTools(server: McpServer) {
         "_from_price/_to_price/_from_rsi/_to_rsi) — Divergenzen werden nie persistiert " +
         "(detectRsiDivergence()/detectRsiDivergenceHistory() in src/rsi.js rechnen live) — bei " +
         "allen drei Snapshot-Arten können touched/invalidated bzw. die aktuelle RSI-Lage seit dem " +
-        "Snapshot-Zeitpunkt abgewichen sein, da es keine spätere Aktualisierung gibt). Ruf dieses " +
+        "Snapshot-Zeitpunkt abgewichen sein, da es keine spätere Aktualisierung gibt; bei " +
+        "kind='chart_object': generischer Chartobjekt-Pin ohne eigene Tabelle, chart_object_type sagt die Art " +
+        "(z.B. 'liquidity2_ls' = starker Liquidity-Sweep aus Liquidität 2.0), chart_object_instrument/_timeframe den " +
+        "Chart, chart_object_snapshot die Rohdaten zum Pin-Zeitpunkt inkl. algoVersion, Zeiten in Unix-Sekunden). Ruf dieses " +
         "Tool proaktiv auf, wenn Philip sagt 'schau dir das mal an' o.ä., statt auf eine " +
         "Beschreibung per Text zu warten — das ist genau der Zweck dieses Tools.",
       inputSchema: {},
