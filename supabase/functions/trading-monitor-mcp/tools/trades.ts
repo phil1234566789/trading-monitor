@@ -28,6 +28,10 @@ async function assertTargetChoiceFromCandidates(args: { dealingRangeId: number; 
 const INSTRUMENT = z.enum(["GBPUSD", "EURUSD"]);
 const DIRECTION = z.enum(["long", "short"]);
 const SOURCE = z.enum(["backtest", "paper", "live"]);
+// Registry-Chartobjekt (DOB, LQ 2.0, OB Sweep, ...) in derselben Form wie get_pin_context.chartObject; eine Rolle nimmt jedes auf.
+const CHART_OBJECT = z.object({
+  type: z.string(), key: z.string(), instrument: z.string(), timeframe: z.string(), snapshot: z.record(z.unknown()),
+}).describe("Registry-Chartobjekt {type,key,instrument,timeframe,snapshot}, z.B. 1:1 aus get_pin_context (kind='chart_object') oder get_tsc_range.");
 const OUTCOME = z.enum(["win", "loss", "open"]);
 
 // Siehe isoOffsetGuard.ts: ein Zeitstempel ohne Offset ist mehrdeutig und wird deshalb abgelehnt,
@@ -168,6 +172,7 @@ export function registerTradeTools(server: McpServer) {
         tradeSetupId: z.number().int().nullable().optional(),
         lessonDealingRangeId: z.number().int().nullable().optional(),
         setupType: z.enum(["10/10-Trade"]).nullable().optional(),
+        invalidationChartObject: CHART_OBJECT.nullable().optional().describe("Chartobjekt, aus dem die Invalidierung stammt; invalidation (Preis) mitgeben. null löst die Verknüpfung."),
       },
     },
     async ({ id, ...fields }) => json(await updateDealingRange(id, fields)),
@@ -250,7 +255,8 @@ export function registerTradeTools(server: McpServer) {
               "(hier weiterhin Pflicht, kein automatisches Anlegen einer Ausführung).",
           ),
         pinId: z.number().int().optional().describe("Statt kind/price/sourceTime/... manuell: id aus get_pin_context, siehe Tool-Beschreibung."),
-        kind: z.enum(["pivot", "ob", "fib", "rsi_divergence"]).optional().describe("Pflicht, außer pinId ist gesetzt (dann daraus abgeleitet)."),
+        kind: z.enum(["pivot", "ob", "fib", "rsi_divergence", "chart_object"]).optional().describe("Pflicht, außer pinId oder chartObject ist gesetzt (dann daraus abgeleitet)."),
+        chartObject: CHART_OBJECT.optional().describe("Statt kind: jedes Registry-Chartobjekt (z.B. DOB als Anti-Confluence mit category='anti_confluence'). price/sourceTime mitgeben, falls der Snapshot sie nicht trägt."),
         category: z
           .enum(["confirmation", "confluence", "anti_confluence"])
           .optional()
@@ -313,7 +319,8 @@ export function registerTradeTools(server: McpServer) {
         replayUntilSec: REPLAY_UNTIL_SEC,
         sec: deprecatedTimeParam("sec"),
         price: z.number(),
-        kind: z.enum(["pivot", "ob"]).nullable().optional(),
+        kind: z.enum(["pivot", "ob", "chart_object"]).nullable().optional(),
+        chartObject: CHART_OBJECT.optional().describe("Registry-Chartobjekt als Target (setzt kind='chart_object'); price/sourceTime trotzdem angeben."),
         rangeLow: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Unterkante"),
         rangeHigh: z.number().nullable().optional().describe("Für OB-Ziele: Zonen-Oberkante"),
         sourceTime: z.string().describe("ISO-Zeitstempel, z.B. Pivot-/OB-Zeitpunkt — PFLICHT, sonst keine Chart-Position berechenbar."),

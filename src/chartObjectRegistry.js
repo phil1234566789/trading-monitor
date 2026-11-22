@@ -28,29 +28,35 @@ export function chartObjectPinKey(type, instrument, timeframe, obj) {
 // übrigen Pin-Kandidaten (kind + distance), damit Menü und Dedupe in priceChartHitTest.js sie mitsortieren.
 export function chartObjectPinCandidates(x, y, sources, { symbol, currentBar }, radius) {
   const result = [];
-  for (const { type, primitives, objectOf } of sources) {
+  const add = (type, def, obj, distance) => result.push({
+    kind: "chart_object", type, instrument: symbol, timeframe: currentBar,
+    key: chartObjectPinKey(type, symbol, currentBar, obj), snapshot: { ...def.snapshot(obj), algoVersion: def.algoVersion }, distance,
+  });
+  for (const { type, primitives, objectOf, candidates } of sources) {
     const def = types.get(type);
+    // Quellen mit eigener Trefferlogik (z.B. DOB: geteilte Boxen, Paare) liefern { obj, distance } selbst.
+    if (candidates) { for (const c of candidates(x, y, radius)) add(type, def, c.obj, c.distance); continue; }
     for (const p of primitives) {
       const distance = p.distanceTo(x, y);
-      if (distance > radius) continue;
-      const obj = objectOf(p);
-      const snapshot = { ...def.snapshot(obj), algoVersion: def.algoVersion };
-      result.push({
-        kind: "chart_object", type, instrument: symbol, timeframe: currentBar,
-        key: chartObjectPinKey(type, symbol, currentBar, obj), snapshot, distance,
-      });
+      if (distance <= radius) add(type, def, objectOf(p), distance);
     }
   }
   return result;
 }
 
 export function hasChartObjectPinCandidate(x, y, sources, radius) {
-  return sources.some(({ primitives }) => primitives.some((p) => p.distanceTo(x, y) <= radius));
+  // has: billiger Treffer-Check für Quellen mit eigener Trefferlogik (Cursor läuft bei jeder Mausbewegung, ohne Snapshot-Bau).
+  return sources.some(({ primitives, has }) => (has ? has(x, y, radius) : primitives.some((p) => p.distanceTo(x, y) <= radius)));
 }
 
 export function chartObjectLabel(type, snapshot, instrument) {
   return types.get(type)?.label(snapshot, instrument) ?? type;
 }
+
+// Eine Zeile für Pin-Menü, Pin-Liste und TSC-Rollen: Zeitebene + Typ-Label (enthält schon den Preis).
+export const chartObjectDisplayLabel = ({ type, snapshot, instrument, timeframe }) => `${timeframe} ${chartObjectLabel(type, snapshot, instrument)}`;
+// Kopf eines TSC-Rollen-Eintrags (Target/Evidenz), in Liste und Chart gleich: Registry-Label oder "Art Preis".
+export const roleItemHead = (item, kindText, priceText) => (item.chartObject ? chartObjectDisplayLabel(item.chartObject) : `${kindText} ${priceText}`);
 
 // Hervorhebung: Quell-Primitives folgen derselben Halo-Konvention wie LiquidityLinePrimitive/OrderBlockPrimitive
 // (_options.inPinContext/isSelectedPin/pinColor/hoverColor, _requestUpdate aus attached()). Kippen statt neu bauen,
@@ -70,7 +76,8 @@ export function setChartObjectHalo(primitive, pinned, hovered) {
 export function applyChartObjectHighlights(sources, { symbol, currentBar }, pinnedIds, hoveredId) {
   const drawn = new Set();
   for (const { type, primitives, objectOf } of sources) {
-    for (const p of primitives) {
+    // Quellen ohne Primitive-Liste (eigene Trefferlogik) heben sich selbst hervor, siehe chartObjectRoleTarget.
+    for (const p of primitives ?? []) {
       let id = primitiveIds.get(p);
       if (id === undefined) primitiveIds.set(p, (id = chartObjectId(type, chartObjectPinKey(type, symbol, currentBar, objectOf(p)))));
       drawn.add(id);
@@ -85,3 +92,28 @@ export function applyChartObjectHighlights(sources, { symbol, currentBar }, pinn
 export function chartObjectLine(type, snapshot) {
   return types.get(type)?.line?.(snapshot) ?? null;
 }
+
+// TSC-Rollen (Bestätigung, Zusatzargument, Anti-Confluence, Target, Invalidierung) nehmen jedes Registry-Objekt in derselben
+// Item-Form wie die alten Arten auf: price/sourceTime aus der Typ-Definition, damit Label, RR und Alter ohne Typ-Zweig laufen.
+// Unbekannter Typ (Registrierung nicht geladen, z.B. im MCP-Test) → Preis aus snapshot.price, kein Absturz.
+export function chartObjectItem(chartObject) {
+  const def = types.get(chartObject.type);
+  const line = def?.line?.(chartObject.snapshot) ?? null;
+  return {
+    kind: "chart_object", chartObject,
+    price: line?.price ?? chartObject.snapshot?.price ?? null,
+    sourceTime: def?.time?.(chartObject.snapshot) ?? null,
+    touchedTime: line?.to ?? null,
+    rangeLow: null, rangeHigh: null, timeframe: chartObject.timeframe,
+  };
+}
+
+// Rollen-Klick: nächster Registry-Treffer im engen Klickradius. Läuft nur beim Klick, wie die Pin-Kandidatensuche.
+export function chartObjectRoleTarget(x, y, sources, ctx, radius) {
+  const hit = chartObjectPinCandidates(x, y, sources, ctx, radius).sort((a, b) => a.distance - b.distance)[0];
+  if (!hit) return null;
+  const { type, key, instrument, timeframe, snapshot } = hit;
+  return chartObjectItem({ type, key, instrument, timeframe, snapshot });
+}
+
+export const chartObjectItemId = (item) => (item?.chartObject ? chartObjectId(item.chartObject.type, item.chartObject.key) : null);

@@ -30,7 +30,7 @@ import { createPriceChart } from "../priceChartSetup.js";
 import { historicalEvidenceHint } from "../tradeEvidence";
 import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
 import { applySelectionHalo } from "../chartSelectionHalo.js";
-import { applyChartObjectHighlights } from "../chartObjectRegistry.js";
+import { applyChartObjectHighlights, chartObjectRoleTarget, hasChartObjectPinCandidate, roleItemHead } from "../chartObjectRegistry.js";
 import { usePriceChartPinnedChartObjects } from "../composables/usePriceChartPinnedChartObjects.js";
 import {
   firstCandleTouch,
@@ -50,6 +50,7 @@ import {
   matchDivergence,
   findNearbyPinCandidates as findNearbyPinCandidatesPure,
   hasNearbyPinCandidate as hasNearbyPinCandidatePure,
+  LIQUIDITY_LINE_CLICK_TOLERANCE_PX,
 } from "../priceChartHitTest.js";
 import { LiquidityLinePrimitive, liquidityLevelNaturalKey } from "../liquidity.js";
 import { findNearestLiquidityTargets, findNearestObTargets } from "../findTargets.js";
@@ -972,7 +973,7 @@ function refreshTradeTargetLinksInternal() {
   for (const t of tradeLikeEntriesForCandles(candles)) {
     for (const target of t.targets ?? []) {
       if (target.sourceTime == null) continue;
-      const label = `${CATEGORY_ICON.target} ${targetKindLabel(target.kind)} ${fmtPrice(target.price, precision)} #${target.id}`;
+      const label = `${CATEGORY_ICON.target} ${roleItemHead(target, targetKindLabel(target.kind), fmtPrice(target.price, precision))} #${target.id}`;
       // Auswahl-Halo (Chat 2026-08-30, Feature-Wunsch Philip, analog zu
       // refreshTradeConfirmationLinksInternal) — EINMAL pro Target berechnet, für beide
       // Zeichenpfade unten (OB-Box/generische Linie) wiederverwendet. Kein Pin-Panel-Ursprung wie
@@ -1075,7 +1076,7 @@ function refreshTradeConfirmationLinksInternal() {
       // Die Invalidierung hat keine trade_evidence-Id (sie steht auf der dealing_ranges-Zeile) —
       // ohne den Guard stünde "#undefined" am Chart-Objekt.
       const idHint = confirmation.id != null ? ` #${confirmation.id}` : "";
-      const kindPriceId = `${evidenceKindLabel(confirmation)}${bonusHint} ${fmtPrice(confirmation.price, precision)}${idHint}`;
+      const kindPriceId = `${roleItemHead(confirmation, evidenceKindLabel(confirmation) + bonusHint, fmtPrice(confirmation.price, precision))}${idHint}`;
       // Anti-Confluence zeichnet das Icon getrennt und größer statt es wie bei Confirmation/
       // Confluence einfach vor den Text zu schreiben (Philip, Chat 2026-08-28: erst "Label 2x
       // größer" gewünscht, dann korrigiert auf "nur der Totenkopf 1,5x größer, Rest der Schrift
@@ -1760,6 +1761,17 @@ function findClickedDivergence(param) {
   return matchDivergence(priceChartRsi.divergencePriceLinePrimitives, param.point.x, param.point.y);
 }
 
+// Registry-Objekte (chartObjectRegistry.js) in jeder TSC-Rolle, vor den FK-Arten geprüft: DOB-Boxen liegen auf M5-OB-Zonen und
+// würden sonst immer als einzelner OB treffen. Enger Radius wie bei LQ-Linien. DOB läuft nur hier über die Registry, im
+// Pin-Menü bleibt kind='double_order_block'.
+const chartObjectRoleSources=[...chartObjectPinSources,{type:'double_order_block',
+  candidates:(x,y,radius)=>doubleOrderBlocks.pinCandidates(x,y,radius).map(c=>({obj:c.dobContext,distance:c.distance})),
+  has:(x,y,radius)=>doubleOrderBlocks.hasPinCandidate(x,y,radius)}];
+function findClickedChartObject(point) {
+  if (!point) return null;
+  return chartObjectRoleTarget(point.x, point.y, chartObjectRoleSources, chartObjectHighlightCtx(), LIQUIDITY_LINE_CLICK_TOLERANCE_PX);
+}
+
 // Vereinigt beide Ziel-Modus-Klick-Flächen (Chat 2026-07-28) — Linie zuerst (präziser, kleinere
 // Toleranz = eindeutigerer Treffer), Box als Fallback. Liefert ein Objekt im TradeTarget-Rohformat
 // (siehe tradeTargets.ts), das direkt an addTargetToTrade durchgereicht werden kann.
@@ -2224,7 +2236,7 @@ onMounted(() => {
         emit("select-setup-confirmations", setup);
         return;
       }
-      const target = findClickedTarget(param);
+      const target = findClickedChartObject(param.point) ?? findClickedTarget(param);
       if (target) emit("select-target", target);
     }
     // Ein Trade-Modus OHNE scharfe Aktion gibt es nicht mehr (Dashboard.vue: armChartClick setzt
@@ -2305,6 +2317,7 @@ onMounted(() => {
         ((props.confirmationModeActive || props.antiConfluenceModeActive) && findClickedDivergence(point)) ||
         (props.confirmationModeActive && doubleOrderBlocks.hit(point.point)) ||
         (props.confirmationModeActive && findClickedSetup(point)) ||
+        hasChartObjectPinCandidate(x, y, chartObjectRoleSources, LIQUIDITY_LINE_CLICK_TOLERANCE_PX) ||
         findClickedTarget(point);
       chartContainerRef.value.style.cursor = hit ? "pointer" : "";
       return;

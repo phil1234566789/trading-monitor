@@ -12,8 +12,9 @@
 import { businessSecondsBetween, formatAge } from "./chartTimeUtils.js";
 import { classifyAge, type AgeTier } from "./ageTier";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
+import { chartObjectDisplayLabel } from "./chartObjectRegistry.js";
 
-export type TradeEvidenceKind = "pivot" | "ob" | "fib" | "rsi_divergence";
+export type TradeEvidenceKind = "pivot" | "ob" | "fib" | "rsi_divergence" | "chart_object";
 export type TradeEvidenceCategory = "confirmation" | "confluence" | "anti_confluence";
 
 export interface TradeEvidence {
@@ -51,6 +52,8 @@ export interface TradeEvidence {
   // Kontext wie "Asia-Mid", Snapshot beim Klick (Migration 20260829120000: Bug-Report Philip, ging
   // vorher komplett verloren, das Label zeigte nur noch generisch "Sweep ...").
   bonus: string | null;
+  // Nur bei kind='chart_object': Registry-Objekt (chartObjectRegistry.js), Label und Geometrie kommen aus seinem Typ.
+  chartObject?: { type: string; key: string; instrument: string; timeframe: string; snapshot: Record<string, unknown> } | null;
 }
 
 // Historisch verknüpfte, bereits invalidierte OBs dokumentieren den Verlauf und geben kein GO.
@@ -64,7 +67,7 @@ export function historicalEvidenceHint(evidence: Pick<TradeEvidence, "historical
 
 // "Sweep" statt "Pivot" (anders als tradeTargets.ts: kindLabel) — eine Bestätigung/ein
 // Zusatzargument ist per Definition schon geschehen, "Pivot" allein würde das nicht ausdrücken.
-const KIND_LABEL: Record<TradeEvidenceKind, string> = { pivot: "Sweep", ob: "OB", fib: "Fib", rsi_divergence: "Div" };
+const KIND_LABEL: Record<TradeEvidenceKind, string> = { pivot: "Sweep", ob: "OB", fib: "Fib", rsi_divergence: "Div", chart_object: "Objekt" };
 
 export function kindLabel(kind: TradeEvidenceKind): string {
   return KIND_LABEL[kind] ?? kind;
@@ -99,7 +102,7 @@ export function formatEvidenceLabel(evidence: TradeEvidence, instrument: string,
   const historyHint = historicalEvidenceHint(evidence);
   const precision = pricePrecisionForInstrument(instrument);
   const price = fmtPrice(evidence.price, precision);
-  const kind = evidenceKindLabel(evidence);
+  const kind = evidence.chartObject ? chartObjectDisplayLabel(evidence.chartObject) : evidenceKindLabel(evidence);
   // Nur bei kind='pivot' gesetzt — "Sweep Asia-Mid 1,33195 ..." statt des generischen "Sweep
   // 1,33195 ...", das den Session-Kontext eines Levels sonst komplett verschluckt (Bug-Report
   // Philip 2026-08-29).
@@ -116,8 +119,10 @@ export function formatEvidenceLabel(evidence: TradeEvidence, instrument: string,
   // refreshTradeConfirmationLinksInternal), damit beide weiterhin 1:1 zueinander passen.
   const idHint = evidence.id != null ? ` #${evidence.id}` : "";
   const seconds = evidenceAgeSeconds(evidence, nowSec);
-  if (seconds == null) return `${kind}${bonusHint} ${price}${rangeHint}${idHint}${historyHint}`;
+  // Registry-Label trägt den Preis schon selbst.
+  const priceHint = evidence.chartObject ? "" : ` ${price}`;
+  if (seconds == null) return `${kind}${bonusHint}${priceHint}${rangeHint}${idHint}${historyHint}`;
   const tier = classifyAge(seconds);
   const age = formatAge(seconds);
-  return `${kind}${bonusHint} ${price}${rangeHint} · ${tier}${age ? ` (${age})` : ""}${idHint}${historyHint}`;
+  return `${kind}${bonusHint}${priceHint}${rangeHint} · ${tier}${age ? ` (${age})` : ""}${idHint}${historyHint}`;
 }

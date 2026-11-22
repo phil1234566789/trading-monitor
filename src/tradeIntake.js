@@ -1,3 +1,4 @@
+import {chartObjectToRow} from '../supabase/functions/_shared/chartObjectColumns.js';
 import { supabase } from "./supabaseClient.js";
 import { tradePositionPayload } from "./tradePositionFields.js";
 import { STRATEGY_SETUP_KEYS, normalizeStrategySetup } from './strategySetupLabels.js';
@@ -343,6 +344,7 @@ export async function addTargetToTrade(dealingRangeId, target) {
     range_high: target.rangeHigh ?? null,
     timeframe: target.timeframe ?? null,
     liquidity_level_id: liquidityLevelId,
+    ...(target.chartObject ? chartObjectToRow(target.chartObject) : {}),
   });
   if (error) {
     console.error("Target hinzufügen fehlgeschlagen:", error);
@@ -409,6 +411,7 @@ export async function updateDealingRange(dealingRangeId, fields) {
     // statt als zwei unabhängige `in fields`-Zweige (siehe setDealingRangeInvalidation).
     payload.invalidation_liquidity_level_id = fields.invalidationLiquidityLevelId ?? null;
     payload.invalidation_ob_zone_id = fields.invalidationObZoneId ?? null;
+    Object.assign(payload, chartObjectToRow(fields.invalidationChartObject ?? null, "invalidation_"));
   }
   // "Lesson"-Verknüpfung (Chat 2026-07-31, vierte Runde): "GBP Short#23 war ein dummer Fehler,
   // Long#24 wäre die Lesson daraus" — self-referencing FK auf eine ANDERE dealing_range, siehe
@@ -445,6 +448,7 @@ async function resolveInvalidationFields(target) {
     invalidation: target.price,
     invalidation_liquidity_level_id: invalidationLiquidityLevelId,
     invalidation_ob_zone_id: invalidationObZoneId,
+    invalidationChartObject: target.chartObject ?? null,
   };
 }
 
@@ -454,6 +458,7 @@ export async function setDealingRangeInvalidation(dealingRangeId, target) {
     invalidation: fields.invalidation,
     invalidationLiquidityLevelId: fields.invalidation_liquidity_level_id,
     invalidationObZoneId: fields.invalidation_ob_zone_id,
+    invalidationChartObject: fields.invalidationChartObject,
   });
 }
 
@@ -505,6 +510,7 @@ async function insertConfirmation({ tradePositionId = null, dealingRangeId = nul
     from_price: confirmation.fromPrice ?? null,
     from_rsi: confirmation.fromRsi ?? null,
     to_rsi: confirmation.toRsi ?? null,
+    ...(confirmation.chartObject ? chartObjectToRow(confirmation.chartObject) : {}),
   });
   if (error) {
     console.error("Bestätigung hinzufügen fehlgeschlagen:", error);

@@ -3,6 +3,8 @@ import { supabase } from "./supabaseClient.js";
 import { normalizeStrategySetup } from './strategySetupLabels.js';
 import { ALL_ACCOUNTS_ID } from "./tradingAccounts.js";
 import {privateJournalAvailable,loadPrivateJournalPages} from './privateJournal.js';
+import {CHART_OBJECT_COLUMNS,chartObjectFromRow} from '../supabase/functions/_shared/chartObjectColumns.js';
+import {chartObjectItem} from './chartObjectRegistry.js';
 import {restoreTradeSetupSourceSnapshot} from '../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
 
 export {computeTradeStats} from './tradeStats.js';
@@ -47,11 +49,13 @@ function toLiquidityLevel(row) {
 export function toInvalidationItem(range) {
   const level = range.invalidation_liquidity_level;
   const zone = range.invalidation_ob_zone;
-  if (!level && !zone) return null;
+  const chartObject = chartObjectFromRow(range, "invalidation_");
+  if (!level && !zone && !chartObject) return null;
   // category/dealingRangeId gehören mit ins Item: der Chart leitet daraus Icon+Farbe ab
   // (priceChartConstants.js: CATEGORY_ICON) und der Zeilen-Hover findet darüber die Range, deren
   // Invalidierung gerade hervorgehoben werden soll (Dashboard.vue: hoveredInvalidationRangeId).
   const common = { category: "invalidation", dealingRangeId: range.id, price: range.invalidation };
+  if (chartObject) return { ...common, ...chartObjectItem(chartObject), price: range.invalidation };
   if (level) {
     return {
       ...common,
@@ -131,6 +135,7 @@ function toConfirmation(c, level) {
     divergenceType: c.divergence_type ?? null,
     // Nur bei kind='pivot' gesetzt (siehe tradeEvidence.ts) — Session-Kontext wie "Asia-Mid".
     bonus: c.bonus ?? null,
+    chartObject: chartObjectFromRow(c),
   };
 }
 
@@ -189,19 +194,19 @@ export async function fetchTrades(instrument, accountId = null, dealingRangeId =
   ] = await Promise.all([
     supabase
       .from("trade_targets")
-      .select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)")
+      .select("id, dealing_range_id, price, kind, source_time, touched_time, range_low, range_high, timeframe, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time), "+CHART_OBJECT_COLUMNS)
       .in("dealing_range_id", rangeIds),
     supabase.from("trade_partial_exits").select("trade_position_id, price, exit_time, portion_pct").in("trade_position_id", positionIds),
     supabase
       .from("trade_evidence")
       .select(
-        "id, dealing_range_id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, dealing_range_id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time), "+CHART_OBJECT_COLUMNS,
       )
       .in("dealing_range_id", rangeIds),
     supabase
       .from("trade_evidence")
       .select(
-        "id, trade_position_id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time)",
+        "id, trade_position_id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, liquidity_level_id, liquidity_levels(price, direction, timeframe, pivot_time, touched, end_time), "+CHART_OBJECT_COLUMNS,
       )
       .in("trade_position_id", positionIds),
     lessonTargetIds.length > 0
@@ -279,6 +284,7 @@ export async function fetchTrades(instrument, accountId = null, dealingRangeId =
         // detectOrderBlocks nachvollzogen werden kann statt nur einen Snapshot zu zeigen.
         timeframe: t.timeframe ?? null,
         liquidityLevel: toLiquidityLevel(t),
+        chartObject: chartObjectFromRow(t),
       })),
       // Bestätigungen fürs GO der ganzen Idee (dealing_range) und fürs GO dieses einen Entries
       // (trade_position, ex-setup_entry) zusammen — beide teilen dieselbe Tabelle/Rohform (siehe
@@ -356,12 +362,12 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
   ] = await Promise.all([
     supabase
       .from("trade_evidence")
-      .select(`id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, category, historical_only, source_context, source_time, touched_time, range_low, range_high, timeframe, divergence_type, from_price, from_rsi, to_rsi, bonus, ${LIQUIDITY_LEVEL_EMBED}, ${CHART_OBJECT_COLUMNS}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
     supabase
       .from("trade_targets")
-      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, ${LIQUIDITY_LEVEL_EMBED}`)
+      .select(`id, price, kind, source_time, touched_time, range_low, range_high, timeframe, ${LIQUIDITY_LEVEL_EMBED}, ${CHART_OBJECT_COLUMNS}`)
       .eq("dealing_range_id", dealingRangeId)
       .order("created_at"),
   ]);
@@ -390,6 +396,7 @@ export async function fetchDealingRangeCockpit(dealingRangeId) {
       rangeHigh: t.range_high ?? null,
       timeframe: t.timeframe ?? null,
       liquidityLevel: toLiquidityLevel(t),
+      chartObject: chartObjectFromRow(t),
     })),
   };
 }
