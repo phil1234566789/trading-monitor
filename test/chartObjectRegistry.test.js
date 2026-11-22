@@ -9,7 +9,7 @@ vi.mock("../src/supabaseClient.js", () => ({ supabase: { from: () => {
   };
   return query;
 } } }));
-import { registerChartObjectType, chartObjectLabel } from "../src/chartObjectRegistry.js";
+import { registerChartObjectType, chartObjectLabel, applyChartObjectHighlights, chartObjectId, chartObjectLine } from "../src/chartObjectRegistry.js";
 import { findNearbyPinCandidates, hasNearbyPinCandidate } from "../src/priceChartHitTest.js";
 import { addPinChartObject } from "../src/pinContext.js";
 import "../src/liquidity2.js";
@@ -62,5 +62,33 @@ describe("Chartobjekt-Registry", () => {
     expect(candidate.key).toBe("GBPUSD|5m|1795000200|top|1");
     expect(candidate.snapshot).toMatchObject({ edge: "top", price: 1.31012, sourceKnownAt: 1795000800, touchedTime: 1795003000, algoVersion: "lq-ob-edge-m5-v1" });
     expect(chartObjectLabel("liquidity_ob_sweep_m5", candidate.snapshot, "GBPUSD")).toBe("OB-Sweep Hoch 1,31012");
+  });
+});
+
+describe("Chartobjekt-Hervorhebung", () => {
+  const lvl = (pivotTime) => ({ dir: -1, price: 1.3, pivotTime, touched: false });
+  const prim = (level) => ({ level, _options: {}, updates: 0, _requestUpdate() { this.updates++; } });
+
+  it("kippt Pin- und Hover-Halo auf den gezeichneten Primitives, ohne sie neu zu bauen, und meldet die gezeichneten Ids", () => {
+    const a = prim(lvl(100)), b = prim(lvl(200));
+    const sources = [{ type: "liquidity2_ls", primitives: [a, b], objectOf: (p) => p.level }];
+    const idA = chartObjectId("liquidity2_ls", "GBPUSD|5m|-1|100");
+    const drawn = applyChartObjectHighlights(sources, ctx, new Set([idA]), null);
+    expect([...drawn]).toEqual([idA, chartObjectId("liquidity2_ls", "GBPUSD|5m|-1|200")]);
+    expect(a._options).toMatchObject({ inPinContext: true, isSelectedPin: false });
+    expect(b._options).toMatchObject({ inPinContext: false, isSelectedPin: false });
+
+    const updatesBefore = a.updates + b.updates;
+    applyChartObjectHighlights(sources, ctx, new Set([idA]), idA);
+    expect(a._options.isSelectedPin).toBe(true);
+    expect(a.updates + b.updates).toBe(updatesBefore + 1); // nur das geänderte Primitive zeichnet neu
+  });
+
+  it("liefert die Snapshot-Geometrie für nicht gezeichnete Pins, null für Typen ohne line()", () => {
+    expect(chartObjectLine("liquidity2_ls", { price: 1.3, dir: 1, pivotTime: 100, touched: true, touchedTime: 400 }))
+      .toEqual({ price: 1.3, dir: 1, from: 100, to: 400, styleKey: "liquidity2Sweep" });
+    expect(chartObjectLine("liquidity_ob_sweep_m5", { price: 1.31, dir: 1, sourceStartTime: 50, touchedTime: 90 }))
+      .toMatchObject({ from: 50, to: 90, styleKey: "liquidityObSweepM5" });
+    expect(chartObjectLine("test_band", { from: 1 })).toBeNull();
   });
 });

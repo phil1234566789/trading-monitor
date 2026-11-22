@@ -51,3 +51,37 @@ export function hasChartObjectPinCandidate(x, y, sources, radius) {
 export function chartObjectLabel(type, snapshot, instrument) {
   return types.get(type)?.label(snapshot, instrument) ?? type;
 }
+
+// Hervorhebung: Quell-Primitives folgen derselben Halo-Konvention wie LiquidityLinePrimitive/OrderBlockPrimitive
+// (_options.inPinContext/isSelectedPin/pinColor/hoverColor, _requestUpdate aus attached()). Kippen statt neu bauen,
+// wie applySelectionHalo — Hover kostet so weder DB noch Erkennung. Die Id hängt am Primitive, das je Refresh neu entsteht.
+export const chartObjectId = (type, key) => `${type}:${key}`;
+const primitiveIds = new WeakMap();
+
+export function setChartObjectHalo(primitive, pinned, hovered) {
+  const o = primitive._options;
+  if (o.inPinContext === pinned && o.isSelectedPin === hovered) return;
+  o.inPinContext = pinned;
+  o.isSelectedPin = hovered;
+  primitive._requestUpdate?.();
+}
+
+// Liefert die Ids der gerade gezeichneten Objekte, damit fehlende Pins aus ihrem Snapshot gezeichnet werden können.
+export function applyChartObjectHighlights(sources, { symbol, currentBar }, pinnedIds, hoveredId) {
+  const drawn = new Set();
+  for (const { type, primitives, objectOf } of sources) {
+    for (const p of primitives) {
+      let id = primitiveIds.get(p);
+      if (id === undefined) primitiveIds.set(p, (id = chartObjectId(type, chartObjectPinKey(type, symbol, currentBar, objectOf(p)))));
+      drawn.add(id);
+      setChartObjectHalo(p, pinnedIds.has(id), id === hoveredId);
+    }
+  }
+  return drawn;
+}
+
+// Geometrie eines Pins aus seinem Snapshot (def.line → { price, dir, from, to|null, styleKey }), für Objekte, die gerade
+// nicht gezeichnet sind (Toggle aus, außerhalb des Fensters). null = Typ ohne Snapshot-Zeichnung.
+export function chartObjectLine(type, snapshot) {
+  return types.get(type)?.line?.(snapshot) ?? null;
+}

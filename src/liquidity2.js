@@ -113,5 +113,7 @@ registerChartObjectType("liquidity2_ls", {
     impulsePips: lvl.impulsePips, impulseAtr: lvl.impulseAtr, brokenSwings: lvl.brokenSwings,
   }),
   time: (s) => s.pivotTime,
+  line: (s) => ({ price: s.price, dir: s.dir, from: s.pivotTime, to: s.touchedTime ?? null,
+    styleKey: s.touched ? "liquidity2Sweep" : s.dir === 1 ? "liquidity2High" : "liquidity2Low" }),
   label: (s, instrument) => `LS2 ${s.dir === 1 ? "Hoch" : "Tief"} ${fmtPrice(s.price, pricePrecisionForInstrument(instrument))}`,
 });

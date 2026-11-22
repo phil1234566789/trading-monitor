@@ -92,7 +92,7 @@ import {
 import { reportUiError } from "../composables/useHttpActivity.js";
 import {doubleOrderBlockPinLabel} from '../doubleOrderBlockPin.js';
 import { usePolledFetch } from "../composables/usePolledFetch.js";
-import { chartObjectLabel, chartObjectType } from "../chartObjectRegistry.js";
+import { chartObjectId, chartObjectLabel, chartObjectType } from "../chartObjectRegistry.js";
 import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
 import {useDobRunOptions} from "../composables/usePriceChartDobPositions.js";
 import { useSessionStorageRef } from "../composables/useSessionStorageRef.js";
@@ -1230,6 +1230,16 @@ const hoveredPinLiquidityLevelKey = computed(() => {
     hoveredModalTargetItem.value?.liquidityLevel ??
     null;
   return rowLvl ? liquidityLevelNaturalKey(rowLvl.dir, rowLvl.pivotTime) : null;
+});
+// Registry-Pins: nur auf ihrem eigenen Instrument und ihrer eigenen Zeitebene (Schlüssel und Geometrie hängen daran).
+const pinnedChartObjects = computed(() =>
+  visiblePinContextEntries.value
+    .filter((e) => e.kind === "chart_object" && e.chartObject.instrument === currentSymbol.value && e.chartObject.timeframe === currentBar.value)
+    .map((e) => ({ id: chartObjectId(e.chartObject.type, e.chartObject.key), type: e.chartObject.type, snapshot: e.chartObject.snapshot })),
+);
+const hoveredChartObjectId = computed(() => {
+  const e = hoveredPinEntry.value;
+  return e?.kind === "chart_object" ? chartObjectId(e.chartObject.type, e.chartObject.key) : null;
 });
 const hoveredPinRsiDivergenceKey = computed(() => {
   const e = hoveredPinEntry.value;
@@ -2424,6 +2434,8 @@ watch(selectedTradingAccountId, () => {
     :show-pivot-sweeps="showPivotSweeps"
     :show-ob-sweeps="showObSweeps"
     :show-liquidity2="showLiquidity2"
+    :pinned-chart-objects="pinnedChartObjects"
+    :hovered-chart-object-id="hoveredChartObjectId"
     :show-liquidity-debug="showLiquidityDebug"
     :show-trade-setups="showTradeSetups"
     :trade-setup-history-count="tradeSetupHistoryCount"

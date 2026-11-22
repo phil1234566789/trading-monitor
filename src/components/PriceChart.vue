@@ -30,6 +30,8 @@ import { createPriceChart } from "../priceChartSetup.js";
 import { historicalEvidenceHint } from "../tradeEvidence";
 import { renderPersistedZones, OrderBlockPrimitive, obZoneNaturalKey } from "../orderBlocks.js";
 import { applySelectionHalo } from "../chartSelectionHalo.js";
+import { applyChartObjectHighlights } from "../chartObjectRegistry.js";
+import { usePriceChartPinnedChartObjects } from "../composables/usePriceChartPinnedChartObjects.js";
 import {
   firstCandleTouch,
   firstCandleTouchRange,
@@ -252,6 +254,9 @@ const props = defineProps({
   showPivotSweeps: { type: Boolean, default: false },
   showObSweeps: { type: Boolean, default: false },
   showLiquidity2: { type: Boolean, default: false },
+  // Gepinnte Registry-Chartobjekte dieses Charts ([{ id, type, snapshot }]) und die Id des gehoverten Pins.
+  pinnedChartObjects: { type: Array, default: () => [] },
+  hoveredChartObjectId: { type: String, default: null },
   showLiquidityDebug: { type: Boolean, default: false },
   showTradeSetups: { type: Boolean, default: true },
   tradeSetupHistoryCount: { type: Number, default: 5 },
@@ -1483,6 +1488,23 @@ function refreshLiquidityInternal() {
     showLiquidityDebug: props.showLiquidityDebug,
     currentBar: props.currentBar,
   });
+  refreshPinnedChartObjects();
+}
+
+// Registry-Pins: Halo auf den gezeichneten Primitives kippen, fehlende aus dem Snapshot zeichnen. Nach jedem
+// Liquiditäts-Refresh (neue Primitives) und bei Pin-Änderung; Hover kippt nur die Optionen (applyChartObjectHover).
+const pinnedChartObjectDrawing = usePriceChartPinnedChartObjects();
+const pinnedChartObjectIds = computed(() => new Set(props.pinnedChartObjects.map((o) => o.id)));
+function chartObjectHighlightCtx() {
+  return { symbol: props.symbol, currentBar: props.currentBar };
+}
+function refreshPinnedChartObjects() {
+  const drawn = applyChartObjectHighlights(chartObjectPinSources, chartObjectHighlightCtx(), pinnedChartObjectIds.value, props.hoveredChartObjectId);
+  pinnedChartObjectDrawing.refresh(candleSeries, clipReplay(allCandles), props.pinnedChartObjects, drawn, props.hoveredChartObjectId);
+}
+function applyChartObjectHover() {
+  applyChartObjectHighlights(chartObjectPinSources, chartObjectHighlightCtx(), pinnedChartObjectIds.value, props.hoveredChartObjectId);
+  pinnedChartObjectDrawing.applyHover(props.hoveredChartObjectId);
 }
 
 // Dünner Wrapper um usePriceChartDailyPivots' refresh() — 1D-Struktur-Pivot-Kreise, immer
@@ -2344,6 +2366,7 @@ onUnmounted(() => {
   disposeMarketStructure();
   disposeTradeSetupDrawing();
   disposeTradeSetup11();
+  pinnedChartObjectDrawing.clear(candleSeries);
   disposeLiquidity();
   disposeDailyPivots();
   // scheduleNextPoll/-TradeSetupM5Poll/-RangesPoll nutzen setTimeout statt setInterval
@@ -2392,6 +2415,8 @@ watch(() => props.pinObZoneKeys, refreshPoiZonesInternal);
 watch(() => props.pinTradeSetupIds, refreshTradeSetupLinksInternal);
 watch(() => props.pinTradeConfirmationIds, refreshTradeConfirmationLinksInternal);
 watch(() => props.pinLiquidityLevelKeys, refreshLiquidityInternal);
+watch(() => props.pinnedChartObjects, refreshPinnedChartObjects);
+watch(() => props.hoveredChartObjectId, applyChartObjectHover);
 // Verknüpfen/Lösen einer Journal-Rolle ändert nur das LABEL des Levels, nicht die
 // Level-Menge selbst — ohne diesen Watch bliebe es bis zum nächsten Refresh unbeschriftet.
 watch(() => props.journalLiquidityCategories, refreshLiquidityInternal);

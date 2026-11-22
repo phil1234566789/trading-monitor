@@ -472,5 +472,6 @@ registerChartObjectType("liquidity_ob_sweep_m5", {
     sourceTop: l.sourceTop, sourceBottom: l.sourceBottom,
   }),
   time: (s) => s.sourceStartTime,
+  line: (s) => ({ price: s.price, dir: s.dir, from: s.sourceStartTime, to: s.touchedTime, styleKey: "liquidityObSweepM5" }),
   label: (s, instrument) => `OB-Sweep ${s.dir === 1 ? "Hoch" : "Tief"} ${fmtPrice(s.price, pricePrecisionForInstrument(instrument))}`,
 });

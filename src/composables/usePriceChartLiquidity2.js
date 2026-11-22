@@ -22,6 +22,8 @@ export function usePriceChartLiquidity2() {
   function refresh(series, candles, { show, symbol, nowSec }) {
     clear(series);
     if (!series || !show || candles.length === 0) return;
+    // Halo-Farben einmal je Refresh; die Registry kippt nur inPinContext/isSelectedPin (chartObjectRegistry.js).
+    const pinColor = cssColor("pin"), hoverColor = cssColor("tradeHover");
     for (const lvl of detectStrongLiquidityLevels(markIgnored(candles, symbol), { instrument: symbol })) {
       const key = styleKey(lvl);
       const primitive = new LiquidityLinePrimitive(
@@ -31,6 +33,8 @@ export function usePriceChartLiquidity2() {
           lineWidth: lineWidth(key),
           label: formatStrongLiquidityLabel(lvl, formatLiquidityLevelLabel(lvl, { nowSec })),
           labelSide: bullBearLabelSide(lvl.dir === 1),
+          pinColor,
+          hoverColor,
         },
         candles,
       );
