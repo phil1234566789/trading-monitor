@@ -192,15 +192,15 @@
     "semantic_hash": ""
   },
   "src/components/PinPanel.vue": {
-    "mtime": 1795337439.9419339,
-    "seen": 1795338830.2722957,
-    "ast_hash": "720e44ca6d07d2fcaa124e5e8e11f69e",
+    "mtime": 1795339461.8661408,
+    "seen": 1795339597.120572,
+    "ast_hash": "8ce3abbeee25d09dd8304d2f27af2277",
     "semantic_hash": ""
   },
   "src/components/PriceChart.vue": {
-    "mtime": 1795338477.968063,
-    "seen": 1795338830.2722957,
-    "ast_hash": "1c88daf2b61627ed3c8e69d1661a86fc",
+    "mtime": 1795339370.4369996,
+    "seen": 1795339597.120572,
+    "ast_hash": "ba81117316eee8325e9a83a3b530d519",
     "semantic_hash": ""
   },
   "src/components/ProtokollTable.vue": {
@@ -414,9 +414,9 @@
     "semantic_hash": ""
   },
   "src/liquidity.js": {
-    "mtime": 1795338450.6249845,
-    "seen": 1795338830.2722957,
-    "ast_hash": "344654d5b1ec88afad62a2d4e85f944d",
+    "mtime": 1795339288.2529235,
+    "seen": 1795339597.1651335,
+    "ast_hash": "8d0d433ea68c84eb316643676729ba93",
     "semantic_hash": ""
   },
   "src/liquidityDetection.js": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1795338486.7407024,
-    "seen": 1795338830.2722957,
-    "ast_hash": "91a395960fc53e12529340103ad8872f",
+    "mtime": 1795339357.5990794,
+    "seen": 1795339597.218935,
+    "ast_hash": "922787e820bc5643e3e3435f2beee5e2",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -11196,9 +11196,9 @@
     "semantic_hash": ""
   },
   "src/liquidity2.js": {
-    "mtime": 1795338450.6249845,
-    "seen": 1795338830.2722957,
-    "ast_hash": "57e9a56ea539d57e9d2b81074bff4cd7",
+    "mtime": 1795339288.2529235,
+    "seen": 1795339597.1651335,
+    "ast_hash": "e23f1cde7c562fc5d738ba378f37a974",
     "semantic_hash": ""
   },
   "test/fixtures/liquidity2/gbpusd-m5-2026-11-18.json": {
@@ -11322,9 +11322,9 @@
     "semantic_hash": ""
   },
   "src/chartObjectRegistry.js": {
-    "mtime": 1795338449.9755445,
-    "seen": 1795338830.2712944,
-    "ast_hash": "6223da4a3a1fc0e045f10b8e4e27be49",
+    "mtime": 1795339288.2539232,
+    "seen": 1795339597.1055658,
+    "ast_hash": "17cdeb4d50458a95208ef8e1180c90e6",
     "semantic_hash": ""
   },
   "test/chartObjectRegistry.test.js": {
@@ -11334,9 +11334,27 @@
     "semantic_hash": ""
   },
   "src/composables/usePriceChartPinnedChartObjects.js": {
-    "mtime": 1795338458.7993543,
-    "seen": 1795338830.2722957,
-    "ast_hash": "365e70e7c98fdb3ed378439db18381de",
+    "mtime": 1795339370.4359982,
+    "seen": 1795339597.13913,
+    "ast_hash": "17639b13134375b804159178d409ba63",
+    "semantic_hash": ""
+  },
+  "src/components/PinListFilter.vue": {
+    "mtime": 1795339335.5429397,
+    "seen": 1795339597.120572,
+    "ast_hash": "887e6bc3776a103a506f2748945b1ca7",
+    "semantic_hash": ""
+  },
+  "src/pinListFilter.js": {
+    "mtime": 1795339287.558719,
+    "seen": 1795339597.182436,
+    "ast_hash": "cdcb6c8dfa2ed2c2dbacff78b0b2fd60",
+    "semantic_hash": ""
+  },
+  "test/pinListFilter.test.js": {
+    "mtime": 1795339301.9980967,
+    "seen": 1795339597.3584602,
+    "ast_hash": "532941191a3fb8eb04bb3b30d29ba506",
     "semantic_hash": ""
   }
 }
