@@ -78,10 +78,13 @@ async function blockStatsFor(client:any,instrument:string,row:any,guardrails:any
 async function ts11Setups(client:any,instrument:string,evaluatedAt:number,h1:any[],sessions:any[],dry:boolean,budget:{left:number}){
   const rows=checked(await client.from('trade_setups').select('*,trade_setup_sweeps(price,pivot_time,touched_time,timeframe,is_primary),ob_zones(top,bottom)')
     .eq('instrument',instrument).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[];
-  const cached=rows.length?checked(await client.from('trade_setup_ts11_verdicts').select('trade_setup_id,status').eq('version',TRADE_SETUP_11_VERSION)
+  const cached=rows.length?checked(await client.from('trade_setup_ts11_verdicts').select('trade_setup_id,status,witness').eq('version',TRADE_SETUP_11_VERSION)
     .in('trade_setup_id',rows.map(r=>r.id)).limit(1000)) as any[]:[];
-  const status=new Map(cached.map(v=>[Number(v.trade_setup_id),v.status]));
-  const pending=rows.filter(r=>!status.has(r.id)),missing=budget.left>0?pending.slice(-budget.left):[];
+  // witness = bestandene TS1.1-Quelle (LS des POI); {} = bestanden ohne eigene Quelle. Ein passed ohne witness stammt von vor der
+  // Spalte und wird neu gerechnet; bis dahin zählt es weiter (mit Primär-LS), damit kein Alarm ausfällt.
+  const verdict=new Map<number,{status:string;witness?:unknown}>(cached.map(v=>[Number(v.trade_setup_id),{status:v.status,witness:v.witness}]));
+  const pending=rows.filter(r=>!verdict.has(r.id)||(verdict.get(r.id)!.status==='passed'&&verdict.get(r.id)!.witness==null)),
+    missing=budget.left>0?pending.slice(-budget.left):[];
   budget.left-=missing.length;
   if(missing.length){
     const verdicts=await computeTs11Verdicts({rows:missing,instrument,evaluatedAt,sessionConfigs:sessions,h1,
@@ -89,10 +92,11 @@ async function ts11Setups(client:any,instrument:string,evaluatedAt:number,h1:any
     // unknown erst nach 1 h endgültig: vorher kann der Kerzenstand bis zur Setup-Erkennung noch fehlen.
     const final=missing.filter(r=>verdicts.get(r.id)!.status!=='unknown'||Date.parse(r.ob_start_time)/1000+3600<evaluatedAt);
     if(!dry&&final.length)checked(await client.from('trade_setup_ts11_verdicts').upsert(final.map(r=>({trade_setup_id:r.id,version:TRADE_SETUP_11_VERSION,
-      status:verdicts.get(r.id)!.status,reason:verdicts.get(r.id)!.reason})),{onConflict:'trade_setup_id,version',ignoreDuplicates:true}));
-    for(const [id,v] of verdicts)status.set(id,v.status);
+      status:verdicts.get(r.id)!.status,reason:verdicts.get(r.id)!.reason,
+      witness:verdicts.get(r.id)!.status==='passed'?verdicts.get(r.id)!.witness??{}:null})),{onConflict:'trade_setup_id,version'}));
+    for(const [id,v] of verdicts)verdict.set(Number(id),v);
   }
-  return {setups:rows.filter(r=>status.get(r.id)==='passed').map(dobTs11FromRow),rows:rows.length,evaluated:missing.length,pending:pending.length-missing.length};
+  return {setups:rows.filter(r=>verdict.get(r.id)?.status==='passed').map(r=>dobTs11FromRow(r,verdict.get(r.id))),rows:rows.length,evaluated:missing.length,pending:pending.length-missing.length};
 }
 
 async function writeState(client:any,instrument:string,state:Record<string,unknown>){

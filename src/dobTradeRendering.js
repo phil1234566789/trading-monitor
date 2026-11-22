@@ -35,8 +35,16 @@ class DobTradeAutoscale {
 export function dobTradeFrame(row){
  const retest=Number.isFinite(row.poi_retest_age_seconds)?row.first_ob_start-row.poi_retest_age_seconds:Infinity;
  // LQ-Sweep: ab dem gesweepten Level des TS1.1, damit Pivot und Sweep im Bild sind.
- const lsPivot=row.ts11?Date.parse(row.ts11.ls_pivot_time)/1000:Infinity;
- return {from:Math.min(row.entry_time,retest,lsPivot),to:row.exit_time??row.entry_time};
+ const lsPivot=row.ts11?dobTs11Ls(row).pivotTime:Infinity;
+ return {from:Math.min(row.entry_time,retest,Number.isFinite(lsPivot)?lsPivot:Infinity),to:row.exit_time??row.entry_time};
+}
+
+// LS des LQ-Sweep-POI = bestandene TS1.1-Quelle, die der Lauf gespeichert hat (features.poi_ls_*); ältere Läufe ohne sie zeigen die
+// Primär-LS der trade_setups-Zeile (row.ts11).
+function dobTs11Ls(row){
+ const f=row.features??{},ts=row.ts11,sec=t=>Date.parse(t)/1000;
+ return Number.isFinite(f.poi_ls_price)?{price:f.poi_ls_price,pivotTime:f.poi_ls_pivot_time,touchedTime:f.poi_ls_touched_time}
+  :{price:ts.ls_price==null?null:Number(ts.ls_price),pivotTime:sec(ts.ls_pivot_time),touchedTime:sec(ts.ls_touched_time)};
 }
 
 // Entry→Exit-Marke plus SL/TP vom Entry bis endTime; geteilt von Detail-Sprung (renderDobTrade) und Lauf-Positionen im Hauptchart.
@@ -83,12 +91,12 @@ export function renderDobTrade(series,row,primitives,candles,currentBar,targetLa
 // usePriceChartTradeSetupDrawing (tradeSetupShort/-Long). ts11 = trade_setups-Zeile, geladen in useDobChartRoute.
 function addTs11Poi(add,row,candles,eventBarSeconds){
  const ts=row.ts11,key=ts.direction==='short'?'tradeSetupShort':'tradeSetupLong',sec=t=>Date.parse(t)/1000;
- const lsPivot=sec(ts.ls_pivot_time),swept=sec(ts.ls_touched_time),obStart=sec(ts.ob_start_time);
- const price=v=>fmtPrice(Number(v),pricePrecisionForInstrument(row.instrument));
- if([lsPivot,swept].every(Number.isFinite)&&ts.ls_price!=null){
-  add(new LiquidityLinePrimitive({price:Number(ts.ls_price),pivotTime:Math.max(lsPivot,candles[0].time),endTime:swept},
-   {color:cssColor(key),lineWidth:lineWidth(key),label:`LS ${price(ts.ls_price)}`,labelSide:'end-above',forceLabel:true,eventBarSeconds},candles));
-  add(new LiquidityLinePrimitive({price:Number(ts.ls_price),pivotTime:swept,endTime:swept+3*eventBarSeconds},
+ const obStart=sec(ts.ob_start_time),price=v=>fmtPrice(Number(v),pricePrecisionForInstrument(row.instrument));
+ const {price:lsPrice,pivotTime:lsPivot,touchedTime:swept}=dobTs11Ls(row);
+ if([lsPivot,swept].every(Number.isFinite)&&lsPrice!=null){
+  add(new LiquidityLinePrimitive({price:Number(lsPrice),pivotTime:Math.max(lsPivot,candles[0].time),endTime:swept},
+   {color:cssColor(key),lineWidth:lineWidth(key),label:`LS ${price(lsPrice)}`,labelSide:'end-above',forceLabel:true,eventBarSeconds},candles));
+  add(new LiquidityLinePrimitive({price:Number(lsPrice),pivotTime:swept,endTime:swept+3*eventBarSeconds},
    {color:cssColor(key),lineWidth:4,label:`Sweep ${formatBerlinTime(swept)}`,labelSide:'end-below',forceLabel:true,eventBarSeconds},candles));
  }
  if(Number.isFinite(obStart))add(new OrderBlockPrimitive({top:Number(ts.ob_top),bottom:Number(ts.ob_bottom),startTime:obStart,

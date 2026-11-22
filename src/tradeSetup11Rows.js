@@ -30,9 +30,20 @@ export function tradeSetup11RowVerdicts({rows=[],instrument,m5Candles=[],h1Candl
  for(const [from,setups] of byStart){
   const result=filterTradeSetup11Candidates({setups,instrument,m5Candles:m5Candles.filter(c=>c.time>=from),h1Candles,d1Candles,evaluatedAt,
    settings,sessionConfigs:configs,sweepSourceProfile:TRADE_SETUP_OB_SWEEP_PROFILE});
-  for(const a of result.assessments)verdicts.set(a.setup.tradeSetupId,{status:a.status,reason:a.reason});
+  for(const a of result.assessments)verdicts.set(a.setup.tradeSetupId,{status:a.status,reason:a.reason,
+   ...(a.status==='passed'?{witness:oldestPassedSource(a.passedSources)}:{})});
  }
  return verdicts;
+}
+
+// LS des TS1.1 für den DOB: die bestandene Quelle mit dem ältesten Strukturpunkt (Philip 22.11.), nicht die Primär-LS der Zeile,
+// die selbst durchgefallen sein kann (#46127: 4130,02 nach dem Range-Low). null, wenn das Setup ohne eigene Quelle bestand.
+export function oldestPassedSource(sources=[]){
+ const oldest=sources.filter(s=>Number.isFinite(s?.level?.pivotTime)).reduce((a,b)=>b.level.pivotTime<a.level.pivotTime?b:a,
+  sources.find(s=>Number.isFinite(s?.level?.pivotTime)));
+ if(!oldest)return null;
+ const {price,pivotTime,touchedTime,sourceKind}=oldest.level;
+ return {price,pivotTime,touchedTime,timeframe:oldest.timeframe,sourceKind:sourceKind??'liquidity'};
 }
 
 function m5Start(anchors,rows){

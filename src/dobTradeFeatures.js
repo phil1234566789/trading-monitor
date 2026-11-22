@@ -34,7 +34,7 @@ export function dobBreakevenRest(features,atR){
 // entscheidet die Konfig (poiMatchMode); HTF-OB-Trades schreiben keine dieser Schlüssel.
 // Keine Detektorversion: trade_setups.detector_version hält nach Backfills das alte Etikett (Trigger preserve_trade_setup_provenance).
 export const DOB_POI_FEATURE_KEYS=Object.freeze({match:'poi_match',gapUsd:'poi_gap_usd',tradeSetupId:'poi_trade_setup_id',matchedOb:'poi_matched_ob',
- matchedEdge:'poi_matched_edge'});
+ matchedEdge:'poi_matched_edge',lsPrice:'poi_ls_price',lsPivotTime:'poi_ls_pivot_time',lsTouchedTime:'poi_ls_touched_time'});
 export const dobPoiFeatures=poi=>poi?.kind!=='ts11'?{}:Object.fromEntries(Object.entries(DOB_POI_FEATURE_KEYS).map(([field,key])=>[key,poi[field]??null]));
 export const dobPoiFeature=(features,field)=>features?.[DOB_POI_FEATURE_KEYS[field]]??null;
 

@@ -15,12 +15,16 @@ const time=v=>v==null?null:typeof v==='number'?v:Date.parse(v)/1000;
 
 // Zeile aus trade_setups (mit eingebettetem ob_zones(top,bottom)) → Eingabe der Erkennung. knownAt: ab dann kennt auch der Chart das
 // TS1.1 (OB + FVG mit C3-Schluss, wie die Trend-Policy); nicht created_at, das ist bei nachgetragenen Zeilen zu spät.
-export function dobTs11FromRow(row){
- const raw=row.ob_zones??row.ob_zone??null;
+// verdict (tradeSetup11RowVerdicts): sein witness ist die bestandene TS1.1-Quelle und ersetzt die Primär-LS der Zeile; ohne witness
+// (altes Urteil, Array.map-Index) bleibt die Zeile.
+export function dobTs11FromRow(row,verdict){
+ const raw=row.ob_zones??row.ob_zone??null,w=Number.isFinite(verdict?.witness?.price)?verdict.witness:null;
  return {id:row.id,direction:row.direction,top:Number(row.ob_top),bottom:Number(row.ob_bottom),
   rawTop:raw?.top==null?null:Number(raw.top),rawBottom:raw?.bottom==null?null:Number(raw.bottom),
-  startTime:time(row.ob_start_time),knownAt:tradeSetup11SourceTimes({obStartTime:time(row.ob_start_time)}).nativeGeometryKnownAt??Infinity,lsPrice:row.ls_price==null?null:Number(row.ls_price),lsTouchedTime:time(row.ls_touched_time),
-  lsTimeframe:row.ls_timeframe??null};
+  startTime:time(row.ob_start_time),knownAt:tradeSetup11SourceTimes({obStartTime:time(row.ob_start_time)}).nativeGeometryKnownAt??Infinity,
+  ...(w?{lsPrice:w.price,lsPivotTime:w.pivotTime,lsTouchedTime:w.touchedTime,lsTimeframe:w.timeframe,lsSourceKind:w.sourceKind}
+   :{lsPrice:row.ls_price==null?null:Number(row.ls_price),lsPivotTime:time(row.ls_pivot_time),lsTouchedTime:time(row.ls_touched_time),
+    lsTimeframe:row.ls_timeframe??null,lsSourceKind:'liquidity'})};
 }
 
 // Rang einer Verbindung (kleiner = stärker): Stufe, dann beide Kanten gleich vor einer (Philip verknüpft #135 mit dem TS1.1, das OB2
@@ -57,7 +61,8 @@ export function lqSweepPoi(input){
    const m=dobLqSweepMatch(pair,ts,tick,adjacentMax);
    if(!m)continue;
    if(!poi||dobLqMatchRank(m)<dobLqMatchRank(poi))poi={kind:'ts11',tradeSetupId:ts.id,zone:{top:ts.top,bottom:ts.bottom},
-    zoneStartTime:ts.startTime,lsPrice:ts.lsPrice,lsTouchedTime:ts.lsTouchedTime,lsTimeframe:ts.lsTimeframe,...m};
+    zoneStartTime:ts.startTime,lsPrice:ts.lsPrice,lsPivotTime:ts.lsPivotTime,lsTouchedTime:ts.lsTouchedTime,lsTimeframe:ts.lsTimeframe,
+    lsSourceKind:ts.lsSourceKind,...m};
   }
   return {poi,reason:poi&&DOB_LQ_MATCH_LEVELS.indexOf(poi.match)<=allowed?null:list.length?'noPoi':'missingTradeSetups'};
  };

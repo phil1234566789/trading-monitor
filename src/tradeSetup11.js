@@ -117,7 +117,9 @@ export function filterTradeSetup11Candidates(input={}) {
   const rows=raw.assessments.slice(group.start,group.start+group.length);
   const chosen=rows.find(r=>r.status==='passed')??rows.find(r=>r.status==='unknown')??rows[0];
   const index=rows.indexOf(chosen),witness=!group.projectionReason&&chosen.status==='passed'?group.sources[index]:null;
-  return {...chosen,...(group.projectionReason?{status:'unknown',reason:group.projectionReason}:{}),
+  // Alle bestandenen Quellen, nicht nur der erste Witness: der DOB wählt daraus den ältesten Strukturpunkt (tradeSetup11Rows.js).
+  const passedSources=group.projectionReason?[]:group.sources.filter((_,i)=>rows[i]?.status==='passed');
+  return {...chosen,passedSources,...(group.projectionReason?{status:'unknown',reason:group.projectionReason}:{}),
    ...(group.projected?{evaluatedSetupProjection:group.projected}:{}),setup:group.setup,trendEvidence:{...chosen.trendEvidence,...(group.profile?{sourceProfile:group.profile}:{}),
    goWitness:witness?{...witness,sourceKey:sweepSourceKey(witness.level,witness.timeframe),
     knownAt:chosen.knownAt,ownerProof:chosen.trendEvidence.sourceOwner??chosen.trendEvidence.currentRange}:null,

@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {expect,it} from 'vitest';
-import {tradeSetup11RowVerdicts,tradeSetup11M5Start} from '../src/tradeSetup11Rows.js';
+import {tradeSetup11RowVerdicts,tradeSetup11M5Start,oldestPassedSource} from '../src/tradeSetup11Rows.js';
 
 // DOB-POI LQ-Sweep nimmt nur TS1.1, die auch der Chart zeigt (gleiche Trend-Policy). Fixtures: Zeile + native Kerzen bis evaluatedAt.
 const fixture=id=>JSON.parse(readFileSync(new URL(`fixtures/ts11-rows/${id}.json`,import.meta.url),'utf8'));
@@ -23,4 +23,19 @@ it.each([50728,49404,50294])('Watcher lädt M5 erst ab tradeSetup11M5Start: glei
  const f=fixture(id),from=tradeSetup11M5Start({rows:[f.row],h1Candles:candles(f.h1),d1Candles:candles(f.d1)});
  expect(from).toBeLessThan(Date.parse(f.row.ob_start_time)/1000);
  expect(verdict(id,from)).toEqual(verdict(id));
+});
+
+// Der DOB zeigt die TS1.1-Quelle, die bestanden hat, nicht die Primär-LS der Zeile (Diagnose ls-nach-range-low).
+// XAU Short 08.10.2026 #46127: Primär-LS 4130,02 (Pivot 09:20 Berlin) liegt nach dem Range-Low 08:35 und fällt durch;
+// TS1.1 besteht über die OB-Kante 4131,38 (OB 07:50 Berlin, Sweep 10:25).
+it('#46127: Urteil trägt die bestandene Quelle, nicht die Primär-LS',()=>{
+ expect(verdict(46127)).toMatchObject({status:'passed',witness:{price:4131.38,pivotTime:1791438600,touchedTime:1791447900,
+  timeframe:'5M',sourceKind:'orderBlock'}});
+});
+
+it('mehrere bestandene Quellen: der älteste Strukturpunkt gilt (Philip 22.11.)',()=>{
+ const level=(price,pivotTime)=>({price,pivotTime,touchedTime:pivotTime+3600});
+ expect(oldestPassedSource([{timeframe:'5M',level:level(2,200)},{timeframe:'1H',level:level(1,100)},{timeframe:'5M',level:level(3,300)}]))
+  .toEqual({price:1,pivotTime:100,touchedTime:3700,timeframe:'1H',sourceKind:'liquidity'});
+ expect(oldestPassedSource([])).toBeNull();
 });

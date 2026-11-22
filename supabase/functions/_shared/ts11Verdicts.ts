@@ -6,7 +6,9 @@ export const TRADE_SETUP_11_VERSION: string = core.TRADE_SETUP_11_VERSION;
 
 // H1 wie das dob-watcher-Fenster, D1 für die Tagesanker; M5 ab dem Strukturstart, gedeckelt (Edge-CPU).
 export const TS11_CONTEXT = { h1: 6000, d1: 300, maxM5: 15000 } as const;
-export type Ts11Verdict = { status: "passed" | "unmet" | "unknown"; reason?: string };
+// witness: bestandene Quelle mit dem ältesten Strukturpunkt (nur bei passed; null = bestanden ohne eigene Quelle).
+export type Ts11Witness = { price: number; pivotTime: number; touchedTime: number; timeframe: string; sourceKind: string };
+export type Ts11Verdict = { status: "passed" | "unmet" | "unknown"; reason?: string; witness?: Ts11Witness | null };
 type Load = (bar: "5m" | "1h" | "1D", count: number) => Promise<Candle[]>;
 // JS-Defaults (= []) ließen Deno die Parameter als never[] lesen.
 const tradeSetup11M5Start = core.tradeSetup11M5Start as unknown as (input: Record<string, unknown>) => number | null;

@@ -87,7 +87,8 @@ try {
       d1Candles: ts11Candles.d1, evaluatedAt: dataEnd, sessionConfigs: sessions });
     const counts = Object.groupBy([...verdicts.values()], v => v.status);
     console.log(`TS1.1 ${TRADE_SETUP_11_VERSION}: ${tradeSetupRows.length} Zeilen · ${Object.entries(counts).map(([k, v]) => `${k} ${v.length}`).join(' · ')}`);
-    return tradeSetupRows.filter(r => verdicts.get(r.id)?.status === 'passed').map(dobTs11FromRow);
+    // Urteil mitgeben: sein witness (bestandene Quelle) ist das LS des POI, nicht die Primär-LS der Zeile.
+    return tradeSetupRows.filter(r => verdicts.get(r.id)?.status === 'passed').map(r => dobTs11FromRow(r, verdicts.get(r.id)));
   })() : undefined;
 
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };
