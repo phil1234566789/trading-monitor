@@ -214,15 +214,21 @@ stimmt das Win mit 2,09 R.
 ## SL statt Sperre: FVG-Anti-Confluence auf den DOB-Läufen 2026
 
 Frage (Philip, 22.11.): Gewinnt man mehr, wenn die Anti-Confluence den Trade nicht sperrt, sondern den SL hinter den nächsten
-Strukturpunkt legt (Vorbild DR #148)? Skripte `sammleDob.mjs` (Trades lesen) und `slStattSperre.mjs` → `sl-statt-sperre.json`.
-Ausgewertet sind die jüngsten Läufe je Asset: LQ-Sweep GBP v1, EUR v0, XAU v1 und HTF-OB v3. Nur abgeschlossene Trades bis 20.11.
+Strukturpunkt legt (Vorbild DR #148)? Skripte `sammleDob.mjs` (Trades und News lesen) und `slStattSperre.mjs` →
+`sl-statt-sperre.json`. Ausgewertet sind die jüngsten Läufe je Asset: LQ-Sweep GBP v1, EUR v0, XAU v1 und HTF-OB v3. Nur
+abgeschlossene Trades bis 20.11.
+
+> **Korrigiert am 23.11.:** Die erste Fassung zählte „getestet“ bzw. „durchlaufen“ ab der Startzeit der berührenden Kerze.
+> Eine M15/H1-Zone galt dadurch beim Entry schon als erledigt, obwohl die Kerze noch lief (DR #148: der 1H-OB 13:00 fehlte).
+> Jetzt zählt der Schluss der berührenden Kerze. Damit kippt das Fazit: Die Sperre ist nicht mehr die einzige stabile
+> Variante, und (c) M15 liegt in der Winrate in jedem Halbjahr vorn.
 
 **Treffer (R1, Varianten A/B):**
 - Eine bullische (Short) bzw. bärische (Long) Zone auf M5/M15/H1 aus den letzten 2 Tagen. Sie ist beim Entry offen (FVG nicht
   vollständig durchlaufen = A) bzw. ungetestet (OB = B), liegt zwischen Ziel und Entry, und ihre Kante liegt höchstens
   0,5 H1-ATR hinter dem Entry.
 - **Streng:** Der Entry liegt in der Zone selbst.
-- Die breite Definition trifft 60–67 % aller Trades, die strenge 13–17 %.
+- Die breite Definition trifft 66–76 % aller Trades, die strenge 25–26 %.
 
 **Varianten:**
 - (a) wie gelaufen: DOB-Ergebnis, Ziel-R oder −1.
@@ -233,49 +239,107 @@ Ausgewertet sind die jüngsten Läufe je Asset: LQ-Sweep GBP v1, EUR v0, XAU v1 
 - Bei jedem Treffer gab es einen solchen Swing. Der SL wird dadurch im Median 1,5-mal so groß.
 - Die eigene M5-Simulation stimmt bei 97 % der Trades mit dem DOB-Ergebnis überein.
 
-| Gruppe | Treffer | (a) ΣR · WR · Max-DD | (b) gesperrt | (c) M5-Swing | (c) M15-Swing |
+Werte als ΣR · WR · Max-DD (R):
+
+| Gruppe | Treffer | (a) wie gelaufen | (b) gesperrt | (c) M5-Swing | (c) M15-Swing |
 |---|---|---|---|---|---|
-| LQ-Sweep GBP v1 | 521/868 | −16 · 32,7 % · 80 | −8 · 32,6 % · 42 | −30 · 39,9 % · 77 | −25 · 44,0 % · 74 |
-| LQ-Sweep EUR v0 | 668/1089 | −6 · 33,1 % · 58 | **+38** · 36,3 % · 17 | +21 · 42,1 % · 43 | +18 · 46,8 % · 39 |
-| LQ-Sweep XAU v1 | 364/534 | **+45** · 36,1 % · 26 | +28 · 38,8 % · 17 | +35 · 42,3 % · 24 | +44 · 47,6 % · 23 |
-| HTF-OB GBP v3 | 244/363 | −18 · 31,7 % · 47 | −8 · 31,1 % · 16 | 0 · 41,9 % · 18 | **+14** · 47,9 % · 15 |
-| HTF-OB EUR v3 | 194/296 | +4 · 33,8 % · 32 | **+18** · 39,2 % · 8 | +5 · 42,2 % · 24 | −1 · 45,6 % · 26 |
-| HTF-OB XAU v3 | 349/521 | +40 · 35,9 % · 31 | +56 · 44,2 % · 13 | +46 · 43,0 % · 28 | **+59** · 48,4 % · 22 |
-| **alle LQ-Sweep** | 1553/2491 | +23 · 33,6 % · 63 | **+58** · 35,4 % · 36 | +26 · 41,4 % · 72 | +37 · 46,0 % · 63 |
-| **alle HTF-OB v3** | 787/1180 | +26 · 34,1 % · 62 | +66 · 38,9 % · 14 | +51 · 42,5 % · 46 | **+72** · 47,5 % · 38 |
+| LQ-Sweep GBP v1 | 588/868 | −16 · 32,7 % · 80 | −19 · 31,1 % · 40 | −36 · 40,7 % · 77 | −22 · 45,9 % · 66 |
+| LQ-Sweep EUR v0 | 724/1089 | −6 · 33,1 % · 58 | +19 · 35,1 % · 19 | +18 · 43,0 % · 41 | +6 · 47,8 % · 42 |
+| LQ-Sweep XAU v1 | 405/534 | +45 · 36,1 % · 26 | +12 · 36,4 % · 24 | +30 · 43,1 % · 25 | +39 · 49,1 % · 26 |
+| HTF-OB GBP v3 | 268/363 | −18 · 31,7 % · 47 | −11 · 29,5 % · 17 | +4 · 43,5 % · 15 | +19 · 50,1 % · 14 |
+| HTF-OB EUR v3 | 206/296 | +4 · 33,8 % · 32 | +12 · 37,8 % · 9 | +7 · 43,2 % · 22 | −2 · 46,6 % · 26 |
+| HTF-OB XAU v3 | 387/521 | +40 · 35,9 % · 31 | +37 · 42,5 % · 13 | +48 · 44,0 % · 28 | +59 · 50,1 % · 20 |
+| **alle LQ-Sweep** | 1717/2491 | +23 · 33,6 % · 63 | +12 · 33,9 % · 40 | +12 · 42,2 % · 76 | +22 · 47,4 % · 70 |
+| **alle HTF-OB v3** | 861/1180 | +26 · 34,1 % · 62 | +38 · 37,3 % · 17 | +59 · 43,6 % · 45 | +75 · 49,2 % · 36 |
 
-ΣR nach Halbjahr (H1 / H2):
+Nach Halbjahr H1 / H2, als WR und ΣR:
 
-| Gruppe | (a) | (b) | (c) M5 | (c) M15 | (b) streng | (c) M15 streng |
-|---|---|---|---|---|---|---|
-| alle LQ-Sweep | +24 / −1 | **+32 / +26** | +30 / −4 | +37 / 0 | +27 / +11 | +26 / −3 |
-| alle HTF-OB v3 | −27 / +53 | **+41 / +25** | −6 / +58 | +7 / +65 | −17 / +55 | −28 / +58 |
+| Gruppe | (a) | (b) | (c) M15 |
+|---|---|---|---|
+| alle LQ-Sweep | 33,9 / 33,3 % · +24 / −1 | 35,0 / 32,5 % · +21 / −9 | **47,9 / 46,7 %** · +40 / −18 |
+| alle HTF-OB v3 | 32,1 / 37,2 % · −27 / +53 | 37,9 / 36,5 % · +25 / +13 | **47,9 / 51,4 %** · +18 / +57 |
 
 **Ergebnis:**
-- **Die Sperre (b) ist die einzige Variante, die in beiden Läufen und beiden Halbjahren positiv ist.** Bei kleinerem Max-DD
-  (36 bzw. 14 R gegen 62–63 R) bringt sie mehr als „wie gelaufen“.
-- (c) hebt die Winrate der getroffenen Trades deutlich (32 → 45–52 %). Der größere SL halbiert aber das R pro Win, deshalb
-  bleibt ΣR nahe an (a). (c) M15 schlägt die Sperre in beiden Halbjahren nur bei LQ-Sweep XAU (+39/+4 gegen +30/−2) und
-  HTF-OB GBP (−6/+20 gegen −7/−1). Bei HTF-OB XAU gilt das nur in H2, gepoolt bei HTF-OB ebenfalls nur über H2.
-- Mit der strengen Definition (Entry in der Zone) verliert die Sperre ihren Vorteil weitgehend. Der Nutzen von (b) kommt aus
-  der breiten Regel, die nur Trades mit „freier Bahn“ übrig lässt (WR 35–39 % gegen 33–34 %).
-- **Gegenprobe DR #148:** Der Trade ist ein Treffer (A und B). In (c) wird er zum Win: SL 1,32377 hinter M5-P2 14:30, Ziel um
-  16:55. Mit dem DOB-Ziel (2R) bringt das +0,84 R, mit Philips Ziel 1,31923 +2,09 R. Mit M15-Swing (13:45, 1,32495) ebenfalls
-  ein Win, aber nur +0,47 R.
+- **(c) M15 hebt die Winrate stabil auf 46–53 %**, in jedem Lauf und jedem Halbjahr. Bei den getroffenen Trades steigt sie von
+  33 auf 53–54 %.
+- **HTF-OB:** (c) M15 ist in ΣR in beiden Halbjahren besser als (a). Gegenüber der Sperre liegt es nur insgesamt (+75 gegen
+  +38 R) und in H2 vorn, in H1 nicht (+18 gegen +25 R). Der Max-DD (36 R) ist doppelt so groß wie bei der Sperre (17 R).
+- **LQ-Sweep:** Keine Variante ist in beiden Halbjahren positiv. (c) M15 verliert in H2 18 R, vor allem GBP und EUR.
+- **Gegenprobe DR #148:** Der Trade ist ein Treffer (A, B und streng). (c) M5 macht ihn zum Win: SL 1,32377 hinter P2 14:30,
+  Ziel um 16:55, +0,84 R mit dem DOB-Ziel 2R (+2,09 R mit Philips Ziel). (c) M15 macht ihn ebenfalls zum Win: SL 1,32495
+  hinter dem Swing 13:45, +0,47 R.
 
-**Beispiele** (Short, Zeiten Berlin):
+## c-losses: Wo verliert (c) M15?
 
-| Entry | (a) | (c) M5 | Hindernis |
-|---|---|---|---|
-| GBP LQ v1 05.03. 12:12 | Loss | SL 1,33608 hinter Swing 11:00 (Risiko ×1,23) → Win 12:30, +1,63 R | 15M-FVG 10:00 1,33276–1,33511 |
-| GBP LQ v1 11.03. 13:43 | Loss | SL 1,34445 hinter Swing 12:50 (×1,61) → Win 12.03. 01:05, +1,24 R | 5M-FVG 09.03. 20:15 |
-| GBP LQ v1 15.01. 15:29 | Loss | SL 1,34171 hinter Swing 13:25 (×2,79) → Win erst am 18.01., +0,72 R | 5M-FVG 15:05 |
-| GBP LQ v1 24.08. 20:49 | Win +2 R | SL 1,36370 hinter Swing 19:05 (×1,75) → Loss 25.08. 01:50 | 5M-FVG 23.08. 23:00 |
-| GBP HTF v3 05.08. 21:29 | Win +2 R | SL 1,34707 hinter Swing 21:00 (×1,22) → Loss 06.08. 04:05 | 5M-OB 19:25 |
+Skript `cLosses.mjs` → `c-losses.json`, nur lokale Daten. Zielmaß ist die Winrate (Philip: TPs per Hand). Der H1-Trend kommt
+aus `dobOuterTrend` (H1, 10 Tage). Die LS-Güte nach LQ 2.1 gibt es nur bei LQ-Sweep-Trades mit M5-LS. News-Nähe heißt ein
+GBP/EUR/USD-Termin von 1 h vor bis 2 h nach dem Entry; `news_events` hat für 2026 nur 84 Einträge.
 
-Die beiden letzten Fälle zeigen den Mechanismus. Weil das Ziel bleibt, braucht der größere SL einen längeren Weg, und ein
-bisheriger Win läuft vorher in den neuen SL.
+**Max-DD von (c) M15:**
 
-**Offen:** Die Treffer-Definition ist zu breit, um als Gate taugen zu können (60 %+ der Trades). Fachlich zu klären ist, was
-„direkt unter dem OB“ heißt und welche Timeframes zählen. Ein angepasstes Ziel (wie bei DR #148 auf 1,31923 statt 2R) ist
-hier nicht gemessen.
+| Familie | Max-DD | Zeitraum (Berlin) | Trades | WR darin | Anteil je Asset |
+|---|---|---|---|---|---|
+| LQ-Sweep | 69,5 R | 10.07. 20:19 → 22.09. 10:56 | 518 | 41,1 % | EUR −32 R (201 T, 40,8 %) · GBP −28 R (193 T, 39,4 %) · XAU −9 R (124 T, 44,4 %) |
+| HTF-OB v3 | 35,9 R | 15.01. 20:11 → 06.03. 19:33 | 210 | 39,0 % | XAU −15 R (84 T, 34,5 %) · EUR −15 R (45 T, 31,1 %) · GBP −6 R (81 T, 48,1 %) |
+
+- **LQ-Sweep:** Der DD ist eine Sommerphase (Juli bis September, Schwerpunkt August mit 221 Trades). Je Asset: GBP läuft von
+  27.02. bis 08.09. 66 R ins Minus (WR 42 %), mit dem schlechtesten Monat August (35 %, −29 R). EUR 13.07. → 17.11. 42 R,
+  XAU 29.06. → 21.10. 26 R.
+- **HTF-OB:** Der DD liegt im Januar und Februar (Februar 141 Trades). XAU Januar 28 % WR, EUR Februar und März 43–48 %.
+
+Monatliche WR von (c) M15 (alle Trades, ΣR in Klammern):
+
+| Asset · Familie | Jan | Feb | Mär | Apr | Mai | Jun | Jul | Aug | Sep | Okt | Nov |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| GBP LQ | 54 % (+15) | 48 % (0) | 46 % (−10) | 43 % (−10) | 42 % (−9) | 43 % (−7) | 51 % (+9) | **35 % (−29)** | 51 % (+11) | 56 % (+21) | 33 % (−14) |
+| EUR LQ | 50 % (+12) | 40 % (−16) | 49 % (−2) | 53 % (+23) | 55 % (+15) | 44 % (−10) | 54 % (+7) | 43 % (−4) | 41 % (−11) | 47 % (0) | 44 % (−7) |
+| XAU LQ | – | 46 % (+5) | 55 % (+5) | 48 % (+6) | 52 % (+14) | 48 % (+11) | 46 % (−5) | 39 % (−10) | 59 % (+7) | 44 % (−10) | 57 % (+17) |
+| GBP HTF | 65 % (+9) | 49 % (−2) | 43 % (−6) | 56 % (+11) | 45 % (0) | 17 % (−13) | 54 % (+11) | 62 % (+7) | 46 % (+1) | (1 T) | 50 % (0) |
+| EUR HTF | 50 % (+2) | 48 % (+2) | 43 % (−7) | 47 % (0) | 46 % (0) | 46 % (−3) | 42 % (−3) | 42 % (−2) | 61 % (+7) | 42 % (−3) | 56 % (+5) |
+| XAU HTF | 28 % (−7) | 39 % (0) | 44 % (−5) | 59 % (+9) | 47 % (+2) | 64 % (+25) | 47 % (+2) | 46 % (+3) | 54 % (+3) | 53 % (+7) | 68 % (+19) |
+
+**Losses gegen Wins:** Grundlage sind die 2.578 Treffer, bei denen (c) gilt. WR gesamt 53,5 % (H1 52,6 %, H2 54,8 %).
+„Auffällig“ heißt: in beiden Halbjahren mindestens 30 Treffer und mindestens 5 Punkte Abweichung in dieselbe Richtung.
+
+| Merkmal | Ausprägung · WR gesamt (H1 / H2) · n | Urteil |
+|---|---|---|
+| **SL-Faktor** (neu/alt) | < 1,5×: **41,6 %** (42,0 / 40,8) · 693 · 1,5–2,5×: 48,1 % · 910 · 2,5–4×: 61,2 % · 564 · ≥ 4×: **75,2 %** (77,6 / 72,6) · 411 | auffällig, aber Mechanik |
+| Session | London 49,7 % (47,5 / 52,9) · 515 · MMM 56,4 % · NY 54,3 % · Asia 54,3 % | London schwächer, nur in H1 deutlich |
+| H1-Trend | gegen 55,4 % (54,7 / 56,3) · 1137 · mit 51,1 % (51,5 / 50,6) · 959 | Hinweis, unter 5 Punkten |
+| LS gebrochene Swings | ≥ 2: 49,5 % (50,7 / 48,0) · 654 · 0: 57,3 % · 494 | Hinweis |
+| LS-Alter | < 2 h: 58,2 % (56,8 / 59,9) · 641 · 2–10 h: 50,1 % | knapp unter der Schwelle |
+| LQ 2.1 erfüllt | 54,7 % (57,4 / 51,6) · 495 gegen 53,0 % · 1109 | kein Unterschied |
+| Hindernis-Typ / höchster TF / Abstand | A+B 53,6 %, nur A 52,1 % · 1H 53,9 %, 15M 54,8 %, 5m 52,6 % · in Zone 54,5 %, 0,25–0,5 ATR 50,0 % | kein Unterschied |
+| Asset, Familie, Wochentag | jeweils 52–56 %, Halbjahre wechselnd | kein Unterschied |
+| News-Nähe | 45,9 % (52,1 / 34,6) · nur 74 Trades | zu wenig n |
+
+- **Die Losses häufen sich nicht verdächtig.** Das einzige stabile Merkmal ist der SL-Faktor, und das ist Mechanik: Je weiter
+  der neue SL bei gleichem Ziel liegt, desto öfter wird das Ziel zuerst erreicht. Liegt der M15-Swing nur knapp hinter dem
+  DOB-SL (< 1,5×), wirkt (c) kaum, und die WR bleibt bei 42 %.
+- **Zeitliche Cluster gibt es:** LQ-Sweep im Sommer (August), HTF-OB im Januar und Februar. Sie folgen keinem der Merkmale.
+
+**Typische Losses von (c) M15** (alle mit kleinem SL-Faktor):
+
+| Entry (Berlin) | Asset · Richtung · Lauf | Entry / DOB-SL / SL (c) | SL-Treffer | Hindernis |
+|---|---|---|---|---|
+| 19.11. 14:37 | GBPUSD Long · LQ v1 | 1,31518 / 1,31443 / 1,31428 (×1,20, Swing 10:30) | 15:45 | 5m-OB 0,38 ATR, 5m-FVG 0,14 ATR |
+| 17.11. 15:39 | EURUSD Short · LQ v0 | 1,09880 / 1,09944 / 1,09959 (×1,23, Swing 14:00) | 16:25 | 5m- und 15M-FVG 0,24 ATR |
+| 10.11. 08:38 | XAUUSD Long · LQ v1 | 4.115,63 / 4.110,82 / 4.110,05 (×1,16, Swing 05:45) | 10:00 | 5m-OB 0,36, 5m-FVG 0,32 ATR |
+| 30.10. 07:15 | GBPUSD Short · LQ v1 | 1,33920 / 1,34009 / 1,34042 (×1,37, Swing 04:00) | 08:20 | 5m-FVG 0,43, 5m-OB 0,33 ATR |
+| 30.10. 05:16 | EURUSD Short · HTF v3 | 1,11913 / 1,12004 / 1,12029 (×1,27, Swing 04:00) | 11:05 | 5m-FVG 0,07 und 0,18 ATR |
+
+**Engine (nur gelesen):**
+- (c) ist **keine reine Konfiguration**. `src/tradeSetupSimulation.js` ist der TS2-Simulator und betrifft den DOB-Lauf nicht.
+- Der DOB-Lauf entsteht in `scripts/dobTradeSetupsFill.mjs`. Dort werden `max_r`, `sl_hit` und `ambiguous_r` je Trade mit
+  `dobMaxR` (`src/dobMaxR.js`) für den Indikator-SL berechnet. Die Konfig (`src/dobTradeStatistics.js`, `dobTotalStats`) wählt
+  daraus nur Ziel-R und Filter.
+- **Vorbild:** Die weite SL-Variante `dobWideVariant` (`src/dobMaxR.js:30`) wird beim Füllen mitgerechnet und in eigenen
+  Spalten gespeichert (`wide_max_r`, `wide_sl_hit`, `wide_ambiguous_r`, `wide_risk_usd`). `dobAsWide`
+  (`src/dobTradeStatistics.js:148`) tauscht sie für die Auswertung ein. (c) bräuchte dasselbe Muster:
+  1. ein Anti-Confluence-Merkmal beim Entry (Zonen M5/M15/H1, offen bzw. ungetestet);
+  2. den letzten unberührten M15-P2 als SL;
+  3. `dobMaxR` mit diesem SL;
+  4. neue Spalten in `dob_trade_setups` (Migration) und einen Konfig-Schalter;
+  5. für den Live-Betrieb dasselbe in `supabase/functions/dob-watcher`.
+- **Fachentscheidung nötig:** Die weite Variante rechnet die Ziele aus dem neuen Risiko (k·R). Diese Messung hält dagegen den
+  Zielpreis fest. Welche Semantik soll (c) haben?

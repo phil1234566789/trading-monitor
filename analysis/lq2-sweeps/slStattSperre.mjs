@@ -35,7 +35,8 @@ function prepare(instrument) {
     // OBs: bekannt mit Schluss der FVG-Kerze (startTime + 2 Kerzen); ungetestet bis touchedTime, gültig bis zur Invalidierung.
     for (const z of detectOrderBlocks(c, tf, isForex, isForex ? null : conf.minFvg[tf] ?? 0))
       zones.push({ kind: 'OB', tf, dir: z.dir, top: z.top, bottom: z.bottom, start: z.startTime, known: z.startTime + 2 * dur,
-        dead: Math.min(z.touchedTime ?? Infinity, z.invalidated ? z.endTime : Infinity) });
+        // Touch/Invalidierung erst mit Schluss der berührenden Kerze bekannt (DR #148: 1H-OB 13:00 beim Entry noch ungetestet).
+        dead: Math.min((z.touchedTime ?? Infinity) + dur, z.invalidated ? z.endTime + dur : Infinity) });
     // FVGs: offen, bis der Kurs sie vollständig durchlaufen hat (q40: Docht oder Schluss darin reicht nicht).
     const clean = c.filter(x => !x.ignored), min = isForex ? FOREX_MIN_FVG_PIPS[tf] * 0.0001 : conf.minFvg[tf] ?? 0;
     for (let i = 2; i < clean.length; i++) for (const dir of [1, -1]) {
@@ -43,7 +44,7 @@ function prepare(instrument) {
       if (top - bottom <= Math.max(min, 1e-9)) continue;
       let dead = Infinity;
       for (let j = i + 1; j < clean.length && clean[j].time < clean[i].time + LOOKBACK + HORIZON; j++)
-        if (dir === 1 ? clean[j].low < bottom : clean[j].high > top) { dead = clean[j].time; break; }
+        if (dir === 1 ? clean[j].low < bottom : clean[j].high > top) { dead = clean[j].time + dur; break; }
       zones.push({ kind: 'FVG', tf, dir, top, bottom, start: clean[i - 1].time, known: clean[i].time + dur, dead });
     }
   }
@@ -106,7 +107,9 @@ for (const instrument of input.instruments) {
     const half = +formatDatedTime(tr.entry_time).slice(5, 7) <= 6 ? 'H1' : 'H2';
     const row = { run: tr.run_id, instrument, id: tr.id, side, entry: B(tr.entry_time), entryTime: tr.entry_time, entryPrice: tr.entry_price, sl: tr.stop_price,
       target: tr.target_price, targetR: +targetR.toFixed(2), outcome: tr.outcome, ra, hitA, hitB, hitStrict, half,
-      hindernis: obs.slice(0, 3).map(z => `${z.kind} ${z.tf} ${B(z.start)} ${z.bottom.toFixed(5)}–${z.top.toFixed(5)}`) };
+      hindernis: obs.slice(0, 3).map(z => `${z.kind} ${z.tf} ${B(z.start)} ${z.bottom.toFixed(5)}–${z.top.toFixed(5)}`),
+      // Abstand Entry ↔ Hinderniskante in H1-ATR; negativ = Entry liegt in der Zone.
+      hindernisse: obs.map(z => ({ kind: z.kind, tf: z.tf, dist: +((side === -1 ? tr.entry_price - z.top : z.bottom - tr.entry_price) / atr).toFixed(2) })) };
     const own = simulate(P, tr.entry_time, side, tr.stop_price, tr.target_price);
     row.simA = own ? (own.win ? 'win' : 'loss') : 'offen';
     for (const tfKey of ['M5', 'M15']) {
@@ -150,6 +153,7 @@ out.dr148 = rows.filter(r => r.instrument === 'GBPUSD' && r.entry === '01.10. 15
 out.beispiele = rows.filter(r => (r.hitA || r.hitB) && r.outcome === 'loss' && r.cM5.ergebnis === 'win').slice(0, 4)
   .concat(rows.filter(r => (r.hitA || r.hitB) && r.outcome === 'success' && r.cM5.ergebnis === 'loss').slice(0, 2));
 out.treffer = rows.filter(r => r.hitA || r.hitB).map(({ entryTime, ...r }) => r);
+out.alle = rows.map(({ hindernis, ...r }) => r);
 await writeFile(path.join(here, 'sl-statt-sperre.json'), JSON.stringify(out, null, 1));
 for (const [g, s] of Object.entries(out.gruppen)) console.log(g.padEnd(24), `n ${s.trades} Treffer ${s.treffer} (A ${s.trefferA}, B ${s.trefferB}) sim=DOB ${s.simStimmt}% kein Punkt ${s.keinStrukturpunkt} Risiko×${s.riskFaktorMedian}`,
   '\n   ', Object.entries(s.gesamt).map(([k, v]) => `${k}: ${v.sumR}R WR ${v.winrate}% n ${v.trades} DD ${v.maxDD}`).join(' | '),

@@ -11334,21 +11334,21 @@
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/ergebnis.json": {
-    "mtime": 1795278360.8763635,
-    "seen": 1795278424.7715278,
-    "ast_hash": "5b9b443edb0df2fe86a727ecea247d95",
+    "mtime": 1795278484.4812806,
+    "seen": 1795343102.6168325,
+    "ast_hash": "3ca0cafa429c08682709e407f45ceeaf",
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/merkmale.mjs": {
-    "mtime": 1795278229.4420073,
-    "seen": 1795278424.7715278,
-    "ast_hash": "51cb9887c665039b3b26cd7e672dc6c9",
+    "mtime": 1795278449.586318,
+    "seen": 1795343102.6168325,
+    "ast_hash": "6b8c02b66354822eb303d87713727330",
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/reaktion.json": {
-    "mtime": 1795278299.840392,
-    "seen": 1795278424.7715278,
-    "ast_hash": "00059d9636246cb0489f2172505967bf",
+    "mtime": 1795278522.9159317,
+    "seen": 1795343102.6168325,
+    "ast_hash": "466225c41c270d9adce41e3ddb9d22f8",
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/reaktion.mjs": {
@@ -11364,9 +11364,57 @@
     "semantic_hash": ""
   },
   "analysis/lq2-sweeps/README.md": {
-    "mtime": 1795278318.8083851,
-    "seen": 1795278424.7725272,
-    "ast_hash": "9e29b5bb879f03c7646f20e139a59ff6",
+    "mtime": 1795343035.7094617,
+    "seen": 1795343103.0384378,
+    "ast_hash": "1b894b894f92a524f72321167218da8b",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/c-losses.json": {
+    "mtime": 1795342873.8481953,
+    "seen": 1795343102.6168325,
+    "ast_hash": "22df5deb19e2a69106e8de31fd4acc4c",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/cLosses.mjs": {
+    "mtime": 1795342806.2581227,
+    "seen": 1795343102.6168325,
+    "ast_hash": "73fd5a3d3e2ea01802f1fb2c37aad275",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/fall-dr148.json": {
+    "mtime": 1795340591.3797631,
+    "seen": 1795343102.6168325,
+    "ast_hash": "45505e3f55dc9c79d79205f1b2144c18",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/fallDr148.mjs": {
+    "mtime": 1795340580.1328914,
+    "seen": 1795343102.6168325,
+    "ast_hash": "0459bd22cfa7849c5973dcf20c3492fb",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/sammleDob.mjs": {
+    "mtime": 1795342707.3850343,
+    "seen": 1795343102.6168325,
+    "ast_hash": "df8ac524e3cd3abad15532cf6cffef7b",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/slStattSperre.mjs": {
+    "mtime": 1795342735.1682837,
+    "seen": 1795343102.6168325,
+    "ast_hash": "a0aec55c0aa2e270a50f84b49f7c50f4",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/svgDr148.mjs": {
+    "mtime": 1795340617.4813874,
+    "seen": 1795343102.6168325,
+    "ast_hash": "def4423001124b4704601cf79d0dbceb",
+    "semantic_hash": ""
+  },
+  "analysis/lq2-sweeps/fall-dr148.svg": {
+    "mtime": 1795340617.5783603,
+    "seen": 1795343103.048946,
+    "ast_hash": "03900da8351c14dec819b893bde52ebd",
     "semantic_hash": ""
   }
 }
