@@ -107,6 +107,7 @@ export function formatStrongLiquidityLabel(lvl, ageLabel) {
 // Pinnbar über die generische Chartobjekt-Registry (kind='chart_object'). Der Snapshot friert die Erkennung zum
 // Pin-Zeitpunkt ein; algoVersion hochzählen, sobald sich die Auswahlregel oben ändert.
 registerChartObjectType("liquidity2_ls", {
+  name: "Liquidität 2.0 (LS2)",
   algoVersion: "liquidity2-v1",
   key: (lvl) => `${lvl.dir}|${lvl.pivotTime}`,
   snapshot: (lvl) => ({

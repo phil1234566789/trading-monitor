@@ -1,7 +1,7 @@
 // Gepinnte Registry-Chartobjekte, die gerade nicht gezeichnet sind (Indikator aus, außerhalb des Fensters), aus
 // ihrem Snapshot zeichnen — mit Pin-Halo wie die live gezeichneten. Eine Linie je fehlendem Pin, ohne Neuerkennung.
-import { LiquidityLinePrimitive } from "../liquidity.js";
-import { chartObjectLine, setChartObjectHalo } from "../chartObjectRegistry.js";
+import { LiquidityLinePrimitive, bullBearLabelSide } from "../liquidity.js";
+import { chartObjectLabel, chartObjectLine, setChartObjectHalo } from "../chartObjectRegistry.js";
 import { cssColor } from "../chartColors.js";
 import { lineWidth } from "../chartLineWidths.js";
 
@@ -16,7 +16,7 @@ export function usePriceChartPinnedChartObjects() {
   }
 
   // pinned: [{ id, type, snapshot }] für Symbol und Zeitebene des Charts; drawnIds aus applyChartObjectHighlights.
-  function refresh(series, candles, pinned, drawnIds, hoveredId) {
+  function refresh(series, candles, pinned, drawnIds, hoveredId, instrument) {
     clear(series);
     if (!series || candles.length === 0) return;
     const first = candles[0].time, last = candles[candles.length - 1].time;
@@ -27,7 +27,7 @@ export function usePriceChartPinnedChartObjects() {
       if (!g || to < first || g.from > last) continue;
       const level = { price: g.price, dir: g.dir, pivotTime: Math.max(g.from, first), endTime: Math.min(to, last), touched: g.to != null };
       const primitive = new LiquidityLinePrimitive(level, { color: cssColor(g.styleKey), lineWidth: lineWidth(g.styleKey),
-        label: null, pinColor: cssColor("pin"), hoverColor: cssColor("tradeHover"), inPinContext: true, isSelectedPin: id === hoveredId }, candles);
+        label: chartObjectLabel(type, snapshot, instrument), labelSide: bullBearLabelSide(g.dir === 1), pinColor: cssColor("pin"), hoverColor: cssColor("tradeHover"), inPinContext: true, isSelectedPin: id === hoveredId }, candles);
       series.attachPrimitive(primitive);
       primitives.push(primitive);
       idOf.set(primitive, id);

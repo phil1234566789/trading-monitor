@@ -2607,6 +2607,7 @@ watch(selectedTradingAccountId, () => {
       :entries="pinContextEntries"
       :trades="trades"
       :mismatch-hint="pinJumpHint"
+      :current-symbol="currentSymbol"
       @remove="onPinRemove"
       @update-note="onPinUpdateNote"
       @update-type="onPinUpdateType"

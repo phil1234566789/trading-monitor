@@ -464,6 +464,7 @@ export function renderLiquidityLevels(
 // (Instrument/Zeitebene ergänzt die Registry). algoVersion hochzählen, sobald detectOrderBlockLiquidityLevels anders erkennt.
 const obSweepEdge = (dir) => (dir === 1 ? "top" : "bottom");
 registerChartObjectType("liquidity_ob_sweep_m5", {
+  name: "OB Sweep",
   algoVersion: "lq-ob-edge-m5-v1",
   key: (l) => `${l.sourceStartTime}|${obSweepEdge(l.dir)}|${l.dir}`,
   snapshot: (l) => ({

@@ -8,6 +8,10 @@ import { simulationPinStageLabel, simulationPinOutcomeLabel } from "../simulatio
 import { fmtPrice, pricePrecisionForInstrument } from "../format.js";
 import PinTypeChips from './PinTypeChips.vue';
 import { chartObjectLabel } from "../chartObjectRegistry.js";
+import PinListFilter from "./PinListFilter.vue";
+import { filterPins, pinInstrument, pinTime, pinTypeKey, pinTypeName } from "../pinListFilter.js";
+import { useLocalStorageRef } from "../composables/useLocalStorageRef.js";
+import { berlinDateStrFor, berlinDayRangeUtcMs } from "../berlinTime.js";
 import {tradeSetupSourceDetails} from '../tradeSetupSourcePresentation.js';
 import {COPIED_FEEDBACK_MS} from '../priceChartConstants.js';
 
@@ -25,6 +29,7 @@ const props = defineProps({
   // Timeframe gerade nicht passen (Philip-Entscheidung: kein automatischer Wechsel, siehe Task
   // "Pin-Kontext: Listen-Hover hebt Chart-Highlight hervor, Klick springt hin").
   mismatchHint: { type: Object, default: null },
+  currentSymbol: { type: String, default: null },
 });
 // "hover" (Chat 2026-08-18): row.entry oder null bei mouseleave — treibt den Auswahl-Halo im Chart
 // (siehe Dashboard.vue: onPinHover/hoveredPin*-Props an PriceChart.vue). "select": Klick auf eine
@@ -55,8 +60,30 @@ async function copyPinId(id, event) {
   }
 }
 
+// Filter je Browser gemerkt (useLocalStorageRef kapselt Lesen/Schreiben in try/catch). instruments null = das gerade
+// angezeigte Instrument; Vorgaben rechnen bei jeder Auswertung neu, damit „7 Tage“ mitläuft.
+const storedFilter = useLocalStorageRef("pinListFilter", { instruments: null, types: [], preset: null, from: null, to: null });
+const effectiveInstruments = computed(() => storedFilter.value.instruments ?? (props.currentSymbol ? [props.currentSymbol] : []));
+const activeFilter = computed(() => {
+  const f = storedFilter.value, now = Date.now() / 1000;
+  const range = f.preset === "week" ? { from: now - 7 * 86400, to: null }
+    : f.preset === "month" ? { from: berlinDayRangeUtcMs(`${berlinDateStrFor(now).slice(0, 8)}01`).startUtcMs / 1000, to: null }
+    : { from: f.from, to: f.to };
+  return { instruments: effectiveInstruments.value, types: f.types ?? [], ...range };
+});
+const dateFilterActive = computed(() => activeFilter.value.from != null || activeFilter.value.to != null);
+const instrumentOptions = computed(() =>
+  [...new Set([props.currentSymbol, ...props.entries.map((e) => pinInstrument(e, props.trades))].filter(Boolean))].sort());
+const typeOptions = computed(() => {
+  const counts = new Map();
+  for (const e of props.entries) counts.set(pinTypeKey(e), (counts.get(pinTypeKey(e)) ?? 0) + 1);
+  return [...counts].map(([key, count]) => ({ key, name: pinTypeName(key), count })).sort((a, b) => a.name.localeCompare(b.name, "de"));
+});
+const filteredEntries = computed(() => filterPins(props.entries, activeFilter.value, props.trades));
+
 const rows = computed(() =>
-  props.entries.map((entry) => ({
+  filteredEntries.value.map((entry) => ({
+    timeFromCreatedAt: dateFilterActive.value && pinTime(entry, props.trades).fromCreatedAt,
     entry,
     trade: entry.kind === "trade_position" ? props.trades.find((t) => t.id === entry.tradePositionId) : null,
   })),
@@ -78,7 +105,11 @@ function onEntryClick(event, entry) {
 </script>
 
 <template>
-  <div v-if="rows.length === 0" class="pin-panel-empty">
+  <div>
+  <PinListFilter v-if="entries.length" v-model="storedFilter" :instruments="effectiveInstruments" :instrument-options="instrumentOptions"
+    :type-options="typeOptions" :shown="rows.length" :total="entries.length" />
+  <div v-if="entries.length && rows.length === 0" class="pin-panel-empty">Keine Pins für diesen Filter.</div>
+  <div v-else-if="rows.length === 0" class="pin-panel-empty">
     Noch nichts an Lana übergeben — Rechtsklick auf eine Trades-Zeile, einen Chart-Marker, eine
     OB-Zone (auch M5), ein 1H-LQ-Level oder eine RSI-Divergenz-Linie → "Anpinnen".
   </div>
@@ -100,6 +131,7 @@ function onEntryClick(event, entry) {
         </small>
         <input v-if="copyStatus?.id === row.entry.id && copyStatus.state === 'failed'" class="pin-id-fallback"
           readonly :value="String(row.entry.id)" :aria-label="`Pin-ID ${row.entry.id} zum manuellen Kopieren`" />
+        <small v-if="row.timeFromCreatedAt" title="Kein Objektzeitpunkt bekannt, der Datumsfilter nutzt das Anlegedatum.">Datum = angelegt</small>
       </div>
       <template v-if="row.entry.kind?.startsWith('simulation_')">
         <div class="pin-panel-entry-header">⚑ {{ row.entry.kind === 'simulation_dr' ? 'Simulations-DR' : row.entry.kind === 'simulation_entry' ? 'Simulations-Entry' : 'Simulations-Checkpoint' }} · {{ row.entry.simulationContext?.instrument }}
@@ -243,6 +275,7 @@ function onEntryClick(event, entry) {
       />
       <div v-if="mismatchHint?.entryId === row.entry.id" class="pin-panel-mismatch-hint">{{ mismatchHint.message }}</div>
     </div>
+  </div>
   </div>
 </template>
 

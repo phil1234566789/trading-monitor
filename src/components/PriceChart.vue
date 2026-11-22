@@ -1500,7 +1500,7 @@ function chartObjectHighlightCtx() {
 }
 function refreshPinnedChartObjects() {
   const drawn = applyChartObjectHighlights(chartObjectPinSources, chartObjectHighlightCtx(), pinnedChartObjectIds.value, props.hoveredChartObjectId);
-  pinnedChartObjectDrawing.refresh(candleSeries, clipReplay(allCandles), props.pinnedChartObjects, drawn, props.hoveredChartObjectId);
+  pinnedChartObjectDrawing.refresh(candleSeries, clipReplay(allCandles), props.pinnedChartObjects, drawn, props.hoveredChartObjectId, props.symbol);
 }
 function applyChartObjectHover() {
   applyChartObjectHighlights(chartObjectPinSources, chartObjectHighlightCtx(), pinnedChartObjectIds.value, props.hoveredChartObjectId);

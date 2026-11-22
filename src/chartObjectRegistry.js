@@ -7,7 +7,7 @@
 
 const types = new Map();
 
-// def: { algoVersion, key(obj) → String, eindeutig je Instrument+Zeitebene; snapshot(obj) → JSON-Objekt;
+// def: { name (Typname für Filter), algoVersion, key(obj) → String, eindeutig je Instrument+Zeitebene; snapshot(obj) → JSON-Objekt;
 //        time(snapshot) → Unix-Sekunden fürs Hinspringen; label(snapshot, instrument) → Text für Menü und Pin-Liste }
 export function registerChartObjectType(type, def) {
   if (!/^[a-z0-9_]+$/.test(type)) throw new Error(`Ungültiger Chartobjekt-Typ: ${type}`);
