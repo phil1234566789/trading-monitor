@@ -51,6 +51,7 @@ export function dobLqSweepMatch(pair,ts,tick,adjacentMax=1){
 // Kausal: Sweep und LS-Reaktion sind bei Erkennung des DOB-Paars schon bekannt; ein früher erkanntes Paar bekommt den POI auch später nicht
 // (live käme der Alarm zu spät, der Lauf darf ihn nicht als rechtzeitig zählen).
 export function lqSweepPoi(input){
+ if(input.liquiditySweepSelector)return causalLqSweepPoi(input.liquiditySweepSelector);
  const tick=instrumentConfig(input.instrument).tick,adjacentMax=dobLqAdjacentMax(input.instrument),allowed=DOB_LQ_MATCH_LEVELS.indexOf(input.poiOptions?.match??input.guardrails?.poiMatchMode??'edge');
  const list=input.tradeSetups??[];
  return pair=>{
@@ -65,5 +66,23 @@ export function lqSweepPoi(input){
     lsSourceKind:ts.lsSourceKind,...m};
   }
   return {poi,reason:poi&&DOB_LQ_MATCH_LEVELS.indexOf(poi.match)<=allowed?null:list.length?'noPoi':'missingTradeSetups'};
+ };
+}
+
+// Kausal (Philip, „LS-Zuordnung kausal“): der LQ-Algo nennt den jüngsten gültigen, gehaltenen Sweep vor OB1 (liquiditySweepSelection.js).
+// Kein Sweep mit IN → kein POI, kein Rückfall auf die Kanten-Geometrie. Der POI ist der Umkehr-OB dieses Sweeps; lsCount zählt die
+// gültigen LS der Sweep-Kerze (WR-Hypothese „mehr Level = besser“). error: IN später als 3 h nach dem Touch (Fill bricht ab).
+function causalLqSweepPoi(select){
+ const memo=new Map();
+ return pair=>{
+  const dir=pair.direction==='short'?1:-1,before=pair.firstOrderBlock.startTime,key=`${dir}:${before}`;
+  if(!memo.has(key))memo.set(key,select({dir,before}));
+  const s=memo.get(key);
+  if(!s)return {poi:null,reason:'noPoi'};
+  const ob=s.reaction.reactionOb,ls=s.primary;
+  return {reason:null,poi:{kind:'ts11',tradeSetupId:null,match:'sweep',matchedOb:null,matchedEdge:null,gapUsd:null,
+   zone:{top:ob.top,bottom:ob.bottom},zoneStartTime:ob.startTime,lsPrice:ls.price,lsPivotTime:ls.pivotTime,lsTouchedTime:s.touchTime,
+   lsTimeframe:'5M',lsSourceKind:ls.sourceKind??'liquidity',lsCount:s.lsCount,
+   lsLevels:s.levels.map(l=>({price:l.price,pivotTime:l.pivotTime,sourceKind:l.sourceKind??'liquidity'})),error:s.error}};
  };
 }

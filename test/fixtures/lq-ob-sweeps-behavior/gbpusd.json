@@ -12398,13 +12398,13 @@
     -1,
     1794977400,
     "unmet",
-    "sourceRangeNotAssociated"
+    "sweepExtremeBroken"
    ],
    [
     1,
     1794999600,
     "unmet",
-    "orderBlockSourceRangeNotAssociated"
+    "sweepExtremeBroken"
    ],
    [
     -1,
@@ -12415,8 +12415,8 @@
    [
     -1,
     1795006500,
-    "passed",
-    "currentTrendDirection"
+    "unmet",
+    "sweepExtremeBroken"
    ],
    [
     -1,
@@ -17942,7 +17942,7 @@
     -1,
     1795192500,
     "unmet",
-    "orderBlockSourceRangeNotAssociated"
+    "sweepExtremeBroken"
    ],
    [
     1,
@@ -17965,8 +17965,8 @@
    [
     -1,
     1795211100,
-    "unknown",
-    "innerTrendUnknown"
+    "unmet",
+    "sweepExtremeBroken"
    ]
   ]
  }

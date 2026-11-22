@@ -21,7 +21,7 @@ export function lsReactionRowVerdicts({rows=[],instrument,m5Candles=[],h1Candles
  const anchors=buildHistoricalDailyAnchors(d1Candles,h1Candles),verdicts=new Map(),byStart=new Map();
  for(const row of rows){
   const setup=tradeSetupFromRow(row);
-  const reaction=evaluateLiquiditySweepReaction(setup,obs,clean);
+  const reaction=evaluateLiquiditySweepReaction(setup,{obs,candles:clean});
   if(reaction.status!=='in'){verdicts.set(row.id,{status:'unmet',reason:reaction.reason});continue;}
   const from=m5Start(anchors,[row])??-Infinity;
   if(!byStart.has(from))byStart.set(from,[]);

@@ -1,6 +1,7 @@
 import {lsReactionSourceTimes} from './lsReactionContext.js';
-import {createM5StructureContextResolver,currentM5StructureRange} from './m5StructureContext.js';
-import {findLiquiditySourceOwner,pivotBeforeRangeOrigin,rangeOriginTime} from './liquiditySourceOwnership.js';
+import {createM5StructureContextResolver} from './m5StructureContext.js';
+import {assessLiquiditySourceValidity} from './liquiditySourceOwnership.js';
+import {evaluateLiquiditySweepReaction,LS_REACTION_EXTREME_PERIOD} from './liquiditySweepReaction.js';
 import {createCloseReactionCache} from './m5CloseReactionHistory.js';
 import {detectLiquidityLevels} from './liquidityDetection.js';
 import {TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
@@ -10,7 +11,8 @@ import {obMinimum} from './instrumentConfig.js';
 import {reconstructLsReactionProjection} from './lsReactionProjection.js';
 import {lsReactionChainAt} from './lsReactionChain.js';
 
-export const LS_REACTION_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v7';
+// v8: das Sweep-Extrem muss bis zum eigenen OB halten (liquiditySweepReaction.js).
+export const LS_REACTION_VERSION='ls-reaction-held-v8';
 
 function contextEntry(resolvers,input,symbol) {
  if(!resolvers.has(symbol))resolvers.set(symbol,{resolve:createM5StructureContextResolver({...input,instrument:symbol}),closeReactionCache:createCloseReactionCache()});
@@ -67,18 +69,13 @@ function assessLsReactionSources({setups=[],instrument,m5Candles=[],h1Candles=[]
     setup.dir===1?context.sourceLiquidity.highs:context.sourceLiquidity.lows);
    if(validity.status!=='valid'){finish(validity.status==='superseded'?'unmet':'unknown',validity.reason,{sweepValidity:validity});continue;}
   }
-  const current=currentM5StructureRange(context,closeReactionCache),expectedTrend=setup.dir===-1?'uptrend':'downtrend';
-  if(!current){finish('unknown','innerTrendUnknown');continue;}
-  // Ob der LS-Pivot vor dem Range-Extrem liegt, entscheidet der LQ-Algo (liquiditySourceOwnership.js).
-  const counterOrigin=rangeOriginTime(current,expectedTrend);
-  const counterEvidence={currentRange:current,counterOrigin};
-  const withTrend=current.trend===expectedTrend;
-  const owner=!withTrend||setup.ls.sourceKind==='orderBlock'?findLiquiditySourceOwner({setup,context,resolveContext,expectedTrend,current}):null;
-  const ownerPivot=owner?.pivot?.pivotTime??setup.ls.pivotTime,sourceEvidence=owner?{...counterEvidence,sourceOwner:owner}:counterEvidence;
-  if((withTrend||owner.status==='ready')&&!pivotBeforeRangeOrigin(current,expectedTrend,ownerPivot))finish('unmet','sourcePivotInCounterMove',sourceEvidence);
-  else if(withTrend)finish('passed','currentTrendDirection',sourceEvidence);
-  else if(owner.status==='ready')finish('passed','sourceRangeDirection',sourceEvidence);
-  else finish(owner.status==='unknown'?'unknown':'unmet',owner.reason,{...counterEvidence,sourceOwner:owner});
+  // Gehalten bis zum eigenen OB (Philip): eine Kerze über dem Sweep-Extrem vor dem OB entwertet die Quelle wie eine Gegen-FVG.
+  context.sourceObs??=detectSetupObs(context.rawCandles,obMinimum(symbol,'5m'));
+  context.sweepPivots??=detectLiquidityLevels(context.candles,LS_REACTION_EXTREME_PERIOD);
+  const reaction=evaluateLiquiditySweepReaction(setup,{obs:context.sourceObs,candles:context.candles,pivots:context.sweepPivots});
+  if(reaction.status!=='in'){finish('unmet',reaction.reason,{sweepReaction:reaction});continue;}
+  const validity=assessLiquiditySourceValidity({setup,context,resolveContext,closeReactionCache});
+  finish(validity.status,validity.reason,validity.evidence);
  }
  const counts=Object.fromEntries(['passed','unmet','unknown'].map(status=>[status,assessments.filter(a=>a.status===status).length]));
  return {version:LS_REACTION_VERSION,status:counts.unknown?'unknown':'ready',counts,assessments,

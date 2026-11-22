@@ -1,6 +1,6 @@
 // LQ-Algo: Gehört ein LS (M5-Pivot oder OB-Kante) zu einer Range in Setup-Richtung, und liegt er vor dem Range-Extrem? Die Struktur
 // liefert m5StructureContext.js als Eingabe; ob die Preisreaktion am Level gut ist, entscheidet liquiditySweepReaction.js.
-import {samePivot,snapshotRange} from './m5StructureContext.js';
+import {samePivot,snapshotRange,currentM5StructureRange} from './m5StructureContext.js';
 import {TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
 import {detectLiquidityLevels} from './liquidityDetection.js';
 
@@ -60,4 +60,19 @@ export function findLiquiditySourceOwner({setup,context,resolveContext,expectedT
   }
  }
  return {status:'unmet',reason:'sourceRangeNotAssociated'};
+}
+
+// Gültigkeit einer LS-Quelle für ein Setup in Richtung dir (1 = Short): Range in Setup-Richtung (Trend oder Quelle gehört zu einer
+// solchen Range) und Pivot vor dem Range-Extrem. setup: {dir, ls}; context zum Bewertungszeitpunkt (m5StructureContext.js).
+export function assessLiquiditySourceValidity({setup,context,resolveContext,closeReactionCache}){
+ const current=currentM5StructureRange(context,closeReactionCache),expectedTrend=setup.dir===-1?'uptrend':'downtrend';
+ if(!current)return {status:'unknown',reason:'innerTrendUnknown'};
+ const counterEvidence={currentRange:current,counterOrigin:rangeOriginTime(current,expectedTrend)};
+ const withTrend=current.trend===expectedTrend;
+ const owner=!withTrend||setup.ls.sourceKind==='orderBlock'?findLiquiditySourceOwner({setup,context,resolveContext,expectedTrend,current}):null;
+ const ownerPivot=owner?.pivot?.pivotTime??setup.ls.pivotTime,evidence=owner?{...counterEvidence,sourceOwner:owner}:counterEvidence;
+ if((withTrend||owner.status==='ready')&&!pivotBeforeRangeOrigin(current,expectedTrend,ownerPivot))return {status:'unmet',reason:'sourcePivotInCounterMove',evidence};
+ if(withTrend)return {status:'passed',reason:'currentTrendDirection',evidence};
+ if(owner.status==='ready')return {status:'passed',reason:'sourceRangeDirection',evidence};
+ return {status:owner.status==='unknown'?'unknown':'unmet',reason:owner.reason,evidence:{...counterEvidence,sourceOwner:owner}};
 }

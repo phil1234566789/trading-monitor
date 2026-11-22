@@ -42,6 +42,11 @@ RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCas
 const lqV0 = RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`];
 RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v1' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v1`] = { ...lqV0, label: 'v1 · LS-Reaktion (Wurzel-Skizze)',
   description: `${lqV0.description}; LS-Reaktion mit Pivot-Alter-Regel und Wurzel als LS-Quelle nach Philips Skizze`, sort: 11, version: 'dob-lq-sweep-v1' };
+// LQ-Sweep v2: POI kausal über den LQ-Algo (liquiditySweepSelection.js): jüngster gültiger Sweep vor OB1 mit LS-Reaktion IN und
+// gehaltenem Extrem bis OB1, statt Kanten-Geometrie. v0/v1 bleiben eingefroren (geometrisch) und nur Vergleich.
+RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v2' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v2`] = { ...lqV0, label: 'v2 · LS-Reaktion kausal',
+  description: 'DOB mit POI = jüngster gültiger, gehaltener LQ-Sweep vor OB1 (LS-Reaktion IN, kein Kanten-Abgleich); Gegen-DOB-Status wie v3',
+  sort: 12, version: 'dob-lq-sweep-v2', poiOptions: { selection: 'causal' } };
 const RUN_ID = flag('--run') ?? runId('v0');
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
@@ -54,9 +59,10 @@ try {
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { dobPoiContext, dobPoiZoneAgeSeconds }, { dobMaxR, dobWideVariant, dobSwingStopVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, dobPoiFeatures, DOB_BREAKEVEN_AT_R_LEVELS },
-    { dobLsReactionFromRow, dobLqMatchRank }, { fetchAllRows }, { lsReactionRowVerdicts, LS_REACTION_VERSION }, { createDobSwingStopGate }, { SL_ALGO_V1, SL_ALGO_POI_TYPES }, { dobIntradayOutcome }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobLsReactionFromRow, dobLqMatchRank }, { fetchAllRows }, { lsReactionRowVerdicts, LS_REACTION_VERSION }, { createDobSwingStopGate }, { SL_ALGO_V1, SL_ALGO_POI_TYPES }, { dobIntradayOutcome },
+    { createLiquiditySweepSelector }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js',
-      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/lsReactionRows.js', '/src/dobSwingStop.js', '/src/slAlgo.js', '/src/dobIntraday.js'].map(load));
+      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/lsReactionRows.js', '/src/dobSwingStop.js', '/src/slAlgo.js', '/src/dobIntraday.js', '/src/liquiditySweepSelection.js'].map(load));
   const [{ fetchDobTradePins }, { missingDobModelTrades, changedDobRunTrades }] = await Promise.all(['/src/pinContext.js', '/src/dobTradeStatistics.js'].map(load));
   const LQ = RUNS[RUN_ID].poiType === 'lq_sweep';
   // trade_setups-Zeilen (alle Detektorversionen) nur für LQ-Sweep-Läufe; LS-Reaktion daraus erst unten mit dem Trendkontext.
@@ -83,7 +89,10 @@ try {
   const dataEnd = Math.min(m1All.at(-1).time + 60, Math.floor(Date.now() / 1000));
   // LS-Reaktion wie im Chart und im Watcher (lsReactionRowVerdicts, Trend-Policy). Das Urteil hängt nur an Kerzen bis zur Setup-Erkennung,
   // daher einmal zum Datenende. Eigener Cache-Ordner: M5/D1 ab 15.11.2025 für den D1-Anker, ohne die Lauf-Kerzen oben zu verändern.
-  const tradeSetups = LQ ? (() => {
+  const CAUSAL = RUNS[RUN_ID].poiOptions?.selection === 'causal';
+  const liquiditySweepSelector = CAUSAL ? createLiquiditySweepSelector({ instrument: SYMBOL, m5Candles: lsReactionCandles.m5,
+    h1Candles: lsReactionCandles.h1, d1Candles: lsReactionCandles.d1, sessionConfigs: sessions }) : undefined;
+  const tradeSetups = LQ && !CAUSAL ? (() => {
     const verdicts = lsReactionRowVerdicts({ rows: tradeSetupRows, instrument: SYMBOL, m5Candles: lsReactionCandles.m5, h1Candles: lsReactionCandles.h1,
       d1Candles: lsReactionCandles.d1, evaluatedAt: dataEnd, sessionConfigs: sessions });
     const counts = Object.groupBy([...verdicts.values()], v => v.status);
@@ -98,7 +107,7 @@ try {
   // SL-Algo 1.0 (Struktur-P2) gemessen für jede POI-Familie ab v1 (mit POI); ob er wirkt, entscheidet erst sl_algo.poiTypes der Konfig.
   // ATR aus demselben POI-Kontext wie der Watcher (dobH1AtrSeries).
   const swingStopGate = RUNS[RUN_ID].version !== 'dob-setup-v0' ? createDobSwingStopGate({ m5Candles: m5Marked, instrument: SYMBOL, atr: poiContext.atr }) : undefined;
-  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, poiType: RUNS[RUN_ID].poiType, poiContext, poiOptions: RUNS[RUN_ID].poiOptions, counterDobGate, swingStopGate, slAlgo: { ...SL_ALGO_V1, poiTypes: SL_ALGO_POI_TYPES }, tradeSetups })) });
+  const runSetups = live => ({ setups: RUNS[RUN_ID].pick(checkDobTradeSetup({ ...live, poiType: RUNS[RUN_ID].poiType, poiContext, poiOptions: RUNS[RUN_ID].poiOptions, counterDobGate, swingStopGate, slAlgo: { ...SL_ALGO_V1, poiTypes: SL_ALGO_POI_TYPES }, tradeSetups, liquiditySweepSelector })) });
   const trades = dobGridTrades(collectDobSetups(grid, { startSec, dataEnd, checkDobTradeSetup: runSetups, dobLiveWindowInput }).setups,
     grid, dataEnd, evaluateDoubleOrderBlockOutcome);
   const carrying = new Map();
@@ -157,6 +166,10 @@ try {
   const missingModels = missingDobModelTrades(await fetchDobTradePins(SYMBOL), rows, { poiType: RUNS[RUN_ID].poiType, fromSec: startSec });
   for (const pin of missingModels) console.error(`Mustertrade fehlt: ${pin.dobTradeContext.direction} ${berlinDateStrFor(pin.dobTradeContext.entry_time)} (Pin ${pin.id}${pin.dealingRangeId ? `, DR #${pin.dealingRangeId}` : ''})`);
   if (missingModels.length && !process.argv.includes('--allow-missing-model')) { console.error('Abbruch: Mustertrade(s) fehlen im Lauf.'); process.exitCode = 1; }
+  // LS-Reaktion später als 3 h nach dem Touch: kein Filter, sondern ein Fehler (fehlende Kerzen oder Erkennung); nichts schreiben.
+  const lateReactions = [...new Map([...bestPoi.values()].filter(p => p?.error).map(p => [`${p.error.touchTime}`, p.error])).values()];
+  for (const e of lateReactions) console.error(`LS-Reaktion unplausibel spät: Touch ${berlinDateStrFor(e.touchTime)} ${new Date(e.touchTime * 1000).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin' })}, Umkehr-OB ${new Date(e.reactionObStart * 1000).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}`);
+  if (lateReactions.length) { console.error('Abbruch: LS-Reaktion(en) über 3 h nach dem Touch.'); process.exitCode = 1; }
   const { data: storedRun, error: runError } = await supabase.from('dob_trade_setup_runs').select('data_end').eq('id', RUN_ID).eq('instrument', SYMBOL).limit(1);
   const { data: stored, error: storedError } = await fetchAllRows((from, to) => supabase.from('dob_trade_setups').select('id,outcome')
     .eq('run_id', RUN_ID).eq('instrument', SYMBOL).order('id').range(from, to));

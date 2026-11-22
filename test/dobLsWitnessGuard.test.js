@@ -19,3 +19,10 @@ it('Chart-Feature und Alarm-POI tragen dasselbe LS',()=>{
  const poi={kind:'ts11',tradeSetupId:ts.id,lsPrice:ts.lsPrice,lsPivotTime:ts.lsPivotTime,lsTouchedTime:ts.lsTouchedTime};
  expect(dobPoiFeatures(poi)).toMatchObject({poi_ls_price:9.8,poi_ls_pivot_time:100,poi_ls_touched_time:200});
 });
+
+// Kausale LS-Auswahl (Lauf v2 und Alarm): beide bauen den POI über denselben LQ-Selector, nicht über eigene Zuordnungen.
+it.each(['scripts/dobTradeSetupsFill.mjs','supabase/functions/dob-watcher/index.ts'])('%s übergibt den LQ-Selector an checkDobTradeSetup',p=>{
+ const s=source(p);
+ expect(s).toMatch(/createLiquiditySweepSelector\(/);
+ expect(s).toMatch(/liquiditySweepSelector\s*\}/);
+});

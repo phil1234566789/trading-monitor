@@ -15,12 +15,15 @@ const fmtLevel=(v,instrument)=>{const d=instrumentConfig(instrument??'XAUUSD').p
 const gapText=(gap,instrument)=>instrument&&instrument!=='XAUUSD'?`${(gap/instrumentConfig(instrument).pip).toLocaleString('de-DE',{maximumFractionDigits:1})} Pips`
  :`${Number(gap).toLocaleString('de-DE',{maximumFractionDigits:2})} USD`;
 // lsPrice (gesweeptes LS-Level) steht vorn, damit Philip das Level im Chart findet: „1,32068 · LS-Reaktion #50740 · Kante“.
-export function dobLsReactionLabel({tradeSetupId,match,gapUsd,instrument,lsPrice}){
+// Kausale Auswahl (match 'sweep'): kein trade_setups-Bezug, dafür die Zahl der gesweepten LS: „4.400,19 · LS-Reaktion · 2 LS“.
+export function dobLsReactionLabel({tradeSetupId,match,gapUsd,instrument,lsPrice,lsCount}){
+ if(match==='sweep')return `${Number.isFinite(lsPrice)?`${fmtLevel(lsPrice,instrument)} · `:''}LS-Reaktion${lsCount>1?` · ${lsCount} LS`:''}`;
  return `${Number.isFinite(lsPrice)?`${fmtLevel(lsPrice,instrument)} · `:''}LS-Reaktion #${tradeSetupId}${match?` · ${MATCH_TEXT[match]??`${gapText(gapUsd,instrument)} daneben`}`:''}`;
 }
 export function dobPoiLabel(row){
  if(!row.poi_kind)return '–';
- if(row.poi_kind==='ts11'){const f=row.features??{};return dobLsReactionLabel({tradeSetupId:f.poi_trade_setup_id,match:f.poi_match,gapUsd:f.poi_gap_usd,instrument:row.instrument});}
+ if(row.poi_kind==='ts11'){const f=row.features??{};return dobLsReactionLabel({tradeSetupId:f.poi_trade_setup_id,match:f.poi_match,gapUsd:f.poi_gap_usd,instrument:row.instrument,lsCount:f.poi_ls_count,
+  ...(f.poi_match==='sweep'?{lsPrice:f.poi_ls_price}:{})});}
  const num=v=>v.toLocaleString('de-DE',{maximumFractionDigits:1});
  const distance=Number.isFinite(row.poi_distance_atr)?` · ${num(row.poi_distance_atr)} ATR`
   :Number.isFinite(row.poi_distance_usd)?` · ${num(row.poi_distance_usd)} USD`:'';

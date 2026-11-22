@@ -29,6 +29,17 @@ describe('DOB-Detail LQ-Sweep',()=>{
   const lines=draw(row).filter(p=>p instanceof LiquidityLinePrimitive).map(p=>p._options.label);
   expect(lines).toEqual(expect.arrayContaining(['LS 3.877,19',expect.stringMatching(/^Sweep \d\d:\d\d$/)]));
  });
+ // Kausale Auswahl (Lauf v2): keine trade_setups-Zeile; alle LS der Sweep-Kerze als Linien, Box = Umkehr-OB.
+ it('zeichnet beim kausalen POI alle LS der Sweep-Kerze und den Umkehr-OB',()=>{
+  const causal={...row,lsReaction:undefined,features:{poi_match:'sweep',poi_ls_price:3878.45,poi_ls_pivot_time:1794896400,poi_ls_touched_time:1794899700,
+   poi_ls_count:2,poi_ls_levels:[{price:3878.45,pivotTime:1794896400,sourceKind:'liquidity'},{price:3877.9,pivotTime:1794897000,sourceKind:'orderBlock'}]}};
+  const lines=draw(causal).filter(p=>p instanceof LiquidityLinePrimitive).map(p=>p._options.label);
+  expect(lines).toEqual(expect.arrayContaining(['LS 3.878,45','LS 3.877,9',expect.stringMatching(/^Sweep \d\d:\d\d$/)]));
+  const boxes=draw(causal).filter(p=>p instanceof OrderBlockPrimitive);
+  expect(boxes.map(b=>b._options.label)).toEqual(['LS-Reaktion · 2 LS']);
+  expect(boxes[0]._zone).toMatchObject({top:3878.62,bottom:3873.07});
+  expect(dobTradeFrame(causal).from).toBe(1794896400);
+ });
  it('HTF-OB bleibt beim goldenen POI',()=>{
   const htf={...row,poi_kind:'ob_h1',lsReaction:undefined,features:{}};
   expect(draw(htf).filter(p=>p instanceof OrderBlockPrimitive).map(p=>p._options.label)[0]).toMatch(/^POI H1-OB/);

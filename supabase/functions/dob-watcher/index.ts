@@ -16,7 +16,8 @@ import {createDobSwingStopGate} from '../../../src/dobSwingStop.js';
 import {dobH1AtrSeries} from '../../../src/dobHtfObPoi.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
 import {dobLsReactionFromRow} from '../../../src/dobLqSweepPoi.js';
-import {computeLsReactionVerdicts,LS_REACTION_VERSION} from '../_shared/lsReactionVerdicts.ts';
+import {computeLsReactionVerdicts,LS_REACTION_VERSION,LS_REACTION_CONTEXT} from '../_shared/lsReactionVerdicts.ts';
+import {createLiquiditySweepSelector} from '../../../src/liquiditySweepSelection.js';
 import {secretMatches} from '../_shared/setup2Notifications.js';
 import {flushDobOutbox} from '../_shared/dobDelivery.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
@@ -118,16 +119,24 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,instrument,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);
-  const lsReaction=poiTypes.some(p=>p.poiType==='lq_sweep')?await lsReactionSetups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null,tradeSetups=lsReaction?.setups??[];
+  const lq=poiTypes.some(p=>p.poiType==='lq_sweep');
+  // LS-Reaktion-Urteile je trade_setups-Zeile weiter cachen (Alarm-Protokoll liest sie); der DOB-POI kommt kausal aus dem LQ-Algo
+  // (wie Lauf v2): M5 bis zur Kontext-Obergrenze (reicht für den D1-Anker), H1 wie oben, D1 für die Anker.
+  const lsReaction=lq?await lsReactionSetups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null;
+  const liquiditySweepSelector=lq?createLiquiditySweepSelector({instrument,sessionConfigs:sessions,h1Candles:h1,
+    m5Candles:await closedCandles(client,instrument,'5m',evaluatedAt,LS_REACTION_CONTEXT.maxM5),
+    d1Candles:await closedCandles(client,instrument,'1D',evaluatedAt,LS_REACTION_CONTEXT.d1)}):undefined;
   // Erkennung zum Datenstand (letzte M1, Feed-Verzug ≤ 3 min), Herzschlag, Stale-Alarm und Alarmfenster zur Uhrzeit.
   const asOf=dobDataAsOf(m1Marked,evaluatedAt);
   const htfCandles={'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)};
   // SL-Algo wie der Lauf (scripts/dobTradeSetupsFill.mjs): alle M5, nicht der Live-Schnitt, und dieselbe H1-ATR-Serie.
   const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt:asOf,m1Candles:m1Marked,m5Candles:m5Marked,htfCandles}),
     counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:instrument}),
-    swingStopGate:createDobSwingStopGate({m5Candles:m5Marked,instrument,atr:dobH1AtrSeries(htfCandles['1h'])}),tradeSetups};
+    swingStopGate:createDobSwingStopGate({m5Candles:m5Marked,instrument,atr:dobH1AtrSeries(htfCandles['1h'])}),liquiditySweepSelector};
   // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
   const calcStart=performance.now(),runs:any[]=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt:asOf,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
+  // LS-Reaktion > 3 h nach dem Touch: nur loggen (Philip: kein Telegram), meist fehlende Kerzen.
+  for(const r of runs)for(const s of [...r.result.setups,...r.result.rejected])if(s.poi?.error)console.warn(`${instrument} LS-Reaktion unplausibel spät`,JSON.stringify(s.poi.error));
   const stale=dobStaleAlarm({instrument:instrument,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   const events=[...runs.flatMap(r=>r.events.map((event:any)=>({event,run:r}))),...(stale?[{event:stale,run:null}]:[])];
   const count=(key:'setups'|'rejected')=>runs.reduce((n,r)=>n+r.result[key].length,0);
