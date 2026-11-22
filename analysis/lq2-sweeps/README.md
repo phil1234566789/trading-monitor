@@ -407,3 +407,33 @@ NY/London; Zeiten Berlin). Die verworfenen sind alle LH nach LL und scheitern nu
 | 19 | verworfen | XAUUSD Long | 08.07. 06:15 | 08.07. 09:05 London | 0,79 | 1 | Impuls < 0,85 | Loss |
 | 20 | verworfen | GBPUSD Short | 04.08. 13:40 | 04.08. 16:05 NY | 0,99 | 0 | 0 Swings | Loss |
 
+## Gegenprobe zu (c) M15: Strukturpunkt oder nur weiterer SL?
+
+Skripte `slStattSperre.mjs` (rechnet zusätzlich (c) mit Ziel 2R und die Kontrolle) und `gegenprobeC.mjs` → `gegenprobe-c.json`.
+Nur Treffer-Trades, Zielmaß WR und Max-DD (R); ΣR steht in der JSON.
+
+- **Kontrolle (d):** Da (c) nur eine SL-Weite setzt, wäre „gleicher Abstand ohne Struktur“ identisch. (d) nimmt darum den
+  SL-Faktor von (c) M15 (neues Risiko / DOB-Risiko) eines zufällig gezogenen **anderen** Treffers desselben Laufs und legt
+  ihn aufs eigene DOB-Risiko. Seed 20261123, 20 Wiederholungen, Mittel ± Streuung. Der Faktor statt eines absoluten
+  Abstands hält die Volatilität vergleichbar.
+- **Ziel fest:** Der Zielpreis bleibt. **Ziel 2R:** Ziel = 2 × neues Risiko.
+- **Breit:** jeder Treffer. **Streng:** Der Entry liegt in der Zone. Ohne Mindest-SL-Faktor.
+
+| Lauf · Definition | n (H1/H2) | (a) WR · DD | (c) fest WR · DD | (d) fest WR · DD | (c) 2R WR · DD | (d) 2R WR · DD |
+|---|---|---|---|---|---|---|
+| LQ-Sweep · breit | 1717 (966/751) | 33,5 % · 49 | 53,5 % · 41 | 53,6 ± 0,6 % · 39 ± 8 | 33,7 % · 92 | 34,0 ± 0,7 % · 74 ± 17 |
+| – H1 / H2 | | 33,4 / 33,7 % | 53,4 / 53,5 % | 54,1 / 53,0 % | 35,1 / 32,0 % | 35,1 / 32,5 % |
+| LQ-Sweep · streng | 631 (369/262) | 34,2 % · 33 | 53,2 % · 24 | 54,6 ± 1,1 % · 22 ± 5 | 34,8 % · 66 | 36,4 ± 1,2 % · 37 ± 11 |
+| – H1 / H2 | | 35,0 / 33,2 % | 53,4 / 53,1 % | 55,7 / 53,1 % | 38,9 / 29,1 % | 39,0 / 32,6 % |
+| HTF-OB v3 · breit | 860 (541/319) | 32,9 % · 70 | **53,7 % · 41** | 51,8 ± 0,6 % · 55 ± 7 | 35,7 % · 81 | 34,2 ± 1,1 % · 64 ± 13 |
+| – H1 / H2 | | 30,1 / 37,6 % | 51,2 / 58,0 % | 48,9 / 56,6 % | 32,7 / 40,7 % | 31,5 / 38,9 % |
+| HTF-OB v3 · streng | 309 (194/115) | 34,6 % · 22 | **57,3 % · 12** | 54,5 ± 1,7 % · 17 ± 3 | 38,0 % · 24 | 36,4 ± 1,4 % · 27 ± 7 |
+| – H1 / H2 | | 34,0 / 35,7 % | 56,2 / 59,1 % | 53,9 / 55,6 % | 37,1 / 39,5 % | 36,4 / 36,5 % |
+
+**Ergebnis:**
+- **LQ-Sweep:** Der Strukturpunkt bringt nichts. (c) und (d) liegen gleichauf, in beiden Halbjahren und beiden
+  Definitionen. Mit Ziel 2R ist der Max-DD von (c) sogar größer als bei (d).
+- **HTF-OB v3:** Der Strukturpunkt bringt etwas. (c) liegt in beiden Halbjahren und beiden Definitionen 1,4–3,5 Punkte über
+  (d), also 2 bis 3 Streuungen, bei kleinerem Max-DD (breit 41 gegen 55 ± 7 R, streng 12 gegen 17 ± 3 R).
+- **Ziel-Semantik:** Mit Ziel 2R fällt die WR aller Varianten auf das Niveau von (a) zurück (32–41 %). Die hohe WR von (c)
+  bei festem Ziel kommt vor allem daher, dass der weitere SL bei gleichem Ziel weniger R pro Win verlangt.

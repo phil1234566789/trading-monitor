@@ -12,6 +12,7 @@ import { wilderAtrValues } from '../../src/atr.js';
 import { markIgnoredCandles, sessionFromRow } from '../../src/sessionOccurrences.js';
 import { berlinOffsetMinutes, formatDatedTime } from '../../src/berlinTime.js';
 import { instrumentConfig, FOREX_MIN_FVG_PIPS } from '../../src/instrumentConfig.js';
+import { mulberry32 } from './merkmale.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 let envDir = fileURLToPath(new URL('../..', import.meta.url));
@@ -92,6 +93,13 @@ function simulate(P, entryTime, side, sl, target) {
   return null;
 }
 
+// R eines Trades mit anderem SL. Semantik 'fest': Zielpreis bleibt; 'kR': Ziel = 2 × neues Risiko. null = offen.
+function withSl(P, row, slPrice, semantik) {
+  const risk = Math.abs(slPrice - row.entryPrice), target = semantik === 'kR' ? row.entryPrice + row.side * 2 * risk : row.target;
+  const res = simulate(P, row.entryTime, row.side, slPrice, target);
+  return res == null ? null : res.win ? (semantik === 'kR' ? 2 : Math.abs(row.target - row.entryPrice) / risk) : -1;
+}
+const CONTROL_REPS = 20, CONTROL_SEED = 20261123;
 const B = t => { const s = formatDatedTime(t); return `${s.slice(8, 10)}.${s.slice(5, 7)}. ${s.slice(11)}`; };
 const rows = [];
 for (const instrument of input.instruments) {
@@ -119,7 +127,22 @@ for (const instrument of input.instruments) {
       row[`c${tfKey}`] = { R: res == null ? 0 : res.win ? +(Math.abs(tr.target_price - tr.entry_price) / newRisk).toFixed(3) : -1,
         sl: +s.price.toFixed(5), swing: B(s.pivotTime), riskFaktor: +(newRisk / risk).toFixed(2), ergebnis: res ? (res.win ? 'win' : 'loss') : 'offen', zeit: res ? B(res.time) : null };
     }
+    if (row.cM15.sl != null) row.cM15.R_kR = withSl(P, row, row.cM15.sl, 'kR');
     rows.push(row);
+  }
+  // Kontrolle (d): SL-Faktor von (c) M15 eines zufällig gezogenen ANDEREN Treffers desselben Laufs, angewandt aufs eigene DOB-Risiko.
+  // Prüft, ob der Strukturpunkt etwas bringt oder nur die SL-Weite. Fester Seed, 20 Wiederholungen.
+  const rnd = mulberry32(CONTROL_SEED);
+  for (const run of [...new Set(rows.filter(r => r.instrument === instrument).map(r => r.run))]) {
+    const hits = rows.filter(r => r.run === run && (r.hitA || r.hitB || r.hitStrict) && r.cM15.riskFaktor);
+    for (const [i, row] of hits.entries()) {
+      row.dFest = []; row.dKR = [];
+      for (let k = 0; k < CONTROL_REPS; k++) {
+        let j = Math.floor(rnd() * (hits.length - 1)); if (j >= i) j++;
+        const sl = row.entryPrice - row.side * hits[j].cM15.riskFaktor * Math.abs(row.entryPrice - row.sl);
+        row.dFest.push(withSl(P, row, sl, 'fest')); row.dKR.push(withSl(P, row, sl, 'kR'));
+      }
+    }
   }
 }
 
