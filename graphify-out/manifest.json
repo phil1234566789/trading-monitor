@@ -216,9 +216,9 @@
     "semantic_hash": ""
   },
   "src/components/SessionsModal.vue": {
-    "mtime": 1795350719.5385993,
-    "seen": 1795351603.6364148,
-    "ast_hash": "ec8f72efe6be2104fff6a7d46f41af69",
+    "mtime": 1795358542.0215743,
+    "seen": 1795358755.4492652,
+    "ast_hash": "4b9c1da3a14ce9c75c948c5400724f09",
     "semantic_hash": ""
   },
   "src/components/StyleModal.vue": {
@@ -3174,9 +3174,9 @@
     "semantic_hash": ""
   },
   "src/berlinTime.js": {
-    "mtime": 1795350719.488165,
-    "seen": 1795351603.6364148,
-    "ast_hash": "2d076c17d26948deb996c17e07b2da5e",
+    "mtime": 1795358523.092022,
+    "seen": 1795358755.423259,
+    "ast_hash": "e549a413f7ec1343e30d8944d8490c50",
     "semantic_hash": ""
   },
   "src/chartMeasure.js": {
@@ -10170,9 +10170,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeStatistics.js": {
-    "mtime": 1795358113.265212,
-    "seen": 1795358301.331579,
-    "ast_hash": "632229216c2425bf6129be67b8acb0a3",
+    "mtime": 1795358523.092022,
+    "seen": 1795358755.4933274,
+    "ast_hash": "46d50dacce316b294ff29fc12ff1e7a3",
     "semantic_hash": ""
   },
   "src/views/DobStatistik.vue": {
@@ -10338,9 +10338,9 @@
     "semantic_hash": ""
   },
   "src/dobGuardrails.js": {
-    "mtime": 1795351780.6319969,
-    "seen": 1795352041.769127,
-    "ast_hash": "c7df7706378ae4ec086df0e1376b81ed",
+    "mtime": 1795358523.0930245,
+    "seen": 1795358755.4893272,
+    "ast_hash": "551cdd05b2181e6a24653ca2a4450444",
     "semantic_hash": ""
   },
   "test/dobGuardrails.test.js": {
@@ -10764,9 +10764,9 @@
     "semantic_hash": ""
   },
   "src/components/DobSetupConfigPanel.vue": {
-    "mtime": 1795358142.8924854,
-    "seen": 1795358301.2869704,
-    "ast_hash": "4f17f782e7fb0324a124eb772153e652",
+    "mtime": 1795358554.2561786,
+    "seen": 1795358755.4372642,
+    "ast_hash": "059bb8fef32a18bed195fd56d8f6b500",
     "semantic_hash": ""
   },
   "test/dobSetupConfigPanel.test.js": {
@@ -11448,9 +11448,15 @@
     "semantic_hash": ""
   },
   "test/dobEntryWindowsNy.test.js": {
-    "mtime": 1795352560.5316644,
-    "seen": 1795352734.024182,
-    "ast_hash": "39c6b8a29e0ad052a8128d645757d82b",
+    "mtime": 1795358569.766583,
+    "seen": 1795358755.6525915,
+    "ast_hash": "a7aa304ea661bfabc0cc31022e0d1ee7",
+    "semantic_hash": ""
+  },
+  "src/components/WeekdayToggles.vue": {
+    "mtime": 1795358541.9565518,
+    "seen": 1795358755.458778,
+    "ast_hash": "5b4d496a204008e93767d2b0dd6db47d",
     "semantic_hash": ""
   }
 }
