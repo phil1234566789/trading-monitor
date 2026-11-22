@@ -83,6 +83,14 @@ export function missingDobModelTrades(pins,rows,{poiType,fromSec=0}){
  return pins.filter(p=>p.pinType==='model'&&p.dobTradeContext&&dobRunPoiType(p.dobTradeContext.run_id)===poiType
   &&p.dobTradeContext.entry_time>=fromSec&&!matched.has(p));
 }
+// Nachfüllen darf gespeicherte Trades nicht ändern: geänderte Trades = Algo-Änderung, die einen neuen Lauf braucht (eingefrorene
+// Vergleichsstände). Erlaubt sind nur neue Trades nach dataEnd und offene Trades, die sich inzwischen entschieden haben.
+export function changedDobRunTrades(stored,rows,{dataEnd=-Infinity}={}){
+ const now=new Map(rows.map(r=>[r.id,r])),before=new Set(stored.map(r=>r.id));
+ return [...stored.filter(s=>!now.has(s.id)||(s.outcome!=='open'&&s.outcome!=null&&now.get(s.id).outcome!==s.outcome))
+   .map(s=>({id:s.id,was:s.outcome,now:now.get(s.id)?.outcome??null})),
+  ...rows.filter(r=>!before.has(r.id)&&r.entry_time<=dataEnd).map(r=>({id:r.id,was:null,now:r.outcome}))];
+}
 // Max R: höchste Stufe vor dem SL (dobMaxR, vom Fill-Skript gespeichert). Filter wählt genaue Stufen, mehrere = ODER;
 // „≥“-Stufen wären bei Mehrfachauswahl immer nur die kleinste gewählte. Alles unter 2R ist ein Loss und eine Stufe.
 export const DOB_MAX_R_FILTERS=['<2','2','2.5','3','3.5','4','4.5','5'];

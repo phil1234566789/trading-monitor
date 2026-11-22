@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobPoiLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker,dobTradeWeekday,dobTradeHalf,dobTradesPerWeek,dobPerWeekText} from '../src/dobTradeStatistics.js';
+import {dobGroups,dobRouteStats,dobTradeMonth,dobTradeSessions,dobChartLink,dobPoiLabel,dobTradePinKey,matchDobTradePins,dobMaxRBucket,dobMaxRShares,dobTargetOutcome,dobTradeR,dobTimeSlotGroups,dobZoneAgeBucket,dobTotalStats,dobReturnTracker,dobTradeWeekday,dobTradeHalf,dobTradesPerWeek,dobPerWeekText,changedDobRunTrades} from '../src/dobTradeStatistics.js';
 
 // 12.11.2026 14:10 Berlin (CET) = 13:10 UTC
 const at=Date.UTC(2026,10,12,13,10)/1000;
@@ -110,5 +110,16 @@ describe('dobTradeStatistics',()=>{
   expect(dobTradesPerWeek([t(2026,11,2,10),t(2026,11,3,10),t(2026,11,4,10),t(2026,11,18,10)])).toEqual({n:4,weeks:3,perWeek:4/3});
   expect(dobPerWeekText(dobTradesPerWeek([t(2026,11,2,10),t(2026,11,3,10),t(2026,11,4,10),t(2026,11,18,10)]))).toBe('1,3');
   expect(dobTradesPerWeek([])).toEqual({n:0,weeks:0,perWeek:null});
+ });
+});
+
+describe('changedDobRunTrades',()=>{
+ const stored=[{id:'a',outcome:'success'},{id:'b',outcome:'open'},{id:'c',outcome:'loss'}];
+ it('Nachfüllen ohne Algo-Änderung: offen entschieden, neuer Trade nach dataEnd',()=>{
+  expect(changedDobRunTrades(stored,[{id:'a',outcome:'success'},{id:'b',outcome:'loss'},{id:'c',outcome:'loss'},{id:'d',outcome:'open',entry_time:200}],{dataEnd:100})).toEqual([]);
+ });
+ it('meldet verschwundene, umgedrehte und neue Trades im alten Zeitraum',()=>{
+  expect(changedDobRunTrades(stored,[{id:'a',outcome:'loss'},{id:'b',outcome:'open'},{id:'e',outcome:'success',entry_time:50}],{dataEnd:100}))
+   .toEqual([{id:'a',was:'success',now:'loss'},{id:'c',was:'loss',now:null},{id:'e',was:null,now:'success'}]);
  });
 });

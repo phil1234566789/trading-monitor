@@ -1,7 +1,8 @@
 // Befüllt dob_trade_setups (Statistikseite /dob-statistik) mit den einmaligen v0-Trades ab --from (Berlin), gleiche Zählweise wie
 // dobSetupWinrate.mjs: jeder M5-Schluss im Live-Fenster, letzte Sichtung je Setup-ID, Ausgang neu bis Datenende, Dedup Richtung/Entry/SL.
 // Flags: --instrument (Standard XAUUSD), --refresh (Kerzen neu holen), --from YYYY-MM-DD, --dry (nichts schreiben, nur Kennzahlen), --run <Lauf-ID aus RUNS>,
-// --dump <Datei> (mit --dry: Zeilen als JSON, für bitgenaue Regressionsvergleiche nach Umbauten), --allow-missing-model (schreibt trotz fehlender Mustertrades).
+// --dump <Datei> (mit --dry: Zeilen als JSON, für bitgenaue Regressionsvergleiche nach Umbauten), --allow-missing-model (schreibt trotz fehlender Mustertrades),
+// --allow-changed-trades (überschreibt gespeicherte Trades trotz geänderter Ergebnisse; sonst neuen Lauf anlegen).
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -56,7 +57,7 @@ try {
     { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }, { tradeSetup11RowVerdicts, TRADE_SETUP_11_VERSION }, { createDobSwingStopGate }, { SL_ALGO_V1, SL_ALGO_POI_TYPES }, { dobIntradayOutcome }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js',
       '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/tradeSetup11Rows.js', '/src/dobSwingStop.js', '/src/slAlgo.js', '/src/dobIntraday.js'].map(load));
-  const [{ fetchDobTradePins }, { missingDobModelTrades }] = await Promise.all(['/src/pinContext.js', '/src/dobTradeStatistics.js'].map(load));
+  const [{ fetchDobTradePins }, { missingDobModelTrades, changedDobRunTrades }] = await Promise.all(['/src/pinContext.js', '/src/dobTradeStatistics.js'].map(load));
   const LQ = RUNS[RUN_ID].poiType === 'lq_sweep';
   // trade_setups-Zeilen (alle Detektorversionen) nur für LQ-Sweep-Läufe; TS1.1 daraus erst unten mit dem Trendkontext.
   const tradeSetupRows = LQ ? await (async () => { const { data, error } = await fetchAllRows((from, to) => supabase.from('trade_setups')
@@ -156,6 +157,15 @@ try {
   const missingModels = missingDobModelTrades(await fetchDobTradePins(SYMBOL), rows, { poiType: RUNS[RUN_ID].poiType, fromSec: startSec });
   for (const pin of missingModels) console.error(`Mustertrade fehlt: ${pin.dobTradeContext.direction} ${berlinDateStrFor(pin.dobTradeContext.entry_time)} (Pin ${pin.id}${pin.dealingRangeId ? `, DR #${pin.dealingRangeId}` : ''})`);
   if (missingModels.length && !process.argv.includes('--allow-missing-model')) { console.error('Abbruch: Mustertrade(s) fehlen im Lauf.'); process.exitCode = 1; }
+  const { data: storedRun, error: runError } = await supabase.from('dob_trade_setup_runs').select('data_end').eq('id', RUN_ID).eq('instrument', SYMBOL).limit(1);
+  const { data: stored, error: storedError } = await fetchAllRows((from, to) => supabase.from('dob_trade_setups').select('id,outcome')
+    .eq('run_id', RUN_ID).eq('instrument', SYMBOL).order('id').range(from, to));
+  if (runError || storedError) throw runError ?? storedError;
+  const changed = changedDobRunTrades(stored, rows, { dataEnd: storedRun[0]?.data_end });
+  if (changed.length) console.error(`${changed.length} gespeicherte Trades ändern sich, z.B. ${JSON.stringify(changed.slice(0, 3))}`);
+  if (changed.length && !process.argv.includes('--allow-changed-trades')) {
+    console.error('Abbruch: Algo-Änderung, dafür einen neuen Lauf anlegen (--allow-changed-trades nur bewusst).'); process.exitCode = 1;
+  }
   if (DRY || process.exitCode) process.exit(process.exitCode ?? 0);
   // Nach 8–10 min Rechnen ist die gepoolte Verbindung oft serverseitig zu (fetch failed: ECONNRESET/ECONNABORTED); der Ersatz ist idempotent.
   const write = () => supabase.rpc('replace_dob_trade_setups', { p_run: { id: RUN_ID, label: RUNS[RUN_ID].label, description: RUNS[RUN_ID].description, sort: RUNS[RUN_ID].sort, setup_version: RUNS[RUN_ID].version, poi_type: RUNS[RUN_ID].poiType, data_end: dataEnd },
