@@ -437,3 +437,25 @@ Nur Treffer-Trades, Zielmaß WR und Max-DD (R); ΣR steht in der JSON.
   (d), also 2 bis 3 Streuungen, bei kleinerem Max-DD (breit 41 gegen 55 ± 7 R, streng 12 gegen 17 ± 3 R).
 - **Ziel-Semantik:** Mit Ziel 2R fällt die WR aller Varianten auf das Niveau von (a) zurück (32–41 %). Die hohe WR von (c)
   bei festem Ziel kommt vor allem daher, dass der weitere SL bei gleichem Ziel weniger R pro Win verlangt.
+
+## LQ 2.1 ohne Struktur-Pflicht
+
+Gleicher Winner-Check wie oben (`lq21Pruefung.mjs`, Block `ohneStruktur` in `lq21-pruefung.json`). Die Regel ist nur noch
+Impuls ≥ 0,85 H1-ATR und mindestens 1 gebrochener Swing; „LH nach LL“ und „Wechselpivot“ entfallen. Die Werte kommen aus
+`merkmale.mjs`, weil die Produktivfunktion die Struktur vor der Impulsmessung prüft. Für LS ohne Wechselpivot gibt es kein
+Gegen-Pivot als Impulsende; der Impuls läuft dann bis zum Sweep und ist eher zu groß. Diese Fälle sind getrennt ausgewiesen.
+
+| Asset | behalten | WR behalten / verworfen (H1 · H2) | verlorene Winner | zum Vergleich LQ 2.1 mit Struktur |
+|---|---|---|---|---|
+| GBPUSD | 543 von 814 (67 %) | 32,8 / 32,8 % (31,5/30,7 · **34,4/35,6**) | 89 (33 %) | 40 % behalten, 59 % Winner verloren |
+| EURUSD | 455 von 1.019 (45 %) | 33,8 / 33,2 % (36,1/34,1 · **31,1/31,7**) | 187 (55 %) | 20 % behalten, 79 % verloren |
+| XAUUSD | 329 von 503 (65 %) | 37,7 / 33,3 % (38,6/37,8 · 36,8/28,6) | 58 (32 %) | 36 % behalten, 60 % verloren |
+| **alle** | **1.327 von 2.336 (57 %)** | **34,4 / 33,1 %** (34,7/33,8 · 33,9/32,2) | **334 (42 %)** | 31 % behalten, 68 % verloren |
+
+Fett markiert sind Halbjahre, in denen die verworfenen Trades mindestens gleich gut sind. ΣR behalten / verworfen (Info):
++41 / −7.
+
+- Nur Wechselpivots: 1.120 von 1.847 behalten, WR 33,9 / 32,7 %. Ohne Wechselpivot: 207 von 489 behalten, WR 36,7 / 34,0 %.
+- **Ergebnis:** Ohne Struktur-Pflicht verliert die Regel deutlich weniger Winner (42 statt 68 %), hebt die WR aber auch nur um
+  1,3 Punkte. Stabil in beiden Halbjahren ist das wieder nur bei XAU. Auf der TS1.1-Vorauswahl trennen die LS-Merkmale
+  Gewinner und Verlierer kaum; das deckt sich mit der Trade-Ebene ganz oben.

@@ -44,24 +44,31 @@ try {
         half: +formatDatedTime(tr.entry_time).slice(5, 7) <= 6 ? 'H1' : 'H2', win: tr.outcome === 'success',
         R: tr.outcome === 'success' ? Math.abs(tr.target_price - tr.entry_price) / Math.abs(tr.entry_price - tr.stop_price) : -1,
         ts: ts.id, ls: B(ts.lsPivotTime), lsPreis: ts.ls_price, sweep: B(f.touchedTime), sweepSession: session(f.touchedTime),
-        lq21: !!s, impulsAtr: +(s?.impulseAtr ?? f.impulseAtr ?? NaN).toFixed(2), swings: s?.brokenSwings ?? f.brokenSwings, lhNachLL: f.lhAfterLL,
+        lq21: !!s, wechselpivot: f.hasAltPivot,
+        // B: ohne Struktur-Pflicht, nur Impuls und Swings (Messung merkmale.mjs; ohne Wechselpivot läuft der Impuls bis zum Sweep).
+        ohneStruktur: f.impulseAtr >= LIQUIDITY2_MIN_IMPULSE_ATR && f.brokenSwings >= 1, impulsAtr: +(s?.impulseAtr ?? f.impulseAtr ?? NaN).toFixed(2), swings: s?.brokenSwings ?? f.brokenSwings, lhNachLL: f.lhAfterLL,
         grund: s ? null : [f.lhAfterLL !== true ? (f.lhAfterLL == null ? 'kein Wechselpivot' : 'kein LH nach LL') : null,
           f.impulseAtr < LIQUIDITY2_MIN_IMPULSE_ATR ? 'Impuls < 0,85' : null, f.brokenSwings < 1 ? '0 Swings' : null].filter(Boolean).join(', ') || 'Messung weicht ab' });
     }
   }
 
-  const block = list => {
-    const wr = l => pct(l.filter(r => r.win).length, l.length), kept = list.filter(r => r.lq21), drop = list.filter(r => !r.lq21);
+  const block = (list, keep = r => r.lq21) => {
+    const wr = l => pct(l.filter(r => r.win).length, l.length), kept = list.filter(keep), drop = list.filter(r => !keep(r));
     const winners = list.filter(r => r.win);
     return { trades: list.length, behalten: kept.length, verworfen: drop.length, wrBehalten: wr(kept), wrVerworfen: wr(drop), wrAlle: wr(list),
-      verloreneWinner: winners.filter(r => !r.lq21).length, verloreneWinnerAnteil: pct(winners.filter(r => !r.lq21).length, winners.length),
+      verloreneWinner: winners.filter(r => !keep(r)).length, verloreneWinnerAnteil: pct(winners.filter(r => !keep(r)).length, winners.length),
       sumRBehalten: +kept.reduce((s, r) => s + r.R, 0).toFixed(1), sumRVerworfen: +drop.reduce((s, r) => s + r.R, 0).toFixed(1),
       lsEindeutig: new Set(list.map(r => r.instrument + r.ls)).size, lsBehalten: new Set(kept.map(r => r.instrument + r.ls)).size };
   };
+  const ohne = r => r.ohneStruktur;
   const out = { measurement: 'lq21-pruefung-v1', regel: 'src/liquidity2.js liquidity2-v2 (LH nach LL, Impuls ≥ 0,85 H1-ATR, ≥ 1 gebrochener Swing)', skipped,
     gruppen: {}, gruende: Object.fromEntries(Object.entries(Object.groupBy(rows.filter(r => !r.lq21), r => r.grund)).map(([k, v]) => [k, v.length])) };
-  for (const [g, list] of Object.entries({ alle: rows, ...Object.groupBy(rows, r => r.instrument) }))
+  out.ohneStruktur = {};
+  for (const [g, list] of Object.entries({ alle: rows, ...Object.groupBy(rows, r => r.instrument) })) {
     out.gruppen[g] = { gesamt: block(list), H1: block(list.filter(r => r.half === 'H1')), H2: block(list.filter(r => r.half === 'H2')) };
+    out.ohneStruktur[g] = { gesamt: block(list, ohne), H1: block(list.filter(r => r.half === 'H1'), ohne), H2: block(list.filter(r => r.half === 'H2'), ohne),
+      nurWechselpivot: block(list.filter(r => r.wechselpivot), ohne), ohneWechselpivot: block(list.filter(r => !r.wechselpivot), ohne) };
+  }
 
   // Stichprobe: ein Trade je LS, Grenzfälle zuerst (Impuls 0,7–1,0 ATR oder 0/1 Swing), Sweep in NY/London bevorzugt, Assets im Wechsel.
   const perLs = [...new Map(rows.map(r => [r.instrument + r.ls, r])).values()];
@@ -77,5 +84,6 @@ try {
   await fs.writeFile(path.join(root, 'analysis', 'lq2-sweeps', 'lq21-pruefung.json'), JSON.stringify(out, null, 1));
   console.log(JSON.stringify({ skipped, gruende: out.gruende }));
   for (const [g, b] of Object.entries(out.gruppen)) console.log(g.padEnd(7), ['gesamt', 'H1', 'H2'].map(h => `${h}: n ${b[h].trades} beh ${b[h].behalten} WR ${b[h].wrBehalten}/${b[h].wrVerworfen} verlW ${b[h].verloreneWinner} (${b[h].verloreneWinnerAnteil}%) ΣR ${b[h].sumRBehalten}/${b[h].sumRVerworfen}`).join(' | '), 'LS', b.gesamt.lsEindeutig, 'beh', b.gesamt.lsBehalten);
+  for (const [g, b] of Object.entries(out.ohneStruktur)) console.log('B', g.padEnd(7), ['gesamt', 'H1', 'H2', 'nurWechselpivot', 'ohneWechselpivot'].map(h => `${h}: n ${b[h].trades} beh ${b[h].behalten} WR ${b[h].wrBehalten}/${b[h].wrVerworfen} verlW ${b[h].verloreneWinner} (${b[h].verloreneWinnerAnteil}%) ΣR ${b[h].sumRBehalten}/${b[h].sumRVerworfen}`).join(' | '));
   for (const s of out.stichprobe) console.log(s.lq21 ? 'BEH' : 'VER', s.instrument, s.richtung, 'LS', s.ls, 'Sweep', s.sweep, s.sweepSession, 'Imp', s.impulsAtr, 'Sw', s.swings, s.grund ?? '', s.win ? 'Win' : 'Loss', s.run);
 } finally { await server.close(); }
