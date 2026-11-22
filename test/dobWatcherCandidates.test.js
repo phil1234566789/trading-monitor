@@ -42,26 +42,26 @@ it('OB1-Partner mit gleichem OB2 ergeben eine Zeile',()=>{
  expect(rows).toHaveLength(1);
 });
 
-it('verworfen nennt den konkreten Grund: HTF ohne Retest, LQ-Sweep mit nächstem TS1.1',()=>{
+it('verworfen nennt den konkreten Grund: HTF ohne Retest, LQ-Sweep mit nächstem LS-Reaktion',()=>{
  const rows=dobWatcherCandidates([
   run([],[s('p1','ob2Retest',{reason:'noPoi',poi:null})]),
   run([],[s('p2','ob2Retest',{reason:'noPoi',poi:{kind:'ts11',tradeSetupId:42,match:'adjacent',gapUsd:0.00012}})],'lq_sweep'),
  ],at,'GBPUSD');
  expect(rows.find(r=>r.pairId==='p1').detail).toBe('verworfen, weil: keine retestete H1/H4-Zone (Zone nicht retestet)');
- expect(rows.find(r=>r.pairId==='p2').detail).toBe('verworfen, weil: kein TS1.1-OB mit gleicher Kante · nächstes TS1.1 #42 · 1,2 Pips daneben');
+ expect(rows.find(r=>r.pairId==='p2').detail).toBe('verworfen, weil: kein LS-Reaktion-OB mit gleicher Kante · nächstes LS-Reaktion #42 · 1,2 Pips daneben');
  const gbp=dobWatcherCandidates([run([],[s('p3','ob2Retest',{reason:'noPoi',poi:{...poi,distanceAtr:5.7}})])],at,'GBPUSD');
  expect(gbp[0].detail).toBe('verworfen, weil: nächste H1-Zone 5,7 ATR weg, erlaubt ≤ 1,0 ATR');
 });
 
-it('Detail-Rahmen: OB1, OB2 und das TS1.1-OB, wenn es nicht exakt OB1/OB2 ist',()=>{
+it('Detail-Rahmen: OB1, OB2 und das LS-Reaktion-OB, wenn es nicht exakt OB1/OB2 ist',()=>{
  const ts={kind:'ts11',tradeSetupId:50740,zone:{top:21,bottom:19.5},zoneStartTime:at-7500,matchedEdge:'top',match:'edge',gapUsd:0,lsPrice:20.5};
  const [row]=dobWatcherCandidates([run([s('p1','ob2Retest',{poi:ts})],[],'lq_sweep')],at,'XAUUSD');
- expect(row.frames.map(f=>f.label)).toEqual(['OB1 · bärische M5 OB (09:00)','OB2 · bärische M5 OB (09:55)','TS1.1-OB #50740 · LS 20,50 · bärische M5 OB (08:55)']);
+ expect(row.frames.map(f=>f.label)).toEqual(['OB1 · bärische M5 OB (09:00)','OB2 · bärische M5 OB (09:55)','LS-Reaktion-OB #50740 · LS 20,50 · bärische M5 OB (08:55)']);
  expect(row.frames[0].ob).toEqual({dir:-1,top:20,bottom:18,startTime:at-7200});
  const [same]=dobWatcherCandidates([run([s('p1','ob2Retest',{poi:{...ts,matchedEdge:'both'}})],[],'lq_sweep')],at,'XAUUSD');
  expect(same.frames).toHaveLength(2);
  expect(row.head).toBe('OB2 berührt um 10:50, Entry noch offen');
- expect(row.poiText).toBe('POI LQ-Sweep 20,50 · TS1.1 #50740 · Kante');
+ expect(row.poiText).toBe('POI LQ-Sweep 20,50 · LS-Reaktion #50740 · Kante');
 });
 
 // Status-Satz vorn (Philip): jeder Status mit Grund, Preise im Instrument-Format, Zeiten in Berlin.

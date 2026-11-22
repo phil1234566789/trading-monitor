@@ -34,7 +34,7 @@ const IRRELEVANT_PCT = 0.05; // Gap kleiner als das wird gar nicht erst als Zone
 // enger Range (~1.3) für M5-Lücken viel zu grob ist (0,05% sind hier ~6-7 Pip).
 // M5 auf 0,5 Pip abgesenkt (Bug-Report Philip 2026-07-28: eine 0,7-Pip-FVG um 12:30 EURUSD wurde
 // vom 1-Pip-Minimum verschluckt) — M1/M3 bleiben bei 1 Pip, da nicht Anlass des Reports.
-// M5 auf 0,4 Pip: EURUSD-Short-OB 20.11.2026 10:50 hatte eine 0,4-Pip-FVG (test/tradeSetup11EurM5SmallFvg).
+// M5 auf 0,4 Pip: EURUSD-Short-OB 20.11.2026 10:50 hatte eine 0,4-Pip-FVG (test/lsReactionEurM5SmallFvg).
 const LOWER_TF_LABELS = new Set(["1m", "3m", "5m"]);
 
 // HTF (1H/4H) Pip-Minimum NUR für Forex (Bug-Report Philip 2026-07-30: eine 4,5-Pip-1H-FVG bei

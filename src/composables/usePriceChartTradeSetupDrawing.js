@@ -142,7 +142,7 @@ export function usePriceChartTradeSetupDrawing() {
       // diese Info nicht." Danach je eine Zeile Oberkante/Unterkante der OB, NUR im Debug-Modus,
       // untereinander statt mit "/" getrennt (Bug-Report Philip: "dann weiß ich, dass die obere
       // Zahl für die Oberkante ist").
-      // Debug: dazu die trade_setups-ID, damit Philip die Box dem DOB-Watcher-Panel („TS1.1 #50740“) zuordnen kann.
+      // Debug: dazu die trade_setups-ID, damit Philip die Box dem DOB-Watcher-Panel („LS-Reaktion #50740“) zuordnen kann.
       const dbId = setup.dbTradeSetupId ?? (setup.fromDb ? setup.tradeSetupId : null);
       const obLabelLines = [`${setup.label}${numberSuffix}${showLiquidityDebug && dbId != null ? ` · #${dbId}` : ""}`];
       if (showLiquidityDebug) obLabelLines.push(formatPrice(top), formatPrice(bottom));

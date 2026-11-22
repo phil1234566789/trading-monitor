@@ -71,7 +71,7 @@ const hasCounterDob=computed(()=>props.rows.some(r=>r.counter_dob_status!=null))
 const modeImpacts=computed(()=>Object.fromEntries(DOB_COUNTER_DOB_MODES.map(m=>[m,configSumR({...draft.value,counterDobMode:m})])));
 // Gegenkerzen-Merkmal (features) gibt es erst ab dem v3-Fill mit features; ältere Läufe blenden den Schalter aus.
 const hasCounterCandles=computed(()=>props.rows.some(r=>dobFeature(dobFeaturesOf(r),'counterCandles3')!=null));
-// POI-Verbindung (nur LQ-Sweep-Läufe, features.poi_match): welche Stufe TS1.1 ↔ DOB noch zählt.
+// POI-Verbindung (nur LQ-Sweep-Läufe, features.poi_match): welche Stufe LS-Reaktion ↔ DOB noch zählt.
 const hasPoiMatch=computed(()=>props.rows.some(r=>dobPoiFeature(dobFeaturesOf(r),'match')!=null));
 const matchImpacts=computed(()=>Object.fromEntries(DOB_LQ_MATCH_LEVELS.map(m=>[m,configSumR({...draft.value,poiMatchMode:m})])));
 // SL-Algo: Methodenwahl nur in Läufen mit swing_*-Spalten (HTF-OB ab dem Fill mit SL-Algo 1.0). Bewertet wird nach Winrate
@@ -142,7 +142,7 @@ const ruleImpacts=computed(()=>{
         <label>Anteil <select v-model.number="draft.partialPct" aria-label="Teilprofit-Anteil"><option v-for="p in [25,33,50,70]" :key="p" :value="p">{{ p }} %</option></select></label>
         <label><input type="checkbox" v-model="draft.partialBe"> danach SL auf Entry</label>
       </fieldset>
-      <fieldset v-if="hasPoiMatch"><legend>POI-Verbindung TS1.1 ↔ OB1/OB2</legend>
+      <fieldset v-if="hasPoiMatch"><legend>POI-Verbindung LS-Reaktion ↔ OB1/OB2</legend>
         <label v-for="m in DOB_LQ_MATCH_LEVELS" :key="m"><input type="radio" name="poiMatchMode" :value="m" v-model="draft.poiMatchMode"> {{ DOB_POI_MATCH_MODE_LABELS[m] }}
           <span class="impact" title="ΣR nach Konfig mit dieser Stellung">{{ dobSignedR(matchImpacts[m]) }} R</span></label>
       </fieldset>

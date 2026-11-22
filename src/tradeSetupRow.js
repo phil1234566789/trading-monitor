@@ -75,8 +75,8 @@ export function tradeSetupFromRow(row) {
 
 
 // Gegenstück zu tradeSetupFromRow: die Erkennungsfelder einer trade_setups-Zeile (wie poi-watcher sie
-// schreibt) plus trade_setup_sweeps. Damit urteilt TS1.1 über ein frisch erkanntes Setup (get_data_snapshot)
-// mit derselben Funktion wie über eine gespeicherte Zeile (tradeSetup11RowVerdicts, dob-watcher).
+// schreibt) plus trade_setup_sweeps. Damit urteilt LS-Reaktion über ein frisch erkanntes Setup (get_data_snapshot)
+// mit derselben Funktion wie über eine gespeicherte Zeile (lsReactionRowVerdicts, dob-watcher).
 /** @param {any} setup @param {{ id?: any, instrument: string, createdAt?: number | null }} options */
 export function tradeSetupToRow(setup, { id = null, instrument, createdAt = null }) {
   const iso = (t) => new Date(t * 1000).toISOString();

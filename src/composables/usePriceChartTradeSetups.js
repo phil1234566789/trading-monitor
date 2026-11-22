@@ -18,7 +18,8 @@
 // bleibt aus demselben Grund ebenfalls dort (hängt an withPollRetries + chart-alive-Check).
 import { ref } from "vue";
 import { setup1Inputs, setup1H1Levels, detectSetup1 } from "../setup1Detection.js";
-import { TRADE_SETUP_DETECTOR_VERSION, hasUninterruptedSweepReaction } from "../tradeSetup.js";
+import { TRADE_SETUP_DETECTOR_VERSION } from "../tradeSetup.js";
+import { hasUninterruptedSweepReaction } from "../liquiditySweepReaction.js";
 import { setup1Configuration } from '../../supabase/functions/_shared/tradeSetupProvenance.js';
 import { mergeDbTradeSetups } from "../tradeSetups.js";
 import { setupInvalidationTarget } from "../setupInvalidationTarget.js";
@@ -92,7 +93,7 @@ export function usePriceChartTradeSetups({ evaluateCandidates, onEvaluated, swee
     // Sonderfall).
     const n = Math.max(0, tradeSetupHistoryCount);
     const takeLast = (arr) => (n === 0 ? [] : arr.slice(-n));
-    // Kein Ausblenden nach forbidden-Session: Setups mit OB in Asia sollen sichtbar und für TS1.1
+    // Kein Ausblenden nach forbidden-Session: Setups mit OB in Asia sollen sichtbar und für LS-Reaktion
     // bewertbar bleiben, wie poi-watcher sie auch speichert.
     const detectionConfiguration = setup1Configuration({ instrument: symbol, params,
       minGap, sessions: symbolSessions,

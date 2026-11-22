@@ -1,14 +1,14 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {load,run,berlin,directory} from './dobFixtures.js';
-import {dobTs11FromRow,dobLqSweepMatch,dobLqAdjacentMax} from '../src/dobLqSweepPoi.js';
-import {dobTs11Label} from '../src/dobPoiLabel.js';
+import {dobLsReactionFromRow,dobLqSweepMatch,dobLqAdjacentMax} from '../src/dobLqSweepPoi.js';
+import {dobLsReactionLabel} from '../src/dobPoiLabel.js';
 
-// POI-Art LQ-Sweep (Philip): POI = TS1.1-Setup, GO wenn OB1 oder OB2 des DOB mindestens eine Kante mit dem TS1.1-OB teilt.
-// Positivfälle = Philips Mustertrades (Konto 8); Erwartung je Fall: welches TS1.1 trägt, an welchem OB, mit welcher Stufe.
-// #139/#138 (nur Überlappung) und #142 (TS1.1-OB 0,18 USD neben dem DOB-OB) sind gemeldete Lücken der Regel, hier eingefroren,
+// POI-Art LQ-Sweep (Philip): POI = LS-Reaktion-Setup, GO wenn OB1 oder OB2 des DOB mindestens eine Kante mit dem LS-Reaktion-OB teilt.
+// Positivfälle = Philips Mustertrades (Konto 8); Erwartung je Fall: welches LS-Reaktion trägt, an welchem OB, mit welcher Stufe.
+// #139/#138 (nur Überlappung) und #142 (LS-Reaktion-OB 0,18 USD neben dem DOB-OB) sind gemeldete Lücken der Regel, hier eingefroren,
 // damit eine Regeländerung sichtbar wird statt still durchzurutschen.
-const tradeSetups=JSON.parse(readFileSync(new URL('lq-sweep-ts11.json',directory),'utf8')).rows.map(dobTs11FromRow);
+const tradeSetups=JSON.parse(readFileSync(new URL('lq-sweep-lsReaction.json',directory),'utf8')).rows.map(dobLsReactionFromRow);
 const SAMPLES=[
  {trade:'#137',day:'2026-11-02',at:'09:05',direction:'short',ts:47184,match:'edge',ob:'ob1',edge:'bottom'},
  {trade:'#140 (K10)',day:'2026-10-22',at:'05:24',direction:'short',ts:50160,match:'edge',ob:'ob1',edge:'both'},
@@ -26,7 +26,7 @@ const entryNear=(result,{day,at,direction})=>[...result.setups,...result.rejecte
  .sort((a,b)=>Math.abs(a.entryTime-berlin(day,at))-Math.abs(b.entryTime-berlin(day,at)))[0];
 
 describe('DOB-POI LQ-Sweep: Mustertrades',()=>{
- it.each(SAMPLES)('$trade: DOB-Entry vorhanden, TS1.1 $ts verbindet sich per $match',s=>{
+ it.each(SAMPLES)('$trade: DOB-Entry vorhanden, LS-Reaktion $ts verbindet sich per $match',s=>{
   const setup=entryNear(lq(s.day,'adjacent'),s);
   expect(setup,`kein DOB-Entry bei ${s.trade}`).toBeDefined();
   expect(setup.poi).toMatchObject({kind:'ts11',tradeSetupId:s.ts,match:s.match,matchedOb:s.ob,matchedEdge:s.edge});
@@ -45,7 +45,7 @@ describe('DOB-POI LQ-Sweep: Mustertrades',()=>{
   expect(entryNear(lq(s.day,'edge'),s)).toMatchObject({poi:{tradeSetupId:50160}});
   expect(entryNear(lq(s.day,'edge'),s).reason).toBeUndefined();
  });
- it('ohne TS1.1-Daten bleibt jedes Setup verworfen und der Grund ist erkennbar',()=>{
+ it('ohne LS-Reaktion-Daten bleibt jedes Setup verworfen und der Grund ist erkennbar',()=>{
   const result=run(load('2026-11-02'),undefined,false,undefined,{poiType:'lq_sweep',tradeSetups:[]});
   expect(result.setups).toEqual([]);
   expect(new Set(result.rejected.map(s=>s.reason))).toEqual(new Set(['missingTradeSetups']));
@@ -78,7 +78,7 @@ describe('LQ-Sweep auf Forex',()=>{
   expect(dobLqSweepMatch(pair,ts(1.31400,1.31265),0.00001,dobLqAdjacentMax('GBPUSD'))).toBeNull();
  });
  it('Label zeigt den Abstand in Pips',()=>{
-  expect(dobTs11Label({tradeSetupId:7,match:'adjacent',gapUsd:0.00012,instrument:'EURUSD'})).toBe('TS1.1 #7 · 1,2 Pips daneben');
-  expect(dobTs11Label({tradeSetupId:7,match:'adjacent',gapUsd:0.84,instrument:'XAUUSD'})).toBe('TS1.1 #7 · 0,84 USD daneben');
+  expect(dobLsReactionLabel({tradeSetupId:7,match:'adjacent',gapUsd:0.00012,instrument:'EURUSD'})).toBe('LS-Reaktion #7 · 1,2 Pips daneben');
+  expect(dobLsReactionLabel({tradeSetupId:7,match:'adjacent',gapUsd:0.84,instrument:'XAUUSD'})).toBe('LS-Reaktion #7 · 0,84 USD daneben');
  });
 });

@@ -1,6 +1,6 @@
 import { setup2AlarmRow } from "./algoWatcher.js";
 import { supabase } from "./supabaseClient.js";
-import { TRADE_SETUP_11_VERSION } from "./tradeSetup11.js";
+import { LS_REACTION_VERSION } from "./lsReaction.js";
 import { fetchTouchedZones, MAX_PROTOKOLL_ZEILEN } from "./poiZones.js";
 import { fmtPrice, pricePrecisionForInstrument } from "./format.js";
 import { dobAlarmLogRows } from "./dobAlarmLog.js";
@@ -21,15 +21,15 @@ async function fetchTouchedLiquidityLevels(instrument) {
 }
 
 // trade_setups hat keine touched-Spalte — eine vorhandene Zeile ist bereits ein "erreichtes" Setup.
-async function fetchTs11Setups(instrument) {
-  // Nur Setups mit bestandenem TS1.1-Urteil (Cache trade_setup_ts11_verdicts, gefüllt vom dob-watcher mit derselben
+async function fetchLsReactionSetups(instrument) {
+  // Nur Setups mit bestandenem LS-Reaktion-Urteil (Cache ls_reaction_verdicts, gefüllt vom dob-watcher mit derselben
   // Policy wie der Chart). TS1.0 als eigenes Produkt gibt es seit 21.11.2026 nicht mehr.
   const { data, error } = await supabase
     .from("trade_setups")
-    .select("*, trade_setup_ts11_verdicts!inner(status, version)")
+    .select("*, ls_reaction_verdicts!inner(status, version)")
     .eq("instrument", instrument)
-    .eq("trade_setup_ts11_verdicts.version", TRADE_SETUP_11_VERSION)
-    .eq("trade_setup_ts11_verdicts.status", "passed")
+    .eq("ls_reaction_verdicts.version", LS_REACTION_VERSION)
+    .eq("ls_reaction_verdicts.status", "passed")
     .order("ls_touched_time", { ascending: false })
     .limit(MAX_PROTOKOLL_ZEILEN);
 
@@ -59,7 +59,7 @@ export async function fetchAlarmLog(instrument) {
   const [zones, liquidity, setups, setup2Events, dobEvents] = await Promise.all([
     fetchTouchedZones(instrument),
     fetchTouchedLiquidityLevels(instrument),
-    fetchTs11Setups(instrument),
+    fetchLsReactionSetups(instrument),
     fetchSetup2Alarms(instrument),
     fetchDobAlarms(instrument),
   ]);
@@ -95,7 +95,7 @@ export async function fetchAlarmLog(instrument) {
       id: `setup-${s.id}`,
       time: s.notified_at ?? s.ls_touched_time,
       signalAt: s.ls_touched_time,
-      typeLabel: "TS1.1-Setup",
+      typeLabel: "LS-Reaktion-Setup",
       direction: s.direction,
       directionLabel: s.direction === "long" ? "Long" : "Short",
       detail: `M5-OB ${fmtPrice(s.ob_bottom, precision)} – ${fmtPrice(s.ob_top, precision)}`,

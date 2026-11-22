@@ -5,6 +5,7 @@
 import type { Candle } from "./orderBlocks.ts";
 import type { LiquidityLevel } from "./liquidityDetection.ts";
 import * as core from "../../../src/tradeSetup.js";
+import * as reaction from "../../../src/liquiditySweepReaction.js";
 import { tradeSetupParameters } from "../../../src/tradeSetupParameters.js";
 export { TRADE_SETUP_M5_FRACTAL_PERIOD } from "../../../src/priceChartConstants.js";
 export { TRADE_SETUP_OB_SWEEP_PROFILE } from "./tradeSetupSourceSnapshot.js";
@@ -60,7 +61,7 @@ const { nowTime: _nowTime, ...forexDefaults } = tradeSetupParameters("GBPUSD", 0
 export const DEFAULT_TRADE_SETUP_PARAMS: Omit<TradeSetupParams, "nowTime"> = forexDefaults;
 
 export const detectSetupObs = core.detectSetupObs as (candles: Candle[], minGapOverride?: number | null) => SetupOb[];
-export const hasUninterruptedSweepReaction = core.hasUninterruptedSweepReaction as (
+export const hasUninterruptedSweepReaction = reaction.hasUninterruptedSweepReaction as (
   setup: Pick<DetectedTradeSetup, "dir" | "ls" | "obStartTime"> & { sweeps?: SetupSweep[] }, setupObs: SetupOb[], m5Candles?: Candle[]) => boolean;
 export const strongestSetupSweeps = core.strongestSetupSweeps as (sweeps: SetupSweep[]) => SetupSweep[];
 export const detectTradeSetups = core.detectTradeSetups as (dir: 1 | -1, fractalLevels: LiquidityLevel[], h1Levels: LiquidityLevel[],

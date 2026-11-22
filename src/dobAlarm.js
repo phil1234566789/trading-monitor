@@ -1,5 +1,5 @@
 import {formatBerlinTime,berlinDateStrFor} from './berlinTime.js';
-import {dobPoiLabel,dobRetestLabel,dobTs11Label} from './dobPoiLabel.js';
+import {dobPoiLabel,dobRetestLabel,dobLsReactionLabel} from './dobPoiLabel.js';
 import {m1GapCovered} from './goldWeekendGap.js';
 import {dobConfigTpR,dobPartialPlan,dobEntryRule} from './dobGuardrails.js';
 import {dobBlockKey,dobBlockStatsText} from './dobBlockStats.js';
@@ -55,7 +55,7 @@ const side=direction=>direction==='long'?'Long':'Short';
 export const dobChartUrl=(id,instrument,at)=>`${DOB_SITE_URL}#/?dob=${encodeURIComponent(id)}&instrument=${instrument}&bar=5m&replay=${at}`;
 // Die POI-Zeile nennt die Art (H1-OB/H4-OB bei HTF-OB, sonst den Namen der POI-Art); die Kopfzeile bleibt ohne Art.
 export function dobPoiLine({poi:s,instrument},poiType){
- if(poiType!==DOB_DEFAULT_POI_TYPE)return `POI: ${dobPoiTypeLabel(poiType)}${s?.kind==='ts11'?`${Number.isFinite(s.lsPrice)?' ':' · '}${dobTs11Label({...s,instrument})}`:''}`;
+ if(poiType!==DOB_DEFAULT_POI_TYPE)return `POI: ${dobPoiTypeLabel(poiType)}${s?.kind==='ts11'?`${Number.isFinite(s.lsPrice)?' ':' · '}${dobLsReactionLabel({...s,instrument})}`:''}`;
  if(!s)return 'POI: –';
  const label=dobPoiLabel({poi_kind:`ob_${s.timeframe.toLowerCase()}`,poi_distance_atr:s.distanceAtr});
  const touch=dobRetestLabel({kind:s.retestKind,count:s.retestCount,ageSeconds:s.retestAgeSeconds});

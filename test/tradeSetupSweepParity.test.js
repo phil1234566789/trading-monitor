@@ -16,7 +16,7 @@ it.each([1,-1])('keeps typed source and strict lifecycle identical across runtim
   expect(backend.evaluateSweepConfirmation(sources[0],candles,at)).toEqual(frontend.evaluateSweepConfirmation(sources[0],candles,at));
 });
 it('keeps native opt-in primary confirmations and legacy defaults in both detectors',()=>{
- const rows=JSON.parse(readFileSync(new URL('./fixtures/ts11-ob-sweeps/M5.json',import.meta.url))).filter(c=>c.time+300<=1793889900);
+ const rows=JSON.parse(readFileSync(new URL('./fixtures/ls-reaction-ob-sweeps/M5.json',import.meta.url))).filter(c=>c.time+300<=1793889900);
  const obs=detectSetupObs(rows,0),own=detectLiquidityLevels(rows,5).highs;
  const first=own.find(l=>l.price===4124.86);
  for(const at of [1793889299,1793889300,1793889900])

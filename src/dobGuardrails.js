@@ -22,7 +22,7 @@ export const DOB_COUNTER_DOB_DEFAULT_MODE='live_block_dead_5r';
 // counterCandlesMode (DOB-PA, Neubewertung): 3of3 = alle 3 letzten geschlossenen M5 vor dem Entry gegen den Trade → sperren,
 // 3of5 = mind. 3 der letzten 5; off = aus (Default, damit ohne Konfig nichts wegfällt).
 export const DOB_COUNTER_CANDLES_MODES=['off','3of3','3of5'];
-// poiMatchMode (nur POI-Art LQ-Sweep): schwächste Verbindung TS1.1 ↔ DOB, die noch zählt; edge = gleiche Kante (Philips Regel),
+// poiMatchMode (nur POI-Art LQ-Sweep): schwächste Verbindung LS-Reaktion ↔ DOB, die noch zählt; edge = gleiche Kante (Philips Regel),
 // overlap/adjacent zeigen in der Statistik, ob auch Überlappung bzw. knapp daneben trägt. alarmEnabled: Alarme dieser POI-Art
 // werden gesendet (aus = nur Protokoll, LQ-Sweep startet aus bis zu Philips Go).
 // slAlgo (src/slAlgo.js): SL-Methode samt Parametern; Default DOB-SL. 1.0 = Struktur-P2 bei Anti-Confluence „breit“ statt Sperre.

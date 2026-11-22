@@ -6,7 +6,7 @@ const PROFILE=TRADE_SETUP_OB_SWEEP_PROFILE;
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const time=value=>Number.isSafeInteger(value)&&value>0;
 const positive=value=>Number.isFinite(value)&&value>0;
-const fail=()=>{throw new Error('Ungültiger TS1.1-Quellen-Snapshot.');};
+const fail=()=>{throw new Error('Ungültiger LS-Reaktion-Quellen-Snapshot.');};
 
 export function tradeSetupSweepSourceKey(level,timeframe='5M') {
  return [level.sourceKind??'liquidity',timeframe,level.dir,level.pivotTime,level.price,level.touchedTime].join(':');
@@ -59,7 +59,7 @@ function assertOwnerProof(proof,dir,asOf,source) {
  const basis=proof?.range?['deepestRangeAtLevelBirth','rangeBoundaryBeforeSweep','protectedPivotBeforeSweep']
   :['confirmedNestedRange','existingCloseReactionChoch'];
  if(!object(proof)||!basis.includes(proof.basis)||!time(proof.knownAt)||proof.knownAt>asOf
-  // Tiefe 0 = Wurzel: seit v7 darf sie die LS belegen (findTradeSetup11SourceOwner, counterAfterLevel).
+  // Tiefe 0 = Wurzel: seit v7 darf sie die LS belegen (findLiquiditySourceOwner, counterAfterLevel).
   ||!Number.isSafeInteger(proof.depth)||proof.depth<(proof.basis==='deepestRangeAtLevelBirth'?0:1)||range?.trend!==expected
   // CHoCH-knownAt bezeichnet den ersten Trendbeleg, die Range kann bis zum erfassten Präfix weiterlaufen.
   ||![range.low,range.high].every(p=>object(p)&&positive(p.price)&&time(p.pivotTime)&&p.pivotTime<=asOf)

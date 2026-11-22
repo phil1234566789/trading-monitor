@@ -61,7 +61,7 @@ const TEILPORTS = [
   // Browser-Seite baut nur Snapshot/Label/Hit-Test und importiert die Validierung direkt aus der
   // Deno-Datei — kein Duplikat, sondern Wrapper um die eine Quelle.
   "doubleOrderBlockPin",
-  // Laut Kopfkommentar bewusster Deno-Spiegel für das TS1.1-Opt-in, mit TS-Typen und lokalen
+  // Laut Kopfkommentar bewusster Deno-Spiegel für das LS-Reaktion-Opt-in, mit TS-Typen und lokalen
   // Imports (liquidity.ts/ageTier.ts) statt der Browser-Helfer.
   "tradeSetupSweepSources",
 ];

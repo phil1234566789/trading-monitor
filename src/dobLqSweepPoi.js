@@ -1,36 +1,36 @@
 import {instrumentConfig} from './instrumentConfig.js';
-import {tradeSetup11SourceTimes} from './tradeSetup11Context.js';
+import {lsReactionSourceTimes} from './lsReactionContext.js';
 
-// POI-Art LQ-Sweep (Philip): der POI ist ein TS1.1-Setup (trade_setups, gefiltert wie im Chart: tradeSetup11RowVerdicts). Zum DOB: OB1
-// oder OB2 hat mit dem TS1.1-OB mindestens eine gleiche Kante (≤ 1 Tick); als TS1.1-OB zählen die gespeicherte Box und das rohe
-// M5-OB dahinter (ob_zone_id), weil TS1.1 die Box bis zum Sweep-Extrem aufweitet. „Nur Überlappung“ und „knapp daneben“ sind
+// POI-Art LQ-Sweep (Philip): der POI ist ein LS-Reaktion-Setup (trade_setups, gefiltert wie im Chart: lsReactionRowVerdicts). Zum DOB: OB1
+// oder OB2 hat mit dem LS-Reaktion-OB mindestens eine gleiche Kante (≤ 1 Tick); als LS-Reaktion-OB zählen die gespeicherte Box und das rohe
+// M5-OB dahinter (ob_zone_id), weil LS-Reaktion die Box bis zum Sweep-Extrem aufweitet. „Nur Überlappung“ und „knapp daneben“ sind
 // Merkmale für die Statistik, keine Regel; welche Stufe zählt, entscheidet poiMatchMode der Konfig. Deno-tauglich (Watcher).
 export const DOB_LQ_MATCH_LEVELS=['edge','overlap','adjacent'];
 // ponytail: feste Grenze für „knapp daneben“: XAU 1 USD (Mustertrades #138/#142: 0,84 und 0,18 USD), Forex 3 Pips (bei Kursen um
 // 1,1–1,3 relativ etwa dieselbe Spanne wie 1 USD bei ~4000); als ATR-Anteil, falls die Statistik trägt.
 export const dobLqAdjacentMax=instrument=>instrument==='XAUUSD'?1:3*instrumentConfig(instrument).pip;
-// Ein TS1.1-OB kann nur zu einem DOB gehören, dessen OB1 höchstens so lange danach startet.
+// Ein LS-Reaktion-OB kann nur zu einem DOB gehören, dessen OB1 höchstens so lange danach startet.
 const MAX_AGE_SECONDS=24*3600;
 const time=v=>v==null?null:typeof v==='number'?v:Date.parse(v)/1000;
 
 // Zeile aus trade_setups (mit eingebettetem ob_zones(top,bottom)) → Eingabe der Erkennung. knownAt: ab dann kennt auch der Chart das
-// TS1.1 (OB + FVG mit C3-Schluss, wie die Trend-Policy); nicht created_at, das ist bei nachgetragenen Zeilen zu spät.
-// verdict (tradeSetup11RowVerdicts): sein witness ist die bestandene TS1.1-Quelle und ersetzt die Primär-LS der Zeile; ohne witness
+// LS-Reaktion (OB + FVG mit C3-Schluss, wie die Trend-Policy); nicht created_at, das ist bei nachgetragenen Zeilen zu spät.
+// verdict (lsReactionRowVerdicts): sein witness ist die bestandene LS-Reaktion-Quelle und ersetzt die Primär-LS der Zeile; ohne witness
 // (altes Urteil, Array.map-Index) bleibt die Zeile.
-export function dobTs11FromRow(row,verdict){
+export function dobLsReactionFromRow(row,verdict){
  const raw=row.ob_zones??row.ob_zone??null,w=Number.isFinite(verdict?.witness?.price)?verdict.witness:null;
  return {id:row.id,direction:row.direction,top:Number(row.ob_top),bottom:Number(row.ob_bottom),
   rawTop:raw?.top==null?null:Number(raw.top),rawBottom:raw?.bottom==null?null:Number(raw.bottom),
-  startTime:time(row.ob_start_time),knownAt:tradeSetup11SourceTimes({obStartTime:time(row.ob_start_time)}).nativeGeometryKnownAt??Infinity,
+  startTime:time(row.ob_start_time),knownAt:lsReactionSourceTimes({obStartTime:time(row.ob_start_time)}).nativeGeometryKnownAt??Infinity,
   ...(w?{lsPrice:w.price,lsPivotTime:w.pivotTime,lsTouchedTime:w.touchedTime,lsTimeframe:w.timeframe,lsSourceKind:w.sourceKind}
    :{lsPrice:row.ls_price==null?null:Number(row.ls_price),lsPivotTime:time(row.ls_pivot_time),lsTouchedTime:time(row.ls_touched_time),
     lsTimeframe:row.ls_timeframe??null,lsSourceKind:'liquidity'})};
 }
 
-// Rang einer Verbindung (kleiner = stärker): Stufe, dann beide Kanten gleich vor einer (Philip verknüpft #135 mit dem TS1.1, das OB2
+// Rang einer Verbindung (kleiner = stärker): Stufe, dann beide Kanten gleich vor einer (Philip verknüpft #135 mit dem LS-Reaktion, das OB2
 // exakt trifft), dann Abstand. Gemeinsam für die Wahl je Paar und über alle tragenden Paare eines Trades (Fill).
 export const dobLqMatchRank=m=>DOB_LQ_MATCH_LEVELS.indexOf(m.match)*1e6+(m.matchedEdge==='both'?0:1e5)+m.gapUsd;
-// Beste Verbindung eines TS1.1-OBs zu OB1/OB2 nach dobLqMatchRank; bei Gleichstand OB1.
+// Beste Verbindung eines LS-Reaktion-OBs zu OB1/OB2 nach dobLqMatchRank; bei Gleichstand OB1.
 export function dobLqSweepMatch(pair,ts,tick,adjacentMax=1){
  const tsEdges=[ts.top,ts.bottom,ts.rawTop,ts.rawBottom].filter(Number.isFinite);
  const tsLow=Math.min(ts.bottom,ts.rawBottom??Infinity),tsHigh=Math.max(ts.top,ts.rawTop??-Infinity);
@@ -46,9 +46,9 @@ export function dobLqSweepMatch(pair,ts,tick,adjacentMax=1){
  return best;
 }
 
-// Erkennung für checkDobTradeSetup: input.tradeSetups (dobTs11FromRow); schwächste noch zählende Stufe aus poiOptions.match (Lauf),
+// Erkennung für checkDobTradeSetup: input.tradeSetups (dobLsReactionFromRow); schwächste noch zählende Stufe aus poiOptions.match (Lauf),
 // sonst aus der Konfig (poiMatchMode, Watcher).
-// Kausal: Sweep und TS1.1 sind bei Erkennung des DOB-Paars schon bekannt; ein früher erkanntes Paar bekommt den POI auch später nicht
+// Kausal: Sweep und LS-Reaktion sind bei Erkennung des DOB-Paars schon bekannt; ein früher erkanntes Paar bekommt den POI auch später nicht
 // (live käme der Alarm zu spät, der Lauf darf ihn nicht als rechtzeitig zählen).
 export function lqSweepPoi(input){
  const tick=instrumentConfig(input.instrument).tick,adjacentMax=dobLqAdjacentMax(input.instrument),allowed=DOB_LQ_MATCH_LEVELS.indexOf(input.poiOptions?.match??input.guardrails?.poiMatchMode??'edge');

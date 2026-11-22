@@ -4,10 +4,10 @@ import { markIgnoredCandles, sessionFromRow } from '../src/sessionOccurrences.js
 import { berlinOffsetMinutes } from '../src/berlinTime.js';
 import { setup1Inputs, detectSetup1, setup1H1Structure, setup1H1Levels, setup1ObLiquidityLevels, TRADE_SETUP_M5_CANDLE_COUNT } from '../src/setup1Detection.js';
 import { TRADE_SETUP_OB_SWEEP_PROFILE } from '../src/tradeSetup.js';
-import { filterTradeSetup11Candidates } from '../src/tradeSetup11.js';
+import { filterLsReactionCandidates } from '../src/lsReaction.js';
 
 // Die OB-Kanten-Quellen zogen aus der Setup-Pipeline in den LQ-Algo (liquidityDetection.js). Setup-1- und
-// TS1.1-Urteile müssen dabei auf echten Kerzen gleich bleiben: der Sollstand in
+// LS-Reaktion-Urteile müssen dabei auf echten Kerzen gleich bleiben: der Sollstand in
 // fixtures/lq-ob-sweeps-behavior.json entstand mit dem Code VOR dem Umzug. Bricht er, hat sich Verhalten geändert.
 const rows = (list) => list.map(([time, open, high, low, close]) => ({ time, open, high, low, close }));
 const sec = (iso) => Date.parse(iso) / 1000;
@@ -29,7 +29,7 @@ function behavior(name) {
   const out = {};
   for (const day of DAYS) {
     const dayStart = sec(`${day}T00:00:00Z`), dayEnd = dayStart + 86400;
-    const setup1 = new Map(), ts11 = new Map();
+    const setup1 = new Map(), lsReaction = new Map();
     // Stündlich über den Tag, wie die Läufe von Chart-Poll und poi-watcher (dort 15 min; stündlich hält den Test schnell).
     for (let t = dayStart + 3600; t <= dayEnd; t += 3600) {
       const m5 = mark(m5All.filter((c) => c.time + 300 <= t).slice(-TRADE_SETUP_M5_CANDLE_COUNT));
@@ -40,33 +40,33 @@ function behavior(name) {
       for (const s of [...plain.shorts, ...plain.longs]) if (!setup1.has(`${s.dir}:${s.obStartTime}`)) setup1.set(`${s.dir}:${s.obStartTime}`, summary(s));
       const typed = detectSetup1(setup1Inputs(f.instrument, m5, { sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE }), highs, lows);
       for (const s of [...typed.shorts, ...typed.longs])
-        if (s.obStartTime >= dayStart && !ts11.has(`${s.dir}:${s.obStartTime}`)) ts11.set(`${s.dir}:${s.obStartTime}`, { ...s, instrument: f.instrument });
+        if (s.obStartTime >= dayStart && !lsReaction.has(`${s.dir}:${s.obStartTime}`)) lsReaction.set(`${s.dir}:${s.obStartTime}`, { ...s, instrument: f.instrument });
     }
     const evaluatedAt = Math.min(dayEnd, f.evaluatedAt);
-    const verdicts = filterTradeSetup11Candidates({ instrument: f.instrument, m5Candles: m5All.filter((c) => c.time + 300 <= evaluatedAt),
+    const verdicts = filterLsReactionCandidates({ instrument: f.instrument, m5Candles: m5All.filter((c) => c.time + 300 <= evaluatedAt),
       h1Candles: h1All.filter((c) => c.time + 3600 <= evaluatedAt), d1Candles: d1.filter((c) => c.time + 86400 <= evaluatedAt), evaluatedAt,
-      settings: {}, sessionConfigs, setups: [...ts11.values()], sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
+      settings: {}, sessionConfigs, setups: [...lsReaction.values()], sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
     out[day] = {
       setup1: [...setup1.values()],
-      ts11: [...ts11.values()].map(summary),
-      ts11Verdicts: verdicts.assessments.map((a) => [a.setup.dir, a.setup.obStartTime, a.status, a.reason ?? null]),
+      lsReaction: [...lsReaction.values()].map(summary),
+      lsReactionVerdicts: verdicts.assessments.map((a) => [a.setup.dir, a.setup.obStartTime, a.status, a.reason ?? null]),
     };
   }
   return out;
 }
 
-describe.each(['gbpusd', 'eurusd', 'xauusd'])('%s: Setup 1 und TS1.1 unverändert nach dem LQ-Umzug', (name) => {
-  it('gleiche Setups, Sweeps und TS1.1-Urteile wie vor dem Umzug', async () => {
+describe.each(['gbpusd', 'eurusd', 'xauusd'])('%s: Setup 1 und LS-Reaktion unverändert nach dem LQ-Umzug', (name) => {
+  it('gleiche Setups, Sweeps und LS-Reaktion-Urteile wie vor dem Umzug', async () => {
     const result = behavior(name);
     const days = Object.values(result);
     // Ohne OB-Kanten-Sweeps und bestandene Urteile wäre der Vergleich zahnlos.
-    expect(days.flatMap((d) => d.ts11).some((s) => s[9] === 'orderBlock' || s[10].some((sw) => sw[4] === 'orderBlock'))).toBe(true);
+    expect(days.flatMap((d) => d.lsReaction).some((s) => s[9] === 'orderBlock' || s[10].some((sw) => sw[4] === 'orderBlock'))).toBe(true);
     await expect(JSON.stringify(result, null, 1)).toMatchFileSnapshot(`./fixtures/lq-ob-sweeps-behavior/${name}.json`);
   }, 300_000);
 });
 
-// Chart = Alarm: der Toggle „OB Sweeps“ zeigt genau die OB-Kanten, mit denen TS1.1 rechnet.
-it.each(['gbpusd', 'eurusd', 'xauusd'])('%s: OB Sweeps im Chart enthalten jede OB-Kante der TS1.1-Setups', (name) => {
+// Chart = Alarm: der Toggle „OB Sweeps“ zeigt genau die OB-Kanten, mit denen LS-Reaktion rechnet.
+it.each(['gbpusd', 'eurusd', 'xauusd'])('%s: OB Sweeps im Chart enthalten jede OB-Kante der LS-Reaktion-Setups', (name) => {
   const f = JSON.parse(readFileSync(new URL(`fixtures/setup1-parity/${name}-2026-11-20.json`, import.meta.url), 'utf8'));
   const sessions = f.sessions.map((r) => ({ ...sessionFromRow(r), instrument: f.instrument }));
   const m5 = markIgnoredCandles(rows(f.m5).filter((c) => c.time + 300 <= f.evaluatedAt).slice(-TRADE_SETUP_M5_CANDLE_COUNT), sessions, (s) => berlinOffsetMinutes(s * 1000));

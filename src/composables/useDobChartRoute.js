@@ -19,10 +19,10 @@ export function useDobChartRoute(query,{currentSymbol,currentBar,showDoubleOrder
   if(Number.isSafeInteger(time)&&time>0){replayTime.value=time;replayActive.value=true;}
   const {data,error}=await supabase.from('dob_trade_setups').select('*').eq('id',id).maybeSingle();
   if(current!==ticket||error||!data)return;
-  // LQ-Sweep-POI: das TS1.1-Setup dazu (LS-Level, Sweep, OB-Box) statt des POI-Kastens; fehlt es, bleibt der Trade ohne POI-Bild.
+  // LQ-Sweep-POI: das LS-Reaktion-Setup dazu (LS-Level, Sweep, OB-Box) statt des POI-Kastens; fehlt es, bleibt der Trade ohne POI-Bild.
   const tsId=data.poi_kind==='ts11'?data.features?.poi_trade_setup_id:null;
   const ts=tsId==null?null:(await supabase.from('trade_setups').select('id,direction,ob_top,ob_bottom,ob_start_time,ls_price,ls_pivot_time,ls_touched_time').eq('id',tsId).maybeSingle()).data;
-  if(current===ticket)dobTrade.value=ts?{...data,ts11:ts}:data;
+  if(current===ticket)dobTrade.value=ts?{...data,lsReaction:ts}:data;
  },{immediate:true});
  return dobTrade;
 }

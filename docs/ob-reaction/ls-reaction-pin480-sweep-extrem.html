@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pin 480 · Den Tiefpunkt erkennen</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#121619;color:#eff3f4;font:15px/1.5 system-ui,sans-serif}main{max-width:980px;margin:auto;padding:24px}h1{font-size:26px;margin:0 0 8px}h2{font-size:21px;margin:0 0 6px}p{margin:0 0 12px}.muted,small{color:#b3bec4}.keep{color:#9ce6bd}.steps{display:flex;gap:8px;margin:20px 0;flex-wrap:wrap}button{font:inherit;background:#1c2226;color:#eff3f4;border:1px solid #52616a;border-radius:4px;padding:10px 14px;min-height:44px;cursor:pointer}button:hover,button[aria-pressed=true]{border-color:#42a5f5}button[aria-pressed=true]{box-shadow:inset 0 -3px #42a5f5}button:focus-visible,.plot:focus-visible,summary:focus-visible{outline:2px solid #42a5f5;outline-offset:3px}.state{min-height:104px}.plot{overflow-x:auto;border:1px solid #364147;border-radius:4px}svg{display:block;min-width:800px;width:100%}.answer{background:#1c2226;border-left:3px solid #ffd700;padding:14px;margin:16px 0}.answer p{margin:0}.lows{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.lows span{border:1px solid #52616a;padding:5px 9px;border-radius:4px;font-variant-numeric:tabular-nums}.lows .lowest{border-color:#ffd700;color:#ffe082;font-weight:700}details{margin-top:20px;color:#b3bec4;border-top:1px solid #364147;padding-top:8px}summary{cursor:pointer;min-height:44px;padding:10px 0}details p{font-size:13px}@media(max-width:600px){main{padding:16px}h1{font-size:23px}.steps button{flex:1 1 100%}.state{min-height:140px}}
+</style>
+<main>
+<p class="keep"><strong>NUR SPÄTER</strong> · Gemerkter Methoden-Vorschlag. Erst bei Verbesserungsbedarf der Sweeps prüfen.</p><h1>Fünf Kerzen bestätigen den Tiefpunkt.</h1>
+<p>Die mittlere Kerze liegt tiefer als <strong>zwei Kerzen davor</strong> und <strong>zwei Kerzen danach</strong>.</p>
+<p class="keep">Beispiel 480 bleibt gültig · Long · 09.10.2026</p>
+<div class="steps" role="group" aria-label="Drei Wissensstände">
+<button data-step="0">1 · Erstes Tief</button><button data-step="1">2 · Noch tiefer</button><button data-step="2">3 · Bestätigt</button>
+</div>
+<section class="state" aria-live="polite"><small id="clock"></small><h2 id="heading"></h2><p id="description"></p></section>
+<div class="plot" id="plot" tabindex="0" aria-label="M5-Diagramm; auf kleinen Bildschirmen seitlich verschiebbar">
+<svg id="chart" viewBox="0 0 900 390" role="img" aria-label="Fünf M5-Kerzen: zwei davor, der Tiefpunkt um 13:10, zwei danach"></svg>
+</div>
+<small>Mobil: Diagramm seitlich verschieben. Die Uhrzeit unter jeder Kerze ist ihr Beginn.</small>
+<section class="answer" id="answer"><p id="proof"></p><div class="lows" id="lows"></div></section>
+<details><summary>Details zur Methode und zu den Daten</summary>
+<p>Die fünf Kerzen gehören zum bereits vorhandenen inneren Pivot-Verfahren: zwei Kerzen auf jeder Seite. Das ist ein Vorschlag, das Sweep-Extrem sichtbar zu bestimmen, keine neue Gültigkeitsregel für ein Setup. Das gesweepte Level bleibt 4.176,94; der Tiefpunkt der Bewegung ist 4.175,10.</p>
+<p>Die rechte Kerze beginnt um 13:20 und schließt um 13:25. Erst dann sind alle fünf Kerzen bekannt. Die native bullische OB-Unterkante bestätigt denselben Preis ebenfalls um 13:25.</p>
+<p>Native FXCM-M5-Daten, unverändert. Quelle: ls-reaction-native/context.json und ls-reaction-ob-sweep-analysis/policy-impact.json. Alle Uhrzeiten: Europe/Berlin.</p>
+</details>
+</main>
+<script id="data" type="application/json">[{"time":1791543300,"open":4181.31,"high":4183.45,"low":4179.15,"close":4179.18},{"time":1791543600,"open":4179.18,"high":4182.23,"low":4178.61,"close":4179.31},{"time":1791543900,"open":4179.31,"high":4179.34,"low":4175.28,"close":4176.48},{"time":1791544200,"open":4176.48,"high":4179.92,"low":4175.1,"close":4179.05},{"time":1791544500,"open":4179.05,"high":4183.15,"low":4178.93,"close":4182.46},{"time":1791544800,"open":4182.46,"high":4184.23,"low":4181.7,"close":4183.18}]</script>
+<script>
+(()=>{
+ const d=JSON.parse(document.getElementById('data').textContent),$=id=>document.getElementById(id),buttons=[...document.querySelectorAll('[data-step]')];
+ const time=t=>new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',hour:'2-digit',minute:'2-digit'}).format(t*1000);
+ const price=p=>p.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const states=[
+  {at:1791544200,title:'Erstes Tief: noch vorläufig.',text:'Bis 13:10 kennen wir das Tief 4.175,28 – die Bewegung kann noch weiterlaufen.',extreme:4175.28,from:1791543900},
+  {at:1791544500,title:'Das Tief rückt auf 4.175,10.',text:'Bis 13:15 ist das tiefere Tief bekannt, aber die zwei rechten Nachbarkerzen fehlen noch.',extreme:4175.10,from:1791544200},
+  {at:1791545100,title:'Bestätigt um 13:25: 4.175,10.',text:'Jetzt sind alle fünf Kerzen geschlossen: Die mittlere hat das tiefste Tief.',extreme:4175.10,from:1791544200}
+ ];
+ const five=d.slice(1),x=t=>115+(t-1791543600)/300*115,y=p=>290-(p-4173)/13*210;
+ let selected=2;
+ const text=(xx,yy,value,color='#b3bec4',size=13)=>'<text x="'+xx+'" y="'+yy+'" text-anchor="middle" fill="'+color+'" font-size="'+size+'">'+value+'</text>';
+ const bracket=(left,right,label)=>'<path d="M'+left+' 86V74H'+right+'V86" fill="none" stroke="#b3bec4" stroke-width="2"/>'+text((left+right)/2,54,label,'#eff3f4',16);
+ function draw(i){
+  selected=i;const s=states[i],visible=five.filter(c=>c.time+300<=s.at);
+  buttons.forEach((b,n)=>b.setAttribute('aria-pressed',String(n===i)));
+  $('clock').textContent='Stand '+time(s.at)+' Uhr · bereits geschlossene M5-Kerzen';
+  $('heading').textContent=s.title;$('description').textContent=s.text;
+  $('proof').textContent=i===2?'4.175,10 liegt unter allen vier Nachbar-Tiefs. Die Kerze 13:20 schließt um 13:25 – deshalb ist der Tiefpunkt erst dann bestätigt.':'Vorläufig: Bisher kennen wir '+visible.length+' der fünf entscheidenden Kerzen.';
+  $('lows').innerHTML=visible.map(c=>'<span class="'+(c.low===s.extreme?'lowest':'')+'">'+time(c.time)+' · '+price(c.low)+'</span>').join('');
+  let out='<rect width="900" height="390" fill="#121619"/>';
+  for(const p of [4175,4180,4185])out+='<path d="M65 '+y(p)+'H635" stroke="#364147"/>'+text(30,y(p)+4,String(p),'#b3bec4',12);
+  if(i===2)out+=bracket(x(five[0].time)-22,x(five[1].time)+22,'2 davor')+text(x(five[2].time),54,'Tiefpunkt','#ffe082',16)+bracket(x(five[3].time)-22,x(five[4].time)+22,'2 danach');
+  for(const c of visible){
+   const color=c.close>=c.open?'#26a69a':'#ef5350';
+   out+='<g data-time="'+c.time+'"><title>'+time(c.time)+' · Tief '+price(c.low)+'</title><path d="M'+x(c.time)+' '+y(c.high)+'V'+y(c.low)+'" stroke="'+color+'" stroke-width="2"/><rect x="'+(x(c.time)-10)+'" y="'+Math.min(y(c.open),y(c.close))+'" width="20" height="'+Math.max(1,Math.abs(y(c.open)-y(c.close)))+'" fill="'+color+'"/></g>';
+   out+=text(x(c.time),y(c.low)+(c.time===s.from?33:22),price(c.low),c.time===s.from?'#ffe082':'#eff3f4',13);
+   out+=text(x(c.time),337,time(c.time),'#b3bec4',13);
+  }
+  out+='<path d="M65 '+y(4176.94)+'H635" stroke="#00e676"/>'+text(758,y(4176.94)+4,'Gesweept: '+price(4176.94),'#00e676',13);
+  out+='<path d="M'+x(s.from)+' '+y(s.extreme)+'H635" stroke="#ffd700" stroke-dasharray="'+(i===2?'0':'5 4')+'" stroke-width="2"/>';
+  out+='<circle cx="'+x(s.from)+'" cy="'+y(s.extreme)+'" r="9" fill="#121619" stroke="#ffd700" stroke-width="3"/>';
+  out+=text(758,y(s.extreme)+5,(i===2?'Tiefpunkt: ':'Vorläufig: ')+price(s.extreme),'#ffe082',14);
+  out+=text(350,372,i===2?'5 Kerzen insgesamt · nicht nur zwei':'Weitere Kerzen werden erst nach ihrem Schluss eingeblendet.','#b3bec4',13);
+  $('chart').innerHTML=out;
+ }
+ buttons.forEach((b,i)=>b.addEventListener('click',()=>draw(i)));
+ document.querySelector('.steps').addEventListener('keydown',e=>{
+  let next=selected;if(e.key==='ArrowRight')next=(selected+1)%3;else if(e.key==='ArrowLeft')next=(selected+2)%3;else if(e.key==='Home')next=0;else if(e.key==='End')next=2;else return;
+  e.preventDefault();draw(next);buttons[next].focus();
+ });
+ draw(2);
+})();
+</script>
+</html>

@@ -1,6 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {readFileSync} from 'node:fs';
-import {detectSetupObs,detectTradeSetups,hasUninterruptedSweepReaction} from '../src/tradeSetup.js';
+import {detectSetupObs,detectTradeSetups} from '../src/tradeSetup.js';
+import {hasUninterruptedSweepReaction} from '../src/liquiditySweepReaction.js';
 import {detectTradeSetup,hasUninterruptedSweepReaction as denoValid} from '../supabase/functions/_shared/tradeSetup.ts';
 
 const at=t=>Date.parse(`2026-11-10T${t}:00+01:00`)/1000;

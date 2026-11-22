@@ -26,7 +26,7 @@ Betrieb, historische Abdeckung und Wiederherstellung: [FXCM-Feed](fxcm-feed.md).
 
 `poi-watcher` erkennt Setups mit derselben Pipeline wie der Chart (`src/setup1Detection.js` über
 `_shared/setup1Live.ts`) und speichert sie in `trade_setups`: die Setup-1-Erkennung plus die
-TS1.1-Kandidaten, die erst die OB-Sweep-Quellen finden. Die Zeilen sind die Basis für TS1.1 (Chart,
+LS-Reaktion-Kandidaten, die erst die OB-Sweep-Quellen finden. Die Zeilen sind die Basis für LS-Reaktion (Chart,
 `dob-watcher`-LQ-Sweep-POI, MCP `get_trade_setups`/`get_data_snapshot`, Alarm-Protokoll). Einen
-eigenen Telegram für diese Setups gibt es nicht; das TS1.1-Urteil cacht `dob-watcher` in
-`trade_setup_ts11_verdicts`.
+eigenen Telegram für diese Setups gibt es nicht; das LS-Reaktion-Urteil cacht `dob-watcher` in
+`ls_reaction_verdicts`.

@@ -8,7 +8,8 @@
 // supabase/functions/_shared/tradeSetup.ts) mitziehen.
 import { detectOrderBlocks } from "./orderBlockDetection.js";
 import { businessSecondsBetween } from "./chartTimeUtils.js";
-import { liquidityTouch, detectOrderBlockLiquidityLevels } from "./liquidityDetection.js";
+import { detectOrderBlockLiquidityLevels } from "./liquidityDetection.js";
+import { hasUninterruptedSweepReaction } from "./liquiditySweepReaction.js";
 import {evaluateSweepConfirmation,sweepSourceKey} from './tradeSetupSweepSources.js';
 import {orderBlockRecognitionTimes} from './orderBlockRecognitionTime.js';
 
@@ -31,20 +32,6 @@ export {TRADE_SETUP_OB_SWEEP_PROFILE};
 // bleibt nur noch die Reduktion aufs von tradeSetup.js erwartete Feld-Subset.
 export function detectSetupObs(candles, minGapOverride = null) {
   return detectOrderBlocks(candles, "5m", true, minGapOverride).map((z) => ({ dir: z.dir, top: z.top, bottom: z.bottom, startTime: z.startTime, fvg: z.fvg }));
-}
-
-// Eine bestätigte Gegen-FVG zwischen Sweep und Umkehr-OB belegt Fortsetzung statt Sweep-Reaktion.
-// Beide Impulszeiten haben denselben M5-Bestätigungsvorlauf; spätere FVGs ändern die Historie nicht.
-export function hasUninterruptedSweepReaction(setup, setupObs, m5Candles = []) {
-  let touch = setup.ls?.touchedTime;
-  if (!Number.isFinite(touch)) return true;
-  if (setup.sweeps?.[0]?.timeframe === '1H') {
-    // H1-Touch ist nur der Stundenanfang: eine M5-FVG davor darf keinen späteren Sweep entwerten.
-    const crossed = m5Candles.find(c => c.time >= touch && c.time < touch + 3600 && liquidityTouch(c, setup.ls.price, setup.dir));
-    if (!crossed) return true;
-    touch = crossed.time;
-  }
-  return !setupObs.some(ob => ob.dir === setup.dir && ob.startTime > touch && ob.startTime < setup.obStartTime);
 }
 
 // Sucht die zeitlich erste FVG einer Richtung, deren Impuls-Kerze auf afterTime folgt, aber

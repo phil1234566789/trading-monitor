@@ -203,7 +203,7 @@ const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
 // dadurch automatisch nur noch das jüngste SICHTBARE Setup).
 const showTradeSetupsLong = useLocalStorageRef("showTradeSetupsLong", true);
 const showTradeSetupsShort = useLocalStorageRef("showTradeSetupsShort", true);
-const showTs11Levels = useLocalStorageRef("showTs11Levels", false);
+const showLsReactionLevels = useLocalStorageRef("showTs11Levels", false);
 // R-Skala (2-10 R ab der nahen OB-Kante, siehe rScale.js) — eigener Toggle neben den
 // Richtungs-Schaltern: bei großer Setup-Historie sind das neun zusätzliche Marken PRO Setup.
 const showRScale = useLocalStorageRef("showRScale", true);
@@ -1090,7 +1090,7 @@ async function onPinAddConfirm(note, pinType) {
     pinAddPopupError.value = error?.message || "Pin konnte nicht gespeichert werden.";
     return;
   }
-  if (saved.snapshotWarning) reportUiError("Pin ohne TS1.1-Quellen-Snapshot gespeichert", saved.snapshotWarning);
+  if (saved.snapshotWarning) reportUiError("Pin ohne LS-Reaktion-Quellen-Snapshot gespeichert", saved.snapshotWarning);
   pinAddPopupTarget.value = null;
   pinAddPopupError.value = null;
   refreshPinContext();
@@ -2061,10 +2061,10 @@ watch(selectedTradingAccountId, () => {
           <div class="toggle-dropdown-divider"></div>
 
           <ToggleButton variant="menu" :class="{ active: showTradeSetupsLong }" @click="showTradeSetupsLong = !showTradeSetupsLong">
-            TS1.1 · Long
+            LS-Reaktion · Long
           </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showTradeSetupsShort }" @click="showTradeSetupsShort = !showTradeSetupsShort">
-            TS1.1 · Short
+            LS-Reaktion · Short
           </ToggleButton>
           <ToggleButton variant="menu" :class="{ active: showRScale }" :title="rScaleHint" @click="showRScale = !showRScale">
             R-Skala
@@ -2136,7 +2136,7 @@ watch(selectedTradingAccountId, () => {
           <ToggleButton variant="menu" :class="{ active: showM1Structure }" title="M1-Struktur nur mit Periode-5-Pivots, ab bestätigtem A, B und C; Styles wie M5-Struktur" @click="showM1Structure = !showM1Structure">
             M1-Struktur
           </ToggleButton>
-          <ToggleButton variant="menu" :class="{ active: showTs11Levels }" title="Struktur-Ebenen ab dem D1-Anker als Zeitbänder: Wurzel, T1, T2, … bis zur aktuellen Ebene" @click="showTs11Levels = !showTs11Levels">
+          <ToggleButton variant="menu" :class="{ active: showLsReactionLevels }" title="Struktur-Ebenen ab dem D1-Anker als Zeitbänder: Wurzel, T1, T2, … bis zur aktuellen Ebene" @click="showLsReactionLevels = !showLsReactionLevels">
             M5-Ebenen (Bänder)
           </ToggleButton>
           <label class="ranges-period-field">
@@ -2447,7 +2447,7 @@ watch(selectedTradingAccountId, () => {
     :trade-setup-history-count="tradeSetupHistoryCount"
     :show-trade-setups-long="showTradeSetupsLong"
     :show-trade-setups-short="showTradeSetupsShort"
-    :show-ts11-levels="showTs11Levels"
+    :show-ls-reaction-levels="showTs11Levels"
     :show-r-scale="showRScale"
     :show-pip-scale="showPipScale"
     :journal-liquidity-categories="journalLiquidityCategories"

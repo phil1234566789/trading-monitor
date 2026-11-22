@@ -400,9 +400,9 @@ export async function addPinRsiDivergenceEntry(instrument, divergence, note, pin
 export async function addPinTscSetupEntry({ instrument, direction, setup }, note, pinType) {
   let snapshot=null,snapshotWarning=null;
   try{snapshot=await captureCurrentTradeSetupSources(setup,instrument);}
-  catch(error){snapshotWarning=error?.message??String(error);console.error('TS1.1-Quellen-Snapshot verworfen:',error);}
+  catch(error){snapshotWarning=error?.message??String(error);console.error('LS-Reaktion-Quellen-Snapshot verworfen:',error);}
   const tradeSetupId = await findOrCreateTradeSetupId({ instrument, direction, setup });
-  if (tradeSetupId == null) throw new Error('Das TS1.1-Setup konnte nicht in trade_setups angelegt werden.');
+  if (tradeSetupId == null) throw new Error('Das LS-Reaktion-Setup konnte nicht in trade_setups angelegt werden.');
   let snapshotId=null;
   if(snapshot){
     const {data:existing,error}=await supabase.from('pin_context').select(ROW_COLUMNS).eq('kind','trade_setup')

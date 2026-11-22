@@ -3,7 +3,7 @@ import {dobPoiLine,dobPrice,dobTpLine,dobWarnText} from './dobAlarm.js';
 import {DOB_DEFAULT_TP_R} from './dobGuardrails.js';
 import {dobBlockKey,dobBlockStatsText} from './dobBlockStats.js';
 import {poiMaxDistanceAtr} from './dobHtfObPoi.js';
-import {dobTs11Label} from './dobPoiLabel.js';
+import {dobLsReactionLabel} from './dobPoiLabel.js';
 
 // Heutige DOB-Kandidaten eines Watcher-Laufs für das DOB-Watcher-Panel (Dashboard): der Watcher schreibt sie je Instrument nach
 // dob_watcher_state.candidates, die Seite zeigt sie nur an. Frühe OB1-Phasen bleiben draußen (Philip), unklar zählt als „läuft“.
@@ -24,16 +24,16 @@ function statusOf(s,evaluatedAt){
 }
 const num=v=>v.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1});
 // Warum ein DOB verworfen ist, konkret statt „kein POI in Reichweite“ neben einer genannten Zone (Philip): HTF-OB mit Abstand und
-// Grenze des Instruments, LQ-Sweep mit dem nächsten TS1.1 und wie weit es von der Kante weg ist.
+// Grenze des Instruments, LQ-Sweep mit dem nächsten LS-Reaktion und wie weit es von der Kante weg ist.
 function droppedText(s,poiType,instrument){
  if(!['noPoi','missingTradeSetups'].includes(s.reason))return 'ohne POI-Daten';
- if(poiType==='lq_sweep')return `kein TS1.1-OB mit gleicher Kante${s.poi?.kind==='ts11'?` · nächstes ${dobTs11Label({...s.poi,instrument})}`:''}`;
+ if(poiType==='lq_sweep')return `kein LS-Reaktion-OB mit gleicher Kante${s.poi?.kind==='ts11'?` · nächstes ${dobLsReactionLabel({...s.poi,instrument})}`:''}`;
  const max=poiMaxDistanceAtr(instrument);
  if(!s.poi)return 'keine retestete H1/H4-Zone (Zone nicht retestet)';
  return `nächste ${s.poi.timeframe}-Zone ${num(s.poi.distanceAtr)} ATR weg, erlaubt ≤ ${num(max)} ATR`;
 }
 // Rahmen fürs aufgeklappte Detail (ChecklistOrderBlock): bei HTF-OB zuerst die POI-Zone (auch die zu weite bei verworfen, Philip),
-// dann OB1, OB2 und bei LQ-Sweep das TS1.1-OB mit LS-Preis, wenn es nicht exakt OB1/OB2 ist. Zonen von Vortagen mit Datum.
+// dann OB1, OB2 und bei LQ-Sweep das LS-Reaktion-OB mit LS-Preis, wenn es nicht exakt OB1/OB2 ist. Zonen von Vortagen mit Datum.
 function obFrames(s,instrument){
  const dir=s.direction==='long'?1:-1,word=dir===1?'bullische':'bärische',c=s.chart,day=berlinDateStrFor(c.secondOrderBlockStart);
  const when=t=>{const d=berlinDateStrFor(t);return d===day?formatBerlinTime(t):`${d.slice(8,10)}.${d.slice(5,7)}. ${formatBerlinTime(t)}`;};
@@ -44,7 +44,7 @@ function obFrames(s,instrument){
   frame('OB1',c.firstOrderBlock,c.firstOrderBlockStart),frame('OB2',c.secondOrderBlock,c.secondOrderBlockStart)];
  const ts=s.poi?.kind==='ts11'?s.poi:null;
  if(ts?.zone&&Number.isFinite(ts.zoneStartTime)&&ts.matchedEdge!=='both')
-  frames.push(frame(`TS1.1-OB #${ts.tradeSetupId}${Number.isFinite(ts.lsPrice)?` · LS ${dobPrice(ts.lsPrice,instrument)}`:''}`,ts.zone,ts.zoneStartTime));
+  frames.push(frame(`LS-Reaktion-OB #${ts.tradeSetupId}${Number.isFinite(ts.lsPrice)?` · LS ${dobPrice(ts.lsPrice,instrument)}`:''}`,ts.zone,ts.zoneStartTime));
  return frames;
 }
 // Status-Satz vorn im Detail (Philip): Status und Grund im Klartext, Preise im Format des Instruments, Zeiten in Berlin.
@@ -86,7 +86,7 @@ export function dobWatcherCandidates(runs,evaluatedAt,instrument){
    const status=statusOf(s,evaluatedAt),ob2=`${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`,key=`${poiType}:${ob2}`,old=rows.get(key);
    if(old&&RANK[old.status]>=RANK[status])continue;
    const head=statusHead(s,status,{instrument,poiType,guardrails,blockStats});
-   // Verworfen: der Grund nennt Zone bzw. TS1.1 schon, keine POI-Zeile neben „kein POI“.
+   // Verworfen: der Grund nennt Zone bzw. LS-Reaktion schon, keine POI-Zeile neben „kein POI“.
    const poiText=status==='dropped'?null:dobPoiLine({...s,instrument},poiType).replace(/^POI: /,'POI ');
    rows.set(key,{key,ob2,instrument,poiType,pairId:s.pairId,direction:s.direction,status,blockLabel:BLOCK_LABEL[s.reason]??null,
     time:status==='win'||status==='loss'?s.phaseSince:time,poi:poiShort(s,poiType),head,poiText,detail:[head,poiText].filter(Boolean).join(' · '),

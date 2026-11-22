@@ -4,15 +4,15 @@ import {expect,it} from 'vitest';
 import {detectSetupObs,detectTradeSetups,TRADE_SETUP_OB_SWEEP_PROFILE} from '../src/tradeSetup.js';
 import {detectLiquidityLevels} from '../src/liquidityDetection.js';
 import {tradeSetupParameters} from '../src/tradeSetupParameters.js';
-import {filterTradeSetup11Candidates} from '../src/tradeSetup11.js';
-import {fixture,nativeInput,expectedFor} from './helpers/tradeSetup11NativeFixture.js';
+import {filterLsReactionCandidates} from '../src/lsReaction.js';
+import {fixture,nativeInput,expectedFor} from './helpers/lsReactionNativeFixture.js';
 import {markIgnoredCandles} from '../src/sessionOccurrences.js';
 import {berlinOffsetMinutes} from '../src/berlinTime.js';
 import {evaluateSweepConfirmation} from '../src/tradeSetupSweepSources.js';
 import {captureTradeSetupSourceSnapshot,restoreTradeSetupSourceSnapshot} from '../supabase/functions/_shared/tradeSetupSourceSnapshot.js';
-const native=JSON.parse(readFileSync(new URL('./fixtures/ts11-ob-sweeps/M5.json',import.meta.url)));
+const native=JSON.parse(readFileSync(new URL('./fixtures/ls-reaction-ob-sweeps/M5.json',import.meta.url)));
 const at=1793889900,obTime=1793889300;
-it.each(fixture.references)('preserves original native TS11 expectation for pin $pin under the NEW source profile',async ref=>{
+it.each(fixture.references)('preserves original native LS_REACTION expectation for pin $pin under the NEW source profile',async ref=>{
  const at=Date.parse(ref.row.ob_start_time)/1000+600;
  const rows=markIgnoredCandles(nativeInput.m5Candles.filter(c=>c.time+300<=at),fixture.sessionConfigs,s=>berlinOffsetMinutes(s*1000));
  const levels=detectLiquidityLevels(rows,5),dir=ref.row.direction==='short'?1:-1,own=dir===1?levels.highs:levels.lows;
@@ -21,10 +21,10 @@ it.each(fixture.references)('preserves original native TS11 expectation for pin 
   .find(s=>s.obStartTime===at-600);
  expect(setup).toBeDefined();expect(setup.sweepSourceProfile).toBe(TRADE_SETUP_OB_SWEEP_PROFILE);
  expect([setup.obTop,setup.obBottom]).toEqual([ref.row.ob_top,ref.row.ob_bottom]);
- const result=filterTradeSetup11Candidates({...nativeInput,setups:[setup],evaluatedAt:at});
+ const result=filterLsReactionCandidates({...nativeInput,setups:[setup],evaluatedAt:at});
  expect(result.assessments[0].status).toBe(expectedFor(ref)==='reject'?'unmet':'passed');
- expect(filterTradeSetup11Candidates({...nativeInput,setups:[setup],evaluatedAt:at-1}).counts.unknown).toBe(1);
- const prefix=filterTradeSetup11Candidates({...nativeInput,setups:[setup],evaluatedAt:at,
+ expect(filterLsReactionCandidates({...nativeInput,setups:[setup],evaluatedAt:at-1}).counts.unknown).toBe(1);
+ const prefix=filterLsReactionCandidates({...nativeInput,setups:[setup],evaluatedAt:at,
   m5Candles:nativeInput.m5Candles.filter(c=>c.time+300<=at),h1Candles:nativeInput.h1Candles.filter(c=>c.time+3600<=at),
   d1Candles:nativeInput.d1Candles.filter(c=>c.time+86400<=at)});
  expect(prefix.assessments).toEqual(result.assessments);
@@ -38,9 +38,9 @@ it.each(fixture.references)('preserves original native TS11 expectation for pin 
  if(ref.pin===485)expect(result.assessments[0].trendEvidence.goWitness.level.price).toBe(4179.51);
 });
 it('preserves native source hashes and original pins without claiming a frozen TS snapshot',()=>{
- const meta=JSON.parse(readFileSync(new URL('./fixtures/ts11-ob-sweeps/provenance.json',import.meta.url)));
- expect(createHash('sha256').update(readFileSync(new URL('./fixtures/ts11-ob-sweeps/M5.json',import.meta.url))).digest('hex')).toBe(meta.fixtureSha256);
- const pins=JSON.parse(readFileSync(new URL('./fixtures/ts11-ob-sweeps/pins.json',import.meta.url)));
+ const meta=JSON.parse(readFileSync(new URL('./fixtures/ls-reaction-ob-sweeps/provenance.json',import.meta.url)));
+ expect(createHash('sha256').update(readFileSync(new URL('./fixtures/ls-reaction-ob-sweeps/M5.json',import.meta.url))).digest('hex')).toBe(meta.fixtureSha256);
+ const pins=JSON.parse(readFileSync(new URL('./fixtures/ls-reaction-ob-sweeps/pins.json',import.meta.url)));
  expect(pins.map(p=>p.id)).toEqual(meta.pins);expect(pins.every(p=>p.kind==='ob_zone')).toBe(true);
 });
 it('uses the older native OB edge instead of the expired 4124.86 first sweep (494–496)',()=>{

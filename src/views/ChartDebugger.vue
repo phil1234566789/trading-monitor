@@ -15,7 +15,7 @@ import ObReactionGraph from '../components/ObReactionGraph.vue';
 import DobPairGraph from '../components/DobPairGraph.vue';
 import {dobPairGraph,dobChangeTimes} from '../dobPairGraph.js';
 import DobEntryM1Section from '../components/DobEntryM1Section.vue';
-import TradeSetup11Section from '../components/TradeSetup11Section.vue';
+import LsReactionSection from '../components/LsReactionSection.vue';
 import DebuggerTimeBar from '../components/DebuggerTimeBar.vue';
 import {useDebuggerTime} from '../composables/useDebuggerTime.js';
 
@@ -149,9 +149,9 @@ watch(tf,()=>{fitPending=true;draw();});
 
 <template>
  <div class="chart-debugger">
-  <label class="section">Sektion <select v-model="section"><option value="cases">OB-Reaktion / DOB</option><option value="dob-entry-m1">DOB-Entry M1</option><option value="ts11">TS1.1</option></select></label>
+  <label class="section">Sektion <select v-model="section"><option value="cases">OB-Reaktion / DOB</option><option value="dob-entry-m1">DOB-Entry M1</option><option value="lsReaction">LS-Reaktion</option></select></label>
   <DobEntryM1Section v-if="section==='dob-entry-m1'"/>
-  <TradeSetup11Section v-if="section==='ts11'"/>
+  <LsReactionSection v-if="section==='ts11'"/>
   <div v-show="section==='cases'" class="bar">
    <select v-model="caseId"><optgroup v-for="[group,cases] in CASE_GROUPS" :key="group" :label="group">
     <option v-for="c in cases" :key="c.id" :value="c.id">{{ c.label }} · erwartet: {{ expectedText(c) }}{{ checkMark(c.id) }}</option></optgroup></select>

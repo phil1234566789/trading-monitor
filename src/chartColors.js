@@ -218,7 +218,7 @@ export const DEFAULT_CHART_COLORS = {
   m5RangeClosedDowntrend: { hex: "#ff7043", alpha: 0.57 },
   m5RangeChoch: { hex: "#ff7043", alpha: 0.57 },
   m5RangeFib: { hex: "#26c6da", alpha: 0.57 },
-  // M5-Ebenen-Bänder (ts11Chain.js) — flächig über die volle Panehöhe, daher sehr niedrige Alpha.
+  // M5-Ebenen-Bänder (lsReactionChain.js) — flächig über die volle Panehöhe, daher sehr niedrige Alpha.
   m5LevelUp: { hex: "#26a69a", alpha: 0.08 },
   m5LevelDown: { hex: "#ef5350", alpha: 0.08 },
 };

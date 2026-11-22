@@ -22,9 +22,9 @@ export async function dobAutoPin(client,{event,setup,pair,evaluatedAt,m5Candles,
 }
 
 // POI-Pin je POI-Art: HTF-OB pinnt die ob_zone; LQ-Sweep pinnt später das gesweepte Level (folgt mit der LQ-Sweep-Erkennung).
-const POI_PINS={htf_ob:pinHtfPoi,lq_sweep:pinTs11Poi};
-// LQ-Sweep: das tragende TS1.1-Setup als normaler trade_setup-Pin (wie Rechtsklick → Anpinnen im Chart).
-async function pinTs11Poi(client,poi){
+const POI_PINS={htf_ob:pinHtfPoi,lq_sweep:pinLsReactionPoi};
+// LQ-Sweep: das tragende LS-Reaktion-Setup als normaler trade_setup-Pin (wie Rechtsklick → Anpinnen im Chart).
+async function pinLsReactionPoi(client,poi){
  if(!Number.isSafeInteger(poi?.tradeSetupId))return {skipped:'noTradeSetup'};
  const rows=must(await client.from('pin_context').upsert({kind:'trade_setup',trade_setup_id:poi.tradeSetupId},{onConflict:'trade_setup_id',ignoreDuplicates:true}).select('id'));
  return {tradeSetupId:poi.tradeSetupId,pin:rows[0]?.id??null,existed:!rows.length};

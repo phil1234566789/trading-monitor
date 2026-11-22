@@ -8,8 +8,8 @@ import { TRADE_SETUP_OB_SWEEP_PROFILE } from "./tradeSetupSourceSnapshot.js";
 
 export interface LiveSetup1 {
   detected: DetectedTradeSetup[];
-  // Nur mit OB-Sweep-Quellen gefunden (TS1.1-Profil des Charts), nicht in detected enthalten.
-  ts11Only: DetectedTradeSetup[];
+  // Nur mit OB-Sweep-Quellen gefunden (LS-Reaktion-Profil des Charts), nicht in detected enthalten.
+  lsReactionOnly: DetectedTradeSetup[];
   params: TradeSetupParams;
   minGap: number | null;
 }
@@ -20,7 +20,7 @@ export function detectLiveSetup1({ instrument, m5Candles, h1Candles, nowSec, str
 }): LiveSetup1 {
   const h1 = setup1H1Levels(setup1H1Structure(h1Candles, { nowSec, structureStartSec }));
   const inputs = setup1Inputs(instrument, m5Candles);
-  const ts11Inputs = setup1Inputs(instrument, m5Candles, { sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
+  const lsReactionInputs = setup1Inputs(instrument, m5Candles, { sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
   // Sonst gälte ein schon gebrochenes Level bis zum nächsten Kerzenschluss (bis zu 1h bei H1) als unberührt.
   const touch = (levels: LiquidityLevel[], high: boolean) => {
     if (currentPrice == null) return;
@@ -33,13 +33,13 @@ export function detectLiveSetup1({ instrument, m5Candles, h1Candles, nowSec, str
   };
   touch(inputs.m5Highs, true);
   touch(inputs.m5Lows, false);
-  touch(ts11Inputs.m5Highs, true);
-  touch(ts11Inputs.m5Lows, false);
+  touch(lsReactionInputs.m5Highs, true);
+  touch(lsReactionInputs.m5Lows, false);
   touch(h1.highs, true);
   touch(h1.lows, false);
   const detected = setup1AlarmCandidates(detectSetup1(inputs, h1.highs, h1.lows), inputs.params);
   const known = new Set(detected.map((s) => `${s.dir}:${s.obStartTime}`));
-  const ts11Only = setup1AlarmCandidates(detectSetup1(ts11Inputs, h1.highs, h1.lows), ts11Inputs.params)
+  const lsReactionOnly = setup1AlarmCandidates(detectSetup1(lsReactionInputs, h1.highs, h1.lows), lsReactionInputs.params)
     .filter((s) => !known.has(`${s.dir}:${s.obStartTime}`));
-  return { detected, ts11Only, params: inputs.params, minGap: inputs.minGap };
+  return { detected, lsReactionOnly, params: inputs.params, minGap: inputs.minGap };
 }

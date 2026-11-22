@@ -30,7 +30,7 @@ export function dobBreakevenRest(features,atR){
  return Number.isFinite(maxR)?{maxR,stopped:features[beKey(atR,'stopped')]===true,ambiguousR:features[beKey(atR,'ambiguous_r')]??null}:null;
 }
 
-// POI-Art LQ-Sweep (src/dobLqSweepPoi.js): welches TS1.1-Setup trägt und wie es am DOB hängt. Die Stufe (edge/overlap/adjacent)
+// POI-Art LQ-Sweep (src/dobLqSweepPoi.js): welches LS-Reaktion-Setup trägt und wie es am DOB hängt. Die Stufe (edge/overlap/adjacent)
 // entscheidet die Konfig (poiMatchMode); HTF-OB-Trades schreiben keine dieser Schlüssel.
 // Keine Detektorversion: trade_setups.detector_version hält nach Backfills das alte Etikett (Trigger preserve_trade_setup_provenance).
 export const DOB_POI_FEATURE_KEYS=Object.freeze({match:'poi_match',gapUsd:'poi_gap_usd',tradeSetupId:'poi_trade_setup_id',matchedOb:'poi_matched_ob',

@@ -4,7 +4,7 @@ import { fetchCandlesCached } from '../candleCache.js';
 import { latestKnownDailyPivot } from '../tradeSetup2Anchors.js';
 
 // Strukturstart für "Start ab 1D-Pivot": live der neueste persistierte Pivot, im Replay der zum
-// Replay-Zeitpunkt schon bekannte (vier D1-Schlüsse, wie TS1.1) — sonst zeigt ein Replay einen
+// Replay-Zeitpunkt schon bekannte (vier D1-Schlüsse, wie LS-Reaktion) — sonst zeigt ein Replay einen
 // Anker aus der Zukunft.
 export function useDailyPivotStructureStart(pivots, symbol, replayUntil) {
   const daily = shallowRef([]);

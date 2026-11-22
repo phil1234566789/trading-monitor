@@ -33,7 +33,7 @@ try {
   const out = { measurement: 'dob-lab-lq-sweep-base-v1', git: execSync('git rev-parse --short HEAD').toString().trim(), instrument: INSTRUMENT, run: RUN,
     breakEven: Object.fromEntries(TARGETS.map(k => [`${k}R`, pct(st.dobBreakEven(k))])),
     share: Object.fromEntries(['edge', 'overlap', 'adjacent'].map(m => [m, rows.filter(r => match(r) === m).length])),
-    methodology: [`Lauf ${RUN} (DB): DOB, dessen OB1/OB2 mit einem TS1.1-OB (Box oder rohes M5-OB) eine Kante teilt (1 Tick), überlappt oder knapp daneben liegt (XAU ≤ 1 USD, Forex ≤ 3 Pips).`,
+    methodology: [`Lauf ${RUN} (DB): DOB, dessen OB1/OB2 mit einem LS-Reaktion-OB (Box oder rohes M5-OB) eine Kante teilt (1 Tick), überlappt oder knapp daneben liegt (XAU ≤ 1 USD, Forex ≤ 3 Pips).`,
       'Stärkste Verbindung je Trade über alle tragenden Paare; einmalige Trades (Richtung/Entry/SL). Ohne Sperren, Gegen-DOB nur als Status gespeichert.',
       'Win/Loss je festem Ziel aus max_r/sl_hit (dobTotalStats); Halbjahre nach Berliner Entry-Monat; Ø Trades je Kalenderwoche.'],
     byLevel: Object.fromEntries(Object.entries(levels).map(([name, set]) => [name, block(rows.filter(r => set.includes(match(r))))])),

@@ -1,6 +1,6 @@
-# TS1.1: Sweep-Quellen und Ablösung
+# LS-Reaktion: Sweep-Quellen und Ablösung
 
-Das Profil `ts11-ob-edge-p5-supersession-v1` ergänzt die bestehende TS1-Erkennung ausschließlich für TS1.1. Ohne Opt-in bleiben TS2, Legacy-Kandidaten und Alarme unverändert.
+Das Profil `ts11-ob-edge-p5-supersession-v1` ergänzt die bestehende TS1-Erkennung ausschließlich für LS-Reaktion. Ohne Opt-in bleiben TS2, Legacy-Kandidaten und Alarme unverändert.
 
 - Eine bestätigte bärische M5-OB-Oberkante ist eine Short-Sweep-Quelle; eine bullische M5-OB-Unterkante entsprechend eine Long-Quelle. Formation bestimmt das Alter, der Schluss der tatsächlich folgenden FVG-Kerze die Verfügbarkeit. Quelle und echtes Williams-Fraktal bleiben unterschiedliche Typen.
 - Ein M5-P5-LS A wird erst abgelöst, wenn ein eigenständiger gleichgerichteter M5-P5-LS B nach A's erstem Touch entstanden, kausal bestätigt und später selbst gesweept worden ist. B muss für Short höher, für Long tiefer liegen. `validUntil` ist der Schluss dieser späteren Sweep-Kerze.

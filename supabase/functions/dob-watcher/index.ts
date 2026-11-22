@@ -15,8 +15,8 @@ import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {createDobSwingStopGate} from '../../../src/dobSwingStop.js';
 import {dobH1AtrSeries} from '../../../src/dobHtfObPoi.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
-import {dobTs11FromRow} from '../../../src/dobLqSweepPoi.js';
-import {computeTs11Verdicts,TRADE_SETUP_11_VERSION} from '../_shared/ts11Verdicts.ts';
+import {dobLsReactionFromRow} from '../../../src/dobLqSweepPoi.js';
+import {computeLsReactionVerdicts,LS_REACTION_VERSION} from '../_shared/lsReactionVerdicts.ts';
 import {secretMatches} from '../_shared/setup2Notifications.js';
 import {flushDobOutbox} from '../_shared/dobDelivery.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
@@ -28,10 +28,10 @@ const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
 // M1/M5 decken 2 Tage für das Gegen-DOB-Gate (v3) samt Wochenende, M5 zusätzlich 2 Tage + 1 Tag Vorlauf für die SL-Variante (c); H1/H4 für beliebig alte POI-Zonen und den ATR.
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':900,'1h':6000,'4h':1500};
-// TS1.1-Trendkontext wie der Chart (tradeSetup11ContextLoader: 300 D1, M5 ab dem D1-Anker, höchstens 15000).
-// ponytail: ein neues TS1.1-Urteil je Tick über alle Instrumente (Edge-CPU-Limit); fehlende gelten bis dahin
-// nicht als TS1.1, d. h. ein LQ-Sweep-Alarm kommt höchstens ein paar Minuten später, nie fälschlich.
-const TS11_PER_TICK=1;
+// LS-Reaktion-Trendkontext wie der Chart (lsReactionContextLoader: 300 D1, M5 ab dem D1-Anker, höchstens 15000).
+// ponytail: ein neues LS-Reaktion-Urteil je Tick über alle Instrumente (Edge-CPU-Limit); fehlende gelten bis dahin
+// nicht als LS-Reaktion, d. h. ein LQ-Sweep-Alarm kommt höchstens ein paar Minuten später, nie fälschlich.
+const LS_REACTION_PER_TICK=1;
 const offset=(sec:number)=>berlinOffsetMinutes(sec*1000);
 // Versand steuert die Alarme-Seite: Schalter alarm_settings.dob_setup (fehlende Zeile = an, wie poi-watcher) und
 // trading_schedules.alarm_windows des Instruments (fehlende Zeile = nie senden, wie poi-watcher).
@@ -45,7 +45,7 @@ async function alarmPolicy(client:any,instrument:string){
   return {enabled,windows,decide:(at:number)=>!enabled?'alarmDisabled':isWithinTradingWindows(at,windows)?null:'outsideAlarmWindow'};
 }
 
-// Geschlossene FXCM-Kerzen; dasselbe Lesen nutzt das MCP für das TS1.1-Urteil (_shared/fxcmCandles.ts).
+// Geschlossene FXCM-Kerzen; dasselbe Lesen nutzt das MCP für das LS-Reaktion-Urteil (_shared/fxcmCandles.ts).
 const closedCandles=(client:any,instrument:string,bar:string,evaluatedAt:number,count=COUNTS[bar])=>
   readClosedFxcmCandles(client,instrument,bar,evaluatedAt,count);
 
@@ -73,30 +73,30 @@ async function blockStatsFor(client:any,instrument:string,row:any,guardrails:any
   return stats;
 }
 
-// LQ-Sweep-POI = TS1.1 wie im Chart: trade_setups der letzten 2 Tage (decken jeden DOB des Live-Fensters) durch tradeSetup11RowVerdicts.
+// LQ-Sweep-POI = LS-Reaktion wie im Chart: trade_setups der letzten 2 Tage (decken jeden DOB des Live-Fensters) durch lsReactionRowVerdicts.
 // Das Urteil wird je Zeile einmal gerechnet und gespeichert; M5/D1 für den Trendkontext nur laden, wenn eins fehlt (Edge-CPU).
-async function ts11Setups(client:any,instrument:string,evaluatedAt:number,h1:any[],sessions:any[],dry:boolean,budget:{left:number}){
+async function lsReactionSetups(client:any,instrument:string,evaluatedAt:number,h1:any[],sessions:any[],dry:boolean,budget:{left:number}){
   const rows=checked(await client.from('trade_setups').select('*,trade_setup_sweeps(price,pivot_time,touched_time,timeframe,is_primary),ob_zones(top,bottom)')
     .eq('instrument',instrument).gte('ob_start_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('ob_start_time').limit(1000)) as any[];
-  const cached=rows.length?checked(await client.from('trade_setup_ts11_verdicts').select('trade_setup_id,status,witness').eq('version',TRADE_SETUP_11_VERSION)
+  const cached=rows.length?checked(await client.from('ls_reaction_verdicts').select('trade_setup_id,status,witness').eq('version',LS_REACTION_VERSION)
     .in('trade_setup_id',rows.map(r=>r.id)).limit(1000)) as any[]:[];
-  // witness = bestandene TS1.1-Quelle (LS des POI); {} = bestanden ohne eigene Quelle. Ein passed ohne witness stammt von vor der
+  // witness = bestandene LS-Reaktion-Quelle (LS des POI); {} = bestanden ohne eigene Quelle. Ein passed ohne witness stammt von vor der
   // Spalte und wird neu gerechnet; bis dahin zählt es weiter (mit Primär-LS), damit kein Alarm ausfällt.
   const verdict=new Map<number,{status:string;witness?:unknown}>(cached.map(v=>[Number(v.trade_setup_id),{status:v.status,witness:v.witness}]));
   const pending=rows.filter(r=>!verdict.has(r.id)||(verdict.get(r.id)!.status==='passed'&&verdict.get(r.id)!.witness==null)),
     missing=budget.left>0?pending.slice(-budget.left):[];
   budget.left-=missing.length;
   if(missing.length){
-    const verdicts=await computeTs11Verdicts({rows:missing,instrument,evaluatedAt,sessionConfigs:sessions,h1,
+    const verdicts=await computeLsReactionVerdicts({rows:missing,instrument,evaluatedAt,sessionConfigs:sessions,h1,
       load:(bar,count)=>closedCandles(client,instrument,bar,evaluatedAt,count)});
     // unknown erst nach 1 h endgültig: vorher kann der Kerzenstand bis zur Setup-Erkennung noch fehlen.
     const final=missing.filter(r=>verdicts.get(r.id)!.status!=='unknown'||Date.parse(r.ob_start_time)/1000+3600<evaluatedAt);
-    if(!dry&&final.length)checked(await client.from('trade_setup_ts11_verdicts').upsert(final.map(r=>({trade_setup_id:r.id,version:TRADE_SETUP_11_VERSION,
+    if(!dry&&final.length)checked(await client.from('ls_reaction_verdicts').upsert(final.map(r=>({trade_setup_id:r.id,version:LS_REACTION_VERSION,
       status:verdicts.get(r.id)!.status,reason:verdicts.get(r.id)!.reason,
       witness:verdicts.get(r.id)!.status==='passed'?verdicts.get(r.id)!.witness??{}:null})),{onConflict:'trade_setup_id,version'}));
     for(const [id,v] of verdicts)verdict.set(Number(id),v);
   }
-  return {setups:rows.filter(r=>verdict.get(r.id)?.status==='passed').map(r=>dobTs11FromRow(r,verdict.get(r.id))),rows:rows.length,evaluated:missing.length,pending:pending.length-missing.length};
+  return {setups:rows.filter(r=>verdict.get(r.id)?.status==='passed').map(r=>dobLsReactionFromRow(r,verdict.get(r.id))),rows:rows.length,evaluated:missing.length,pending:pending.length-missing.length};
 }
 
 async function writeState(client:any,instrument:string,state:Record<string,unknown>){
@@ -104,7 +104,7 @@ async function writeState(client:any,instrument:string,state:Record<string,unkno
 }
 
 // dry: rechnet auch außerhalb 02:00–22:00, verschickt nichts und schreibt keinen Herzschlag (Prüfung von Datenpfad und Laufzeit).
-async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dry=false,probes:number[]=[],budget={left:TS11_PER_TICK}){
+async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dry=false,probes:number[]=[],budget={left:LS_REACTION_PER_TICK}){
   const started=performance.now();
   // Einziger Guardrail (Q2): kein Entry 22:00–02:00 Berlin, also auch kein Alarm.
   if(!dry&&!insideEntryWindow(evaluatedAt)){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'outsideEntryWindow',error:null});return {skipped:'outsideEntryWindow'};}
@@ -118,7 +118,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,instrument,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);
-  const ts11=poiTypes.some(p=>p.poiType==='lq_sweep')?await ts11Setups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null,tradeSetups=ts11?.setups??[];
+  const lsReaction=poiTypes.some(p=>p.poiType==='lq_sweep')?await lsReactionSetups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null,tradeSetups=lsReaction?.setups??[];
   // Erkennung zum Datenstand (letzte M1, Feed-Verzug ≤ 3 min), Herzschlag, Stale-Alarm und Alarmfenster zur Uhrzeit.
   const asOf=dobDataAsOf(m1Marked,evaluatedAt);
   const htfCandles={'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)};
@@ -133,7 +133,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const count=(key:'setups'|'rejected')=>runs.reduce((n,r)=>n+r.result[key].length,0);
   const policy=await alarmPolicy(client,instrument),blocked=policy.decide(evaluatedAt);
   if(dry)return {dry:true,evaluatedAt,asOf,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
-    alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,ts11:ts11&&{rows:ts11.rows,evaluated:ts11.evaluated,pending:ts11.pending,passed:ts11.setups.length},bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
+    alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,lsReaction:lsReaction&&{rows:lsReaction.rows,evaluated:lsReaction.evaluated,pending:lsReaction.pending,passed:lsReaction.setups.length},bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,
     poiTypes:Object.fromEntries(poiTypes.map(({poiType,guardrails})=>{const r=runs.find(x=>x.poiType===poiType);
       return [poiType,{guardrails,entryRuleNow:dobEntryRule(guardrails,evaluatedAt),setups:r?.result.setups.length??null,rejected:r?.result.rejected.length??null,
@@ -174,7 +174,7 @@ const CANDLE_ARRIVAL_SECONDS=20;
 
 // Alle Instrumente nacheinander zur selben Minute; Fehler je Instrument landen in dessen Herzschlag und als Hinweis.
 async function tick(client:any,dry=false,probes:number[]=[]){
-  const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={},budget={left:TS11_PER_TICK};
+  const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={},budget={left:LS_REACTION_PER_TICK};
   for(const instrument of INSTRUMENTS){
     try{results[instrument]=await tickInstrument(client,instrument,evaluatedAt,dry,probes,budget);}
     catch(error){results[instrument]={error:await reportError(client,instrument,error)};}

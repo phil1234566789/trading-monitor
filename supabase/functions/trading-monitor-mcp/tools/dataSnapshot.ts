@@ -11,7 +11,7 @@ import { isBoxInvalidated } from "../../_shared/orderBlocks.ts";
 import type { DetectedTradeSetup } from "../../_shared/tradeSetup.ts";
 import { setup1StructureWindow, TRADE_SETUP_M5_CANDLE_COUNT } from "../../../../src/setup1Detection.js";
 import { detectLiveSetup1 } from "../../_shared/setup1Live.ts";
-import { passedTs11Setups } from "../ts11TradeSetups.ts";
+import { passedLsReactionSetups } from "../lsReactionTradeSetups.ts";
 import { json } from "../jsonResponse.ts";
 
 // get_data_snapshot (Task "schlankes Schritt-5-Tool"/get-trade-setups-filtern, 2026-08-30) —
@@ -110,8 +110,8 @@ export async function buildDataSnapshot({ instrument, replayUntilSec }: DataSnap
   // Hour vorher markiert (markIgnoredCandles); asOfSec trifft auch im Replay den simulierten Zeitpunkt.
   const live = detectLiveSetup1({ instrument, m5Candles: markIgnored(m5CandlesRoh, sessionConfigs),
     h1Candles: markIgnored(h1CandlesRoh, sessionConfigs), nowSec: asOfSec, structureStartSec, currentPrice: referencePrice });
-  // Nur TS1.1-bestandene Setups (dasselbe Urteil wie Chart und dob-watcher), TS1.0 gibt es nicht mehr.
-  const fresh = await passedTs11Setups(instrument, [...live.detected, ...live.ts11Only].sort((a, b) => a.obStartTime - b.obStartTime), asOfSec);
+  // Nur LS-Reaktion-bestandene Setups (dasselbe Urteil wie Chart und dob-watcher), TS1.0 gibt es nicht mehr.
+  const fresh = await passedLsReactionSetups(instrument, [...live.detected, ...live.lsReactionOnly].sort((a, b) => a.obStartTime - b.obStartTime), asOfSec);
   const detectedShort = fresh.filter((s) => s.dir === 1).at(-1) ?? null;
   const detectedLong = fresh.filter((s) => s.dir === -1).at(-1) ?? null;
 
@@ -161,12 +161,12 @@ export function registerDataSnapshotTools(server: McpServer) {
         `häufige Aufrufe pro Tag, deshalb eng gefasst: umliegende Liquidity-Level/OB-Zonen ` +
         `(1H/4H, ${SNAPSHOT_RANGE_PIPS} Pips um den aktuellen Kurs ODER innerhalb der letzten ` +
         `${SNAPSHOT_RECENCY_HOURS}h geswept/invalidiert), je Richtung nur das aktuellste ` +
-        `TS1.1-Setup (nur mit bestandenem TS1.1-Urteil wie Chart und dob-watcher; max. ${SETUP_MAX_AGE_HOURS}h alt ODER dessen OB seither per Wick durchstochen, ` +
+        `LS-Reaktion-Setup (nur mit bestandenem LS-Reaktion-Urteil wie Chart und dob-watcher; max. ${SETUP_MAX_AGE_HOURS}h alt ODER dessen OB seither per Wick durchstochen, ` +
         "sonst null), aktuelle EMA(50/200) und " +
         "RSI(14) NUR als Punkt (keine Serie), sowie der Status der offenen TSC-Idee (id+direction " +
         "oder null, siehe get_tsc_range für die volle Cockpit-Ansicht mit Confirmations/Targets). " +
         "Ohne replayUntilSec live 'jetzt', mit replayUntilSec ein Backtest/Replay-Zeitpunkt " +
-        "(gleiche Semantik wie get_data_export) — TS1.1-Setups werden live aus den Kerzen bis " +
+        "(gleiche Semantik wie get_data_export) — LS-Reaktion-Setups werden live aus den Kerzen bis " +
         "replayUntilSec neu erkannt (dieselbe Erkennung wie poi-watcher, nicht dessen historischer " +
         "Schreibstand), ein Replay sieht daher nie ein Setup, dessen Muster erst nach dem " +
         "simulierten Zeitpunkt entstanden ist.",

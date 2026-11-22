@@ -1,4 +1,4 @@
-// TS1.1-Sweep-Bestätigung: dieselben Regeln wie im Chart (src/tradeSetupSweepSources.js), nur typisiert.
+// LS-Reaktion-Sweep-Bestätigung: dieselben Regeln wie im Chart (src/tradeSetupSweepSources.js), nur typisiert.
 // Die OB-Kanten-Level selbst kommen aus dem LQ-Algo (_shared/liquidityDetection.ts).
 import type {Candle} from './orderBlocks.ts';
 import type {LiquidityLevel} from './liquidityDetection.ts';

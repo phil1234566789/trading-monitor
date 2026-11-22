@@ -1,6 +1,6 @@
 <script setup>
 import CopyButton from "./ui/CopyButton.vue";
-import {tradeSetup11RequestedBoundary} from '../tradeSetup11ContextLoader.js';
+import {lsReactionRequestedBoundary} from '../lsReactionContextLoader.js';
 import {closedReplayEvaluationTime} from '../tradeSetupChecklistTimeBasis.js';
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { nextCandlePollDelay } from "../candlePolling.js";
@@ -20,7 +20,7 @@ import {useDoubleOrderBlockChart} from '../composables/useDoubleOrderBlockChart.
 import {renderDobTrade,dobTradeFrame} from '../dobTradeRendering.js';
 import {usePriceChartDobPositions} from '../composables/usePriceChartDobPositions.js';
 import DoubleOrderBlockStatus from './DoubleOrderBlockStatus.vue';
-import TradeSetup11Status from './TradeSetup11Status.vue';
+import LsReactionStatus from './LsReactionStatus.vue';
 import {tradeSetupSourceDetails,tradeSetupInteractionRows} from '../tradeSetupSourcePresentation.js';
 import ChartIndicatorStatusStack from './ChartIndicatorStatusStack.vue';
 import { goldNativeZones } from '../priceChartObZones.js';
@@ -99,7 +99,7 @@ import {useBrokerPositionDrawing} from '../composables/useBrokerPositionDrawing.
 import {useTradeIdeaDrawing} from '../composables/useTradeIdeaDrawing.js';
 import {useDrawings} from '../composables/useDrawings.js';
 import { measureDrawing } from "../chartMeasure.js";
-import {usePriceChartTradeSetup11} from '../composables/usePriceChartTradeSetup11.js';
+import {usePriceChartLsReaction} from '../composables/usePriceChartLsReaction.js';
 import { usePriceChartMarketStructure } from "../composables/usePriceChartMarketStructure.js";
 import { usePriceChartChecklist } from "../composables/usePriceChartChecklist.js";
 import { createChecklistStatisticsStore } from "../tradeSetupChecklistStatistics.js";
@@ -107,7 +107,7 @@ import { supabase } from "../supabaseClient.js";
 import { usePriceChartTradeSetupDrawing } from "../composables/usePriceChartTradeSetupDrawing.js";
 import { renderTradeMarkers } from "../tradeMarkers.js";
 import { barSecondsFor, REPLAY_LOOKAHEAD_SEC } from "../timeframes.js";
-import { usePriceChartTs11Levels } from "../composables/usePriceChartTs11Levels.js";
+import { usePriceChartLsReactionLevels } from "../composables/usePriceChartLsReactionLevels.js";
 import {
   fetchInitialCandles as fetchInitialForexCandles,
   fetchRecentCandles as fetchRecentForexCandles,
@@ -266,7 +266,7 @@ const props = defineProps({
   // dann gar nicht erst).
   showTradeSetupsLong: { type: Boolean, default: true },
   showTradeSetupsShort: { type: Boolean, default: true },
-  showTs11Levels: { type: Boolean, default: false },
+  showLsReactionLevels: { type: Boolean, default: false },
   // R-/Pip-Skala an jeder Setup-Box (siehe rScale.js, pipScale.js) — je ein eigener Toggle, weil
   // bei einer tradeSetupHistoryCount > 1 schnell viele waagrechte Linien gleichzeitig im Chart
   // stehen.
@@ -476,19 +476,19 @@ const {
   getTrendAnalysisM5Candles,
   computeTradeSetups: computeTradeSetupsPure,
   fetchM5Candles: fetchTradeSetupM5Candles,
-  status:tradeSetup11Status,
-  chain:ts11Chain,
-  dispose:disposeTradeSetup11,
-} = usePriceChartTradeSetup11({onUpdate:()=>{
+  status:lsReactionStatus,
+  chain:lsReactionChain,
+  dispose:disposeLsReaction,
+} = usePriceChartLsReaction({onUpdate:()=>{
   if(!chart)return;
   renderTradeSetupsInternal();refreshCockpitInternal();applyCandleData();
 }});
-const tradeSetup11HoverDetails=ref('');
-watch([()=>props.symbol,()=>props.replayUntil,tradeSetupsMetadata],()=>{tradeSetup11HoverDetails.value='';});
+const lsReactionHoverDetails=ref('');
+watch([()=>props.symbol,()=>props.replayUntil,tradeSetupsMetadata],()=>{lsReactionHoverDetails.value='';});
 const selectedFrozenSetup=computed(()=>props.pinnedTradeSetups.find(s=>s.tradeSetupId===props.hoveredPinTradeSetupId)?.frozenSetup);
 const interactiveTradeSetups=computed(()=>tradeSetupInteractionRows(tradeSetupsMetadata.value,selectedFrozenSetup.value));
-const tradeSetup11Details=computed(()=>selectedFrozenSetup.value
-  ?`Eingefrorener Pin · ${tradeSetupSourceDetails(selectedFrozenSetup.value,props.symbol)}`:tradeSetup11HoverDetails.value);
+const lsReactionDetails=computed(()=>selectedFrozenSetup.value
+  ?`Eingefrorener Pin · ${tradeSetupSourceDetails(selectedFrozenSetup.value,props.symbol)}`:lsReactionHoverDetails.value);
 // Ranges/1h-Struktur-Trend + Market-Structure-Zeichnung (siehe usePriceChartMarketStructure.js,
 // Phase 6g) — marketStructureState/rangesMetadata/rangesMetadata2 direkt im Template/in anderen
 // Composables' ctx gebunden, daher destructured.
@@ -1658,7 +1658,7 @@ async function loadRangesCandles({ refresh = true } = {}) {
 function rangesNeedsData() {
   if (snapshotView.value) return false;
   // M5-Struktur ankert am 1h-Outer-Cutoff, braucht also dieselben H1-Kerzen.
-  return props.showTradeSetup2 || props.showM1Structure || props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showTs11Levels;
+  return props.showTradeSetup2 || props.showM1Structure || props.showTradeSetupChecklist || props.showRanges || props.showRangesMetadata || props.showTradeSetupCockpit || props.showTradeSetups || props.showM5Structure || props.showLsReactionLevels;
 }
 // An den H1-Kerzenschluss ausgerichtet statt festem Intervall (Chat 2026-07-20) — H1-Kerzen
 // ändern sich nur stündlich, ein häufigerer Poll bringt nichts außer zusätzlichen Requests.
@@ -1699,15 +1699,15 @@ function computeTradeSetupsInternal() {
     symbol: props.symbol,
     tradeSetupHistoryCount: props.tradeSetupHistoryCount,
     dbTradeSetups: props.dbTradeSetups,
-    evaluatedAt:tradeSetup11EvaluationTime(),
+    evaluatedAt:lsReactionEvaluationTime(),
     settings:{m5StructurePeriod:props.m5StructurePeriod,m5Structure2Period:props.m5Structure2Period},
   });
 }
 
-function tradeSetup11EvaluationTime() {
+function lsReactionEvaluationTime() {
   const now=Math.floor(Date.now()/1000);
   // Alte Chartkerzen dürfen einen neuen Replay-Abruf nicht wieder auf den vorherigen Monat begrenzen.
-  return tradeSetup11RequestedBoundary({replayUntil:props.replayUntil,currentBar:props.currentBar,now});
+  return lsReactionRequestedBoundary({replayUntil:props.replayUntil,currentBar:props.currentBar,now});
 }
 
 // Dünne Koordinaten-Wrapper um die reinen Match-Funktionen in priceChartHitTest.js (siehe dort für
@@ -1832,9 +1832,9 @@ function renderTradeSetupsInternal() {
     replayUntil: props.replayUntil,
     symbol: props.symbol,
   });
-  ts11Levels.render(candleSeries, { chain: ts11Chain.value, candles: clipReplay(allCandles), show: props.showTs11Levels });
+  lsReactionLevels.render(candleSeries, { chain: lsReactionChain.value, candles: clipReplay(allCandles), show: props.showLsReactionLevels });
 }
-const ts11Levels = usePriceChartTs11Levels();
+const lsReactionLevels = usePriceChartLsReactionLevels();
 
 // EMA-/RSI-/Divergenz-Zeichenlogik lebt seit Phase 6b des Große-Dateien-Refactorings in
 // usePriceChartRsi.js (siehe dort, inkl. der EMA/RSI-Series-Anlage aus onMounted und den
@@ -1865,7 +1865,7 @@ async function loadTradeSetupM5({ refresh = true } = {}) {
   if (snapshotView.value) return true;
   const checklistTicket = checklist.begin('m5');
   const { ok, applied } = await fetchTradeSetupM5Candles({ symbol: props.symbol, toMs: replayToMs("5m"), showEma: props.showEma,
-    evaluatedAt:tradeSetup11EvaluationTime() });
+    evaluatedAt:lsReactionEvaluationTime() });
   checklist.finish(checklistTicket, { ok, applied }, getTradeSetupM5Candles());
   if (!chart) return ok;
   if (ok && applied && refresh) {
@@ -2291,7 +2291,7 @@ onMounted(() => {
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     doubleOrderBlocks.hover({x,y});
-    tradeSetup11HoverDetails.value=tradeSetupSourceDetails(findClickedSetup({point:{x,y}}),props.symbol);
+    lsReactionHoverDetails.value=tradeSetupSourceDetails(findClickedSetup({point:{x,y}}),props.symbol);
     const targetCursor=targetDrawing.cursorAt(x,y);
     if(targetCursor){chartContainerRef.value.style.cursor=targetCursor;return;}
     ideaDrawing.move({x,y});
@@ -2378,7 +2378,7 @@ onUnmounted(() => {
   disposeDrawings();
   disposeMarketStructure();
   disposeTradeSetupDrawing();
-  disposeTradeSetup11();
+  disposeLsReaction();
   pinnedChartObjectDrawing.clear(candleSeries);
   disposeLiquidity();
   disposeDailyPivots();
@@ -2396,7 +2396,7 @@ onUnmounted(() => {
   // per Guard erkennen, dass der Chart schon disposed ist, statt lightweight-charts'
   // "Object is disposed" auszulösen.
   chart = null;
-  ts11Levels.clear();
+  lsReactionLevels.clear();
   candleSeries = null;
   priceChartRsi.dispose();
 });
@@ -2503,7 +2503,7 @@ watch(() => props.dbTradeSetups, () => {
 // Nur Re-Render, kein computeTradeSetups() — currentTradeSetups bleibt unabhängig von diesem
 // Toggle vollständig (siehe computeTradeSetups), die TSC-Karte bekommt also KEIN eigenes
 // Refresh hier (sie ignoriert diesen Toggle bewusst, siehe Chat 2026-07-19).
-watch([() => props.showTradeSetupsLong, () => props.showTradeSetupsShort, () => props.showTs11Levels, () => props.showRScale, () => props.showPipScale], renderTradeSetupsInternal);
+watch([() => props.showTradeSetupsLong, () => props.showTradeSetupsShort, () => props.showLsReactionLevels, () => props.showRScale, () => props.showPipScale], renderTradeSetupsInternal);
 watch(() => props.showRanges, () => {
   refreshRangesPollingState();
   refreshRangesMarkersInternal(); // sofort reagieren, nicht erst beim nächsten refreshChart()
@@ -2803,7 +2803,7 @@ defineExpose({
 
 <template>
   <div class="chart-wrapper" :style="{ height: chartWrapperHeight + 'px' }">
-    <div ref="chartContainerRef" class="chart-container" @mouseleave="tradeSetup11HoverDetails='' "></div>
+    <div ref="chartContainerRef" class="chart-container" @mouseleave="lsReactionHoverDetails='' "></div>
     <TradeSetup2Loading v-if="snapshotView && showTradeSetup2" :steps="snapshotSteps" :error="setup2Error || snapshotCandleError"
       @retry="setup2.refresh(); loadInitial()" />
     <TradeSetup2Controls v-if="showTradeSetup2" :positions="setup2Positions" :selected="setup2Selected" :loading="setup2Loading"
@@ -2813,7 +2813,7 @@ defineExpose({
       <M1StructureStatus v-if="showM1Structure && !snapshotView" :status="m1StructureStatus" :symbol="symbol" />
       <DoubleOrderBlockStatus v-if="(showDoubleOrderBlocks || pinnedDoubleOrderBlocks.length) && dobStatus" :status="dobStatus" :details="dobDetails" />
       <DoubleOrderBlockStatus v-if="dobPositionsStatus" :status="dobPositionsStatus" />
-      <TradeSetup11Status v-if="showTradeSetups && (showTradeSetupsLong || showTradeSetupsShort) && !snapshotView" :status="tradeSetup11Status" :details="tradeSetup11Details" />
+      <LsReactionStatus v-if="showTradeSetups && (showTradeSetupsLong || showTradeSetupsShort) && !snapshotView" :status="lsReactionStatus" :details="lsReactionDetails" />
     </ChartIndicatorStatusStack>
     <div v-if="ideaEditingStatus && !ideaDrawing.active.value" class="idea-drawing-controls" role="status">{{ideaEditingStatus}}</div>
     <div v-if="ideaDrawing.active.value" class="idea-drawing-controls" role="status">

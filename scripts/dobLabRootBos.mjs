@@ -1,6 +1,6 @@
 // Labor DOB-LAB-ROOT-BOS (Philips Wurzel-Skizze, Long-Bild): Ein Trade gegen die Wurzel, dessen aktuelle Range gegen die Wurzel läuft,
 // hat einen BOS, wenn das Extrem der aktuellen Range (HH bzw. LL) bis zum Entry das letzte LH (bzw. HL) der Wurzel vor ihrem Extrem bricht.
-// Nur Messung auf den gespeicherten LQ-Sweep-v1-Trades (TS1.1 v7), Kontext kausal zum Entry. Schreibt analysis/dob-setup/lab-root-bos-2026.json.
+// Nur Messung auf den gespeicherten LQ-Sweep-v1-Trades (LS-Reaktion v7), Kontext kausal zum Entry. Schreibt analysis/dob-setup/lab-root-bos-2026.json.
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -16,30 +16,30 @@ const server = await createServer({ root, envDir, server: { middlewareMode: true
 try {
   const L = p => server.ssrLoadModule(p);
   const [{ supabase }, { fetchInitialCandles }, { fetchAllRows }, st, { dobPoiFeature, dobFeaturesOf }, { berlinDayRangeUtcMs },
-    { prepareTradeSetup11Context }, { currentTradeSetup11Range }, { createCloseReactionCache }, { buildHistoricalDailyAnchors }] = await Promise.all([
+    { prepareM5StructureContext }, { currentM5StructureRange }, { createCloseReactionCache }, { buildHistoricalDailyAnchors }] = await Promise.all([
     '/src/supabaseClient.js', '/src/forexCandles.js', '/src/dbReadPaging.js', '/src/dobTradeStatistics.js', '/src/dobTradeFeatures.js', '/src/berlinTime.js',
-    '/src/tradeSetup11Context.js', '/src/tradeSetup11Ownership.js', '/src/m5CloseReactionHistory.js', '/src/tradeSetup2Anchors.js'].map(L));
+    '/src/m5StructureContext.js', '/src/m5StructureContext.js', '/src/m5CloseReactionHistory.js', '/src/tradeSetup2Anchors.js'].map(L));
   const out = { measurement: 'dob-lab-root-bos-v1', git: execSync('git rev-parse --short HEAD').toString().trim(), target: '3R', instruments: {} };
   for (const [instrument, run] of [['XAUUSD', 'dob-lq-sweep-v1'], ['GBPUSD', 'dob-lq-sweep-gbpusd-v1']]) {
     const { data: rows, error } = await fetchAllRows((from, to) => supabase.from('dob_trade_setups').select('*').eq('run_id', run)
       .order('entry_time').order('id').range(from, to));
     if (error) throw error;
-    // Gleiche Kerzen wie der Lauf (TS1.1-Cache ab 15.11.2025 für den D1-Anker).
+    // Gleiche Kerzen wie der Lauf (LS-Reaktion-Cache ab 15.11.2025 für den D1-Anker).
     const since = berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000;
     const cacheOf = dir => dobCandleCache({ outDir: dir, symbol: instrument, refresh: false, defaultStartSec: since, startSec: since, fetchInitialCandles, supabase });
-    const ts11 = cacheOf(path.join(root, '.debug', 'dob-setup', 'ts11')), htf = cacheOf(path.join(root, '.debug', 'dob-setup'));
-    const m5 = await ts11.candles('5m', 300, 300), h1 = await htf.candles('1h', 3600, 200), d1 = await ts11.candles('1D', 86400, 300);
+    const lsReaction = cacheOf(path.join(root, '.debug', 'dob-setup', 'ts11')), htf = cacheOf(path.join(root, '.debug', 'dob-setup'));
+    const m5 = await lsReaction.candles('5m', 300, 300), h1 = await htf.candles('1h', 3600, 200), d1 = await lsReaction.candles('1D', 86400, 300);
     const sessions = await htf.sessions(), anchors = buildHistoricalDailyAnchors(d1, h1), closeCache = createCloseReactionCache();
     const featureOf = row => {
       const at = row.entry_time, anchor = anchors.filter(a => a.knownAt <= at).sort((a, b) => b.pivotTime - a.pivotTime)[0];
       if (!anchor) return { group: 'unbekannt' };
-      // M5 ab Strukturstart minus 1 Tag wie tradeSetup11Rows: mehr M5 ändert nichts, kostet nur Zeit.
-      const ctx = prepareTradeSetup11Context({ instrument, m5Candles: m5.filter(c => c.time >= anchor.structureStartTime - 86400), h1Candles: h1,
+      // M5 ab Strukturstart minus 1 Tag wie lsReactionRows: mehr M5 ändert nichts, kostet nur Zeit.
+      const ctx = prepareM5StructureContext({ instrument, m5Candles: m5.filter(c => c.time >= anchor.structureStartTime - 86400), h1Candles: h1,
         d1Candles: d1, sessionConfigs: sessions, evaluatedAt: at });
       if (ctx.status !== 'ready') return { group: 'unbekannt' };
       const rootState = ctx.chain[0], trade = row.direction === 'long' ? 'uptrend' : 'downtrend';
       if (rootState.trend === trade) return { group: 'mit Wurzel' };
-      const current = currentTradeSetup11Range(ctx, closeCache);
+      const current = currentM5StructureRange(ctx, closeCache);
       if (!current || current.trend !== trade) return { group: 'gegen Wurzel, Range nicht gegen Wurzel' };
       // Letztes LH vor dem Wurzel-Low (Long) bzw. letztes HL vor dem Wurzel-High (Short), aus den P5-Pivots der Wurzel.
       const extreme = trade === 'uptrend' ? rootState.currRange.low : rootState.currRange.high, type = trade === 'uptrend' ? 'high' : 'low';

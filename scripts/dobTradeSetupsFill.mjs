@@ -31,17 +31,17 @@ const RUNS = Object.fromEntries([
   ['v3', { label: 'v3 · Gegen-DOB', description: 'wie v2 mit Gegen-DOB-Status seit dem Retest des POI; Sperre bzw. TP über die Setup-Konfiguration',
     sort: 3, pick: r => r.setups, poiOptions: { requireRetest: true }, counterDob: true }],
 ].map(([v, run]) => [runId(v), { ...run, version: `dob-setup-${v}`, poiType: 'htf_ob' }]));
-// LQ-Sweep v0: POI = TS1.1-Setup mit gleicher Kante an OB1/OB2 (Philip). Der Lauf nimmt auch Überlappung und knapp daneben
+// LQ-Sweep v0: POI = LS-Reaktion-Setup mit gleicher Kante an OB1/OB2 (Philip). Der Lauf nimmt auch Überlappung und knapp daneben
 // auf (features.poi_match), welche Stufe zählt, entscheidet die Konfig (poiMatchMode, Default gleiche Kante). Lauf-ID wie oben:
 // XAU dob-lq-sweep-v0, sonst mit Instrument (dob-lq-sweep-gbpusd-v0).
-RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`] = { label: 'v0 · TS1.1 an OB1/OB2',
-  description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem TS1.1-OB teilt (TS1.1 wie im Chart, mit Trend-Policy; Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
+RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`] = { label: 'v0 · LS-Reaktion an OB1/OB2',
+  description: 'DOB, dessen OB1 oder OB2 eine Kante mit einem LS-Reaktion-OB teilt (LS-Reaktion wie im Chart, mit Trend-Policy; Überlappung/daneben als Merkmal); Gegen-DOB-Status wie v3',
   sort: 10, version: 'dob-lq-sweep-v0', poiType: 'lq_sweep', pick: r => r.setups, poiOptions: { match: 'adjacent' }, counterDob: true };
-// LQ-Sweep v1: Konfiguration wie v0, nur mit dem TS1.1-Stand nach Philips Wurzel-Skizze (Pivot-Alter + Wurzel als Quelle, v7).
+// LQ-Sweep v1: Konfiguration wie v0, nur mit dem LS-Reaktion-Stand nach Philips Wurzel-Skizze (Pivot-Alter + Wurzel als Quelle, v7).
 // v0 bleibt als Vergleich stehen und kanonisch (dobCanonicalRunId).
 const lqV0 = RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`];
-RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v1' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v1`] = { ...lqV0, label: 'v1 · TS1.1 (Wurzel-Skizze)',
-  description: `${lqV0.description}; TS1.1 mit Pivot-Alter-Regel und Wurzel als LS-Quelle nach Philips Skizze`, sort: 11, version: 'dob-lq-sweep-v1' };
+RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v1' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v1`] = { ...lqV0, label: 'v1 · LS-Reaktion (Wurzel-Skizze)',
+  description: `${lqV0.description}; LS-Reaktion mit Pivot-Alter-Regel und Wurzel als LS-Quelle nach Philips Skizze`, sort: 11, version: 'dob-lq-sweep-v1' };
 const RUN_ID = flag('--run') ?? runId('v0');
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
@@ -54,12 +54,12 @@ try {
   const [{ fetchInitialCandles }, { supabase }, { checkDobTradeSetup, dobLiveWindowInput },
     { evaluateDoubleOrderBlockOutcome }, { markIgnoredCandles, htfObCandles }, { berlinDayRangeUtcMs, berlinDateStrFor, berlinOffsetMinutes },
     { dobPoiContext, dobPoiZoneAgeSeconds }, { dobMaxR, dobWideVariant, dobSwingStopVariant }, { createDobCounterDobGate }, { dobTradeFeatures, dobBreakevenFeatures, dobPoiFeatures, DOB_BREAKEVEN_AT_R_LEVELS },
-    { dobTs11FromRow, dobLqMatchRank }, { fetchAllRows }, { tradeSetup11RowVerdicts, TRADE_SETUP_11_VERSION }, { createDobSwingStopGate }, { SL_ALGO_V1, SL_ALGO_POI_TYPES }, { dobIntradayOutcome }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
+    { dobLsReactionFromRow, dobLqMatchRank }, { fetchAllRows }, { lsReactionRowVerdicts, LS_REACTION_VERSION }, { createDobSwingStopGate }, { SL_ALGO_V1, SL_ALGO_POI_TYPES }, { dobIntradayOutcome }] = await Promise.all(['/src/forexCandles.js', '/src/supabaseClient.js', '/src/dobTradeSetup.js',
       '/src/doubleOrderBlockOutcome.js', '/src/sessionOccurrences.js', '/src/berlinTime.js', '/src/dobHtfObPoi.js', '/src/dobMaxR.js', '/src/dobCounterDob.js', '/src/dobTradeFeatures.js',
-      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/tradeSetup11Rows.js', '/src/dobSwingStop.js', '/src/slAlgo.js', '/src/dobIntraday.js'].map(load));
+      '/src/dobLqSweepPoi.js', '/src/dbReadPaging.js', '/src/lsReactionRows.js', '/src/dobSwingStop.js', '/src/slAlgo.js', '/src/dobIntraday.js'].map(load));
   const [{ fetchDobTradePins }, { missingDobModelTrades, changedDobRunTrades }] = await Promise.all(['/src/pinContext.js', '/src/dobTradeStatistics.js'].map(load));
   const LQ = RUNS[RUN_ID].poiType === 'lq_sweep';
-  // trade_setups-Zeilen (alle Detektorversionen) nur für LQ-Sweep-Läufe; TS1.1 daraus erst unten mit dem Trendkontext.
+  // trade_setups-Zeilen (alle Detektorversionen) nur für LQ-Sweep-Läufe; LS-Reaktion daraus erst unten mit dem Trendkontext.
   const tradeSetupRows = LQ ? await (async () => { const { data, error } = await fetchAllRows((from, to) => supabase.from('trade_setups')
     .select('*,trade_setup_sweeps(price,pivot_time,touched_time,timeframe,is_primary),ob_zones(top,bottom)')
     .eq('instrument', SYMBOL).order('ob_start_time').order('id').range(from, to)); if (error) throw error; return data; })() : undefined;
@@ -76,20 +76,20 @@ try {
   const poiContext = dobPoiContext({ instrument: SYMBOL, m5Candles: mark(m5All), htfCandles: {
     '1h': htfObCandles(mark(await htf.candles('1h', 3600, 200)), sessions, offset),
     '4h': htfObCandles(mark(await htf.candles('4h', 4 * 3600, 100)), sessions, offset) } });
-  const ts11Cache = LQ && dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup', 'ts11'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
+  const lsReactionCache = LQ && dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup', 'ts11'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
     defaultStartSec: berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000, startSec: berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000, fetchInitialCandles, supabase });
-  const ts11Candles = LQ && { m5: await ts11Cache.candles('5m', 300, 300), h1: await htf.candles('1h', 3600, 200), d1: await ts11Cache.candles('1D', 86400, 300) };
+  const lsReactionCandles = LQ && { m5: await lsReactionCache.candles('5m', 300, 300), h1: await htf.candles('1h', 3600, 200), d1: await lsReactionCache.candles('1D', 86400, 300) };
   const m1Marked = mark(m1All), m5Marked = mark(m5All);
   const dataEnd = Math.min(m1All.at(-1).time + 60, Math.floor(Date.now() / 1000));
-  // TS1.1 wie im Chart und im Watcher (tradeSetup11RowVerdicts, Trend-Policy). Das Urteil hängt nur an Kerzen bis zur Setup-Erkennung,
+  // LS-Reaktion wie im Chart und im Watcher (lsReactionRowVerdicts, Trend-Policy). Das Urteil hängt nur an Kerzen bis zur Setup-Erkennung,
   // daher einmal zum Datenende. Eigener Cache-Ordner: M5/D1 ab 15.11.2025 für den D1-Anker, ohne die Lauf-Kerzen oben zu verändern.
   const tradeSetups = LQ ? (() => {
-    const verdicts = tradeSetup11RowVerdicts({ rows: tradeSetupRows, instrument: SYMBOL, m5Candles: ts11Candles.m5, h1Candles: ts11Candles.h1,
-      d1Candles: ts11Candles.d1, evaluatedAt: dataEnd, sessionConfigs: sessions });
+    const verdicts = lsReactionRowVerdicts({ rows: tradeSetupRows, instrument: SYMBOL, m5Candles: lsReactionCandles.m5, h1Candles: lsReactionCandles.h1,
+      d1Candles: lsReactionCandles.d1, evaluatedAt: dataEnd, sessionConfigs: sessions });
     const counts = Object.groupBy([...verdicts.values()], v => v.status);
-    console.log(`TS1.1 ${TRADE_SETUP_11_VERSION}: ${tradeSetupRows.length} Zeilen · ${Object.entries(counts).map(([k, v]) => `${k} ${v.length}`).join(' · ')}`);
+    console.log(`LS-Reaktion ${LS_REACTION_VERSION}: ${tradeSetupRows.length} Zeilen · ${Object.entries(counts).map(([k, v]) => `${k} ${v.length}`).join(' · ')}`);
     // Urteil mitgeben: sein witness (bestandene Quelle) ist das LS des POI, nicht die Primär-LS der Zeile.
-    return tradeSetupRows.filter(r => verdicts.get(r.id)?.status === 'passed').map(r => dobTs11FromRow(r, verdicts.get(r.id)));
+    return tradeSetupRows.filter(r => verdicts.get(r.id)?.status === 'passed').map(r => dobLsReactionFromRow(r, verdicts.get(r.id)));
   })() : undefined;
 
   const grid = { symbol: SYMBOL, m5All, m5Marked, m1Marked };

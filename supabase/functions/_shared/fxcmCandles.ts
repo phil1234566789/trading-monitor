@@ -27,7 +27,7 @@ export async function readFxcmCandles(db: SupabaseClient, symbol: string, period
 const CLOSED_BAR_SECONDS: Record<string, number> = { '1m': 60, '5m': 300, '1h': 3600, '4h': 14400, '1D': 86400 };
 
 // Die letzten `count` vor evaluatedAt geschlossenen Kerzen, ohne Obergrenze (Cursor-Paginierung über das zuletzt
-// gelieferte Zeitfeld, PostgREST kappt Seiten still bei ~1000). dob-watcher und das TS1.1-Urteil im MCP lesen
+// gelieferte Zeitfeld, PostgREST kappt Seiten still bei ~1000). dob-watcher und das LS-Reaktion-Urteil im MCP lesen
 // so; kein Live-Nachladen wie fetchForexCandles, das am Wochenende cTrader anwirft.
 export async function readClosedFxcmCandles(db: SupabaseClient, instrument: string, bar: string, evaluatedAt: number, count: number): Promise<FxcmCandle[]> {
   const rows: Record<string, unknown>[] = [];

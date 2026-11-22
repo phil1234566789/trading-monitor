@@ -7,7 +7,7 @@ import { cssColorScaled } from '../chartColors.js';
 const props = defineProps({
   preview: { type: Object, required: true },
   instrument: { type: String, required: true },
-  // Eigene Beschriftung (DOB-Watcher-Panel: OB1/OB2/TS1.1-OB); dann ohne Sweep-Zuordnung und Kandidaten-Hinweis.
+  // Eigene Beschriftung (DOB-Watcher-Panel: OB1/OB2/LS-Reaktion-OB); dann ohne Sweep-Zuordnung und Kandidaten-Hinweis.
   label: { type: String, default: null },
 });
 const bearish = computed(() => props.preview.ob.dir === -1);

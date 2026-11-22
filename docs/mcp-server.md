@@ -66,7 +66,7 @@ dupliziert: `_shared/berlinTime.ts` (Berlin-Zeitzonen-Datumsmathe aus `dataExpor
 Originale geändert, prüfen ob der Port hier denselben Fix braucht.
 
 `berlinTime.ts`/`sessionOccurrences.js`/`pipConfig.js` liegen in `_shared/`, weil mehrere Functions sie
-teilen. Erkennungscode (Setup 1/TS1.1, Fraktale) importieren die Functions direkt aus `src/` (siehe
+teilen. Erkennungscode (Setup 1/LS-Reaktion, Fraktale) importieren die Functions direkt aus `src/` (siehe
 CLAUDE.md „Two runtimes, one detection“), statt eine weitere Kopie zu führen.
 
 ## Trade-Journal-Write-Tools (`tools/trades.ts`)

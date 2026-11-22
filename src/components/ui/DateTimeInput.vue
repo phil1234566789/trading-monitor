@@ -1,6 +1,6 @@
 <script setup>
 import {toDatetimeLocal,fromDatetimeLocal} from '../../datetimeLocal.js';
-// Zeitpunkt-Feld auf Unix-Sekunden (null = leer), z. B. fester Strukturstart im Dashboard und im TS1.1-Debugger.
+// Zeitpunkt-Feld auf Unix-Sekunden (null = leer), z. B. fester Strukturstart im Dashboard und im LS-Reaktion-Debugger.
 defineProps({modelValue:{type:Number,default:null}});
 const emit=defineEmits(['update:modelValue']);
 </script>

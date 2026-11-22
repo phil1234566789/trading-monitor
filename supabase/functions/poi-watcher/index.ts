@@ -717,14 +717,14 @@ Deno.serve(async (req) => {
       }
 
       // Trade-Setups speichern (Liquidity Sweep + M5-Fraktal + M5-OB, siehe src/setup1Detection.js): die Setup-1-Erkennung
-      // plus die TS1.1-Kandidaten, die erst die OB-Sweep-Quellen finden. Die Zeilen sind die Basis für TS1.1 (Chart,
+      // plus die LS-Reaktion-Kandidaten, die erst die OB-Sweep-Quellen finden. Die Zeilen sind die Basis für LS-Reaktion (Chart,
       // dob-watcher, MCP). Ein eigener Setup-1-Telegram existiert seit 21.11.2026 nicht mehr (TS1.0 abgebaut).
       {
         const m5Candles = forexBatch.candlesByTf.get("M5")!;
         const nowSec = Math.floor(Date.now() / 1000);
         // H1-Level wie im Chart aus der H1-Marktstruktur ab dem letzten 1D-Strukturpivot (siehe _shared/setup1Live.ts).
         const structureStartSec = await latestStructureStartSec(supabase, cfg.instrument);
-        const { detected: setup1, ts11Only, params: tradeSetupParams } = detectLiveSetup1({ instrument: cfg.instrument, m5Candles,
+        const { detected: setup1, lsReactionOnly, params: tradeSetupParams } = detectLiveSetup1({ instrument: cfg.instrument, m5Candles,
           h1Candles: h1CandlesForSetup, nowSec, structureStartSec, currentPrice });
         const provenanceFor = (sweepSourceProfile?: string) => tradeSetupProvenance({ source: 'live', detectorVersion: TRADE_SETUP_DETECTOR_VERSION,
           configuration: setup1Configuration({ instrument: cfg.instrument, params: { ...tradeSetupParams, ...(sweepSourceProfile ? { sweepSourceProfile } : {}) },
@@ -733,13 +733,13 @@ Deno.serve(async (req) => {
             m5Window: TRADE_SETUP_M5_CANDLE_LIMIT, h1Window: setup1StructureWindow(nowSec, structureStartSec).count,
             h1Source: 'marketStructurePivots' }) });
         const setup1Provenance = await provenanceFor();
-        // Die Konfiguration (also config_hash) nennt das OB-Sweep-Profil, über das nur TS1.1 sie findet.
-        const ts11Provenance = ts11Only.length ? await provenanceFor(TRADE_SETUP_OB_SWEEP_PROFILE) : null;
-        const ts11Keys = new Set(ts11Only.map((s) => `${s.dir}_${s.obStartTime}`));
+        // Die Konfiguration (also config_hash) nennt das OB-Sweep-Profil, über das nur LS-Reaktion sie findet.
+        const lsReactionProvenance = lsReactionOnly.length ? await provenanceFor(TRADE_SETUP_OB_SWEEP_PROFILE) : null;
+        const lsReactionKeys = new Set(lsReactionOnly.map((s) => `${s.dir}_${s.obStartTime}`));
 
-        for (const setup of [...setup1, ...ts11Only]) {
+        for (const setup of [...setup1, ...lsReactionOnly]) {
           const direction: "short" | "long" = setup.dir === 1 ? "short" : "long";
-          const setupProvenance = ts11Keys.has(`${setup.dir}_${setup.obStartTime}`) ? ts11Provenance! : setup1Provenance;
+          const setupProvenance = lsReactionKeys.has(`${setup.dir}_${setup.obStartTime}`) ? lsReactionProvenance! : setup1Provenance;
           // Das bestätigende M5-OB als eigene ob_zones-Zeile (Migration 20260822100000), nur die referenzierte
           // Teilmenge. Normaler Upsert, damit .select() auch beim Konflikt die id liefert.
           const { data: setupObZone, error: obZoneUpsertError } = await supabase
@@ -773,7 +773,7 @@ Deno.serve(async (req) => {
           await persistTradeSetupSweeps(supabase, setupRow.id as number, setup.sweeps);
         }
 
-        instrumentSummary["tradeSetups"] = { detected: setup1.length, ts11Only: ts11Only.length };
+        instrumentSummary["tradeSetups"] = { detected: setup1.length, lsReactionOnly: lsReactionOnly.length };
       }
 
       // Erst nach einem vollständigen Lauf markieren; ein Fehler muss erneut versucht werden.

@@ -19,7 +19,7 @@ import { buildNearRelevantLiquidityLevels, NEAR_RANGE_PIPS } from "./nearRelevan
 import { computeRsi, rsiZone, DEFAULT_RSI_PERIOD } from "../rsi.js";
 import { computeEma } from "../ema.js";
 import { resolveDayWindow, fetchM5WithWarmup, isWithinDayWindow } from "../indicatorWindow.ts";
-import { getTs11TradeSetups } from "../ts11TradeSetups.ts";
+import { getLsReactionTradeSetups } from "../lsReactionTradeSetups.ts";
 import { json } from "../jsonResponse.ts";
 import { WATCHED_OB_TIMEFRAMES } from "../../_shared/obTimeframes.js";
 
@@ -196,9 +196,9 @@ export function registerReadTools(server: McpServer) {
   server.registerTool(
     "get_trade_setups",
     {
-      title: "TS1.1-Setups",
+      title: "LS-Reaktion-Setups",
       description:
-        "Gespeicherte Trade-Setups mit bestandenem TS1.1-Urteil (dieselbe Policy wie Chart und dob-watcher; " +
+        "Gespeicherte Trade-Setups mit bestandenem LS-Reaktion-Urteil (dieselbe Policy wie Chart und dob-watcher; " +
         "TS1.0 als eigenes Produkt gibt es seit 21.11.2026 nicht mehr), neueste zuerst. Das Urteil kommt aus dem " +
         "dob-watcher-Cache oder wird nachgerechnet. limit hat einen Default (2), weil ein ungefilterter Call das " +
         "Token-Limit sprengte; für breitere Abfragen limit erhöhen (max. 500), fromSec grenzt nach ob_start_time ein. " +
@@ -212,7 +212,7 @@ export function registerReadTools(server: McpServer) {
         replayUntilSec: z.number().optional().describe("Unix-Sekunden — nur Setups, deren created_at (Erkennungszeitpunkt) bis zu diesem Zeitpunkt lag (Replay-Simulation)"),
       },
     },
-    async ({ instrument, fromSec, limit, replayUntilSec }) => json(await getTs11TradeSetups(instrument, fromSec, limit, replayUntilSec)),
+    async ({ instrument, fromSec, limit, replayUntilSec }) => json(await getLsReactionTradeSetups(instrument, fromSec, limit, replayUntilSec)),
   );
 
   server.registerTool(

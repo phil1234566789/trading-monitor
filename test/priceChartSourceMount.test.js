@@ -8,7 +8,7 @@ vi.mock('../src/composables/useDoubleOrderBlockChart.js',async original=>{
 vi.mock('../src/supabaseClient.js',()=>({supabase:{from(){
  const q=new Proxy({}, {get:(_,k)=>k==='then'?r=>r({data:[],error:null}):()=>q});return q;
 }}}));
-it('initializes the actual PriceChart with DOB, M1 and TS11 replay consumers together',async()=>{
+it('initializes the actual PriceChart with DOB, M1 and LS_REACTION replay consumers together',async()=>{
  const storage={getItem:()=>null,setItem:()=>{},removeItem:()=>{}};
  vi.stubGlobal('localStorage',storage);vi.stubGlobal('sessionStorage',storage);
  vi.stubGlobal('window',{addEventListener:()=>{},removeEventListener:()=>{},localStorage:storage,sessionStorage:storage});

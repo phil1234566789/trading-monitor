@@ -7,7 +7,7 @@ import ChecklistOrderBlock from './ChecklistOrderBlock.vue';
 
 // DOB-Watcher-Panel nach Philips abgenommener Vorschau: Kopf mit Herzschlag, „Aktuell“ (Retest und frischer Entry aller Assets) und
 // aufklappbares „Protokoll“ des Tages mit Asset-Filtern. Jede Zeile ist ein Button und klappt Details, die OB-Rahmen (OB1, OB2,
-// TS1.1-OB wie in der Checkliste) sowie Chart- und Pin-Link auf. Vorn steht der Status-Satz mit Grund, nach den Rahmen der POI.
+// LS-Reaktion-OB wie in der Checkliste) sowie Chart- und Pin-Link auf. Vorn steht der Status-Satz mit Grund, nach den Rahmen der POI.
 const props=defineProps({status:Object,candidates:Array,deliveryIssues:Array});
 const emit=defineEmits(['open-chart','open-pin']);
 const STATUS_TEXT={retest:'Retest',entry:'Entry',running:'läuft',win:'Win',loss:'Loss',dropped:'verworfen'};

@@ -33,12 +33,12 @@ it('gesperrter Monat einer POI-Art: beide rechnen, jede mit ihrer Konfig',()=>{
  expect(seen).toEqual([['htf_ob',[month]],['lq_sweep',[]]]);
 });
 
-it('LQ-Sweep nennt das tragende TS1.1-Setup in der POI-Zeile, auch im Entry-Alarm',()=>{
+it('LQ-Sweep nennt das tragende LS-Reaktion-Setup in der POI-Zeile, auch im Entry-Alarm',()=>{
  const poi={kind:'ts11',tradeSetupId:50160,match:'edge',gapUsd:0};
  const entry={...retest,id:'dob:XAUUSD:-1:1000:2000:a',route:'a',phase:'entry',entryTime:at,entryPrice:4113.57,stopPrice:4123.87,poi};
  const [lq]=dobPoiTypeAlarmRuns({poiTypes:[poiTypes[1]],input:{},evaluatedAt:at,check:()=>({setups:[{...retest,poi},entry],rejected:[],pairs:new Map()})});
  const lines=lq.events.map(e=>e.text.split('\n')[1]);
- expect(lines).toEqual(['POI: LQ-Sweep · TS1.1 #50160 · Kante','POI: LQ-Sweep · TS1.1 #50160 · Kante']);
+ expect(lines).toEqual(['POI: LQ-Sweep · LS-Reaktion #50160 · Kante','POI: LQ-Sweep · LS-Reaktion #50160 · Kante']);
 });
 
 describe('Entry-Alarm: TP nach Konfig',()=>{
@@ -84,5 +84,5 @@ describe('⛔ bei jeder Konfig-Sperre mit Statistik der Sperre (Q23)',()=>{
 it('LQ-Sweep-POI-Zeile nennt das gesweepte LS-Level vorn',()=>{
  const poi={kind:'ts11',tradeSetupId:50740,match:'edge',gapUsd:0,lsPrice:1.32068};
  const [lq]=dobPoiTypeAlarmRuns({poiTypes:[poiTypes[1]],input:{},evaluatedAt:at,check:()=>({setups:[{...retest,instrument:'GBPUSD',poi}],rejected:[],pairs:new Map()})});
- expect(lq.events[0].text.split('\n')[1]).toBe('POI: LQ-Sweep 1,32068 · TS1.1 #50740 · Kante');
+ expect(lq.events[0].text.split('\n')[1]).toBe('POI: LQ-Sweep 1,32068 · LS-Reaktion #50740 · Kante');
 });

@@ -12,9 +12,9 @@ import { RANGES_CANDLE_BUFFER } from '../src/priceChartConstants.js';
 import { detectLiquidityLevels as frontendFractals } from '../src/liquidity.js';
 import { setup1Inputs, detectSetup1, TRADE_SETUP_M5_CANDLE_COUNT } from '../src/setup1Detection.js';
 import { TRADE_SETUP_OB_SWEEP_PROFILE } from '../src/tradeSetup.js';
-import { filterTradeSetup11Candidates } from '../src/tradeSetup11.js';
+import { filterLsReactionCandidates } from '../src/lsReaction.js';
 import { tradeSetupToRow } from '../src/tradeSetupRow.js';
-import { computeTs11Verdicts } from '../supabase/functions/_shared/ts11Verdicts.ts';
+import { computeLsReactionVerdicts } from '../supabase/functions/_shared/lsReactionVerdicts.ts';
 import { detectLiveSetup1 } from '../supabase/functions/_shared/setup1Live.ts';
 import { markIgnored as backendMarkIgnored } from '../supabase/functions/_shared/ignoredCandles.ts';
 import { detectLiquidityLevels as backendFractals } from '../supabase/functions/_shared/liquidity.ts';
@@ -85,9 +85,9 @@ describe.each(fixtures)('$instrument 20.11.2026', (f) => {
     expect(backend.detected.map(setupKey)).toEqual(fresh.map(setupKey));
   });
 
-  // Gemeinsam für Setup-1- und TS1.1-Vergleich: was beide Seiten über den Tag erstmals erkennen.
+  // Gemeinsam für Setup-1- und LS-Reaktion-Vergleich: was beide Seiten über den Tag erstmals erkennen.
   const day = (() => {
-    const chart = new Map(), backend = new Map(), backendTs11 = new Map(), chartTs11 = new Map();
+    const chart = new Map(), backend = new Map(), backendLsReaction = new Map(), chartLsReaction = new Map();
     for (const t of ticks) {
       const { m5, h1, startSec } = at(t);
       const h1Front = chartH1Levels(f, markFront(h1), t, startSec);
@@ -95,15 +95,15 @@ describe.each(fixtures)('$instrument 20.11.2026', (f) => {
       const all = detectSetup1(front, h1Front.highs, h1Front.lows);
       for (const s of [...all.shorts, ...all.longs])
         if (s.obStartTime >= front.params.nowTime - front.params.maxLookbackSec && !chart.has(`${s.dir}:${s.obStartTime}`)) chart.set(`${s.dir}:${s.obStartTime}`, s);
-      const ts11 = detectSetup1(setup1Inputs(f.instrument, markFront(m5), { sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE }), h1Front.highs, h1Front.lows);
-      for (const s of [...ts11.shorts, ...ts11.longs])
-        if (s.obStartTime >= f.dayStart && !chartTs11.has(`${s.dir}:${s.obStartTime}`)) chartTs11.set(`${s.dir}:${s.obStartTime}`, { ...s, instrument: f.instrument });
+      const lsReaction = detectSetup1(setup1Inputs(f.instrument, markFront(m5), { sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE }), h1Front.highs, h1Front.lows);
+      for (const s of [...lsReaction.shorts, ...lsReaction.longs])
+        if (s.obStartTime >= f.dayStart && !chartLsReaction.has(`${s.dir}:${s.obStartTime}`)) chartLsReaction.set(`${s.dir}:${s.obStartTime}`, { ...s, instrument: f.instrument });
       const live = detectLiveSetup1({ instrument: f.instrument, m5Candles: backendMarkIgnored(m5, sessionsBack),
         h1Candles: backendMarkIgnored(h1, sessionsBack), nowSec: t, structureStartSec: startSec, currentPrice: null });
       for (const s of live.detected) if (!backend.has(`${s.dir}:${s.obStartTime}`)) backend.set(`${s.dir}:${s.obStartTime}`, { s, t });
-      for (const s of live.ts11Only) if (!backendTs11.has(`${s.dir}:${s.obStartTime}`)) backendTs11.set(`${s.dir}:${s.obStartTime}`, { s, t });
+      for (const s of live.lsReactionOnly) if (!backendLsReaction.has(`${s.dir}:${s.obStartTime}`)) backendLsReaction.set(`${s.dir}:${s.obStartTime}`, { s, t });
     }
-    return { chart, backend, backendTs11, chartTs11 };
+    return { chart, backend, backendLsReaction, chartLsReaction };
   })();
 
   it('Setup 1: Chart und poi-watcher melden über den Tag dieselben Setups mit denselben Sweeps', () => {
@@ -111,27 +111,27 @@ describe.each(fixtures)('$instrument 20.11.2026', (f) => {
     expect([...day.backend.values()].map(({ s }) => setupKey(s))).toEqual([...day.chart.values()].map(setupKey));
   });
 
-  it('TS1.1: jeder TS1.1-Kandidat des Charts steht als poi-watcher-Zeile; dob-watcher, Protokoll und MCP urteilen wie der Chart', async () => {
+  it('LS-Reaktion: jeder LS-Reaktion-Kandidat des Charts steht als poi-watcher-Zeile; dob-watcher, Protokoll und MCP urteilen wie der Chart', async () => {
     const d1 = rows(f.d1), sessionConfigs = f.sessions.map(sessionFromRow);
     // Kerzen-Loader wie dob-watcher/MCP: nur geschlossene Kerzen bis evaluatedAt, die letzten `count`.
     const bySec = { '5m': [m5All, 300], '1h': [h1All, 3600], '1D': [d1, 86400] };
     const load = async (bar, count) => bySec[bar][0].filter((c) => c.time + bySec[bar][1] <= f.evaluatedAt).slice(-count);
     const judge = async (stored, createdAt) => {
-      const verdicts = await computeTs11Verdicts({ rows: stored.map((x, i) => tradeSetupToRow(x.s, { id: i, instrument: f.instrument, createdAt: createdAt(x) })),
+      const verdicts = await computeLsReactionVerdicts({ rows: stored.map((x, i) => tradeSetupToRow(x.s, { id: i, instrument: f.instrument, createdAt: createdAt(x) })),
         instrument: f.instrument, evaluatedAt: f.evaluatedAt, sessionConfigs, load });
       return new Map(stored.map(({ s }, i) => [`${s.dir}:${s.obStartTime}`, verdicts.get(i)?.status]));
     };
-    // Setup-1-Zeilen plus die TS1.1-only-Zeilen (OB-Sweep-Quellen), die poi-watcher seit 21.11.2026 mitspeichert.
-    const stored = [...day.backend.values(), ...day.backendTs11.values()].filter(({ s }) => s.obStartTime >= f.dayStart);
+    // Setup-1-Zeilen plus die LS-Reaktion-only-Zeilen (OB-Sweep-Quellen), die poi-watcher seit 21.11.2026 mitspeichert.
+    const stored = [...day.backend.values(), ...day.backendLsReaction.values()].filter(({ s }) => s.obStartTime >= f.dayStart);
     const watcher = await judge(stored, ({ t }) => t); // created_at = erster poi-watcher-Lauf mit dem Setup
     const snapshot = await judge(stored, ({ s }) => s.obStartTime + 600); // get_data_snapshot: frisch erkannt, ohne Zeile
     const m5 = m5All.filter((c) => c.time + 300 <= f.evaluatedAt);
-    const chart = filterTradeSetup11Candidates({ instrument: f.instrument, m5Candles: m5, h1Candles: h1All, d1Candles: d1, evaluatedAt: f.evaluatedAt,
-      settings: {}, sessionConfigs, setups: [...day.chartTs11.values()], sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
+    const chart = filterLsReactionCandidates({ instrument: f.instrument, m5Candles: m5, h1Candles: h1All, d1Candles: d1, evaluatedAt: f.evaluatedAt,
+      settings: {}, sessionConfigs, setups: [...day.chartLsReaction.values()], sweepSourceProfile: TRADE_SETUP_OB_SWEEP_PROFILE });
     const chartStatus = new Map(chart.assessments.map((a) => [`${a.setup.dir}:${a.setup.obStartTime}`, a.status]));
-    // Fixture-M5 reicht bis vor den Strukturanker, sonst urteilt TS1.1 nur 'unknown' und der Vergleich wäre leer.
+    // Fixture-M5 reicht bis vor den Strukturanker, sonst urteilt LS-Reaktion nur 'unknown' und der Vergleich wäre leer.
     expect([...chartStatus.values()]).toContain('passed');
-    // Jeder Chart-Kandidat muss gespeichert sein; umgekehrt gibt es keine Zeile, die der Chart nicht als TS1.1-Kandidat kennt.
+    // Jeder Chart-Kandidat muss gespeichert sein; umgekehrt gibt es keine Zeile, die der Chart nicht als LS-Reaktion-Kandidat kennt.
     const keys = [...new Set([...chartStatus.keys(), ...watcher.keys()])].sort();
     const expected = keys.map((k) => [k, chartStatus.get(k) ?? 'nicht im Chart']);
     expect(keys.map((k) => [k, watcher.get(k) ?? 'nicht gespeichert'])).toEqual(expected);
@@ -166,8 +166,8 @@ it('Setup-1-Erkennung läuft nur über src/setup1Detection.js oder ist begründe
   const ALLOWED = {
     'src/setup1Detection.js': 2, // die Pipeline selbst
     'supabase/functions/_shared/tradeSetup.ts': 1, // detectTradeSetup = neuestes von detectTradeSetups, nur Analyse-Skripte
-    'src/tradeSetup11Debugger.js': 1, // TS1.1-Debugger: native M5-Quellen eines Falls, keine Alarmquelle
-    'src/tradeSetup11Projection.js': 1, // TS1.1 rechnet ein gespeichertes Setup auf seinen Erkennungsstand nach
+    'src/lsReactionDebugger.js': 1, // LS-Reaktion-Debugger: native M5-Quellen eines Falls, keine Alarmquelle
+    'src/lsReactionProjection.js': 1, // LS-Reaktion rechnet ein gespeichertes Setup auf seinen Erkennungsstand nach
     'src/tradeSetupChecklistReactions.js': 1, // TS2-Checkliste: Reaktionen innerhalb einer schon bestätigten Range
     'supabase/functions/trading-monitor-mcp/scripts/setup1Replay.ts': 1, // Analyse/Backfill, H1-Fraktale P10 (Bericht 21.11.)
   };
@@ -203,19 +203,19 @@ it('Chart-Hinweis "Struktur weicht vom Alarm ab" folgt derselben Konstante wie d
     expect(dashboard, key).toContain(`useLocalStorageRef("${key}", SETUP1_STRUCTURE_SETTINGS.${key})`);
 });
 
-it('TS1.0 ist abgebaut: kein eigener Setup-1-Alarm, Setup-Listen zeigen nur TS1.1-Urteile', () => {
+it('TS1.0 ist abgebaut: kein eigener Setup-1-Alarm, Setup-Listen zeigen nur LS-Reaktion-Urteile', () => {
   const src = Object.fromEntries(sources());
   expect(src['src/alarmSettings.js']).not.toMatch(/key:\s*["']trade_setup["']/);
   expect(src['supabase/functions/poi-watcher/index.ts']).not.toMatch(/isAlarmOn\(\s*["']trade_setup["']\s*\)/);
-  expect(src['src/alarmLog.js']).toMatch(/trade_setup_ts11_verdicts!inner[\s\S]*status["'],\s*["']passed/);
-  expect(src['supabase/functions/trading-monitor-mcp/tools/reads.ts']).toMatch(/getTs11TradeSetups\(/);
-  expect(src['supabase/functions/trading-monitor-mcp/tools/dataSnapshot.ts']).toMatch(/passedTs11Setups\(/);
+  expect(src['src/alarmLog.js']).toMatch(/ls_reaction_verdicts!inner[\s\S]*status["'],\s*["']passed/);
+  expect(src['supabase/functions/trading-monitor-mcp/tools/reads.ts']).toMatch(/getLsReactionTradeSetups\(/);
+  expect(src['supabase/functions/trading-monitor-mcp/tools/dataSnapshot.ts']).toMatch(/passedLsReactionSetups\(/);
 });
 
 // get_trade_setups lief live in den 300-s-MCP-Timeout: fetchForexCandles hielt das Archiv am Wochenende für veraltet
-// und lud bis zu 15000 M5 von cTrader nach. Das TS1.1-Urteil darf nur geschlossene FXCM-Kerzen lesen (wie dob-watcher)
+// und lud bis zu 15000 M5 von cTrader nach. Das LS-Reaktion-Urteil darf nur geschlossene FXCM-Kerzen lesen (wie dob-watcher)
 // und muss seine Arbeit je Aufruf deckeln.
-it('TS1.1-Urteil im MCP: kein Live-Nachladen bei cTrader, Laufzeit gedeckelt', async () => {
+it('LS-Reaktion-Urteil im MCP: kein Live-Nachladen bei cTrader, Laufzeit gedeckelt', async () => {
   const reach = (start) => {
     const seen = new Set(), todo = [start];
     while (todo.length) {
@@ -230,20 +230,20 @@ it('TS1.1-Urteil im MCP: kein Live-Nachladen bei cTrader, Laufzeit gedeckelt', a
     }
     return [...seen];
   };
-  for (const entry of ['supabase/functions/trading-monitor-mcp/ts11TradeSetups.ts', 'supabase/functions/_shared/ts11Verdicts.ts']) {
+  for (const entry of ['supabase/functions/trading-monitor-mcp/lsReactionTradeSetups.ts', 'supabase/functions/_shared/lsReactionVerdicts.ts']) {
     const files = reach(entry);
     expect(files.filter((f) => /forexCandles\.ts$|\/ctrader\//.test(f)), entry).toEqual([]);
     const code = files.map((f) => blankComments(readFileSync(join(ROOT, f), 'utf8'))).join('\n');
     expect(code, entry).not.toMatch(/\bfetchForexCandles\(|\bfetchLiveForexCandles\(|functions\/v1\/forex-candles/);
   }
-  const mcp = blankComments(readFileSync(join(ROOT, 'supabase/functions/trading-monitor-mcp/ts11TradeSetups.ts'), 'utf8'));
+  const mcp = blankComments(readFileSync(join(ROOT, 'supabase/functions/trading-monitor-mcp/lsReactionTradeSetups.ts'), 'utf8'));
   expect(mcp).toMatch(/readClosedFxcmCandles\(/);
   const cap = Number(mcp.match(/const MAX_COMPUTED = (\d+);/)?.[1]);
   expect(cap).toBeGreaterThan(0);
   expect(cap).toBeLessThanOrEqual(20);
   expect(mcp).toMatch(/\.slice\(0, MAX_COMPUTED\)/);
   expect(mcp).toMatch(/\.limit\(Math\.min\(500,/);
-  const { TS11_CONTEXT } = await import('../supabase/functions/_shared/ts11Verdicts.ts');
-  expect(TS11_CONTEXT.maxM5).toBeLessThanOrEqual(15000);
-  expect(TS11_CONTEXT.h1).toBeLessThanOrEqual(6000);
+  const { LS_REACTION_CONTEXT } = await import('../supabase/functions/_shared/lsReactionVerdicts.ts');
+  expect(LS_REACTION_CONTEXT.maxM5).toBeLessThanOrEqual(15000);
+  expect(LS_REACTION_CONTEXT.h1).toBeLessThanOrEqual(6000);
 });

@@ -16,7 +16,7 @@ export async function captureCurrentTradeSetupSources(setup,instrument){
  const {sourceSnapshotContext,...canonical}=setup;
  if(!sourceSnapshotContext){
   if(setup.sweepSourceProfile||setup.trendEvaluationSourceProfile||setup.ls?.sourceKind==='orderBlock')
-   throw new Error('Der native Auswertungskontext des TS1.1-Snapshots fehlt.');
+   throw new Error('Der native Auswertungskontext des LS-Reaktion-Snapshots fehlt.');
   return null;
  }
  return captureTradeSetupSourceSnapshot({setup:canonical,instrument,
