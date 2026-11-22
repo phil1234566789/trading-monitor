@@ -66,3 +66,12 @@ it('steps over weekend placeholders to the next real replay candle', async () =>
   expect(candle.time).toBe(Date.parse(row('28').time)/1000);
   expect(mock.boundaries).toContainEqual(['gt', new Date(placeholder.time).toISOString()]);
 });
+it('reads native Gold M15 from the archive instead of returning an empty chart', async () => {
+  mock.pages=[{data:[row('18')],error:null}];
+  expect(await fetchInitialCandles('XAUUSD','15m',1)).toHaveLength(1);
+  mock.pages=[{data:[row('17')],error:null}];
+  expect(await fetchOlderCandles('XAUUSD','15m',Date.parse(row('18').time)/1000,1)).toHaveLength(1);
+  mock.pages=[{data:[row('18')],error:null}];
+  expect((await fetchNextCandle('XAUUSD','15m',Date.parse(row('17').time)/1000)).time).toBe(Date.parse(row('18').time)/1000);
+  expect(fetch).not.toHaveBeenCalled();
+});

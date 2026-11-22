@@ -1,8 +1,8 @@
 import {afterEach,expect,it,vi} from 'vitest';
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();});
-it.each([13,14,15,16])('resets affected archive caches without discarding other candles from v%s',async(oldVersion)=>{
+it.each([13,14,15,16,17])('resets affected archive caches without discarding other candles from v%s',async(oldVersion)=>{
  vi.resetModules();
- const rows=new Map(['EURUSD:1m','EURUSD:4h','GBPUSD:5m','XAUUSD:1h','XAUUSD:1m','XAUUSD:3m'].map(key=>[key,{key,candles:[{time:123}]}]));
+ const rows=new Map(['EURUSD:1m','EURUSD:4h','GBPUSD:5m','XAUUSD:1h','XAUUSD:1m','XAUUSD:3m','XAUUSD:15m'].map(key=>[key,{key,candles:[{time:123}]}]));
  const removeStore=vi.fn(),createStore=vi.fn();let openedVersion;
  vi.stubGlobal('IDBKeyRange',{bound:(lower,upper)=>({lower,upper})});
  const store={delete(range){if(typeof range==='string')rows.delete(range);else for(const key of rows.keys())if(key>=range.lower&&key<=range.upper)rows.delete(key);},get(key){const read={};queueMicrotask(()=>{read.result=rows.get(key);read.onsuccess();});return read;}};
@@ -15,7 +15,8 @@ it.each([13,14,15,16])('resets affected archive caches without discarding other 
  expect((await getCachedCandles('EURUSD','4h')).candles).toEqual(oldVersion<16?[]:[{time:123}]);
  expect((await getCachedCandles('XAUUSD','1m')).candles).toEqual([]);
  expect((await getCachedCandles('XAUUSD','3m')).candles).toEqual([]);
+ expect((await getCachedCandles('XAUUSD','15m')).candles).toEqual([]);
  expect((await getCachedCandles('GBPUSD','5m')).candles).toEqual([{time:123}]);
  expect((await getCachedCandles('XAUUSD','1h')).candles).toEqual([{time:123}]);
- expect(openedVersion).toBe(17);expect(removeStore).not.toHaveBeenCalled();expect(createStore).not.toHaveBeenCalled();
+ expect(openedVersion).toBe(18);expect(removeStore).not.toHaveBeenCalled();expect(createStore).not.toHaveBeenCalled();
 });
