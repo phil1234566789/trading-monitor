@@ -210,3 +210,71 @@ Ein zweiter Entry 17:32 bei 1,31999 ist dort `unknown`.
 **Widerspruch im Journal:** Position 177 hat SL 1,32292 und Outcome „win“. Mit diesem SL wäre sie um 15:45 ausgestoppt
 worden. Der eingetragene SL ist offenbar der DOB-SL. Philips realer SL lag nach seiner Aussage auf dem P2-LH; dann
 stimmt das Win mit 2,09 R.
+
+## SL statt Sperre: FVG-Anti-Confluence auf den DOB-Läufen 2026
+
+Frage (Philip, 22.11.): Gewinnt man mehr, wenn die Anti-Confluence den Trade nicht sperrt, sondern den SL hinter den nächsten
+Strukturpunkt legt (Vorbild DR #148)? Skripte `sammleDob.mjs` (Trades lesen) und `slStattSperre.mjs` → `sl-statt-sperre.json`.
+Ausgewertet sind die jüngsten Läufe je Asset: LQ-Sweep GBP v1, EUR v0, XAU v1 und HTF-OB v3. Nur abgeschlossene Trades bis 20.11.
+
+**Treffer (R1, Varianten A/B):**
+- Eine bullische (Short) bzw. bärische (Long) Zone auf M5/M15/H1 aus den letzten 2 Tagen. Sie ist beim Entry offen (FVG nicht
+  vollständig durchlaufen = A) bzw. ungetestet (OB = B), liegt zwischen Ziel und Entry, und ihre Kante liegt höchstens
+  0,5 H1-ATR hinter dem Entry.
+- **Streng:** Der Entry liegt in der Zone selbst.
+- Die breite Definition trifft 60–67 % aller Trades, die strenge 13–17 %.
+
+**Varianten:**
+- (a) wie gelaufen: DOB-Ergebnis, Ziel-R oder −1.
+- (b) gesperrt: 0 R.
+- (c) SL 5 Ticks hinter den letzten bestätigten, bis zum Entry unberührten P2-Swing (M5 oder M15) der letzten 2 Tage, jenseits
+  des DOB-SL. Das Ziel bleibt, R wird neu berechnet.
+- **Proxy-Hinweis:** Der Struktur-Algo markiert solche LH nicht als protected (DR #148: 14:30 nur „high“), deshalb P2-Fraktale.
+- Bei jedem Treffer gab es einen solchen Swing. Der SL wird dadurch im Median 1,5-mal so groß.
+- Die eigene M5-Simulation stimmt bei 97 % der Trades mit dem DOB-Ergebnis überein.
+
+| Gruppe | Treffer | (a) ΣR · WR · Max-DD | (b) gesperrt | (c) M5-Swing | (c) M15-Swing |
+|---|---|---|---|---|---|
+| LQ-Sweep GBP v1 | 521/868 | −16 · 32,7 % · 80 | −8 · 32,6 % · 42 | −30 · 39,9 % · 77 | −25 · 44,0 % · 74 |
+| LQ-Sweep EUR v0 | 668/1089 | −6 · 33,1 % · 58 | **+38** · 36,3 % · 17 | +21 · 42,1 % · 43 | +18 · 46,8 % · 39 |
+| LQ-Sweep XAU v1 | 364/534 | **+45** · 36,1 % · 26 | +28 · 38,8 % · 17 | +35 · 42,3 % · 24 | +44 · 47,6 % · 23 |
+| HTF-OB GBP v3 | 244/363 | −18 · 31,7 % · 47 | −8 · 31,1 % · 16 | 0 · 41,9 % · 18 | **+14** · 47,9 % · 15 |
+| HTF-OB EUR v3 | 194/296 | +4 · 33,8 % · 32 | **+18** · 39,2 % · 8 | +5 · 42,2 % · 24 | −1 · 45,6 % · 26 |
+| HTF-OB XAU v3 | 349/521 | +40 · 35,9 % · 31 | +56 · 44,2 % · 13 | +46 · 43,0 % · 28 | **+59** · 48,4 % · 22 |
+| **alle LQ-Sweep** | 1553/2491 | +23 · 33,6 % · 63 | **+58** · 35,4 % · 36 | +26 · 41,4 % · 72 | +37 · 46,0 % · 63 |
+| **alle HTF-OB v3** | 787/1180 | +26 · 34,1 % · 62 | +66 · 38,9 % · 14 | +51 · 42,5 % · 46 | **+72** · 47,5 % · 38 |
+
+ΣR nach Halbjahr (H1 / H2):
+
+| Gruppe | (a) | (b) | (c) M5 | (c) M15 | (b) streng | (c) M15 streng |
+|---|---|---|---|---|---|---|
+| alle LQ-Sweep | +24 / −1 | **+32 / +26** | +30 / −4 | +37 / 0 | +27 / +11 | +26 / −3 |
+| alle HTF-OB v3 | −27 / +53 | **+41 / +25** | −6 / +58 | +7 / +65 | −17 / +55 | −28 / +58 |
+
+**Ergebnis:**
+- **Die Sperre (b) ist die einzige Variante, die in beiden Läufen und beiden Halbjahren positiv ist.** Bei kleinerem Max-DD
+  (36 bzw. 14 R gegen 62–63 R) bringt sie mehr als „wie gelaufen“.
+- (c) hebt die Winrate der getroffenen Trades deutlich (32 → 45–52 %). Der größere SL halbiert aber das R pro Win, deshalb
+  bleibt ΣR nahe an (a). Nur M15 bei HTF-OB XAU und GBP schlägt die Sperre, und dort trägt fast nur H2.
+- Mit der strengen Definition (Entry in der Zone) verliert die Sperre ihren Vorteil weitgehend. Der Nutzen von (b) kommt aus
+  der breiten Regel, die nur Trades mit „freier Bahn“ übrig lässt (WR 35–39 % gegen 33–34 %).
+- **Gegenprobe DR #148:** Der Trade ist ein Treffer (A und B). In (c) wird er zum Win: SL 1,32377 hinter M5-P2 14:30, Ziel um
+  16:55. Mit dem DOB-Ziel (2R) bringt das +0,84 R, mit Philips Ziel 1,31923 +2,09 R. Mit M15-Swing (13:45, 1,32495) ebenfalls
+  ein Win, aber nur +0,47 R.
+
+**Beispiele** (Short, Zeiten Berlin):
+
+| Entry | (a) | (c) M5 | Hindernis |
+|---|---|---|---|
+| GBP LQ v1 05.03. 12:12 | Loss | SL 1,33608 hinter Swing 11:00 (Risiko ×1,23) → Win 12:30, +1,63 R | 15M-FVG 10:00 1,33276–1,33511 |
+| GBP LQ v1 11.03. 13:43 | Loss | SL 1,34445 hinter Swing 12:50 (×1,61) → Win 12.03. 01:05, +1,24 R | 5M-FVG 09.03. 20:15 |
+| GBP LQ v1 15.01. 15:29 | Loss | SL 1,34171 hinter Swing 13:25 (×2,79) → Win erst am 18.01., +0,72 R | 5M-FVG 15:05 |
+| GBP LQ v1 24.08. 20:49 | Win +2 R | SL 1,36370 hinter Swing 19:05 (×1,75) → Loss 25.08. 01:50 | 5M-FVG 23.08. 23:00 |
+| GBP HTF v3 05.08. 21:29 | Win +2 R | SL 1,34707 hinter Swing 21:00 (×1,22) → Loss 06.08. 04:05 | 5M-OB 19:25 |
+
+Die beiden letzten Fälle zeigen den Mechanismus. Weil das Ziel bleibt, braucht der größere SL einen längeren Weg, und ein
+bisheriger Win läuft vorher in den neuen SL.
+
+**Offen:** Die Treffer-Definition ist zu breit, um als Gate taugen zu können (60 %+ der Trades). Fachlich zu klären ist, was
+„direkt unter dem OB“ heißt und welche Timeframes zählen. Ein angepasstes Ziel (wie bei DR #148 auf 1,31923 statt 2R) ist
+hier nicht gemessen.
