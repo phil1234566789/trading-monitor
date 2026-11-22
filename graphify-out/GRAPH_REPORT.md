@@ -1,4 +1,4 @@
-# Graph Report - dob-sl-variante-c-0043b4  (2026-11-22)
+# Graph Report - xenodochial-kirch-30d785  (2026-11-22)
 
 ## Corpus Check
 - 1974 files · ~1,825,895 words
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `575f1043`
+- Built from commit: `f31ea3ec`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

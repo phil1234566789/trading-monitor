@@ -14738,7 +14738,7 @@
       "file_type": "code",
       "norm_label": "cachedcandlesupto()",
       "source_file": "src/candleCache.js",
-      "source_location": "L236"
+      "source_location": "L237"
     },
     {
       "id": "src_candlecache_cachekey",
@@ -14750,7 +14750,7 @@
       "file_type": "code",
       "norm_label": "cachekey()",
       "source_file": "src/candleCache.js",
-      "source_location": "L127"
+      "source_location": "L128"
     },
     {
       "id": "src_candlecache_fetchcandlescached",
@@ -14762,7 +14762,7 @@
       "file_type": "code",
       "norm_label": "fetchcandlescached()",
       "source_file": "src/candleCache.js",
-      "source_location": "L279"
+      "source_location": "L280"
     },
     {
       "id": "src_candlecache_getcachedcandles",
@@ -14774,7 +14774,7 @@
       "file_type": "code",
       "norm_label": "getcachedcandles()",
       "source_file": "src/candleCache.js",
-      "source_location": "L135"
+      "source_location": "L136"
     },
     {
       "id": "src_candlecache_haslargecandlegap",
@@ -14786,7 +14786,7 @@
       "file_type": "code",
       "norm_label": "haslargecandlegap()",
       "source_file": "src/candleCache.js",
-      "source_location": "L363"
+      "source_location": "L364"
     },
     {
       "id": "src_candlecache_opendb",
@@ -14810,7 +14810,7 @@
       "file_type": "code",
       "norm_label": "safecompleteupto()",
       "source_file": "src/candleCache.js",
-      "source_location": "L367"
+      "source_location": "L368"
     },
     {
       "id": "src_candlecache_setcachedcandles",
@@ -14822,7 +14822,7 @@
       "file_type": "code",
       "norm_label": "setcachedcandles()",
       "source_file": "src/candleCache.js",
-      "source_location": "L151"
+      "source_location": "L152"
     },
     {
       "id": "src_candlecachecoverage_addcandlecoverage",
@@ -14894,7 +14894,7 @@
       "file_type": "code",
       "norm_label": "fetchinitialcandles()",
       "source_file": "src/forexCandles.js",
-      "source_location": "L253"
+      "source_location": "L250"
     },
     {
       "id": "test_candlecache_test_candle",
@@ -38534,7 +38534,7 @@
       "file_type": "code",
       "norm_label": "mergecandles()",
       "source_file": "src/candleCache.js",
-      "source_location": "L192"
+      "source_location": "L193"
     },
     {
       "id": "src_components_tradesetup11section_basistext",
@@ -41294,7 +41294,7 @@
       "file_type": "code",
       "norm_label": "fetcharchivedpage()",
       "source_file": "src/forexCandles.js",
-      "source_location": "L195"
+      "source_location": "L192"
     },
     {
       "id": "src_forexcandles_fetcharchivedupto",
@@ -41306,7 +41306,7 @@
       "file_type": "code",
       "norm_label": "fetcharchivedupto()",
       "source_file": "src/forexCandles.js",
-      "source_location": "L227"
+      "source_location": "L224"
     },
     {
       "id": "src_forexcandles_fetchcandles",
@@ -41354,7 +41354,7 @@
       "file_type": "code",
       "norm_label": "fetchnextcandle()",
       "source_file": "src/forexCandles.js",
-      "source_location": "L155"
+      "source_location": "L152"
     },
     {
       "id": "src_forexcandles_fetcholdercandles",
@@ -41366,7 +41366,7 @@
       "file_type": "code",
       "norm_label": "fetcholdercandles()",
       "source_file": "src/forexCandles.js",
-      "source_location": "L326"
+      "source_location": "L323"
     },
     {
       "id": "src_forexcandles_fetcholdercandlesfromdb",
@@ -41378,7 +41378,7 @@
       "file_type": "code",
       "norm_label": "fetcholdercandlesfromdb()",
       "source_file": "src/forexCandles.js",
-      "source_location": "L298"
+      "source_location": "L295"
     },
     {
       "id": "src_forexcandles_fetchrecentcandles",
@@ -41390,7 +41390,7 @@
       "file_type": "code",
       "norm_label": "fetchrecentcandles()",
       "source_file": "src/forexCandles.js",
-      "source_location": "L278"
+      "source_location": "L275"
     },
     {
       "id": "src_forexcandles_fetchsinglewithretry",
@@ -41438,7 +41438,7 @@
       "file_type": "code",
       "norm_label": "maparchivedrows()",
       "source_file": "src/forexCandles.js",
-      "source_location": "L140"
+      "source_location": "L137"
     },
     {
       "id": "src_fxcmgoldcalendar_goldweekendclosed",
@@ -89098,7 +89098,7 @@
       "file_type": "code",
       "norm_label": "db_archived_bars",
       "source_file": "src/forexCandles.js",
-      "source_location": "L138"
+      "source_location": "L135"
     },
     {
       "id": "src_fxcmgoldcalendar",
@@ -112159,7 +112159,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L238",
+      "source_location": "L239",
       "weight": 1.0
     },
     {
@@ -112171,7 +112171,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L244",
+      "source_location": "L245",
       "weight": 1.0
     },
     {
@@ -112183,7 +112183,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L280",
+      "source_location": "L281",
       "weight": 1.0
     },
     {
@@ -112195,7 +112195,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L284",
+      "source_location": "L285",
       "weight": 1.0
     },
     {
@@ -112207,7 +112207,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L288",
+      "source_location": "L289",
       "weight": 1.0
     },
     {
@@ -112219,7 +112219,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L290",
+      "source_location": "L291",
       "weight": 1.0
     },
     {
@@ -112231,7 +112231,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L310",
+      "source_location": "L311",
       "weight": 1.0
     },
     {
@@ -112243,7 +112243,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L311",
+      "source_location": "L312",
       "weight": 1.0
     },
     {
@@ -112255,7 +112255,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L342",
+      "source_location": "L343",
       "weight": 1.0
     },
     {
@@ -112267,7 +112267,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L344",
+      "source_location": "L345",
       "weight": 1.0
     },
     {
@@ -112279,7 +112279,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L137",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -112291,7 +112291,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L140",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -112303,7 +112303,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L155",
+      "source_location": "L156",
       "weight": 1.0
     },
     {
@@ -112315,7 +112315,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/candleCache.js",
-      "source_location": "L160",
+      "source_location": "L161",
       "weight": 1.0
     },
     {
@@ -133615,7 +133615,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L212",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -133627,7 +133627,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L217",
+      "source_location": "L214",
       "weight": 1.0
     },
     {
@@ -133639,7 +133639,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L222",
+      "source_location": "L219",
       "weight": 1.0
     },
     {
@@ -133651,7 +133651,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L228",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -133675,7 +133675,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L256",
+      "source_location": "L253",
       "weight": 1.0
     },
     {
@@ -133687,7 +133687,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L260",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
@@ -133699,7 +133699,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L261",
+      "source_location": "L258",
       "weight": 1.0
     },
     {
@@ -133711,7 +133711,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L264",
+      "source_location": "L261",
       "weight": 1.0
     },
     {
@@ -133723,7 +133723,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L165",
+      "source_location": "L162",
       "weight": 1.0
     },
     {
@@ -133735,7 +133735,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L166",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -133747,7 +133747,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L171",
+      "source_location": "L168",
       "weight": 1.0
     },
     {
@@ -133759,7 +133759,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L172",
+      "source_location": "L169",
       "weight": 1.0
     },
     {
@@ -133771,7 +133771,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L327",
+      "source_location": "L324",
       "weight": 1.0
     },
     {
@@ -133783,7 +133783,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L328",
+      "source_location": "L325",
       "weight": 1.0
     },
     {
@@ -133795,7 +133795,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L331",
+      "source_location": "L328",
       "weight": 1.0
     },
     {
@@ -133807,7 +133807,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L299",
+      "source_location": "L296",
       "weight": 1.0
     },
     {
@@ -133819,7 +133819,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/forexCandles.js",
-      "source_location": "L279",
+      "source_location": "L276",
       "weight": 1.0
     },
     {
@@ -301357,7 +301357,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/candleCache.js",
-      "source_location": "L127",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -301368,7 +301368,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/candleCache.js",
-      "source_location": "L135",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -301379,7 +301379,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/candleCache.js",
-      "source_location": "L151",
+      "source_location": "L152",
       "weight": 1.0
     },
     {
@@ -301390,7 +301390,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/candleCache.js",
-      "source_location": "L192",
+      "source_location": "L193",
       "weight": 1.0
     },
     {
@@ -301401,7 +301401,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/candleCache.js",
-      "source_location": "L236",
+      "source_location": "L237",
       "weight": 1.0
     },
     {
@@ -301412,7 +301412,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/candleCache.js",
-      "source_location": "L279",
+      "source_location": "L280",
       "weight": 1.0
     },
     {
@@ -301423,7 +301423,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/candleCache.js",
-      "source_location": "L363",
+      "source_location": "L364",
       "weight": 1.0
     },
     {
@@ -301434,7 +301434,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/candleCache.js",
-      "source_location": "L367",
+      "source_location": "L368",
       "weight": 1.0
     },
     {
@@ -318847,7 +318847,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L138",
+      "source_location": "L135",
       "weight": 1.0
     },
     {
@@ -318858,7 +318858,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L140",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -318869,7 +318869,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L155",
+      "source_location": "L152",
       "weight": 1.0
     },
     {
@@ -318880,7 +318880,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L195",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -318891,7 +318891,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L227",
+      "source_location": "L224",
       "weight": 1.0
     },
     {
@@ -318902,7 +318902,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L253",
+      "source_location": "L250",
       "weight": 1.0
     },
     {
@@ -318924,7 +318924,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L278",
+      "source_location": "L275",
       "weight": 1.0
     },
     {
@@ -318935,7 +318935,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L298",
+      "source_location": "L295",
       "weight": 1.0
     },
     {
@@ -318957,7 +318957,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/forexCandles.js",
-      "source_location": "L326",
+      "source_location": "L323",
       "weight": 1.0
     },
     {
@@ -377541,5 +377541,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "575f10436cf0600e958aea525b39ed6a6503b195"
+  "built_at_commit": "f31ea3ecc559d5e1bab92b3297a3029eea87ba7f"
 }
