@@ -255,7 +255,8 @@ Ausgewertet sind die jüngsten Läufe je Asset: LQ-Sweep GBP v1, EUR v0, XAU v1 
 - **Die Sperre (b) ist die einzige Variante, die in beiden Läufen und beiden Halbjahren positiv ist.** Bei kleinerem Max-DD
   (36 bzw. 14 R gegen 62–63 R) bringt sie mehr als „wie gelaufen“.
 - (c) hebt die Winrate der getroffenen Trades deutlich (32 → 45–52 %). Der größere SL halbiert aber das R pro Win, deshalb
-  bleibt ΣR nahe an (a). Nur M15 bei HTF-OB XAU und GBP schlägt die Sperre, und dort trägt fast nur H2.
+  bleibt ΣR nahe an (a). (c) M15 schlägt die Sperre in beiden Halbjahren nur bei LQ-Sweep XAU (+39/+4 gegen +30/−2) und
+  HTF-OB GBP (−6/+20 gegen −7/−1). Bei HTF-OB XAU gilt das nur in H2, gepoolt bei HTF-OB ebenfalls nur über H2.
 - Mit der strengen Definition (Entry in der Zone) verliert die Sperre ihren Vorteil weitgehend. Der Nutzen von (b) kommt aus
   der breiten Regel, die nur Trades mit „freier Bahn“ übrig lässt (WR 35–39 % gegen 33–34 %).
 - **Gegenprobe DR #148:** Der Trade ist ein Treffer (A und B). In (c) wird er zum Win: SL 1,32377 hinter M5-P2 14:30, Ziel um
