@@ -1,6 +1,7 @@
 import {tradeSetupProvenance} from './tradeSetupProvenance.js';
 
 export const TRADE_SETUP_SOURCE_SNAPSHOT_VERSION='trade-setup-source-snapshot-v1';
+// Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
 export const TRADE_SETUP_OB_SWEEP_PROFILE='ts11-ob-edge-p5-supersession-v1';
 const PROFILE=TRADE_SETUP_OB_SWEEP_PROFILE;
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);

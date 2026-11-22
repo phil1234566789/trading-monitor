@@ -35,17 +35,26 @@ describe('kausale LS-Auswahl an den Pin-Fällen',()=>{
   expect(s.error).toBeNull();
  });
 
- it('DOB-POI: der Umkehr-OB ist der POI, das LS kommt aus dem LQ-Algo (Pin 634)',()=>{
-  const c=pin(634),poiOf=lqSweepPoi({instrument:'XAUUSD',liquiditySweepSelector:selectFor(c)});
-  const {poi,reason}=poiOf({direction:'short',firstOrderBlock:{startTime:c.before},recognizedAt:c.before+3600});
+ // Zwischenlösung (Philip): ob ein POI trägt, entscheidet die Kanten-Geometrie wie v1; welcher LS, die kausale Auswahl.
+ const c634=pin(634),pair={direction:'short',firstOrderBlock:{startTime:c634.before,top:10,bottom:9},secondOrderBlock:{top:9.6,bottom:9.2},
+  recognizedAt:c634.before+3600};
+ // Geometrisch gekoppelte LS-Reaktion mit der heute angezeigten Primär-LS 4.177,39 (#50327).
+ const ts={id:50327,direction:'short',top:10,bottom:9.4,rawTop:null,rawBottom:null,startTime:c634.before-1800,knownAt:c634.before-1200,
+  lsPrice:4177.39,lsPivotTime:c634.before-9000,lsTouchedTime:c634.before-2400,lsTimeframe:'5M',lsSourceKind:'liquidity'};
+ const poiOf=selector=>lqSweepPoi({instrument:'XAUUSD',poiOptions:{match:'adjacent'},tradeSetups:[ts],liquiditySweepSelector:selector});
+ it('Pin 634: geometrisch gekoppelter POI trägt den kausalen LS 4.190,77 statt der Primär-LS',()=>{
+  const {poi,reason}=poiOf(selectFor(c634))(pair);
   expect(reason).toBeNull();
-  expect(poi).toMatchObject({kind:'ts11',match:'sweep',lsPrice:4190.77,lsCount:1,error:null});
-  expect(berlin(poi.zoneStartTime)).toBe('16.10., 11:20');
+  expect(poi).toMatchObject({kind:'ts11',tradeSetupId:50327,match:'edge',lsSource:'causal',lsPrice:4190.77,lsCount:1,error:null});
+  expect(berlin(poi.lsTouchedTime)).toBe('16.10., 11:05');
  });
-
- it('ohne Sweep mit IN kein POI und kein Geometrie-Rückfall',()=>{
-  const c=pin(634),poiOf=lqSweepPoi({instrument:'XAUUSD',liquiditySweepSelector:()=>null});
-  expect(poiOf({direction:'short',firstOrderBlock:{startTime:c.before},recognizedAt:c.before})).toEqual({poi:null,reason:'noPoi'});
+ it('ohne kausalen Sweep bleibt der POI, aber ohne LS und ohne Rückfall auf die Primär-LS',()=>{
+  const {poi}=poiOf(()=>null)(pair);
+  expect(poi).toMatchObject({tradeSetupId:50327,lsSource:'none',lsPrice:null,lsCount:0});
+ });
+ it('ohne geometrische Kopplung kein POI, auch wenn ein kausaler Sweep existiert',()=>{
+  const far={...pair,firstOrderBlock:{...pair.firstOrderBlock,top:20,bottom:19},secondOrderBlock:{top:19.6,bottom:19.2}};
+  expect(poiOf(selectFor(c634))(far).poi).toBeNull();
  });
 });
 

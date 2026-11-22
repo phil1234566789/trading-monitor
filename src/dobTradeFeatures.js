@@ -35,8 +35,8 @@ export function dobBreakevenRest(features,atR){
 // Keine Detektorversion: trade_setups.detector_version hält nach Backfills das alte Etikett (Trigger preserve_trade_setup_provenance).
 export const DOB_POI_FEATURE_KEYS=Object.freeze({match:'poi_match',gapUsd:'poi_gap_usd',tradeSetupId:'poi_trade_setup_id',matchedOb:'poi_matched_ob',
  matchedEdge:'poi_matched_edge',lsPrice:'poi_ls_price',lsPivotTime:'poi_ls_pivot_time',lsTouchedTime:'poi_ls_touched_time',
- // Kausale Auswahl (match 'sweep'): Zahl und Liste der gültigen LS der Sweep-Kerze.
- lsCount:'poi_ls_count',lsLevels:'poi_ls_levels'});
+ // Kausale LS-Auswahl (Lauf v2): Herkunft ('causal'/'none'), Zahl und Liste der gültigen LS der Sweep-Kerze, Start des Umkehr-OB.
+ lsSource:'poi_ls_source',lsCount:'poi_ls_count',lsLevels:'poi_ls_levels',reactionObStart:'poi_reaction_ob_start'});
 export const dobPoiFeatures=poi=>poi?.kind!=='ts11'?{}:Object.fromEntries(Object.entries(DOB_POI_FEATURE_KEYS).map(([field,key])=>[key,poi[field]??null]));
 export const dobPoiFeature=(features,field)=>features?.[DOB_POI_FEATURE_KEYS[field]]??null;
 

@@ -1,7 +1,6 @@
 import {lsReactionSourceTimes} from './lsReactionContext.js';
 import {createM5StructureContextResolver} from './m5StructureContext.js';
 import {assessLiquiditySourceValidity} from './liquiditySourceOwnership.js';
-import {evaluateLiquiditySweepReaction,LS_REACTION_EXTREME_PERIOD} from './liquiditySweepReaction.js';
 import {createCloseReactionCache} from './m5CloseReactionHistory.js';
 import {detectLiquidityLevels} from './liquidityDetection.js';
 import {TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
@@ -11,8 +10,9 @@ import {obMinimum} from './instrumentConfig.js';
 import {reconstructLsReactionProjection} from './lsReactionProjection.js';
 import {lsReactionChainAt} from './lsReactionChain.js';
 
-// v8: das Sweep-Extrem muss bis zum eigenen OB halten (liquiditySweepReaction.js).
-export const LS_REACTION_VERSION='ls-reaction-held-v8';
+// Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion. Die Zeilen-Urteile
+// prüfen bewusst kein „gehalten“: sie sind vorerst die Geometrie-Kopplung des DOB wie v1; „gehalten“ gilt in der kausalen LS-Auswahl.
+export const LS_REACTION_VERSION='ts11-causal-inner-trend-ob-sources-p5-supersession-v7';
 
 function contextEntry(resolvers,input,symbol) {
  if(!resolvers.has(symbol))resolvers.set(symbol,{resolve:createM5StructureContextResolver({...input,instrument:symbol}),closeReactionCache:createCloseReactionCache()});
@@ -69,11 +69,6 @@ function assessLsReactionSources({setups=[],instrument,m5Candles=[],h1Candles=[]
     setup.dir===1?context.sourceLiquidity.highs:context.sourceLiquidity.lows);
    if(validity.status!=='valid'){finish(validity.status==='superseded'?'unmet':'unknown',validity.reason,{sweepValidity:validity});continue;}
   }
-  // Gehalten bis zum eigenen OB (Philip): eine Kerze über dem Sweep-Extrem vor dem OB entwertet die Quelle wie eine Gegen-FVG.
-  context.sourceObs??=detectSetupObs(context.rawCandles,obMinimum(symbol,'5m'));
-  context.sweepPivots??=detectLiquidityLevels(context.candles,LS_REACTION_EXTREME_PERIOD);
-  const reaction=evaluateLiquiditySweepReaction(setup,{obs:context.sourceObs,candles:context.candles,pivots:context.sweepPivots});
-  if(reaction.status!=='in'){finish('unmet',reaction.reason,{sweepReaction:reaction});continue;}
   const validity=assessLiquiditySourceValidity({setup,context,resolveContext,closeReactionCache});
   finish(validity.status,validity.reason,validity.evidence);
  }

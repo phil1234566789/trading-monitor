@@ -42,11 +42,11 @@ RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCas
 const lqV0 = RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v0' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v0`];
 RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v1' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v1`] = { ...lqV0, label: 'v1 · LS-Reaktion (Wurzel-Skizze)',
   description: `${lqV0.description}; LS-Reaktion mit Pivot-Alter-Regel und Wurzel als LS-Quelle nach Philips Skizze`, sort: 11, version: 'dob-lq-sweep-v1' };
-// LQ-Sweep v2: POI kausal über den LQ-Algo (liquiditySweepSelection.js): jüngster gültiger Sweep vor OB1 mit LS-Reaktion IN und
-// gehaltenem Extrem bis OB1, statt Kanten-Geometrie. v0/v1 bleiben eingefroren (geometrisch) und nur Vergleich.
-RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v2' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v2`] = { ...lqV0, label: 'v2 · LS-Reaktion kausal',
-  description: 'DOB mit POI = jüngster gültiger, gehaltener LQ-Sweep vor OB1 (LS-Reaktion IN, kein Kanten-Abgleich); Gegen-DOB-Status wie v3',
-  sort: 12, version: 'dob-lq-sweep-v2', poiOptions: { selection: 'causal' } };
+// LQ-Sweep v2: ob ein POI trägt, entscheidet die Kanten-Geometrie wie v1; welcher LS, die kausale Auswahl des LQ-Algos
+// (liquiditySweepSelection.js: jüngster gültiger, gehaltener Sweep vor OB1, alle LS der Sweep-Kerze). v0/v1 bleiben eingefroren.
+RUNS[SYMBOL === 'XAUUSD' ? 'dob-lq-sweep-v2' : `dob-lq-sweep-${SYMBOL.toLowerCase()}-v2`] = { ...lqV0, label: 'v2 · LS kausal',
+  description: `${lqV0.description}; LS = jüngster gültiger, gehaltener Sweep vor OB1 (alle LS der Sweep-Kerze, Zähler)`,
+  sort: 12, version: 'dob-lq-sweep-v2', poiOptions: { ...lqV0.poiOptions, selection: 'causal' } };
 const RUN_ID = flag('--run') ?? runId('v0');
 if (!RUNS[RUN_ID]) throw new Error(`Unbekannter Lauf ${RUN_ID}, bekannt: ${Object.keys(RUNS).join(', ')}`);
 const root = fileURLToPath(new URL('..', import.meta.url)).replace(/[\\/]$/, '');
@@ -82,6 +82,7 @@ try {
   const poiContext = dobPoiContext({ instrument: SYMBOL, m5Candles: mark(m5All), htfCandles: {
     '1h': htfObCandles(mark(await htf.candles('1h', 3600, 200)), sessions, offset),
     '4h': htfObCandles(mark(await htf.candles('4h', 4 * 3600, 100)), sessions, offset) } });
+  // Cache-Ordner .debug/dob-setup/ts11: Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
   const lsReactionCache = LQ && dobCandleCache({ outDir: path.join(root, '.debug', 'dob-setup', 'ts11'), symbol: SYMBOL, refresh: process.argv.includes('--refresh'),
     defaultStartSec: berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000, startSec: berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000, fetchInitialCandles, supabase });
   const lsReactionCandles = LQ && { m5: await lsReactionCache.candles('5m', 300, 300), h1: await htf.candles('1h', 3600, 200), d1: await lsReactionCache.candles('1D', 86400, 300) };
@@ -92,7 +93,7 @@ try {
   const CAUSAL = RUNS[RUN_ID].poiOptions?.selection === 'causal';
   const liquiditySweepSelector = CAUSAL ? createLiquiditySweepSelector({ instrument: SYMBOL, m5Candles: lsReactionCandles.m5,
     h1Candles: lsReactionCandles.h1, d1Candles: lsReactionCandles.d1, sessionConfigs: sessions }) : undefined;
-  const tradeSetups = LQ && !CAUSAL ? (() => {
+  const tradeSetups = LQ ? (() => {
     const verdicts = lsReactionRowVerdicts({ rows: tradeSetupRows, instrument: SYMBOL, m5Candles: lsReactionCandles.m5, h1Candles: lsReactionCandles.h1,
       d1Candles: lsReactionCandles.d1, evaluatedAt: dataEnd, sessionConfigs: sessions });
     const counts = Object.groupBy([...verdicts.values()], v => v.status);
@@ -143,6 +144,7 @@ try {
       ...Object.assign({}, ...DOB_BREAKEVEN_AT_R_LEVELS.map(atR => dobBreakevenFeatures(atR, dobMaxR(t, { candles: m1Marked, dataEnd, instrument: SYMBOL, breakevenAtR: atR })))),
       ...(LQ ? dobPoiFeatures(bestPoi.get(dobTradeKey(t))) : {}) },
     first_ob_start: t.chart.firstOrderBlockStart, second_ob_start: t.chart.secondOrderBlockStart,
+    // poi_kind 'ts11': Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
     ...(LQ ? (poi => ({ poi_kind: 'ts11', poi_distance_usd: poi.gapUsd, poi_zone_top: poi.zone.top, poi_zone_bottom: poi.zone.bottom,
       poi_zone_start: poi.zoneStartTime, poi_gap_seconds: t.chart.firstOrderBlockStart - poi.zoneStartTime }))(bestPoi.get(dobTradeKey(t)))
     : RUNS[RUN_ID].version === 'dob-setup-v0' ? {} : { poi_kind: `ob_${t.poi.timeframe.toLowerCase()}`, poi_distance_usd: t.poi.distanceUsd,
@@ -169,6 +171,8 @@ try {
   // LS-Reaktion später als 3 h nach dem Touch: kein Filter, sondern ein Fehler (fehlende Kerzen oder Erkennung); nichts schreiben.
   const lateReactions = [...new Map([...bestPoi.values()].filter(p => p?.error).map(p => [`${p.error.touchTime}`, p.error])).values()];
   for (const e of lateReactions) console.error(`LS-Reaktion unplausibel spät: Touch ${berlinDateStrFor(e.touchTime)} ${new Date(e.touchTime * 1000).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin' })}, Umkehr-OB ${new Date(e.reactionObStart * 1000).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}`);
+  // Geometrisch gekoppelt, aber ohne kausalen Sweep: zählen und melden, kein Rückfall auf den LS der LS-Reaktion-Zeile.
+  if (CAUSAL) console.log(`LS kausal: ${rows.filter(r => r.features?.poi_ls_source === 'causal').length} · ohne kausalen Sweep: ${rows.filter(r => r.features?.poi_ls_source === 'none').length}`);
   if (lateReactions.length) { console.error('Abbruch: LS-Reaktion(en) über 3 h nach dem Touch.'); process.exitCode = 1; }
   const { data: storedRun, error: runError } = await supabase.from('dob_trade_setup_runs').select('data_end').eq('id', RUN_ID).eq('instrument', SYMBOL).limit(1);
   const { data: stored, error: storedError } = await fetchAllRows((from, to) => supabase.from('dob_trade_setups').select('id,outcome')

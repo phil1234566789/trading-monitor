@@ -51,6 +51,7 @@ async function loadCases(){
 const optionText=c=>`${c.code} · ${(c.instrument??'?').replace('USD','')} ${c.dir===1?'Short':c.dir===-1?'Long':'?'} · ${c.anchorTime?formatDatedTime(c.anchorTime):'–'} · ${(c.pin.note??'').slice(0,60)}`;
 
 watch([pinId,tf,lead,tail,structure,manualStart,levels],([p,t,l,n,st,ms,lv])=>{
+ // sektion 'ts11': Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
  const q={...route.query,sektion:'ts11',pin:p!=null?String(p):undefined,tf:t,lead:l,tail:n,struktur:st?'1':undefined,ebenen:lv?'1':undefined,start:ms!=null?String(ms):undefined};
  if(['pin','tf','lead','tail','struktur','ebenen','start'].some(k=>route.query[k]!==q[k]))router.replace({query:q});
 },{immediate:true});

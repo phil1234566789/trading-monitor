@@ -50,8 +50,17 @@ export function dobLqSweepMatch(pair,ts,tick,adjacentMax=1){
 // sonst aus der Konfig (poiMatchMode, Watcher).
 // Kausal: Sweep und LS-Reaktion sind bei Erkennung des DOB-Paars schon bekannt; ein früher erkanntes Paar bekommt den POI auch später nicht
 // (live käme der Alarm zu spät, der Lauf darf ihn nicht als rechtzeitig zählen).
+// Mit liquiditySweepSelector (Lauf v2, Watcher) bleibt die Geometrie Torwächter, der LS kommt aber kausal aus dem LQ-Algo (causalLs).
 export function lqSweepPoi(input){
- if(input.liquiditySweepSelector)return causalLqSweepPoi(input.liquiditySweepSelector);
+ const geometric=geometricLqSweepPoi(input);
+ if(!input.liquiditySweepSelector)return geometric;
+ const lsOf=causalLs(input.liquiditySweepSelector);
+ return pair=>{const r=geometric(pair);return r.poi?{...r,poi:{...r.poi,...lsOf(pair)}}:r;};
+}
+
+// ponytail: Platzhalter, bis die POI↔DOB-Kopplung über den Marktstruktur-Baustein kommt (Pseudochart mit Philip): ob ein DOB einen POI hat,
+// entscheidet vorerst die Kanten-Geometrie zu einer bestandenen LS-Reaktion bis 24 h vor OB1 (hält die Trade-Menge auf v1-Niveau).
+function geometricLqSweepPoi(input){
  const tick=instrumentConfig(input.instrument).tick,adjacentMax=dobLqAdjacentMax(input.instrument),allowed=DOB_LQ_MATCH_LEVELS.indexOf(input.poiOptions?.match??input.guardrails?.poiMatchMode??'edge');
  const list=input.tradeSetups??[];
  return pair=>{
@@ -61,6 +70,7 @@ export function lqSweepPoi(input){
     ||ts.startTime<pair.firstOrderBlock.startTime-MAX_AGE_SECONDS)continue;
    const m=dobLqSweepMatch(pair,ts,tick,adjacentMax);
    if(!m)continue;
+   // kind 'ts11' (= dob_trade_setups.poi_kind): Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
    if(!poi||dobLqMatchRank(m)<dobLqMatchRank(poi))poi={kind:'ts11',tradeSetupId:ts.id,zone:{top:ts.top,bottom:ts.bottom},
     zoneStartTime:ts.startTime,lsPrice:ts.lsPrice,lsPivotTime:ts.lsPivotTime,lsTouchedTime:ts.lsTouchedTime,lsTimeframe:ts.lsTimeframe,
     lsSourceKind:ts.lsSourceKind,...m};
@@ -69,20 +79,18 @@ export function lqSweepPoi(input){
  };
 }
 
-// Kausal (Philip, „LS-Zuordnung kausal“): der LQ-Algo nennt den jüngsten gültigen, gehaltenen Sweep vor OB1 (liquiditySweepSelection.js).
-// Kein Sweep mit IN → kein POI, kein Rückfall auf die Kanten-Geometrie. Der POI ist der Umkehr-OB dieses Sweeps; lsCount zählt die
-// gültigen LS der Sweep-Kerze (WR-Hypothese „mehr Level = besser“). error: IN später als 3 h nach dem Touch (Fill bricht ab).
-function causalLqSweepPoi(select){
+// Welcher LS (Philip, „LS-Zuordnung kausal“): der jüngste gültige, gehaltene Sweep vor OB1 aus dem LQ-Algo (liquiditySweepSelection.js),
+// alle gültigen LS der Sweep-Kerze plus Zähler (WR-Hypothese „mehr Level = besser“). Kein Sweep: lsSource 'none' und kein LS, kein stiller
+// Rückfall auf den LS der geometrischen LS-Reaktion. error: IN später als 3 h Marktzeit nach dem Touch (Fill bricht ab).
+function causalLs(select){
  const memo=new Map();
  return pair=>{
   const dir=pair.direction==='short'?1:-1,before=pair.firstOrderBlock.startTime,key=`${dir}:${before}`;
   if(!memo.has(key))memo.set(key,select({dir,before}));
   const s=memo.get(key);
-  if(!s)return {poi:null,reason:'noPoi'};
-  const ob=s.reaction.reactionOb,ls=s.primary;
-  return {reason:null,poi:{kind:'ts11',tradeSetupId:null,match:'sweep',matchedOb:null,matchedEdge:null,gapUsd:null,
-   zone:{top:ob.top,bottom:ob.bottom},zoneStartTime:ob.startTime,lsPrice:ls.price,lsPivotTime:ls.pivotTime,lsTouchedTime:s.touchTime,
-   lsTimeframe:'5M',lsSourceKind:ls.sourceKind??'liquidity',lsCount:s.lsCount,
-   lsLevels:s.levels.map(l=>({price:l.price,pivotTime:l.pivotTime,sourceKind:l.sourceKind??'liquidity'})),error:s.error}};
+  if(!s)return {lsSource:'none',lsPrice:null,lsPivotTime:null,lsTouchedTime:null,lsTimeframe:null,lsSourceKind:null,lsCount:0,lsLevels:[],error:null};
+  return {lsSource:'causal',lsPrice:s.primary.price,lsPivotTime:s.primary.pivotTime,lsTouchedTime:s.touchTime,lsTimeframe:'5M',
+   lsSourceKind:s.primary.sourceKind??'liquidity',lsCount:s.lsCount,reactionObStart:s.reaction.reactionOb.startTime,
+   lsLevels:s.levels.map(l=>({price:l.price,pivotTime:l.pivotTime,sourceKind:l.sourceKind??'liquidity'})),error:s.error};
  };
 }

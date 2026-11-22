@@ -27,7 +27,7 @@ export function hasUninterruptedSweepReaction(setup, setupObs, m5Candles = []) {
 
 // Drei Ereignisse nach dem Touch, das erste entscheidet (Short; Long gespiegelt): bullische M5-FVG → OUT, Kerze über dem Sweep-Extrem
 // → OUT, bärischer M5-OB → IN (Umkehr-OB). Sweep-Extrem = erster M5-Pivot (Periode 2) ab der Touch-Kerze; „gehalten“ = keine Kerze
-// darüber bis vor den Umkehr-OB, mit holdUntil (DOB: OB1) bis vor diesen; die OB-Kerze selbst macht oft das Extrem (#143). setup: {dir, ls:{price,touchedTime}, sweeps?, obStartTime?};
+// darüber bis vor den Umkehr-OB, mit holdUntil (DOB: OB1) bis vor diesen. setup: {dir, ls:{price,touchedTime}, sweeps?, obStartTime?};
 // obStartTime = eigener OB einer Setup-Zeile, sonst der erste Umkehr-OB ab dem Touch. m5: obs (detectSetupObs), candles (ohne
 // ignorierte), pivots (detectLiquidityLevels(candles, 2)), ignoredTimes (Zeiten der ausgeblendeten Kerzen, aufsteigend).
 export function evaluateLiquiditySweepReaction(setup,{obs=[],candles=[],pivots={highs:[],lows:[]},ignoredTimes=[]}={},{holdUntil}={}){
@@ -36,13 +36,14 @@ export function evaluateLiquiditySweepReaction(setup,{obs=[],candles=[],pivots={
  const reaction=Number.isFinite(setup.obStartTime)?{startTime:setup.obStartTime}:firstFrom(obs,touch,'startTime',ob=>ob.dir===-setup.dir);
  if(!reaction)return {status:'pending',touchTime:touch};
  const extreme=firstFrom(setup.dir===1?pivots.highs:pivots.lows,touch,'pivotTime',()=>true);
- // Gegen-FVG nach dem Touch und erst ab der Kerze des Sweep-Extrems: FVGs des Sweep-Schenkels selbst sind der Sweep, keine
+ // Vorläufige Auslegung (Philip prüft später) — Gegen-FVG nach dem Touch und erst ab der Kerze des Sweep-Extrems: FVGs des Sweep-Schenkels selbst sind der Sweep, keine
  // Fortsetzung (Pin 641: OBs 06:45/06:50 vor dem Extrem 06:55 zählen nicht, IN 07:00). Liegt das Extrem auf der Touch-Kerze, zählt wie
  // bisher erst die Kerze danach (Pin 479).
  const counter=firstFrom(obs,Math.max(touch+1,extreme?.pivotTime??-Infinity),'startTime',ob=>ob.dir===setup.dir);
  if(counter&&counter.startTime<reaction.startTime)return {status:'out',reason:'sweepReactionInterrupted',touchTime:touch};
  const brokenAt=extreme?firstFrom(candles,extreme.pivotTime+1,'time',c=>setup.dir===1?c.high>extreme.price:c.low<extreme.price)?.time??null:null;
  const base={touchTime:touch,reactionOb:reaction,extreme:extreme&&{price:extreme.price,time:extreme.pivotTime},extremeBrokenAt:brokenAt};
+ // Vorläufige Auslegung (Philip prüft später): OB-Kerze exklusiv, sie macht oft selbst das Extrem (Mustertrade 49404, #143 Long).
  if(brokenAt!=null&&brokenAt<reaction.startTime)return {...base,status:'out',reason:'sweepExtremeBroken'};
  if(brokenAt!=null&&brokenAt<holdUntil)return {...base,status:'out',reason:'sweepExtremeBrokenBeforeHoldEnd'};
  return {...base,status:'in',late:marketSeconds(candles,ignoredTimes,touch,reaction.startTime)>LS_REACTION_PLAUSIBLE_SECONDS};

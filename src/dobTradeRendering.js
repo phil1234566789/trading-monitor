@@ -35,17 +35,19 @@ class DobTradeAutoscale {
 export function dobTradeFrame(row){
  const retest=Number.isFinite(row.poi_retest_age_seconds)?row.first_ob_start-row.poi_retest_age_seconds:Infinity;
  // LQ-Sweep: ab dem gesweepten Level des LS-Reaktion, damit Pivot und Sweep im Bild sind.
- const lsPivot=row.lsReaction||causalLs(row)?Math.min(...dobLsReactionLevels(row).map(l=>l.pivotTime)):Infinity;
+ const lsPivot=row.lsReaction?Math.min(...dobLsReactionLevels(row).map(l=>l.pivotTime).filter(Number.isFinite),Infinity):Infinity;
  return {from:Math.min(row.entry_time,retest,Number.isFinite(lsPivot)?lsPivot:Infinity),to:row.exit_time??row.entry_time};
 }
 
 // LS des LQ-Sweep-POI = bestandene LS-Reaktion-Quelle, die der Lauf gespeichert hat (features.poi_ls_*); ältere Läufe ohne sie zeigen die
 // Primär-LS der trade_setups-Zeile (row.lsReaction).
-// Kausale Auswahl (match 'sweep', Lauf v2): keine trade_setups-Zeile, Box = Umkehr-OB aus den poi_zone-Feldern, alle LS der Sweep-Kerze.
-const causalLs=row=>row.features?.poi_match==='sweep';
+// Kausale LS-Auswahl (Lauf v2, poi_ls_source): alle LS der Sweep-Kerze; 'none' = kein kausaler Sweep, dann keine LS-Linie statt der
+// Primär-LS der Zeile.
 function dobLsReactionLevels(row){
- const ls=dobLsReactionLs(row),levels=row.features?.poi_ls_levels;
- return causalLs(row)&&Array.isArray(levels)&&levels.length?levels.map(l=>({price:l.price,pivotTime:l.pivotTime,touchedTime:ls.touchedTime})):[ls];
+ const f=row.features??{};
+ if(f.poi_ls_source==='none')return [];
+ const ls=dobLsReactionLs(row);
+ return Array.isArray(f.poi_ls_levels)&&f.poi_ls_levels.length?f.poi_ls_levels.map(l=>({price:l.price,pivotTime:l.pivotTime,touchedTime:ls.touchedTime})):[ls];
 }
 function dobLsReactionLs(row){
  const f=row.features??{},ts=row.lsReaction,sec=t=>Date.parse(t)/1000;
@@ -75,7 +77,7 @@ export function renderDobTrade(series,row,primitives,candles,currentBar,targetLa
  const spec=entryRiskSpec(entryRiskScale(row.entry_price,row.stop_price,[{label:'TP',price:row.target_price}],row.instrument,row.direction),
   'SL','rScale',row.instrument);
  if(spec)add(new ScalePrimitive({...spec,startTime:row.entry_time},candles));
- if(row.poi_kind==='ts11'){if(row.lsReaction||causalLs(row))addLsReactionPoi(add,row,candles,eventBarSeconds);}
+ if(row.poi_kind==='ts11'){if(row.lsReaction)addLsReactionPoi(add,row,candles,eventBarSeconds);}
  // POI (v1/v2): H1/H4-Zone golden ab Zonenstart bis Exit, dazu der Retest (Start der letzten Touch-Episode vor OB1)
  // als kurze Marke an der Kante, an der der Preis die Zone berührt. Vor dem Kerzenfenster beginnende Zonen starten am Fensterrand.
  else if([row.poi_zone_top,row.poi_zone_bottom,row.poi_zone_start].every(Number.isFinite)){
@@ -97,13 +99,12 @@ export function renderDobTrade(series,row,primitives,candles,currentBar,targetLa
 // usePriceChartTradeSetupDrawing (tradeSetupShort/-Long). lsReaction = trade_setups-Zeile, geladen in useDobChartRoute.
 function addLsReactionPoi(add,row,candles,eventBarSeconds){
  const ts=row.lsReaction,f=row.features??{},key=row.direction==='short'?'tradeSetupShort':'tradeSetupLong',sec=t=>Date.parse(t)/1000;
- const box=causalLs(row)?{top:row.poi_zone_top,bottom:row.poi_zone_bottom,start:row.poi_zone_start}
-  :{top:Number(ts.ob_top),bottom:Number(ts.ob_bottom),start:sec(ts.ob_start_time)};
- const price=v=>fmtPrice(Number(v),pricePrecisionForInstrument(row.instrument)),levels=dobLsReactionLevels(row),swept=levels[0].touchedTime;
+ const box={top:Number(ts.ob_top),bottom:Number(ts.ob_bottom),start:sec(ts.ob_start_time)};
+ const price=v=>fmtPrice(Number(v),pricePrecisionForInstrument(row.instrument)),levels=dobLsReactionLevels(row),swept=levels[0]?.touchedTime;
  for(const {price:lsPrice,pivotTime:lsPivot} of levels)if([lsPivot,swept].every(Number.isFinite)&&lsPrice!=null)
   add(new LiquidityLinePrimitive({price:Number(lsPrice),pivotTime:Math.max(lsPivot,candles[0].time),endTime:swept},
    {color:cssColor(key),lineWidth:lineWidth(key),label:`LS ${price(lsPrice)}`,labelSide:'end-above',forceLabel:true,eventBarSeconds},candles));
- if(Number.isFinite(swept)&&levels[0].price!=null)add(new LiquidityLinePrimitive({price:Number(levels[0].price),pivotTime:swept,endTime:swept+3*eventBarSeconds},
+ if(Number.isFinite(swept)&&levels[0]?.price!=null)add(new LiquidityLinePrimitive({price:Number(levels[0].price),pivotTime:swept,endTime:swept+3*eventBarSeconds},
   {color:cssColor(key),lineWidth:4,label:`Sweep ${formatBerlinTime(swept)}`,labelSide:'end-below',forceLabel:true,eventBarSeconds},candles));
  if(Number.isFinite(box.start))add(new OrderBlockPrimitive({top:box.top,bottom:box.bottom,startTime:box.start,
   drawStartTime:Math.max(box.start,candles[0].time),endTime:box.start+TRADE_SETUP_OB_WIDTH_SEC,touched:true},

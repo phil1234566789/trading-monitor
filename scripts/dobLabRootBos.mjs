@@ -27,6 +27,7 @@ try {
     // Gleiche Kerzen wie der Lauf (LS-Reaktion-Cache ab 15.11.2025 für den D1-Anker).
     const since = berlinDayRangeUtcMs('2025-11-15').startUtcMs / 1000;
     const cacheOf = dir => dobCandleCache({ outDir: dir, symbol: instrument, refresh: false, defaultStartSec: since, startSec: since, fetchInitialCandles, supabase });
+    // Cache-Ordner ts11: Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
     const lsReaction = cacheOf(path.join(root, '.debug', 'dob-setup', 'ts11')), htf = cacheOf(path.join(root, '.debug', 'dob-setup'));
     const m5 = await lsReaction.candles('5m', 300, 300), h1 = await htf.candles('1h', 3600, 200), d1 = await lsReaction.candles('1D', 86400, 300);
     const sessions = await htf.sessions(), anchors = buildHistoricalDailyAnchors(d1, h1), closeCache = createCloseReactionCache();

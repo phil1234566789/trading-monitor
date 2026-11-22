@@ -120,9 +120,9 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);
   const lq=poiTypes.some(p=>p.poiType==='lq_sweep');
-  // LS-Reaktion-Urteile je trade_setups-Zeile weiter cachen (Alarm-Protokoll liest sie); der DOB-POI kommt kausal aus dem LQ-Algo
-  // (wie Lauf v2): M5 bis zur Kontext-Obergrenze (reicht für den D1-Anker), H1 wie oben, D1 für die Anker.
-  const lsReaction=lq?await lsReactionSetups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null;
+  // POI wie Lauf v2: Geometrie über die LS-Reaktion-Zeilen, der LS kausal aus dem LQ-Algo (M5 bis zur Kontext-Obergrenze, reicht für
+  // den D1-Anker; D1 für die Anker).
+  const lsReaction=lq?await lsReactionSetups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null,tradeSetups=lsReaction?.setups??[];
   const liquiditySweepSelector=lq?createLiquiditySweepSelector({instrument,sessionConfigs:sessions,h1Candles:h1,
     m5Candles:await closedCandles(client,instrument,'5m',evaluatedAt,LS_REACTION_CONTEXT.maxM5),
     d1Candles:await closedCandles(client,instrument,'1D',evaluatedAt,LS_REACTION_CONTEXT.d1)}):undefined;
@@ -132,7 +132,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   // SL-Algo wie der Lauf (scripts/dobTradeSetupsFill.mjs): alle M5, nicht der Live-Schnitt, und dieselbe H1-ATR-Serie.
   const input={...dobLiveWindowInput({instrument:instrument,evaluatedAt:asOf,m1Candles:m1Marked,m5Candles:m5Marked,htfCandles}),
     counterDobGate:createDobCounterDobGate({m5Candles:m5Marked,m1Candles:m1Marked,instrument:instrument}),
-    swingStopGate:createDobSwingStopGate({m5Candles:m5Marked,instrument,atr:dobH1AtrSeries(htfCandles['1h'])}),liquiditySweepSelector};
+    swingStopGate:createDobSwingStopGate({m5Candles:m5Marked,instrument,atr:dobH1AtrSeries(htfCandles['1h'])}),tradeSetups,liquiditySweepSelector};
   // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
   const calcStart=performance.now(),runs:any[]=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt:asOf,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
   // LS-Reaktion > 3 h nach dem Touch: nur loggen (Philip: kein Telegram), meist fehlende Kerzen.

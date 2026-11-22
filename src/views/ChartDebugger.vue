@@ -21,6 +21,7 @@ import {useDebuggerTime} from '../composables/useDebuggerTime.js';
 
 const route=useRoute(),router=useRouter();
 // Sektion DOB-Entry M1 ist eine reine Ansicht ohne Fixture; die Fall-Sektion bleibt per v-show montiert, ihr Chart braucht chartEl.
+// URL-Sektion 'ts11': Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
 const section=ref(['dob-entry-m1','ts11'].includes(route.query.sektion)?route.query.sektion:'cases');
 watch(section,s=>router.replace({query:s==='cases'?{fall:caseId.value}:{sektion:s}}));
 const caseId=ref(CHART_DEBUGGER_CASES.some(c=>c.id===route.query.fall)?route.query.fall:CHART_DEBUGGER_CASES[0].id);

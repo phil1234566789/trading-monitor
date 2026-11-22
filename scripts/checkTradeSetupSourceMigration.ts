@@ -16,6 +16,7 @@ insert into dealing_ranges values(42,'XAUUSD',9);
 `);
 const migration=await Deno.readTextFile(new URL('../supabase/migrations/20261114160000_trade_setup_source_snapshots.sql',import.meta.url));
 try{await db.exec(migration);}catch(error){console.error({message:error.message,position:error.position,internalPosition:error.internalPosition,internalQuery:error.internalQuery});throw error;}
+// Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
 const profile='ts11-ob-edge-p5-supersession-v1';
 const pivot={price:100,dir:1,pivotTime:300,touchedTime:2100,touched:true,endTime:2100};
 const ob={...pivot,sourceKind:'orderBlock',sourceStartTime:300,sourceKnownAt:900,sourceDirection:-1,sourceTop:100,sourceBottom:98};

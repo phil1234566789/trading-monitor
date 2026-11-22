@@ -4247,8 +4247,8 @@
    [
     1,
     1794572100,
-    "unmet",
-    "sweepExtremeBroken"
+    "passed",
+    "currentTrendDirection"
    ],
    [
     1,
@@ -6882,14 +6882,14 @@
    [
     -1,
     1794831000,
-    "unmet",
-    "sweepExtremeBroken"
+    "passed",
+    "currentTrendDirection"
    ],
    [
     1,
     1794838800,
     "unmet",
-    "sweepExtremeBroken"
+    "sourceRangeNotAssociated"
    ],
    [
     1,
@@ -9158,7 +9158,7 @@
     -1,
     1794900000,
     "unmet",
-    "sweepExtremeBroken"
+    "orderBlockSourceRangeNotAssociated"
    ],
    [
     1,
@@ -11420,7 +11420,7 @@
     -1,
     1795020600,
     "unmet",
-    "sweepExtremeBroken"
+    "sourcePivotInCounterMove"
    ],
    [
     -1,
@@ -16355,7 +16355,7 @@
     -1,
     1795211100,
     "unmet",
-    "sweepExtremeBroken"
+    "sourceRangeNotAssociated"
    ]
   ]
  }

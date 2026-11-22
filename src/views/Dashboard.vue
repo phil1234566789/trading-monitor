@@ -203,6 +203,7 @@ const tradeSetupHistoryCount = useLocalStorageRef("tradeSetupHistoryCount", 5);
 // dadurch automatisch nur noch das jüngste SICHTBARE Setup).
 const showTradeSetupsLong = useLocalStorageRef("showTradeSetupsLong", true);
 const showTradeSetupsShort = useLocalStorageRef("showTradeSetupsShort", true);
+// localStorage-Key showTs11Levels: Persistierter Wert aus der TS1.1-Zeit, bewusst nicht umbenannt (Altzeilen/Links/Toggles), Baustein heißt LS-Reaktion.
 const showLsReactionLevels = useLocalStorageRef("showTs11Levels", false);
 // R-Skala (2-10 R ab der nahen OB-Kante, siehe rScale.js) — eigener Toggle neben den
 // Richtungs-Schaltern: bei großer Setup-Historie sind das neun zusätzliche Marken PRO Setup.
@@ -2447,7 +2448,7 @@ watch(selectedTradingAccountId, () => {
     :trade-setup-history-count="tradeSetupHistoryCount"
     :show-trade-setups-long="showTradeSetupsLong"
     :show-trade-setups-short="showTradeSetupsShort"
-    :show-ls-reaction-levels="showTs11Levels"
+    :show-ls-reaction-levels="showLsReactionLevels"
     :show-r-scale="showRScale"
     :show-pip-scale="showPipScale"
     :journal-liquidity-categories="journalLiquidityCategories"

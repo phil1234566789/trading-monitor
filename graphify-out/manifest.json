@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/views/Dashboard.vue": {
-    "mtime": 1795375639.697957,
-    "seen": 1795375724.385267,
-    "ast_hash": "ad313b13535bf921c30c79201419774a",
+    "mtime": 1795381450.2539964,
+    "seen": 1795383749.850263,
+    "ast_hash": "100e71705be01726cd1d8173cad7cd10",
     "semantic_hash": ""
   },
   "src/views/Handelszeiten.vue": {
@@ -9462,9 +9462,9 @@
     "semantic_hash": ""
   },
   "scripts/checkTradeSetupSourceMigration.ts": {
-    "mtime": 1795373614.6073048,
-    "seen": 1795375724.3842676,
-    "ast_hash": "09a2281e5ba8976ee8d1ffe1a3c27b49",
+    "mtime": 1795381440.204748,
+    "seen": 1795383749.6996105,
+    "ast_hash": "92f9e47ce6bb2fb0c8b7d6744f8dc742",
     "semantic_hash": ""
   },
   "scripts/fixtures/tradeSetupSourceSqlCases.json": {
@@ -9492,9 +9492,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/_shared/tradeSetupSourceSnapshot.js": {
-    "mtime": 1795375639.700958,
-    "seen": 1795375724.385267,
-    "ast_hash": "ac7eec8983207cc8830460d3acd4a91a",
+    "mtime": 1795381440.204748,
+    "seen": 1795383749.8612618,
+    "ast_hash": "4044b897b1d9951dd45c71fd205aaeb4",
     "semantic_hash": ""
   },
   "supabase/functions/_shared/tradeSetupSweepSources.ts": {
@@ -9756,9 +9756,9 @@
     "semantic_hash": ""
   },
   "src/views/ChartDebugger.vue": {
-    "mtime": 1795375639.6969573,
-    "seen": 1795375724.385267,
-    "ast_hash": "51e6b8d3e0e158953cd052dad514fea1",
+    "mtime": 1795381440.2077498,
+    "seen": 1795383749.850263,
+    "ast_hash": "09ba8f2b060221a05e77fec484a8c323",
     "semantic_hash": ""
   },
   "supabase/functions/trading-monitor-mcp/mt5ExitPlanAlert.js": {
@@ -9990,9 +9990,9 @@
     "semantic_hash": ""
   },
   "scripts/dobTradeSetupsFill.mjs": {
-    "mtime": 1795376563.6529014,
-    "seen": 1795381270.634762,
-    "ast_hash": "0f4536f3baa204752d35fd4d816c1218",
+    "mtime": 1795381440.2067509,
+    "seen": 1795383749.7056103,
+    "ast_hash": "12e1ccbe0eb842cce73248b860d78f0e",
     "semantic_hash": ""
   },
   "src/composables/useDobChartRoute.js": {
@@ -10038,9 +10038,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeRendering.js": {
-    "mtime": 1795376985.6711383,
-    "seen": 1795381270.712718,
-    "ast_hash": "2d37d544c150bef8afc131b16291a9a9",
+    "mtime": 1795381400.1587555,
+    "seen": 1795383749.7841978,
+    "ast_hash": "7eee456b33d23d98fea86c064deb7fa9",
     "semantic_hash": ""
   },
   "src/dobAlarm.js": {
@@ -10050,9 +10050,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/dob-watcher/index.ts": {
-    "mtime": 1795376728.6299016,
-    "seen": 1795381270.7917476,
-    "ast_hash": "d8b2abd9d839c83ecd52bb189bc0ae4b",
+    "mtime": 1795381416.9184616,
+    "seen": 1795383749.8622622,
+    "ast_hash": "bf204947e1a25b5a0bcb6835c8b37f21",
     "semantic_hash": ""
   },
   "test/dobAlarm.test.js": {
@@ -10362,9 +10362,9 @@
     "semantic_hash": ""
   },
   "src/dobTradeFeatures.js": {
-    "mtime": 1795376530.6574228,
-    "seen": 1795381270.712718,
-    "ast_hash": "54425067cc0f4756691cd119e1eb9f34",
+    "mtime": 1795381378.9456446,
+    "seen": 1795383749.7841978,
+    "ast_hash": "41282e8e4e25b90cd3d86bb717ab5685",
     "semantic_hash": ""
   },
   "test/dobTradeFeatures.test.js": {
@@ -10494,9 +10494,9 @@
     "semantic_hash": ""
   },
   "src/dobPoiLabel.js": {
-    "mtime": 1795376985.6741385,
-    "seen": 1795381270.711718,
-    "ast_hash": "db8dff7d705d14095773f58eb71be3c2",
+    "mtime": 1795381400.1587555,
+    "seen": 1795383749.7831979,
+    "ast_hash": "52e911c8a741941741935f9921df116f",
     "semantic_hash": ""
   },
   "src/dobPoiType.js": {
@@ -10518,9 +10518,9 @@
     "semantic_hash": ""
   },
   "src/dobLqSweepPoi.js": {
-    "mtime": 1795376530.6574228,
-    "seen": 1795381270.7107182,
-    "ast_hash": "ec0d57fe4995d011349ea640901e015b",
+    "mtime": 1795381440.2057514,
+    "seen": 1795383749.782198,
+    "ast_hash": "57e2523742157badaba8af46085ae692",
     "semantic_hash": ""
   },
   "test/dobLqSweepPoi.test.js": {
@@ -10602,9 +10602,9 @@
     "semantic_hash": ""
   },
   "test/dobTradeRenderingLqSweep.test.js": {
-    "mtime": 1795377020.5769336,
-    "seen": 1795381270.8392663,
-    "ast_hash": "1f533db83891cdac39522d451a8fd405",
+    "mtime": 1795381542.5120015,
+    "seen": 1795383749.9117742,
+    "ast_hash": "7ff91db86920a8863bd4d80f8a0f802d",
     "semantic_hash": ""
   },
   "analysis/algo-watcher/oct-entries-2026.json": {
@@ -10818,9 +10818,9 @@
     "semantic_hash": ""
   },
   "scripts/dobLabRootBos.mjs": {
-    "mtime": 1795375639.669928,
-    "seen": 1795375724.3842676,
-    "ast_hash": "1edd28bb9d1e61f52e5fc89902ccbf18",
+    "mtime": 1795381440.2067509,
+    "seen": 1795383749.7036104,
+    "ast_hash": "794de4cab4407e892a69a3f037f4ba11",
     "semantic_hash": ""
   },
   "src/composables/useDailyPivotStructureStart.js": {
@@ -10962,21 +10962,21 @@
     "semantic_hash": ""
   },
   "test/fixtures/lq-ob-sweeps-behavior/eurusd.json": {
-    "mtime": 1795376277.5385883,
-    "seen": 1795381270.8636327,
-    "ast_hash": "bdd28ccb303d06d5a4a8ea616cf0d251",
+    "mtime": 1795382621.8330517,
+    "seen": 1795383749.9367738,
+    "ast_hash": "bdcd7aad4f31c5b734bb3da8fd842d64",
     "semantic_hash": ""
   },
   "test/fixtures/lq-ob-sweeps-behavior/gbpusd.json": {
-    "mtime": 1795376277.5385883,
-    "seen": 1795381270.8636327,
-    "ast_hash": "ae35238da545d67aa0b428d45a53a5fd",
+    "mtime": 1795382621.8340511,
+    "seen": 1795383749.9367738,
+    "ast_hash": "8feb9f69ba48e5763d4debbf081f9364",
     "semantic_hash": ""
   },
   "test/fixtures/lq-ob-sweeps-behavior/xauusd.json": {
-    "mtime": 1795376277.5385883,
-    "seen": 1795381270.8636327,
-    "ast_hash": "64c764f0986548531edea89c358676fa",
+    "mtime": 1795382621.8350506,
+    "seen": 1795383749.9367738,
+    "ast_hash": "1d0265c5a7e188f2bb6b2fffa3a8ee29",
     "semantic_hash": ""
   },
   "test/lqObSweepsBehaviorGuard.test.js": {
@@ -11136,9 +11136,9 @@
     "semantic_hash": ""
   },
   "src/components/LsReactionSection.vue": {
-    "mtime": 1795375639.6739283,
-    "seen": 1795375724.3842676,
-    "ast_hash": "c4644c6602bc375c37cd7aca00f6dfba",
+    "mtime": 1795381440.2107499,
+    "seen": 1795383749.744121,
+    "ast_hash": "8641c69d92f015c247a7deebdfa44b8e",
     "semantic_hash": ""
   },
   "src/components/LsReactionStatus.vue": {
@@ -11166,15 +11166,15 @@
     "semantic_hash": ""
   },
   "src/liquiditySweepReaction.js": {
-    "mtime": 1795379728.1694586,
-    "seen": 1795381270.7257216,
-    "ast_hash": "fb023717303c5eb9028c82e96e012e33",
+    "mtime": 1795381440.2112596,
+    "seen": 1795383749.7967048,
+    "ast_hash": "11a7ea230ac572e8ff6a15961bec6087",
     "semantic_hash": ""
   },
   "src/lsReaction.js": {
-    "mtime": 1795376067.2042582,
-    "seen": 1795381270.7267215,
-    "ast_hash": "ebbcd2028e2efa235e91f2729d44e1b2",
+    "mtime": 1795382621.6907496,
+    "seen": 1795383749.7977047,
+    "ast_hash": "2dcc35936d6f5f07b5d7101c3b2fb4d5",
     "semantic_hash": ""
   },
   "src/lsReactionChain.js": {
@@ -11496,9 +11496,9 @@
     "semantic_hash": ""
   },
   "test/liquiditySweepSelection.test.js": {
-    "mtime": 1795378404.9337623,
-    "seen": 1795381270.8889303,
-    "ast_hash": "1b965e7ddb1317330afa1a1f308c3da1",
+    "mtime": 1795381476.7781477,
+    "seen": 1795383749.958774,
+    "ast_hash": "5dd20da3290d12d103e4dfa2617d90ea",
     "semantic_hash": ""
   }
 }
