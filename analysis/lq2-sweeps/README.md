@@ -1,5 +1,11 @@
 # LQ 2.0: Was macht einen guten Liquiditäts-Sweep aus?
 
+> **Entscheidung (Philip, 22.11.2026): Variante B.** Ein LS ist stark, wenn der Impuls ≥ 0,85 H1-ATR ist, mindestens
+> 1 Swing gebrochen wird und der LS ein LH nach LL ist (Long gespiegelt). Einen Asia-Ausschluss gibt es nicht.
+> Gegen die Reaktion gemessen (H1/H2 2026): Lift 1,47/1,46, Recall 24/26 %. Die Regel behält 12–14 % der Sweeps ohne
+> Reaktion. Alle 5 Mustertrade-Pins (623, 624, 625, 626, 629) bleiben drin. Die Schwelle 0,85 ist an Pin 626
+> festgemacht. Umsetzung im Chart: Session liq-2-chart.
+
 Stand 21.11.2026. Reine Analyse: kein Produktivcode, keine DB-Schreibzugriffe. Alle Zeiten Berlin.
 Grundgesamtheit: alle gesweepten LQ-1.0-Level 2026 (M5, Fraktal P5, Spread Hour ignoriert) aus `fxcm_candles`,
 05.01. bis 21.11.2026, GBPUSD, EURUSD und XAUUSD. Halbjahre: H1 = Jan–Jun, H2 = Jul–Nov (Berliner Monat).
