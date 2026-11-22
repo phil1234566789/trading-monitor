@@ -13,6 +13,7 @@ import { registerChartObjectType, chartObjectLabel } from "../src/chartObjectReg
 import { findNearbyPinCandidates, hasNearbyPinCandidate } from "../src/priceChartHitTest.js";
 import { addPinChartObject } from "../src/pinContext.js";
 import "../src/liquidity2.js";
+import "../src/liquidity.js";
 
 const emptyBag = { tradePrimitives: [], orderBlockPrimitives: [], liquidityPrimitives: [], tradeSetupLinkPrimitives: [],
   tradeConfirmationLinkPrimitives: [], divergencePrimitives: [], tscSetupPrimitives: [] };
@@ -51,5 +52,15 @@ describe("Chartobjekt-Registry", () => {
     expect(candidates[0].key).toBe("GBPUSD|5m|1|1795000000");
     expect(candidates[0].snapshot).toMatchObject({ price: 1.27345, bosTime: 1795003000, algoVersion: "liquidity2-v1" });
     expect(chartObjectLabel("liquidity2_ls", candidates[0].snapshot, "GBPUSD")).toBe("LS2 Hoch 1,27345");
+  });
+
+  it("liefert OB Sweeps mit stabilem Schlüssel (OB-Start, Kante, Richtung) und Algo-Version", () => {
+    const lvl = { sourceKind: "orderBlock", sourceStartTime: 1795000200, sourceKnownAt: 1795000800, sourceDirection: -1,
+      sourceTop: 1.31012, sourceBottom: 1.30981, price: 1.31012, dir: 1, pivotTime: 1795000200, touched: true, touchedTime: 1795003000 };
+    const sources = [{ type: "liquidity_ob_sweep_m5", primitives: [{ level: lvl, distanceTo: () => 2 }], objectOf: (p) => p.level }];
+    const [candidate] = findNearbyPinCandidates(0, 0, { ...emptyBag, chartObjectSources: sources }, ctx);
+    expect(candidate.key).toBe("GBPUSD|5m|1795000200|top|1");
+    expect(candidate.snapshot).toMatchObject({ edge: "top", price: 1.31012, sourceKnownAt: 1795000800, touchedTime: 1795003000, algoVersion: "lq-ob-edge-m5-v1" });
+    expect(chartObjectLabel("liquidity_ob_sweep_m5", candidate.snapshot, "GBPUSD")).toBe("OB-Sweep Hoch 1,31012");
   });
 });

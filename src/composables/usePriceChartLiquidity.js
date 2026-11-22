@@ -33,7 +33,7 @@ export function usePriceChartLiquidity() {
   // Aktuell gezeichnete Liquiditäts-Level — für den Zielmodus-Klick-Hittest (Chat 2026-07-27:
   // "Können wir die Linien klickbar machen?") gebraucht, siehe getCurrentLiquidityLevels() unten.
   let currentLiquidityLevels = [];
-  // OB Sweeps getrennt von liquidityPrimitives: die hängen am Pin-/Ziel-Hittest, der OB-Kanten noch nicht kennt.
+  // OB Sweeps getrennt von liquidityPrimitives (Ziel-/LQ-Pin-Hittest): gepinnt werden sie über die Registry-Quelle unten.
   const obSweepPrimitives = [];
 
   // Liquidität 2.0 hängt hier dran statt in PriceChart.vue, weil sie dieselbe Serie und dieselben Refresh-Anlässe
@@ -42,7 +42,7 @@ export function usePriceChartLiquidity() {
   const liquidityMetadata = ref(null);
   const liquidityEarliestTime = ref(null);
 
-  const chartObjectPinSources = [liquidity2.pinSource];
+  const chartObjectPinSources = [liquidity2.pinSource, { type: "liquidity_ob_sweep_m5", primitives: obSweepPrimitives, objectOf: (p) => p.level }];
 
   function getCurrentLiquidityLevels() {
     return currentLiquidityLevels;

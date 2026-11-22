@@ -11,6 +11,8 @@ import { classifyAge } from "./ageTier";
 import { drawIconLabel } from "./chartIconLabel.js";
 import { CATEGORY_ICON } from "./priceChartConstants.js";
 import { chartObjectCoordinate } from './chartEventCoordinate.js';
+import { registerChartObjectType } from './chartObjectRegistry.js';
+import { fmtPrice, pricePrecisionForInstrument } from './format.js';
 // Reine Fraktal-Erkennung seit Chat 2026-07-31 nach liquidityDetection.js ausgelagert (dort auch
 // die Begründung) — hier nur re-exportiert, damit sich an der öffentlichen API dieser Datei nichts
 // ändert (PriceChart.vue importiert weiterhin von hier).
@@ -457,3 +459,18 @@ export function renderLiquidityLevels(
     existingPrimitives.push(primitive);
   }
 }
+
+// OB Sweeps pinnbar über die Chartobjekt-Registry (kind='chart_object'). Schlüssel: OB-Start, Kante, Richtung
+// (Instrument/Zeitebene ergänzt die Registry). algoVersion hochzählen, sobald detectOrderBlockLiquidityLevels anders erkennt.
+const obSweepEdge = (dir) => (dir === 1 ? "top" : "bottom");
+registerChartObjectType("liquidity_ob_sweep_m5", {
+  algoVersion: "lq-ob-edge-m5-v1",
+  key: (l) => `${l.sourceStartTime}|${obSweepEdge(l.dir)}|${l.dir}`,
+  snapshot: (l) => ({
+    dir: l.dir, edge: obSweepEdge(l.dir), price: l.price, touchedTime: l.touchedTime,
+    sourceStartTime: l.sourceStartTime, sourceKnownAt: l.sourceKnownAt, sourceDirection: l.sourceDirection,
+    sourceTop: l.sourceTop, sourceBottom: l.sourceBottom,
+  }),
+  time: (s) => s.sourceStartTime,
+  label: (s, instrument) => `OB-Sweep ${s.dir === 1 ? "Hoch" : "Tief"} ${fmtPrice(s.price, pricePrecisionForInstrument(instrument))}`,
+});
