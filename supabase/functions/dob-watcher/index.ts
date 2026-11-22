@@ -135,8 +135,6 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
     swingStopGate:createDobSwingStopGate({m5Candles:m5Marked,instrument,atr:dobH1AtrSeries(htfCandles['1h'])}),tradeSetups,liquiditySweepSelector};
   // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
   const calcStart=performance.now(),runs:any[]=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt:asOf,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
-  // LS-Reaktion > 3 h nach dem Touch: nur loggen (Philip: kein Telegram), meist fehlende Kerzen.
-  for(const r of runs)for(const s of [...r.result.setups,...r.result.rejected])if(s.poi?.error)console.warn(`${instrument} LS-Reaktion unplausibel spät`,JSON.stringify(s.poi.error));
   const stale=dobStaleAlarm({instrument:instrument,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   const events=[...runs.flatMap(r=>r.events.map((event:any)=>({event,run:r}))),...(stale?[{event:stale,run:null}]:[])];
   const count=(key:'setups'|'rejected')=>runs.reduce((n,r)=>n+r.result[key].length,0);

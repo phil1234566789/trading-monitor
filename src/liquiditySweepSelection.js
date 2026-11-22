@@ -1,7 +1,7 @@
 // LQ-Algo: Welcher Sweep vor einem Zeitpunkt hat die Bewegung ausgelöst? (Philip, Pseudochart „LS-Zuordnung kausal“.) Kandidaten sind alle
 // Gegenseiten-LS (M5-Fraktal P5 und OB-Kante), die vor `before` berührt wurden, jüngste Sweep-Kerze zuerst. Eine Sweep-Kerze zählt, wenn
 // mindestens ein LS an ihr gültig ist (assessLiquiditySourceValidity) und die LS-Reaktion IN ist, mit gehaltenem Extrem bis `before`.
-// Alle gültigen LS dieser Kerze kommen mit (lsCount). Kein Zeitlimit; IN später als 3 h nach dem Touch liefert einen Plausibilitätsfehler.
+// Alle gültigen LS dieser Kerze kommen mit (lsCount). Kein Zeitlimit: späte Reaktionen nach NY-Schluss sind normal (Philip).
 import {detectLiquidityLevels,detectOrderBlockLiquidityLevels} from './liquidityDetection.js';
 import {detectSetupObs} from './tradeSetup.js';
 import {evaluateLiquiditySweepReaction,LS_REACTION_EXTREME_PERIOD} from './liquiditySweepReaction.js';
@@ -23,7 +23,6 @@ export function createLiquiditySweepSelector({instrument,m5Candles=[],h1Candles=
  const configs=sessionConfigs.map(s=>({...s,instrument}));
  const marked=markIgnoredCandles(m5Candles,configs,s=>berlinOffsetMinutes(s*1000)),clean=marked.filter(c=>!c.ignored);
  const obs=detectSetupObs(marked,obMinimum(instrument,'5m')),pivots=detectLiquidityLevels(clean,LS_REACTION_EXTREME_PERIOD);
- const ignoredTimes=marked.filter(c=>c.ignored).map(c=>c.time);
  const fractals=detectLiquidityLevels(clean,TRADE_SETUP_M5_FRACTAL_PERIOD),end=(clean.at(-1)?.time??0)+300;
  const anchors=buildHistoricalDailyAnchors(d1Candles,h1Candles),resolvers=new Map(),closeReactionCache=createCloseReactionCache();
  // Je Richtung die Sweep-Kerzen absteigend, jede mit ihren LS.
@@ -44,7 +43,7 @@ export function createLiquiditySweepSelector({instrument,m5Candles=[],h1Candles=
  const reactions=new Map(),validity=new Map();
  const reactionOf=(dir,group)=>{
   const key=`${dir}:${group.touch}`;
-  if(!reactions.has(key))reactions.set(key,evaluateLiquiditySweepReaction({dir,ls:{price:group.levels[0].price,touchedTime:group.touch}},{obs,candles:clean,pivots,ignoredTimes}));
+  if(!reactions.has(key))reactions.set(key,evaluateLiquiditySweepReaction({dir,ls:{price:group.levels[0].price,touchedTime:group.touch}},{obs,candles:clean,pivots}));
   return reactions.get(key);
  };
  const validityOf=(dir,level,touch)=>{
@@ -69,8 +68,7 @@ export function createLiquiditySweepSelector({instrument,m5Candles=[],h1Candles=
     .sort((a,b)=>(a.sourceKind==='orderBlock')-(b.sourceKind==='orderBlock')).map(l=>[l.price,l])).values()];
    if(!valid.length)continue;
    const primary=valid.reduce((a,b)=>b.pivotTime<a.pivotTime?b:a);
-   return {touchTime:group.touch,reaction,levels:valid,primary,lsCount:valid.length,
-    error:reaction.late?{reason:'lateLsReaction',touchTime:group.touch,reactionObStart:reaction.reactionOb.startTime}:null};
+   return {touchTime:group.touch,reaction,levels:valid,primary,lsCount:valid.length};
   }
   return null;
  };

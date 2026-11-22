@@ -1,11 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {createLiquiditySweepSelector} from '../src/liquiditySweepSelection.js';
-import {evaluateLiquiditySweepReaction,LS_REACTION_EXTREME_PERIOD} from '../src/liquiditySweepReaction.js';
 import {lqSweepPoi} from '../src/dobLqSweepPoi.js';
-import {detectSetupObs} from '../src/tradeSetup.js';
-import {detectLiquidityLevels} from '../src/liquidityDetection.js';
-import {obMinimum} from '../src/instrumentConfig.js';
 
 // Spec aus Philips Pseudochart „LS-Zuordnung kausal“ (Pins 634/639/640 Winner mit richtigem LS, 641 Loss eines gültigen Setups):
 // jüngster gültiger Sweep vor OB1, Sweep-Extrem = erster M5-Pivot ab Touch, IN = Umkehr-OB. Kerzen aus dem Lauf-Cache, Zeiten Berlin.
@@ -32,7 +28,6 @@ describe('kausale LS-Auswahl an den Pin-Fällen',()=>{
   expect(s.lsCount).toBe(ls.length);
   expect([berlin(s.reaction.extreme.time),s.reaction.extreme.price]).toEqual([extremeAt,extreme]);
   expect(berlin(s.reaction.reactionOb.startTime)).toBe(inAt);
-  expect(s.error).toBeNull();
  });
 
  // Zwischenlösung (Philip): ob ein POI trägt, entscheidet die Kanten-Geometrie wie v1; welcher LS, die kausale Auswahl.
@@ -45,7 +40,7 @@ describe('kausale LS-Auswahl an den Pin-Fällen',()=>{
  it('Pin 634: geometrisch gekoppelter POI trägt den kausalen LS 4.190,77 statt der Primär-LS',()=>{
   const {poi,reason}=poiOf(selectFor(c634))(pair);
   expect(reason).toBeNull();
-  expect(poi).toMatchObject({kind:'ts11',tradeSetupId:50327,match:'edge',lsSource:'causal',lsPrice:4190.77,lsCount:1,error:null});
+  expect(poi).toMatchObject({kind:'ts11',tradeSetupId:50327,match:'edge',lsSource:'causal',lsPrice:4190.77,lsCount:1});
   expect(berlin(poi.lsTouchedTime)).toBe('16.10., 11:05');
  });
  it('ohne kausalen Sweep bleibt der POI, aber ohne LS und ohne Rückfall auf die Primär-LS',()=>{
@@ -55,38 +50,5 @@ describe('kausale LS-Auswahl an den Pin-Fällen',()=>{
  it('ohne geometrische Kopplung kein POI, auch wenn ein kausaler Sweep existiert',()=>{
   const far={...pair,firstOrderBlock:{...pair.firstOrderBlock,top:20,bottom:19},secondOrderBlock:{top:19.6,bottom:19.2}};
   expect(poiOf(selectFor(c634))(far).poi).toBeNull();
- });
-});
-
-describe('3-h-Plausibilität der LS-Reaktion',()=>{
- const reactionOf=m5=>{
-  const c=pin(634),s=selectFor(c)({dir:c.dir,before:c.before});
-  return evaluateLiquiditySweepReaction({dir:1,ls:{price:4190.77,touchedTime:s.touchTime}},
-   {obs:detectSetupObs(m5,obMinimum('XAUUSD','5m')),candles:m5,pivots:detectLiquidityLevels(m5,LS_REACTION_EXTREME_PERIOD)});
- };
- it('an den Pin-Fällen kein Fehler',()=>{
-  for(const c of fixture.cases)expect(selectFor(c)({dir:c.dir,before:c.before}).error).toBeNull();
-  expect(reactionOf(candles(pin(634).m5)).late).toBe(false);
- });
- it('fehlende Kerzen nach dem Touch lösen den Fehler aus',()=>{
-  // Short-Sweep an 105, danach fehlen 4 h Kerzen (Datenloch); der bärische Umkehr-OB kommt erst danach.
-  const t0=1792140000,bar=(i,o,h,l,c)=>({time:t0+i*300,open:o,high:h,low:l,close:c});
-  const m5=[bar(0,100,101,99.5,100.5),bar(1,100.5,102,100,101.5),bar(2,101.5,103,101,102.5),bar(3,102.5,104,102,103.5),
-   bar(4,103.5,110,103,108),bar(5,108,109,107,108),bar(6,108,108.5,107,107.5),
-   bar(54,107.5,109.2,107.4,109),bar(55,109,109.1,100,100.5),bar(56,100.5,101,99,99.5)];
-  const r=evaluateLiquiditySweepReaction({dir:1,ls:{price:105,touchedTime:t0+4*300}},
-   {obs:detectSetupObs(m5,0.5),candles:m5,pivots:detectLiquidityLevels(m5,LS_REACTION_EXTREME_PERIOD)});
-  expect(r).toMatchObject({status:'in',late:true});
-  expect((r.reactionOb.startTime-r.touchTime)/3600).toBeGreaterThan(3);
- });
- it('Wochenende zählt nicht: Sweep Freitag 22:50, Umkehr Sonntagabend ist kein Fehler',()=>{
-  // Wie die GBP-Fälle im Lauf: Touch Freitag 16.10. 22:50 Berlin, Umkehr-OB erst Sonntag 18.10. nach Handelsstart.
-  const fri=Date.parse('2026-10-16T21:30:00Z')/1000,sun=Date.parse('2026-10-18T22:15:00Z')/1000,at=(base,i,o,h,l,c)=>({time:base+i*300,open:o,high:h,low:l,close:c});
-  const m5=[at(fri,0,100,101,99.5,100.5),at(fri,1,100.5,102,100,101.5),at(fri,2,101.5,103,101,102.5),at(fri,3,102.5,104,102,103.5),
-   at(fri,4,103.5,110,103,108),at(fri,5,108,109,107,108),at(fri,6,108,108.5,107,107.5),
-   at(sun,0,107.5,109.2,107.4,109),at(sun,1,109,109.1,100,100.5),at(sun,2,100.5,101,99,99.5)];
-  const r=evaluateLiquiditySweepReaction({dir:1,ls:{price:105,touchedTime:fri+4*300}},
-   {obs:detectSetupObs(m5,0.5),candles:m5,pivots:detectLiquidityLevels(m5,LS_REACTION_EXTREME_PERIOD)});
-  expect(r).toMatchObject({status:'in',late:false});
  });
 });

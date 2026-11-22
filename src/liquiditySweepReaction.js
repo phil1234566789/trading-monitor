@@ -1,12 +1,7 @@
 // LS-Reaktion (Gruppe POI): Ist die Preisreaktion an einem LQ-Level gut? Welche Level in Frage kommen, entscheidet der LQ-Algo,
 // welche Range gilt, der Struktur-Algo. Gegenstück zu evaluateOrderBlockReaction() (orderBlockReaction.js).
 import {liquidityTouch} from './liquidityDetection.js';
-import {businessSecondsBetween} from './chartTimeUtils.js';
 
-// Kein Zeitfilter (Philip): eines der drei Ereignisse kommt zügig. Später als 3 h Marktzeit nach dem Touch heißt fehlende Kerzen oder ein
-// Erkennungsfehler; Fill bricht ab, Live wird nur geloggt. Marktzeit = Kerzenfolge: Wochenende und ausgeblendete Sessions zählen eine
-// Kerze (sonst wäre jeder Sweep Freitag 22:55 mit Umkehr nach der Pause ein Fehler), eine Datenlücke unter der Woche zählt voll.
-export const LS_REACTION_PLAUSIBLE_SECONDS=3*3600;
 // Sweep-Extrem = erster M5-Pivot ab dem Touch, mit der inneren Strukturperiode (P2) des LQ-Algos.
 export const LS_REACTION_EXTREME_PERIOD=2;
 
@@ -29,8 +24,8 @@ export function hasUninterruptedSweepReaction(setup, setupObs, m5Candles = []) {
 // → OUT, bärischer M5-OB → IN (Umkehr-OB). Sweep-Extrem = erster M5-Pivot (Periode 2) ab der Touch-Kerze; „gehalten“ = keine Kerze
 // darüber bis vor den Umkehr-OB, mit holdUntil (DOB: OB1) bis vor diesen. setup: {dir, ls:{price,touchedTime}, sweeps?, obStartTime?};
 // obStartTime = eigener OB einer Setup-Zeile, sonst der erste Umkehr-OB ab dem Touch. m5: obs (detectSetupObs), candles (ohne
-// ignorierte), pivots (detectLiquidityLevels(candles, 2)), ignoredTimes (Zeiten der ausgeblendeten Kerzen, aufsteigend).
-export function evaluateLiquiditySweepReaction(setup,{obs=[],candles=[],pivots={highs:[],lows:[]},ignoredTimes=[]}={},{holdUntil}={}){
+// ignorierte), pivots (detectLiquidityLevels(candles, 2)).
+export function evaluateLiquiditySweepReaction(setup,{obs=[],candles=[],pivots={highs:[],lows:[]}}={},{holdUntil}={}){
  const touch=touchTime(setup,candles);
  if(!Number.isFinite(touch))return {status:'in',reason:'touchUnknown'};
  const reaction=Number.isFinite(setup.obStartTime)?{startTime:setup.obStartTime}:firstFrom(obs,touch,'startTime',ob=>ob.dir===-setup.dir);
@@ -46,23 +41,14 @@ export function evaluateLiquiditySweepReaction(setup,{obs=[],candles=[],pivots={
  // Vorläufige Auslegung (Philip prüft später): OB-Kerze exklusiv, sie macht oft selbst das Extrem (Mustertrade 49404, #143 Long).
  if(brokenAt!=null&&brokenAt<reaction.startTime)return {...base,status:'out',reason:'sweepExtremeBroken'};
  if(brokenAt!=null&&brokenAt<holdUntil)return {...base,status:'out',reason:'sweepExtremeBrokenBeforeHoldEnd'};
- return {...base,status:'in',late:marketSeconds(candles,ignoredTimes,touch,reaction.startTime)>LS_REACTION_PLAUSIBLE_SECONDS};
+ return {...base,status:'in'};
 }
 
 // Erstes Element ab Zeit t (Arrays aufsteigend nach key sortiert, wie detectOrderBlocks/detectLiquidityLevels liefern): Binärsuche statt
 // Vollscan, weil der LQ-Algo das für jede Sweep-Kerze des Jahres fragt.
-function marketSeconds(candles,ignoredTimes,from,to){
- let total=0;
- for(let i=indexFrom(candles,from,'time')+1;i<candles.length&&candles[i].time<=to;i++){
-  const prev=candles[i-1].time,gap=candles[i].time-prev,slots=gap/300-1;
-  const planned=businessSecondsBetween(prev,candles[i].time)<gap||indexFrom(ignoredTimes,candles[i].time)-indexFrom(ignoredTimes,prev+1)>=slots;
-  total+=planned?300:gap;
- }
- return total;
-}
 function indexFrom(rows,t,key){
  let lo=0,hi=rows.length;
- while(lo<hi){const mid=(lo+hi)>>1;if((key?rows[mid][key]:rows[mid])<t)lo=mid+1;else hi=mid;}
+ while(lo<hi){const mid=(lo+hi)>>1;if(rows[mid][key]<t)lo=mid+1;else hi=mid;}
  return lo;
 }
 function firstFrom(rows,t,key,match){

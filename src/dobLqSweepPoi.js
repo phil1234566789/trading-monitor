@@ -81,16 +81,16 @@ function geometricLqSweepPoi(input){
 
 // Welcher LS (Philip, „LS-Zuordnung kausal“): der jüngste gültige, gehaltene Sweep vor OB1 aus dem LQ-Algo (liquiditySweepSelection.js),
 // alle gültigen LS der Sweep-Kerze plus Zähler (WR-Hypothese „mehr Level = besser“). Kein Sweep: lsSource 'none' und kein LS, kein stiller
-// Rückfall auf den LS der geometrischen LS-Reaktion. error: IN später als 3 h Marktzeit nach dem Touch (Fill bricht ab).
+// Rückfall auf den LS der geometrischen LS-Reaktion.
 function causalLs(select){
  const memo=new Map();
  return pair=>{
   const dir=pair.direction==='short'?1:-1,before=pair.firstOrderBlock.startTime,key=`${dir}:${before}`;
   if(!memo.has(key))memo.set(key,select({dir,before}));
   const s=memo.get(key);
-  if(!s)return {lsSource:'none',lsPrice:null,lsPivotTime:null,lsTouchedTime:null,lsTimeframe:null,lsSourceKind:null,lsCount:0,lsLevels:[],error:null};
+  if(!s)return {lsSource:'none',lsPrice:null,lsPivotTime:null,lsTouchedTime:null,lsTimeframe:null,lsSourceKind:null,lsCount:0,lsLevels:[]};
   return {lsSource:'causal',lsPrice:s.primary.price,lsPivotTime:s.primary.pivotTime,lsTouchedTime:s.touchTime,lsTimeframe:'5M',
    lsSourceKind:s.primary.sourceKind??'liquidity',lsCount:s.lsCount,reactionObStart:s.reaction.reactionOb.startTime,
-   lsLevels:s.levels.map(l=>({price:l.price,pivotTime:l.pivotTime,sourceKind:l.sourceKind??'liquidity'})),error:s.error};
+   lsLevels:s.levels.map(l=>({price:l.price,pivotTime:l.pivotTime,sourceKind:l.sourceKind??'liquidity'}))};
  };
 }

@@ -168,12 +168,8 @@ try {
   const missingModels = missingDobModelTrades(await fetchDobTradePins(SYMBOL), rows, { poiType: RUNS[RUN_ID].poiType, fromSec: startSec });
   for (const pin of missingModels) console.error(`Mustertrade fehlt: ${pin.dobTradeContext.direction} ${berlinDateStrFor(pin.dobTradeContext.entry_time)} (Pin ${pin.id}${pin.dealingRangeId ? `, DR #${pin.dealingRangeId}` : ''})`);
   if (missingModels.length && !process.argv.includes('--allow-missing-model')) { console.error('Abbruch: Mustertrade(s) fehlen im Lauf.'); process.exitCode = 1; }
-  // LS-Reaktion später als 3 h nach dem Touch: kein Filter, sondern ein Fehler (fehlende Kerzen oder Erkennung); nichts schreiben.
-  const lateReactions = [...new Map([...bestPoi.values()].filter(p => p?.error).map(p => [`${p.error.touchTime}`, p.error])).values()];
-  for (const e of lateReactions) console.error(`LS-Reaktion unplausibel spät: Touch ${berlinDateStrFor(e.touchTime)} ${new Date(e.touchTime * 1000).toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin' })}, Umkehr-OB ${new Date(e.reactionObStart * 1000).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}`);
   // Geometrisch gekoppelt, aber ohne kausalen Sweep: zählen und melden, kein Rückfall auf den LS der LS-Reaktion-Zeile.
   if (CAUSAL) console.log(`LS kausal: ${rows.filter(r => r.features?.poi_ls_source === 'causal').length} · ohne kausalen Sweep: ${rows.filter(r => r.features?.poi_ls_source === 'none').length}`);
-  if (lateReactions.length) { console.error('Abbruch: LS-Reaktion(en) über 3 h nach dem Touch.'); process.exitCode = 1; }
   const { data: storedRun, error: runError } = await supabase.from('dob_trade_setup_runs').select('data_end').eq('id', RUN_ID).eq('instrument', SYMBOL).limit(1);
   const { data: stored, error: storedError } = await fetchAllRows((from, to) => supabase.from('dob_trade_setups').select('id,outcome')
     .eq('run_id', RUN_ID).eq('instrument', SYMBOL).order('id').range(from, to));
