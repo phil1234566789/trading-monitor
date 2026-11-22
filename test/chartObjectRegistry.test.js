@@ -50,7 +50,7 @@ describe("Chartobjekt-Registry", () => {
     const candidates = findNearbyPinCandidates(0, 0, { ...emptyBag, chartObjectSources: sources }, ctx);
     expect(candidates).toHaveLength(1);
     expect(candidates[0].key).toBe("GBPUSD|5m|1|1795000000");
-    expect(candidates[0].snapshot).toMatchObject({ price: 1.27345, bosTime: 1795003000, algoVersion: "liquidity2-v1" });
+    expect(candidates[0].snapshot).toMatchObject({ price: 1.27345, bosTime: 1795003000, algoVersion: "liquidity2-v2" });
     expect(chartObjectLabel("liquidity2_ls", candidates[0].snapshot, "GBPUSD")).toBe("LS2 Hoch 1,27345");
   });
 

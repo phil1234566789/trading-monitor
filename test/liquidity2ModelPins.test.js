@@ -7,7 +7,7 @@ import { detectStrongLiquidityLevels } from "../src/liquidity2.js";
 // Wird hier etwas rot, ist das eine Frage an Philip, KEIN Test-Update (keinen Pin streichen, keine Fixture kürzen).
 //
 // Neuer Pin: Zeile in MODEL_PINS ergänzen und M5-Kerzen als test/fixtures/liquidity2/model-pins/<key mit _>.json
-// ablegen (fxcm_candles, 12h vor dem Pivot bis 1h nach dem Sweep).
+// ablegen (fxcm_candles, 4 Tage vor dem Pivot bis 1h nach dem Sweep; die H1-ATR(14) braucht den Vorlauf).
 const MODEL_PINS = [
   { id: 623, key: "GBPUSD|5m|1|1795103700", note: "starkes LQ, wo man shorten kann" },
   { id: 624, key: "GBPUSD|5m|1|1795106700", note: "kann man auch shorten, aber vorsichtiger wegen MMM Session" },
