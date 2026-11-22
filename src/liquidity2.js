@@ -6,6 +6,8 @@
 //   3. und er bis zum ersten Hoch über ihm aktiv bleibt (danach gesweept).
 // Pivots und Sweep kommen unverändert aus dem alten Algo (liquidityDetection.js), damit beide Indikatoren auf
 // denselben Pivots stehen und der Vorher/Nachher-Vergleich nur die Auswahl zeigt.
+// Mustertrade-Pins vom Typ liquidity2_ls sind Spezifikation: ein Umbau dieser Regel darf keinen davon verlieren
+// (test/liquidity2ModelPins.test.js). Wird die Wache rot, Philip fragen, nicht den Test anpassen.
 import { detectLiquidityLevels, liquidityTouch, LIQUIDITY_FRACTAL_PERIOD } from "./liquidityDetection.js";
 import { wilderAtrValues } from "./atr.js";
 import { toPips } from "./pipConfig.js";
