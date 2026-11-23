@@ -30,7 +30,7 @@ const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':900,'1h':6000,'4h':1500};
 // LS-Reaktion-Trendkontext wie der Chart (lsReactionContextLoader: 300 D1, M5 ab dem D1-Anker, höchstens 15000).
-// ponytail: ein neues LS-Reaktion-Urteil je Tick über alle Instrumente (Edge-CPU-Limit); fehlende gelten bis dahin
+// ponytail: ein neues LS-Reaktion-Urteil je Tick und Instrument (Edge-CPU-Limit); fehlende gelten bis dahin
 // nicht als LS-Reaktion, d. h. ein LQ-Sweep-Alarm kommt höchstens ein paar Minuten später, nie fälschlich.
 const LS_REACTION_PER_TICK=1;
 const offset=(sec:number)=>berlinOffsetMinutes(sec*1000);
@@ -121,9 +121,10 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const m1Marked=mark(m1),m5Marked=mark(m5);
   const lq=poiTypes.some(p=>p.poiType==='lq_sweep');
   // POI wie Lauf v2: Geometrie über die LS-Reaktion-Zeilen, der LS kausal aus dem LQ-Algo (M5 bis zur Kontext-Obergrenze, reicht für
-  // den D1-Anker; D1 für die Anker).
+  // den D1-Anker; D1 für die Anker). Ohne bestandene LS-Reaktion findet die Geometrie keinen POI und fragt den LS nie ab: dann
+  // weder 15000 M5 laden noch den LQ-Algo bauen (Edge-CPU).
   const lsReaction=lq?await lsReactionSetups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null,tradeSetups=lsReaction?.setups??[];
-  const liquiditySweepSelector=lq?createLiquiditySweepSelector({instrument,sessionConfigs:sessions,h1Candles:h1,
+  const liquiditySweepSelector=tradeSetups.length?createLiquiditySweepSelector({instrument,sessionConfigs:sessions,h1Candles:h1,
     m5Candles:await closedCandles(client,instrument,'5m',evaluatedAt,LS_REACTION_CONTEXT.maxM5),
     d1Candles:await closedCandles(client,instrument,'1D',evaluatedAt,LS_REACTION_CONTEXT.d1)}):undefined;
   // Erkennung zum Datenstand (letzte M1, Feed-Verzug ≤ 3 min), Herzschlag, Stale-Alarm und Alarmfenster zur Uhrzeit.
@@ -179,13 +180,20 @@ async function reportError(client:any,instrument:string,error:unknown){
 
 const CANDLE_ARRIVAL_SECONDS=20;
 
-// Alle Instrumente nacheinander zur selben Minute; Fehler je Instrument landen in dessen Herzschlag und als Hinweis.
-async function tick(client:any,dry=false,probes:number[]=[]){
-  const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={},budget={left:LS_REACTION_PER_TICK};
-  for(const instrument of INSTRUMENTS){
-    try{results[instrument]=await tickInstrument(client,instrument,evaluatedAt,dry,probes,budget);}
-    catch(error){results[instrument]={error:await reportError(client,instrument,error)};}
-  }
+// Jedes Instrument zur selben Minute in einem eigenen Aufruf dieser Function: das Edge-CPU-Limit (~2 s) gilt je Worker, und seit dem
+// LQ-Algo für den kausalen LS reichte es nicht mehr für alle drei in einem (546 WORKER_RESOURCE_LIMIT ohne jeden Hinweis). Stirbt ein
+// Instrument-Aufruf, meldet der Verteiler es in dessen Herzschlag und als Hinweis.
+async function tick(client:any,token:string,dry=false,probes:number[]=[]){
+  const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={};
+  await Promise.all(INSTRUMENTS.map(async instrument=>{
+    try{
+      const response=await fetch(`${env('SUPABASE_URL')}/functions/v1/dob-watcher`,{method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({instrument,evaluatedAt,dry,probes})});
+      const text=await response.text();
+      if(!response.ok)throw new Error(`HTTP ${response.status}: ${text.slice(0,200)}`);
+      results[instrument]=JSON.parse(text);
+    }catch(error){results[instrument]={error:await reportError(client,instrument,error)};}
+  }));
   // Auch außerhalb 02–22 Uhr: Wiederholungen und Ausfallmeldungen dürfen nicht bis zum Morgen warten.
   const delivery=dry?null:await flushDobOutbox(client,env,Math.floor(Date.now()/1000)).catch(error=>({error:error instanceof Error?error.message:String(error)}));
   return {evaluatedAt,runtimeMs:Math.round(performance.now()-started),instruments:results,delivery};
@@ -207,11 +215,17 @@ Deno.serve(async request=>{
         text:`🧪 DOB-Watcher ${INSTRUMENTS.join(', ')}: Testnachricht ${berlinDateStrFor(now)} ${formatBerlinTime(now)}. Ab jetzt kommen Alarme beim OB2-Retest und beim Entry (02:00–22:00).`});
       return json(await flushDobOutbox(client,env,now));
     }
+    const probes=Array.isArray(body?.probes)?body.probes.filter(Number.isFinite):[];
+    // Instrument-Aufruf vom Verteiler (tick): Minute steht schon fest, also nicht noch einmal auf die Kerze warten.
+    if(INSTRUMENTS.includes(body?.instrument)&&Number.isInteger(body?.evaluatedAt)){
+      try{return json(await tickInstrument(client,body.instrument,body.evaluatedAt,Boolean(body.dry),probes));}
+      catch(error){return json({error:await reportError(client,body.instrument,error)});}
+    }
     // FXCM liefert die M1-Kerze erst ~14 s nach Schluss (10 s Abschlussabstand + Upload). Ohne Warten sieht der Lauf zu :00 sie nicht,
     // und jeder Alarm kommt eine Minute zu spät.
     const wait=CANDLE_ARRIVAL_SECONDS*1000-Date.now()%60000;
     if(!body?.dry&&wait>0)await new Promise(resolve=>setTimeout(resolve,wait));
-    return json(await tick(client,Boolean(body?.dry),Array.isArray(body?.probes)?body.probes.filter(Number.isFinite):[]));
+    return json(await tick(client,token!,Boolean(body?.dry),probes));
   }catch(error){
     return json({error:error instanceof Error?error.message:String(error)},500);
   }
