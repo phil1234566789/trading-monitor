@@ -105,8 +105,11 @@ async function lsReactionSetups(client:any,instrument:string,evaluatedAt:number,
 // (eine noch unbestätigte Umkehr-OB kann sie davor ändern), so gleicht die gespeicherte der frisch gerechneten.
 const LS_SELECTION_SETTLE_SECONDS=1800;
 async function lsSelectionCache(client:any,instrument:string,evaluatedAt:number,build:()=>(q:{dir:number,before:number})=>unknown){
-  const rows=checked(await client.from('dob_ls_selections').select('dir,before_time,result').eq('instrument',instrument)
-    .eq('version',LIQUIDITY_SWEEP_SELECTION_VERSION).gte('before_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('before_time').limit(1000)) as any[];
+  // Lesefehler (z. B. Tabelle noch nicht migriert): ohne Cache rechnen wie bisher, nie den Alarm verlieren.
+  const read=await client.from('dob_ls_selections').select('dir,before_time,result').eq('instrument',instrument)
+    .eq('version',LIQUIDITY_SWEEP_SELECTION_VERSION).gte('before_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('before_time').limit(1000);
+  if(read.error)console.error('dob_ls_selections lesen fehlgeschlagen',instrument,read.error.message);
+  const rows=(read.data??[]) as any[];
   const key=(dir:number,before:number)=>`${dir}:${before}`,iso=(sec:number)=>new Date(sec*1000).toISOString();
   const map=new Map<string,unknown>(rows.map(r=>[key(r.dir,Date.parse(r.before_time)/1000),r.result]));
   const fresh:[number,number][]=[];let selector:ReturnType<typeof build>|null=null;
