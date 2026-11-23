@@ -82,6 +82,11 @@ function geometricLqSweepPoi(input){
 // Welcher LS (Philip, „LS-Zuordnung kausal“): der jüngste gültige, gehaltene Sweep vor OB1 aus dem LQ-Algo (liquiditySweepSelection.js),
 // alle gültigen LS der Sweep-Kerze plus Zähler (WR-Hypothese „mehr Level = besser“). Kein Sweep: lsSource 'none' und kein LS, kein stiller
 // Rückfall auf den LS der geometrischen LS-Reaktion.
+// Genau die Felder, die causalLs liest: so klein, dass der dob-watcher das Ergebnis speichern und später statt des LQ-Algos zurückgeben kann.
+export const slimLiquiditySweepSelection=s=>s&&{touchTime:s.touchTime,lsCount:s.lsCount,reaction:{reactionOb:{startTime:s.reaction.reactionOb.startTime}},
+ primary:{price:s.primary.price,pivotTime:s.primary.pivotTime,sourceKind:s.primary.sourceKind??null},
+ levels:s.levels.map(l=>({price:l.price,pivotTime:l.pivotTime,sourceKind:l.sourceKind??null}))};
+
 function causalLs(select){
  const memo=new Map();
  return pair=>{

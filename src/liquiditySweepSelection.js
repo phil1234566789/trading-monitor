@@ -15,6 +15,9 @@ import {obMinimum} from './instrumentConfig.js';
 import {TRADE_SETUP_M5_FRACTAL_PERIOD} from './priceChartConstants.js';
 
 const bar=t=>Math.floor(t/300)*300;
+// Schlüssel der im dob-watcher gespeicherten Auswahl (dob_ls_selections): bei jeder fachlichen Änderung am LQ-Algo, der LS-Reaktion oder
+// dem Strukturkontext hochzählen, sonst liest der Watcher alte Ergebnisse.
+export const LIQUIDITY_SWEEP_SELECTION_VERSION='lq-causal-held-v1';
 
 // m5Candles roh (inkl. Sessions, die markIgnoredCandles ausblendet), H1/D1 für den D1-Anker des Strukturkontexts.
 // JSDoc, weil Deno die Defaults (= []) sonst als never[] liest.

@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {describe,expect,it} from 'vitest';
 import {createLiquiditySweepSelector} from '../src/liquiditySweepSelection.js';
-import {lqSweepPoi} from '../src/dobLqSweepPoi.js';
+import {lqSweepPoi,slimLiquiditySweepSelection} from '../src/dobLqSweepPoi.js';
 
 // Spec aus Philips Pseudochart „LS-Zuordnung kausal“ (Pins 634/639/640 Winner mit richtigem LS, 641 Loss eines gültigen Setups):
 // jüngster gültiger Sweep vor OB1, Sweep-Extrem = erster M5-Pivot ab Touch, IN = Umkehr-OB. Kerzen aus dem Lauf-Cache, Zeiten Berlin.
@@ -50,5 +50,25 @@ describe('kausale LS-Auswahl an den Pin-Fällen',()=>{
  it('ohne geometrische Kopplung kein POI, auch wenn ein kausaler Sweep existiert',()=>{
   const far={...pair,firstOrderBlock:{...pair.firstOrderBlock,top:20,bottom:19},secondOrderBlock:{top:19.6,bottom:19.2}};
   expect(poiOf(selectFor(c634))(far).poi).toBeNull();
+ });
+});
+
+// dob-watcher speichert die Auswahl je (Richtung, OB1-Start) schlank in dob_ls_selections und rechnet sie nicht jede Minute neu (Edge-CPU).
+describe('gespeicherte LS-Auswahl',()=>{
+ const slimJson=s=>JSON.parse(JSON.stringify(slimLiquiditySweepSelection(s)));
+ it.each([634,639,640,641])('Pin %i: 30 min nach OB1-Start steht die Auswahl schon fest',id=>{
+  const c=pin(id),cut=c.before+1800,closed=(rows,sec)=>candles(rows).filter(x=>x.time+sec<=cut);
+  const early=createLiquiditySweepSelector({instrument:'XAUUSD',m5Candles:closed(c.m5,300),h1Candles:closed(c.h1,3600),
+   d1Candles:closed(c.d1,86400),sessionConfigs:fixture.sessions});
+  expect(slimJson(early({dir:c.dir,before:c.before}))).toEqual(slimJson(selectFor(c)({dir:c.dir,before:c.before})));
+ });
+ it('Pin 634: POI aus der gespeicherten Auswahl gleicht dem aus der frischen',()=>{
+  const c=pin(634),fresh=selectFor(c),stored=slimJson(fresh({dir:c.dir,before:c.before}));
+  const pair={direction:'short',firstOrderBlock:{startTime:c.before,top:10,bottom:9},secondOrderBlock:{top:9.6,bottom:9.2},recognizedAt:c.before+3600};
+  const ts={id:50327,direction:'short',top:10,bottom:9.4,rawTop:null,rawBottom:null,startTime:c.before-1800,knownAt:c.before-1200,
+   lsPrice:4177.39,lsPivotTime:c.before-9000,lsTouchedTime:c.before-2400,lsTimeframe:'5M',lsSourceKind:'liquidity'};
+  const poiOf=selector=>lqSweepPoi({instrument:'XAUUSD',poiOptions:{match:'adjacent'},tradeSetups:[ts],liquiditySweepSelector:selector})(pair);
+  expect(poiOf(()=>stored)).toEqual(poiOf(fresh));
+  expect(poiOf(()=>null).poi.lsSource).toBe('none');
  });
 });

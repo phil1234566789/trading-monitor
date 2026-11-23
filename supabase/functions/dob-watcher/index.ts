@@ -15,9 +15,9 @@ import {createDobCounterDobGate} from '../../../src/dobCounterDob.js';
 import {createDobSwingStopGate} from '../../../src/dobSwingStop.js';
 import {dobH1AtrSeries} from '../../../src/dobHtfObPoi.js';
 import {dobAutoPin} from '../../../src/dobAutoPin.js';
-import {dobLsReactionFromRow} from '../../../src/dobLqSweepPoi.js';
+import {dobLsReactionFromRow,slimLiquiditySweepSelection} from '../../../src/dobLqSweepPoi.js';
 import {computeLsReactionVerdicts,LS_REACTION_VERSION,LS_REACTION_CONTEXT} from '../_shared/lsReactionVerdicts.ts';
-import {createLiquiditySweepSelector} from '../../../src/liquiditySweepSelection.js';
+import {createLiquiditySweepSelector,LIQUIDITY_SWEEP_SELECTION_VERSION} from '../../../src/liquiditySweepSelection.js';
 import {secretMatches} from '../_shared/setup2Notifications.js';
 import {flushDobOutbox} from '../_shared/dobDelivery.js';
 import {db,env,json,checked,headers} from '../_shared/setup2Http.ts';
@@ -100,6 +100,30 @@ async function lsReactionSetups(client:any,instrument:string,evaluatedAt:number,
   return {setups:rows.filter(r=>verdict.get(r.id)?.status==='passed').map(r=>dobLsReactionFromRow(r,verdict.get(r.id))),rows:rows.length,evaluated:missing.length,pending:pending.length-missing.length};
 }
 
+// Kausale LS-Auswahl je (Richtung, OB1-Start) aus dob_ls_selections; den LQ-Algo (15000 M5 + Strukturkontext, der größte CPU-Posten
+// je Aufruf) nur bauen, wenn eine fehlt. Gespeichert erst 30 min nach OB1-Start: an Live-Daten war die Auswahl ab 15 min danach stabil
+// (eine noch unbestätigte Umkehr-OB kann sie davor ändern), so gleicht die gespeicherte der frisch gerechneten.
+const LS_SELECTION_SETTLE_SECONDS=1800;
+async function lsSelectionCache(client:any,instrument:string,evaluatedAt:number,build:()=>(q:{dir:number,before:number})=>unknown){
+  const rows=checked(await client.from('dob_ls_selections').select('dir,before_time,result').eq('instrument',instrument)
+    .eq('version',LIQUIDITY_SWEEP_SELECTION_VERSION).gte('before_time',new Date((evaluatedAt-2*86400)*1000).toISOString()).order('before_time').limit(1000)) as any[];
+  const key=(dir:number,before:number)=>`${dir}:${before}`,iso=(sec:number)=>new Date(sec*1000).toISOString();
+  const map=new Map<string,unknown>(rows.map(r=>[key(r.dir,Date.parse(r.before_time)/1000),r.result]));
+  const fresh:[number,number][]=[];let selector:ReturnType<typeof build>|null=null;
+  return {cached:rows.length,get built(){return selector!=null;},
+    select({dir,before}:{dir:number,before:number}){
+      const k=key(dir,before);
+      if(!map.has(k)){selector??=build();map.set(k,slimLiquiditySweepSelection(selector({dir,before})));fresh.push([dir,before]);}
+      return map.get(k);
+    },
+    async save(){
+      const settled=fresh.filter(([,before])=>before<=evaluatedAt-LS_SELECTION_SETTLE_SECONDS);
+      if(settled.length)checked(await client.from('dob_ls_selections').upsert(settled.map(([dir,before])=>({instrument,version:LIQUIDITY_SWEEP_SELECTION_VERSION,
+        dir,before_time:iso(before),result:map.get(key(dir,before))})),{onConflict:'instrument,version,dir,before_time',ignoreDuplicates:true}));
+      return settled.length;
+    }};
+}
+
 async function writeState(client:any,instrument:string,state:Record<string,unknown>){
   checked(await client.from('dob_watcher_state').upsert({instrument,last_run_at:new Date().toISOString(),updated_at:new Date().toISOString(),...state}));
 }
@@ -124,9 +148,11 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   // den D1-Anker; D1 für die Anker). Ohne bestandene LS-Reaktion findet die Geometrie keinen POI und fragt den LS nie ab: dann
   // weder 15000 M5 laden noch den LQ-Algo bauen (Edge-CPU).
   const lsReaction=lq?await lsReactionSetups(client,instrument,evaluatedAt,h1,sessions,dry,budget):null,tradeSetups=lsReaction?.setups??[];
-  const liquiditySweepSelector=tradeSetups.length?createLiquiditySweepSelector({instrument,sessionConfigs:sessions,h1Candles:h1,
-    m5Candles:await closedCandles(client,instrument,'5m',evaluatedAt,LS_REACTION_CONTEXT.maxM5),
-    d1Candles:await closedCandles(client,instrument,'1D',evaluatedAt,LS_REACTION_CONTEXT.d1)}):undefined;
+  const lsM5=tradeSetups.length?await closedCandles(client,instrument,'5m',evaluatedAt,LS_REACTION_CONTEXT.maxM5):[];
+  const lsD1=tradeSetups.length?await closedCandles(client,instrument,'1D',evaluatedAt,LS_REACTION_CONTEXT.d1):[];
+  const lsSelection=tradeSetups.length?await lsSelectionCache(client,instrument,evaluatedAt,
+    ()=>createLiquiditySweepSelector({instrument,sessionConfigs:sessions,h1Candles:h1,m5Candles:lsM5,d1Candles:lsD1})):null;
+  const liquiditySweepSelector=lsSelection?(q:{dir:number,before:number})=>lsSelection.select(q):undefined;
   // Erkennung zum Datenstand (letzte M1, Feed-Verzug ≤ 3 min), Herzschlag, Stale-Alarm und Alarmfenster zur Uhrzeit.
   const asOf=dobDataAsOf(m1Marked,evaluatedAt);
   const htfCandles={'1h':htfObCandles(mark(h1),sessions,offset),'4h':htfObCandles(mark(h4),sessions,offset)};
@@ -136,12 +162,14 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
     swingStopGate:createDobSwingStopGate({m5Candles:m5Marked,instrument,atr:dobH1AtrSeries(htfCandles['1h'])}),tradeSetups,liquiditySweepSelector};
   // Je aktive POI-Art ein Durchlauf mit deren Konfig; Ereignisse tragen ihre POI-Art (eigene IDs, eigene Historie).
   const calcStart=performance.now(),runs:any[]=dobPoiTypeAlarmRuns({poiTypes,input,evaluatedAt:asOf,check:checkDobTradeSetup}),calcMs=Math.round(performance.now()-calcStart);
+  // Ein Speicherfehler kostet nur CPU im nächsten Aufruf, nie einen Alarm.
+  const lsSaved=!dry&&lsSelection?await lsSelection.save().catch(error=>{console.error('dob_ls_selections speichern fehlgeschlagen',instrument,error);return 0;}):0;
   const stale=dobStaleAlarm({instrument:instrument,lastM1Time:m1.at(-1)?.time,evaluatedAt});
   const events=[...runs.flatMap(r=>r.events.map((event:any)=>({event,run:r}))),...(stale?[{event:stale,run:null}]:[])];
   const count=(key:'setups'|'rejected')=>runs.reduce((n,r)=>n+r.result[key].length,0);
   const policy=await alarmPolicy(client,instrument),blocked=policy.decide(evaluatedAt);
   if(dry)return {dry:true,evaluatedAt,asOf,alarmEnabled:policy.enabled,alarmWindows:policy.windows,blocked,
-    alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,lsReaction:lsReaction&&{rows:lsReaction.rows,evaluated:lsReaction.evaluated,pending:lsReaction.pending,passed:lsReaction.setups.length},bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
+    alarmWindowProbes:Object.fromEntries(probes.map(p=>[`${berlinDateStrFor(p)} ${formatBerlinTime(p)}`,policy.decide(p)??'senden'])),runtimeMs:Math.round(performance.now()-started),calcMs,lsReaction:lsReaction&&{rows:lsReaction.rows,evaluated:lsReaction.evaluated,pending:lsReaction.pending,passed:lsReaction.setups.length},lsSelection:lsSelection&&{cached:lsSelection.cached,built:lsSelection.built},bars:{m1:m1.length,m5:m5.length,h1:h1.length,h4:h4.length,
     liveM1:input.m1Candles.length,liveM5:input.m5Candles.length},lastM1:m1.at(-1)?.time??null,
     poiTypes:Object.fromEntries(poiTypes.map(({poiType,guardrails})=>{const r=runs.find(x=>x.poiType===poiType);
       return [poiType,{guardrails,entryRuleNow:dobEntryRule(guardrails,evaluatedAt),setups:r?.result.setups.length??null,rejected:r?.result.rejected.length??null,
@@ -165,7 +193,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
     runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:count('setups'),rejected:count('rejected'),skipped:null,error:null,
     // Heutige Kandidaten fürs DOB-Watcher-Panel; außerhalb 02–22 Uhr bleibt der letzte Stand stehen.
     candidates:dobWatcherCandidates(runs,asOf,instrument)});
-  return {evaluatedAt,calcMs,poiTypes:runs.map(r=>r.poiType),setups:count('setups'),events:events.length,delivered};
+  return {evaluatedAt,calcMs,lsSelection:lsSelection&&{cached:lsSelection.cached,built:lsSelection.built,saved:lsSaved},poiTypes:runs.map(r=>r.poiType),setups:count('setups'),events:events.length,delivered};
 }
 
 // Fehler im Lauf: Herzschlag mit Fehler und ein Hinweis je Stunde, statt still zu schweigen.
@@ -181,11 +209,12 @@ async function reportError(client:any,instrument:string,error:unknown){
 const CANDLE_ARRIVAL_SECONDS=20;
 
 // Jedes Instrument zur selben Minute in einem eigenen Aufruf dieser Function: das Edge-CPU-Limit (~2 s) gilt je Worker, und seit dem
-// LQ-Algo für den kausalen LS reichte es nicht mehr für alle drei in einem (546 WORKER_RESOURCE_LIMIT ohne jeden Hinweis). Stirbt ein
-// Instrument-Aufruf, meldet der Verteiler es in dessen Herzschlag und als Hinweis.
+// LQ-Algo für den kausalen LS reichte es nicht mehr für alle drei in einem (546 WORKER_RESOURCE_LIMIT ohne jeden Hinweis). Nacheinander,
+// weil parallele Aufrufe im selben Worker landen können und ihre CPU dort zusammenzählt. Stirbt ein Instrument-Aufruf, meldet der
+// Verteiler es in dessen Herzschlag und als Hinweis.
 async function tick(client:any,token:string,dry=false,probes:number[]=[]){
   const started=performance.now(),evaluatedAt=Math.floor(Date.now()/60000)*60,results:Record<string,unknown>={};
-  await Promise.all(INSTRUMENTS.map(async instrument=>{
+  for(const instrument of INSTRUMENTS){
     try{
       const response=await fetch(`${env('SUPABASE_URL')}/functions/v1/dob-watcher`,{method:'POST',
         headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({instrument,evaluatedAt,dry,probes})});
@@ -193,7 +222,7 @@ async function tick(client:any,token:string,dry=false,probes:number[]=[]){
       if(!response.ok)throw new Error(`HTTP ${response.status}: ${text.slice(0,200)}`);
       results[instrument]=JSON.parse(text);
     }catch(error){results[instrument]={error:await reportError(client,instrument,error)};}
-  }));
+  }
   // Auch außerhalb 02–22 Uhr: Wiederholungen und Ausfallmeldungen dürfen nicht bis zum Morgen warten.
   const delivery=dry?null:await flushDobOutbox(client,env,Math.floor(Date.now()/1000)).catch(error=>({error:error instanceof Error?error.message:String(error)}));
   return {evaluatedAt,runtimeMs:Math.round(performance.now()-started),instruments:results,delivery};
