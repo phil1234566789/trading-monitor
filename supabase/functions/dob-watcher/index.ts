@@ -61,13 +61,14 @@ async function record(client:any,event:any,blockedReason:string|null=null){
   return blockedReason?{id:event.id,status:'suppressed',reason:blockedReason}:{id:event.id,status:'pending'};
 }
 
-// Statistik der Sperren (⛔-Text) aus dem Referenzlauf: nur neu, wenn die Konfig seit der letzten Rechnung gespeichert wurde oder die
+// Statistik der Sperren (⛔-Text) und WR je TP-Fall (Entry-Alarm) aus dem Referenzlauf: nur neu, wenn die Konfig seit der letzten Rechnung gespeichert wurde oder die
 // Zahl einen Tag alt ist (Läufe werden neu gefüllt), sonst die gespeicherte. updated_at bleibt unberührt.
 async function blockStatsFor(client:any,instrument:string,row:any,guardrails:any){
   const at=row.blocked_stats_at?Date.parse(row.blocked_stats_at):0;
-  if(row.blocked_stats&&at>=Date.parse(row.updated_at)&&Date.now()-at<86400e3)return row.blocked_stats;
+  // Ohne tp (Stand vor der WR im Entry-Alarm) sofort neu rechnen statt bis zu einem Tag ohne Zahl.
+  if(row.blocked_stats?.tp&&at>=Date.parse(row.updated_at)&&Date.now()-at<86400e3)return row.blocked_stats;
   const runId=dobCanonicalRunId(instrument,row.poi_type);
-  const rows=await fetchAllRows((from:number,to:number)=>client.from('dob_trade_setups').select('entry_time,outcome,max_r,sl_hit,ambiguous_r,counter_dob_status,poi_zone_age_seconds,features')
+  const rows=await fetchAllRows((from:number,to:number)=>client.from('dob_trade_setups').select('run_id,entry_time,entry_price,stop_price,outcome,max_r,sl_hit,ambiguous_r,swing_max_r,swing_sl_hit,swing_ambiguous_r,swing_risk_usd,counter_dob_status,poi_zone_age_seconds,features')
     .eq('instrument',instrument).eq('run_id',runId).order('entry_time').order('id').range(from,to));
   const stats={...dobBlockStats(guardrails,rows),runId};
   checked(await client.from('dob_guardrails').update({blocked_stats:stats,blocked_stats_at:new Date().toISOString()}).eq('instrument',instrument).eq('poi_type',row.poi_type));

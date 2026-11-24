@@ -2,12 +2,12 @@ import {aggregateDobRoutes} from '../scripts/dobWinrateAggregate.mjs';
 import {sessionOccurrences} from './sessionOccurrences.js';
 import {berlinDateStrFor,berlinOffsetMinutes,berlinWeekday} from './berlinTime.js';
 import {narrowByEntryPrice} from './simulationPinMatching.js';
-import {slAlgoApplies} from './slAlgo.js';
 
 // Gleiche Zählung wie die Messung (dobWinrateAggregate): je Route Win/Loss/offen, Winrate nur aus Win+Loss, R = 2·Win − Loss.
 // R-Ziel k aus max_r/sl_hit: src/dobTargetOutcome.js (eigene Datei, damit der dob-watcher es ohne die Statistik-Abhängigkeiten bündelt).
 export {dobTargetOutcome} from './dobTargetOutcome.js';
 import {dobTargetOutcome} from './dobTargetOutcome.js';
+import {dobRunPoiType} from './dobRowStop.js';
 // k: festes Ziel für alle Trades oder Funktion je Trade (Konfig: TP aus der Regel seines Entry-Fensters); ΣR je Trade mit seinem k.
 // Liefert die Funktion ein Ergebnis {target, outcome, r} (dobRowConfigScore, Teilprofit), zählt dessen r.
 export function dobRouteStats(rows,k=2){
@@ -77,7 +77,6 @@ export function matchDobTradePins(pins,rows){
  return matched;
 }
 // Mustertrades (Pin-Typ model) müssen jeden Neulauf derselben POI-Art im gerechneten Zeitraum überleben; fehlende stoppen das Schreiben.
-export const dobRunPoiType=runId=>runId.includes('lq-sweep')?'lq_sweep':'htf_ob';
 export function missingDobModelTrades(pins,rows,{poiType,fromSec=0}){
  const matched=new Set(matchDobTradePins(pins,rows).values());
  return pins.filter(p=>p.pinType==='model'&&p.dobTradeContext&&dobRunPoiType(p.dobTradeContext.run_id)===poiType
@@ -155,13 +154,7 @@ export function dobReturnTracker(){
 // SL-Vergleich: dieselbe Zeile mit den Werten der weiten SL-Variante (ferne OB2-Kante); nur Trades mit Variante (Extrem-SL).
 export const dobHasWideVariant=row=>row.wide_max_r!=null;
 export const dobAsWide=row=>({...row,max_r:row.wide_max_r,sl_hit:row.wide_sl_hit,ambiguous_r:row.wide_ambiguous_r});
-// SL-Algo Struktur-P2 (Konfig slAlgo): Trades mit Anti-Confluence und M15-P2 rechnen mit dessen Werten, alle anderen unverändert.
-// Die swing_*-Spalten rechnet der Fill mit SL_ALGO_V1. stop_price bleibt (Pin-Schlüssel), der neue SL steht in swing_stop_price.
-export const dobHasSwingStopVariant=row=>row.swing_max_r!=null;
-// Wie der Alarm (checkDobTradeSetup): Methode UND POI-Familie der Zeile (aus ihrem Lauf) müssen passen.
-export const dobSlAlgoActive=(config,row)=>slAlgoApplies(config?.slAlgo,dobRunPoiType(row?.run_id??''));
-export const dobRowStopPrice=(config,row)=>dobSlAlgoActive(config,row)&&dobHasSwingStopVariant(row)?row.swing_stop_price:row.stop_price;
-export const dobAsSwingStop=row=>dobHasSwingStopVariant(row)?{...row,max_r:row.swing_max_r,sl_hit:row.swing_sl_hit,ambiguous_r:row.swing_ambiguous_r}:row;
+export {dobRunPoiType,dobHasSwingStopVariant,dobSlAlgoActive,dobRowStopPrice,dobAsSwingStop} from './dobRowStop.js';
 export const dobMedian=values=>{const v=values.filter(Number.isFinite).sort((a,b)=>a-b);return v.length?v[v.length>>1]:null;};
 export const DOB_OUTCOME_LABELS={success:'Win',loss:'Loss',open:'offen',ambiguous:'uneindeutig',unknown:'unbekannt'};
 // Eigenes Modul, damit der DOB-Watcher (Deno) das Label ohne die Pin-Abgleich-Kette dieser Datei importieren kann.

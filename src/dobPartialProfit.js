@@ -1,4 +1,5 @@
-import {dobTargetOutcome,dobHasSwingStopVariant,dobAsSwingStop,dobSlAlgoActive} from './dobTradeStatistics.js';
+import {dobTargetOutcome} from './dobTargetOutcome.js';
+import {dobHasSwingStopVariant,dobAsSwingStop,dobSlAlgoActive} from './dobRowStop.js';
 import {dobRowConfigTpR,dobPartialPlan} from './dobGuardrails.js';
 import {dobFeaturesOf,dobBreakevenRest} from './dobTradeFeatures.js';
 
