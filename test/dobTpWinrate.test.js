@@ -39,3 +39,16 @@ it('Entry-Alarm trägt die WR an der TP-Zeile, Teilprofit sagt worauf sie sich b
  const partial={...cfg,defaultTpR:5,partialAtR:3,partialPct:50,partialBe:true};
  expect(tpLine(partial)).toMatch(/· TP2 5R @ 1,31245 · WR \(TP1\) 54,3 % \(n=46, 2025–2026\)$/);
 });
+
+// Retest-Vorschau (Philip: „bei retest … schon teasern“): dieselbe Konfig und derselbe Cache, nur Zeit-Sperren stehen schon fest.
+it('Retest-Alarm: voraussichtlicher TP mit WR, Teilprofit, Sperrzeit statt TP',async()=>{
+ const {dobRetestOutlook}=await import('../src/dobAlarm.js');
+ const stats={years:'2026',tp:{'tp:default':{n:846,wr:32.6},'tp:dead':{n:3,wr:66.7}},byKey:{[`window:${minute-19}-${minute+41}`]:{n:40,wr3:12.8,sum3:-9}}};
+ const s=extra=>({instrument:'GBPUSD',phaseSince:at+3*3600,...extra});
+ expect(dobRetestOutlook(s(),cfg,stats)).toBe('noch kein Entry · voraussichtlich TP 2R · WR 32,6 % (n=846, 2026)');
+ expect(dobRetestOutlook(s({counterDob:{status:'dead'}}),cfg,stats)).toBe('noch kein Entry · voraussichtlich TP 5R');
+ expect(dobRetestOutlook(s(),{...cfg,defaultTpR:5,partialAtR:3},stats)).toBe('noch kein Entry · voraussichtlich TP1 3R / TP2 5R · WR (TP1) 32,6 % (n=846, 2026)');
+ const blocked={...cfg,entryWindows:[{from:minute-19,to:minute+41,action:'block'}]};
+ expect(dobRetestOutlook(s({phaseSince:at}),blocked,stats)).toBe('noch kein Entry · Entry jetzt wäre gesperrt: Sperrzeit 14:00–15:00 · dort WR3 12,8 %, −9R (2026)');
+ expect(dobRetestOutlook(s(),null,stats)).toBe('noch kein Entry');
+});

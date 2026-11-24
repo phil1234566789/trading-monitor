@@ -1,7 +1,7 @@
 import {formatBerlinTime,berlinDateStrFor} from './berlinTime.js';
 import {dobPoiLabel,dobRetestLabel,dobLsReactionLabel} from './dobPoiLabel.js';
 import {m1GapCovered} from './goldWeekendGap.js';
-import {dobConfigTpR,dobPartialPlan,dobEntryRule} from './dobGuardrails.js';
+import {dobConfigTpR,dobPartialPlan,dobEntryRule,dobMonthBlocked,dobEntryTimeBlocked} from './dobGuardrails.js';
 import {dobBlockKey,dobBlockStatsText,dobTpWinrateText} from './dobBlockStats.js';
 import {instrumentConfig} from './instrumentConfig.js';
 import {slAlgoApplies} from './slAlgo.js';
@@ -30,6 +30,8 @@ const clock=m=>`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).pa
 export const dobWarnText=(guardrail,guardrails,entryTime)=>{const w=guardrail==='blockedEntryHour'&&guardrails?dobEntryRule(guardrails,entryTime).window:null;
  return w?`${WARN_TEXT[guardrail]} ${clock(w.from)}–${clock(w.to)}, Entry`:WARN_TEXT[guardrail];};
 
+// Sperrgrund ohne „Entry“-Rahmen („Sperrzeit 09:30–12:00“, „Monat gesperrt“) für Panel-Status und Retest-Vorschau.
+export const dobBlockReasonText=(guardrail,guardrails,at)=>dobWarnText(guardrail,guardrails,at).replace(/^Entry in /,'').replace(/, Entry$/,'');
 // Preise mit der Nachkommazahl des Instruments (XAU 2, Forex 5).
 export const dobPrice=(v,instrument='XAUUSD')=>{const d=instrumentConfig(instrument).precision;return Number.isFinite(v)?v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d}):'–';};
 const price=dobPrice;
@@ -44,6 +46,15 @@ export function dobTpLine(s,guardrails,blockStats=null){
  // WR zum empfohlenen TP aus der vorberechneten Statistik (dobBlockStats.tp); ohne Zahl fehlt sie still.
  const wr=dobTpWinrateText(blockStats,guardrails,s.entryTime,s.counterDob?.status??null);
  return (plan?`TP1 ${rText(plan.atR)} @ ${at(plan.atR)} (${plan.pct} %${plan.be?', danach SL auf Entry':''}) · TP2 ${rText(tp)} @ ${at(tp)}`:`TP ${rText(tp)} @ ${at(tp)}`)+wr;
+}
+// Retest-Vorschau: was ein Entry jetzt bekäme (gleiche Konfig und gleicher Statistik-Cache wie der Entry-Alarm). Nur Zeit-Sperren
+// (Monat, Sperrzeit) stehen beim Retest fest; Zonenalter, Gegen-DOB und Gegenkerzen entscheidet erst der Entry, daher „voraussichtlich“.
+export function dobRetestOutlook(s,guardrails,blockStats=null){
+ if(!guardrails)return 'noch kein Entry';
+ const at=s.phaseSince,reason=dobMonthBlocked(guardrails,at)?'blockedMonth':dobEntryTimeBlocked(guardrails,at)?'blockedEntryHour':null;
+ if(reason)return `noch kein Entry · Entry jetzt wäre gesperrt: ${dobBlockReasonText(reason,guardrails,at)}${dobBlockStatsText(blockStats,dobBlockKey(guardrails,reason,at))}`;
+ const status=s.counterDob?.status??null,tp=dobConfigTpR(guardrails,at,status),plan=dobPartialPlan(guardrails,tp);
+ return `noch kein Entry · voraussichtlich ${plan?`TP1 ${rText(plan.atR)} / TP2 ${rText(tp)}`:`TP ${rText(tp)}`}${dobTpWinrateText(blockStats,guardrails,at,status)}`;
 }
 // SL nach Konfig: SL-Algo Struktur-P2 nennt den SL hinter dem M15-P2 (Ziel bleibt, dobTpLine rechnet vom DOB-SL); sonst der DOB-SL.
 // Der Chart liest denselben SL aus der Lauf-Zeile (dobRowStopPrice); test/dobSwingStop.test.js hält beide gleich.
@@ -80,7 +91,7 @@ export function dobAlarmEvents(result,evaluatedAt,{blockedEntryAlarm=DOB_BLOCKED
    const id=key(`retest:${instrument}:${s.direction}:${s.chart.secondOrderBlockStart}`);
    if(!events.has(id))events.set(id,{id,poiType,phase:'ob2Retest',setupId:s.id,instrument,direction:s.direction,signalAt:s.phaseSince,guardrail,suppressed:!!guardrail,
     text:[`🟡 DOB ${instrument} ${side(s.direction)} · OB2-Retest ${formatBerlinTime(s.phaseSince)}`,dobPoiLine(s,poiType),...obLines(s),
-     'noch kein Entry',
+     dobRetestOutlook({...s,instrument},guardrails,blockStats),
      dobChartUrl(id,instrument,s.phaseSince)].join('\n')});
   }
   if(ENTERED.has(s.phase)&&s.entryTime>=evaluatedAt-DOB_ALARM_FRESH_SECONDS){

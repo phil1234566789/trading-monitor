@@ -1,5 +1,5 @@
 import {berlinDateStrFor,formatBerlinTime} from './berlinTime.js';
-import {dobPoiLine,dobPrice,dobTpLine,dobWarnText} from './dobAlarm.js';
+import {dobBlockReasonText,dobPoiLine,dobPrice,dobTpLine} from './dobAlarm.js';
 import {DOB_DEFAULT_TP_R} from './dobGuardrails.js';
 import {dobBlockKey,dobBlockStatsText} from './dobBlockStats.js';
 import {poiMaxDistanceAtr} from './dobHtfObPoi.js';
@@ -60,7 +60,7 @@ function statusHead(s,status,{instrument,poiType,guardrails,blockStats}){
  switch(status){
   case 'dropped':return `verworfen, weil: ${droppedText(s,poiType,instrument)}`;
   case 'blocked':{
-   const at=s.entryTime??s.phaseSince,why=dobWarnText(s.reason,guardrails,at).replace(/^Entry in /,'').replace(/, Entry$/,'');
+   const at=s.entryTime??s.phaseSince,why=dobBlockReasonText(s.reason,guardrails,at);
    const stats=guardrails?dobBlockStatsText(blockStats,dobBlockKey(guardrails,s.reason,at)).replace(/^ · /,'').replace(/ \((.+)\)$/,', $1'):'';
    return `gesperrt, weil: ${why}${stats?` (${stats})`:''}`;
   }
