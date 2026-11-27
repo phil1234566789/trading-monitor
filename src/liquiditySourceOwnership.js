@@ -47,9 +47,8 @@ export function findLiquiditySourceOwner({setup,context,resolveContext,expectedT
  const times=[...context.pivotsOuter.map(p=>knownAt(p,context.periods.outer)),
   ...context.pivotsInner.map(p=>knownAt(p,context.periods.inner)),level.touchedTime]
   .filter(at=>Number.isFinite(at)&&at>=birth&&at<=level.touchedTime);
- for(const at of [...new Set(times)].sort((a,b)=>a-b)){
-  const prefix=resolveContext(at);
-  if(prefix.status!=='ready')continue;
+ const owned=prefix=>{
+  if(prefix.status!=='ready')return null;
   for(let depth=prefix.chain.length-1;depth>0;depth--){
    const state=prefix.chain[depth];
    if(state.trend!==expectedTrend)continue;
@@ -58,6 +57,12 @@ export function findLiquiditySourceOwner({setup,context,resolveContext,expectedT
     (expectedTrend==='uptrend'?'protected-low':'protected-high'));
    if(boundary||protectedPoint)return proof(state,depth,prefix.stateKnownAt,boundary?'rangeBoundaryBeforeSweep':'protectedPivotBeforeSweep');
   }
+  return null;
+ };
+ // chainAt spart je Zeitpunkt die volle Faltung; den Beleg liefert der vollständige Kontext (gleiche Kette, Pivots mit Präfix-Touch).
+ for(const at of [...new Set(times)].sort((a,b)=>a-b)){
+  const hit=resolveContext.chainAt?(owned(resolveContext.chainAt(at))&&owned(resolveContext(at))):owned(resolveContext(at));
+  if(hit)return hit;
  }
  return {status:'unmet',reason:'sourceRangeNotAssociated'};
 }

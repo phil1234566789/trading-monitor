@@ -6,6 +6,7 @@ import {closedChecklistCandles} from './tradeSetupChecklistTimeBasis.js';
 import {markIgnoredCandles} from './sessionOccurrences.js';
 import {berlinOffsetMinutes} from './berlinTime.js';
 import {deriveM5CloseReaction} from './m5CloseReaction.js';
+import {createM5StructurePrefixChainResolver} from './m5StructurePrefixChain.js';
 
 export const M5_STRUCTURE_CONTEXT_VERSION='causal-d1-rooted-m5-evidence-v1';
 
@@ -41,9 +42,11 @@ export function prepareM5StructureContext({instrument,m5Candles=[],h1Candles=[],
   candles,rawCandles,pivotsOuter:outer,pivotsInner:inner};
 }
 
+// chainAt: nur Kette/Status je Zeitpunkt, inkrementell (m5StructurePrefixChain.js) für die Pivot-Schleife des LQ-Algo.
 export function createM5StructureContextResolver(input) {
  const cache=new Map();
- return at=>{
+ let chains=null;
+ const resolve=at=>{
   const key=Math.floor(at/300)*300;
   if(!cache.has(key)){
    if(cache.size>=128)cache.delete(cache.keys().next().value);
@@ -51,6 +54,8 @@ export function createM5StructureContextResolver(input) {
   }
   return cache.get(key);
  };
+ resolve.chainAt=at=>(chains??=createM5StructurePrefixChainResolver(input))(at);
+ return resolve;
 }
 
 export function currentM5StructureRange(context,closeReactionCache) {
