@@ -30,7 +30,7 @@ const INSTRUMENTS=['XAUUSD','GBPUSD','EURUSD'];
 // ponytail: HTF jede Minute neu aus der DB (~12 Lesezugriffe); ein Stunden-Cache erst, falls Laufzeit oder Requests stören.
 const COUNTS: Record<string,number>={'1m':3000,'5m':900,'1h':6000,'4h':1500};
 // LS-Reaktion-Trendkontext wie der Chart (lsReactionContextLoader: 300 D1, M5 ab dem D1-Anker, höchstens 15000).
-// ponytail: ein neues LS-Reaktion-Urteil je Tick und Instrument (Edge-CPU-Limit); fehlende gelten bis dahin
+// ponytail: ein neues LS-Reaktion-Urteil je Tick und Instrument, im eigenen Aufruf nach dem Alarm-Lauf (Edge-CPU-Limit); fehlende gelten bis dahin
 // nicht als LS-Reaktion, d. h. ein LQ-Sweep-Alarm kommt höchstens ein paar Minuten später, nie fälschlich.
 const LS_REACTION_PER_TICK=1;
 const offset=(sec:number)=>berlinOffsetMinutes(sec*1000);
@@ -89,10 +89,17 @@ async function lsReactionSetups(client:any,instrument:string,evaluatedAt:number,
     missing=budget.left>0?pending.slice(-budget.left):[];
   budget.left-=missing.length;
   if(missing.length){
+    // Absturzsperre: ein Urteil kann das Edge-CPU-Limit allein sprengen (LS-Pivot Tage vor dem Sweep, Strukturkontext je Pivot-Zeitpunkt).
+    // Der Platzhalter bleibt dann stehen und die Zeile wird nicht jede Minute neu versucht; wie jedes nicht bestandene Urteil zählt sie nicht.
+    const fresh=missing.filter(r=>!verdict.has(r.id));
+    if(!dry&&fresh.length)checked(await client.from('ls_reaction_verdicts').upsert(fresh.map(r=>({trade_setup_id:r.id,version:LS_REACTION_VERSION,
+      status:'unknown',reason:'computeAborted',witness:null})),{onConflict:'trade_setup_id,version'}));
     const verdicts=await computeLsReactionVerdicts({rows:missing,instrument,evaluatedAt,sessionConfigs:sessions,h1,
       load:(bar,count)=>closedCandles(client,instrument,bar,evaluatedAt,count)});
-    // unknown erst nach 1 h endgültig: vorher kann der Kerzenstand bis zur Setup-Erkennung noch fehlen.
+    // unknown erst nach 1 h endgültig: vorher kann der Kerzenstand bis zur Setup-Erkennung noch fehlen (Platzhalter wieder weg).
     const final=missing.filter(r=>verdicts.get(r.id)!.status!=='unknown'||Date.parse(r.ob_start_time)/1000+3600<evaluatedAt);
+    const retry=fresh.filter(r=>!final.includes(r));
+    if(!dry&&retry.length)checked(await client.from('ls_reaction_verdicts').delete().eq('version',LS_REACTION_VERSION).in('trade_setup_id',retry.map(r=>r.id)));
     if(!dry&&final.length)checked(await client.from('ls_reaction_verdicts').upsert(final.map(r=>({trade_setup_id:r.id,version:LS_REACTION_VERSION,
       status:verdicts.get(r.id)!.status,reason:verdicts.get(r.id)!.reason,
       witness:verdicts.get(r.id)!.status==='passed'?verdicts.get(r.id)!.witness??{}:null})),{onConflict:'trade_setup_id,version'}));
@@ -128,6 +135,16 @@ async function lsSelectionCache(client:any,instrument:string,evaluatedAt:number,
     }};
 }
 
+const loadSessions=async(client:any,instrument:string)=>(checked(await client.from('sessions').select(SESSION_ROW_COLUMNS)
+  .eq('instrument',instrument).limit(200)) as any[]).map(sessionFromRow);
+
+// Fehlende LS-Reaktion-Urteile in einem eigenen Aufruf (eigener Worker): ein teures Urteil darf nie den Alarm-Lauf des Instruments reißen.
+async function tickLsReaction(client:any,instrument:string,evaluatedAt:number){
+  const [sessions,h1]=await Promise.all([loadSessions(client,instrument),closedCandles(client,instrument,'1h',evaluatedAt)]);
+  const r=await lsReactionSetups(client,instrument,evaluatedAt,h1,sessions,false,{left:LS_REACTION_PER_TICK});
+  return {rows:r.rows,evaluated:r.evaluated,pending:r.pending};
+}
+
 async function writeState(client:any,instrument:string,state:Record<string,unknown>){
   checked(await client.from('dob_watcher_state').upsert({instrument,last_run_at:new Date().toISOString(),updated_at:new Date().toISOString(),...state}));
 }
@@ -143,7 +160,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
   const poiTypes=await Promise.all(configRows.map(async row=>{const guardrails=dobGuardrailsFromRow(row);
     return {poiType:row.poi_type,guardrails,blockStats:dry?row.blocked_stats:await blockStatsFor(client,instrument,row,guardrails)};}));
   if(!poiTypes.length){await writeState(client,instrument,{evaluated_at:new Date(evaluatedAt*1000).toISOString(),skipped:'noConfig',error:null});return {skipped:'noConfig'};}
-  const sessions=(checked(await client.from('sessions').select(SESSION_ROW_COLUMNS).eq('instrument',instrument).limit(200)) as any[]).map(sessionFromRow);
+  const sessions=await loadSessions(client,instrument);
   const [m1,m5,h1,h4]=await Promise.all(['1m','5m','1h','4h'].map(bar=>closedCandles(client,instrument,bar,evaluatedAt)));
   const mark=(rows:any[])=>markIgnoredCandles(rows,sessions,offset);
   const m1Marked=mark(m1),m5Marked=mark(m5);
@@ -197,7 +214,7 @@ async function tickInstrument(client:any,instrument:string,evaluatedAt:number,dr
     runtime_ms:Math.round(performance.now()-started),calc_ms:calcMs,setups:count('setups'),rejected:count('rejected'),skipped:null,error:null,
     // Heutige Kandidaten fürs DOB-Watcher-Panel; außerhalb 02–22 Uhr bleibt der letzte Stand stehen.
     candidates:dobWatcherCandidates(runs,asOf,instrument)});
-  return {evaluatedAt,calcMs,lsSelection:lsSelection&&{cached:lsSelection.cached,built:lsSelection.built,saved:lsSaved},poiTypes:runs.map(r=>r.poiType),setups:count('setups'),events:events.length,delivered};
+  return {evaluatedAt,calcMs,lsReactionPending:lsReaction?.pending??0,lsSelection:lsSelection&&{cached:lsSelection.cached,built:lsSelection.built,saved:lsSaved},poiTypes:runs.map(r=>r.poiType),setups:count('setups'),events:events.length,delivered};
 }
 
 // Fehler im Lauf: Herzschlag mit Fehler und ein Hinweis je Stunde, statt still zu schweigen.
@@ -225,6 +242,12 @@ async function tick(client:any,token:string,dry=false,probes:number[]=[]){
       const text=await response.text();
       if(!response.ok)throw new Error(`HTTP ${response.status}: ${text.slice(0,200)}`);
       results[instrument]=JSON.parse(text);
+      // Erst nach dem Alarm-Lauf; stirbt dieser Aufruf, fehlt nur das eine Urteil (Absturzsperre in lsReactionSetups), kein Hinweis nötig.
+      if(!dry&&(results[instrument] as any).lsReactionPending>0){
+        const ls=await fetch(`${env('SUPABASE_URL')}/functions/v1/dob-watcher`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},
+          body:JSON.stringify({instrument,evaluatedAt,lsReactionOnly:true})}).catch(error=>error);
+        results[`${instrument}:lsReaction`]=ls instanceof Response?(ls.ok?await ls.json():{status:ls.status}):{error:String(ls)};
+      }
     }catch(error){results[instrument]={error:await reportError(client,instrument,error)};}
   }
   // Auch außerhalb 02–22 Uhr: Wiederholungen und Ausfallmeldungen dürfen nicht bis zum Morgen warten.
@@ -251,7 +274,8 @@ Deno.serve(async request=>{
     const probes=Array.isArray(body?.probes)?body.probes.filter(Number.isFinite):[];
     // Instrument-Aufruf vom Verteiler (tick): Minute steht schon fest, also nicht noch einmal auf die Kerze warten.
     if(INSTRUMENTS.includes(body?.instrument)&&Number.isInteger(body?.evaluatedAt)){
-      try{return json(await tickInstrument(client,body.instrument,body.evaluatedAt,Boolean(body.dry),probes));}
+      if(body.lsReactionOnly)return json(await tickLsReaction(client,body.instrument,body.evaluatedAt));
+      try{return json(await tickInstrument(client,body.instrument,body.evaluatedAt,Boolean(body.dry),probes,{left:0}));}
       catch(error){return json({error:await reportError(client,body.instrument,error)});}
     }
     // FXCM liefert die M1-Kerze erst ~14 s nach Schluss (10 s Abschlussabstand + Upload). Ohne Warten sieht der Lauf zu :00 sie nicht,
